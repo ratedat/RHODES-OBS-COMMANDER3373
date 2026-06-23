@@ -312,28 +312,39 @@ function formatMetricValue(metric) {
 }
 
 function detectOperatorTarget(text) {
-  if (/【先鋒】/.test(text)) return "先鋒";
-  if (/【前衛】/.test(text)) return "前衛";
-  if (/【重装】/.test(text)) return "重装";
-  if (/【狙撃】/.test(text)) return "狙撃";
-  if (/【術師】/.test(text)) return "術師";
-  if (/【医療】/.test(text)) return "医療";
-  if (/【補助】/.test(text)) return "補助";
-  if (/【特殊】/.test(text)) return "特殊";
-  if (/近距離/.test(text)) return "近距離";
-  if (/遠距離/.test(text)) return "遠距離";
-  if (/伺燭客/.test(text)) return "伺燭客";
-  if (/化境マス/.test(text)) return "化境マス";
-  if (/配置待機エリア/.test(text)) return "配置待機";
-  if (/味方全員|全オペレーター|全てのオペレーター|オペレーター全員|味方ユニット|味方/.test(text)) return "全員";
+  if (/【先鋒】/.test(text)) return "【先鋒】";
+  if (/【前衛】/.test(text)) return "【前衛】";
+  if (/【重装】/.test(text)) return "【重装】";
+  if (/【狙撃】/.test(text)) return "【狙撃】";
+  if (/【術師】/.test(text)) return "【術師】";
+  if (/【医療】/.test(text)) return "【医療】";
+  if (/【補助】/.test(text)) return "【補助】";
+  if (/【特殊】/.test(text)) return "【特殊】";
+  if (/近距離/.test(text)) return "【近距離】";
+  if (/遠距離/.test(text)) return "【遠距離】";
+  if (/伺燭客/.test(text)) return "【伺燭客】";
+  if (/化境マス/.test(text)) return "【化境マス】";
+  if (/配置待機エリア/.test(text)) return "【配置待機】";
+  if (/味方全員|全オペレーター|全てのオペレーター|オペレーター全員|味方ユニット|味方/.test(text)) return "【味方全員】";
+  if (/オペレーター/.test(text)) return "【オペレーター】";
+  return null;
+}
+
+function namedEnemyTarget(text) {
+  const names = [...new Set((text.match(/＜[^＞]+＞/g) || []).slice(0, 3))];
+  if (names.length) return `【${names.join("/")}】`;
+  if (/便符/.test(text)) return "【便符】";
   return null;
 }
 
 function detectEnemyTarget(text) {
-  if (/エリート|ボス|BOSS/.test(text)) return "敵エリート/ボス";
-  if (/敵全員|全ての敵/.test(text)) return "敵全員";
-  if (/【化物】/.test(text)) return "敵【化物】";
-  if (/敵/.test(text)) return "敵";
+  const named = namedEnemyTarget(text);
+  if (named) return named;
+  if (/敵【エリート】.*【ボス】|敵【エリート】・【ボス】|全ての敵【エリート】|エリート敵とボス|エリート.*ボス|ボス.*エリート/i.test(text)) return "【敵エリート/ボス】";
+  if (/敵【エリート】|【エリート】|エリート敵|エリート/.test(text)) return "【敵エリート】";
+  if (/敵【ボス】|【ボス】|ボス|BOSS/i.test(text)) return "【敵ボス】";
+  if (/敵全員|全ての敵/.test(text)) return "【敵全員】";
+  if (/敵/.test(text)) return "【敵】";
   return null;
 }
 
@@ -360,11 +371,16 @@ function metricStatsFromPhrase(phrase, domain) {
   add(/物理回避/, "物理回避");
   if (!/物理・術回避/.test(phrase)) add(/回避/, "回避");
   if (domain === "enemy") {
-    add(/物理ダメージ/, "物理被ダメージ");
-    add(/術ダメージ/, "術被ダメージ");
+    const hasCombinedPhysicalArtsDamage = /物理・術ダメージ/.test(phrase);
+    if (hasCombinedPhysicalArtsDamage) {
+      add(/物理・術ダメージ/, "物理・術被ダメージ");
+    } else {
+      add(/物理ダメージ/, "物理被ダメージ");
+      add(/術ダメージ/, "術被ダメージ");
+      add(/被ダメージ|受ける(?:物理|術)?ダメージ|受けるダメージ/, "被ダメージ");
+    }
     add(/元素ダメージ|元素損傷/, "元素被ダメージ");
     add(/確定ダメージ/, "確定被ダメージ");
-    add(/被ダメージ|受けるダメージ/, "被ダメージ");
   } else {
     add(/物理ダメージ|術ダメージ|元素ダメージ|確定ダメージ|与ダメージ/, "与ダメージ");
     add(/被ダメージ|受ける.*ダメージ/, "被ダメージ");
@@ -373,29 +389,35 @@ function metricStatsFromPhrase(phrase, domain) {
   return stats;
 }
 
+function addMetricValueFromContext(text, matchIndex, matchText, value, unit, operatorMetrics, enemyMetrics, lastValueEnd = 0) {
+  const before = text.slice(0, matchIndex);
+  const sentenceStart = Math.max(before.lastIndexOf("。") + 1, before.lastIndexOf("；") + 1, 0);
+  const phraseStart = Math.max(sentenceStart, lastValueEnd);
+  const context = text.slice(sentenceStart, matchIndex);
+  const phrase = text.slice(phraseStart, matchIndex);
+  const operatorTarget = detectOperatorTarget(phrase) || detectOperatorTarget(context);
+  const enemyTarget = detectEnemyTarget(phrase) || detectEnemyTarget(context);
+  const operatorStats = operatorTarget ? metricStatsFromPhrase(phrase, "operator") : [];
+  const enemyStats = enemyTarget ? metricStatsFromPhrase(phrase, "enemy") : [];
+  for (const stat of operatorStats) addMetric(operatorMetrics, operatorTarget, stat, value, unit);
+  for (const stat of enemyStats) addMetric(enemyMetrics, enemyTarget, stat, value, unit);
+  return matchIndex + matchText.length;
+}
+
 function addTextMetrics(text, operatorMetrics, enemyMetrics) {
   const valuePattern = /([+-]\d+(?:\.\d+)?)(%|sp\/s)?/g;
   let lastValueEnd = 0;
   for (const match of text.matchAll(valuePattern)) {
-    const value = Number(match[1]);
-    const unit = match[2] || "";
-    const before = text.slice(0, match.index);
-    const sentenceStart = Math.max(before.lastIndexOf("。") + 1, before.lastIndexOf("；") + 1, 0);
-    const phraseStart = Math.max(sentenceStart, lastValueEnd);
-    const context = text.slice(sentenceStart, match.index);
-    const phrase = text.slice(phraseStart, match.index);
-    const operatorTarget = detectOperatorTarget(context);
-    const enemyTarget = detectEnemyTarget(context);
-    const operatorStats = operatorTarget ? metricStatsFromPhrase(phrase, "operator") : [];
-    const enemyStats = enemyTarget ? metricStatsFromPhrase(phrase, "enemy") : [];
-    for (const stat of operatorStats) addMetric(operatorMetrics, operatorTarget, stat, value, unit);
-    for (const stat of enemyStats) addMetric(enemyMetrics, enemyTarget, stat, value, unit);
-    lastValueEnd = match.index + match[0].length;
+    lastValueEnd = addMetricValueFromContext(text, match.index, match[0], Number(match[1]), match[2] || "", operatorMetrics, enemyMetrics, lastValueEnd);
+  }
+
+  for (const match of text.matchAll(/(\d+(?:\.\d+)?)(%|sp\/s)?(?:低下|減少)/g)) {
+    addMetricValueFromContext(text, match.index, match[0], -Number(match[1]), match[2] || "", operatorMetrics, enemyMetrics);
   }
 
   for (const match of text.matchAll(/HP(?:が|を)?(?:1秒(?:ごと|につき)|毎秒)(?:最大HPの)?(\d+(?:\.\d+)?)(%)?の?HP?を?回復/g)) {
     const context = text.slice(Math.max(0, match.index - 40), match.index + match[0].length);
-    const target = detectOperatorTarget(context) || "全員";
+    const target = detectOperatorTarget(context) || "【味方全員】";
     addMetric(operatorMetrics, target, "HP回復", Number(match[1]), match[2] ? "%/秒" : "/秒");
   }
 }
@@ -405,15 +427,20 @@ function addRecruitmentHope(recruitmentValues, text) {
   const addToRarities = (value, rarities) => {
     for (const rarity of rarities) recruitmentValues[rarity] += value;
   };
-  const pattern = /((?:★([1-6])(?:以上)?(?:の)?)|(?:全ての|全|次回)?)(?:オペレーター)(?:を)?[招召]集(?:もしくは昇進させる際に消費する希望|する際に消費する希望|時の希望消費)([+-]\d+)/g;
-  for (const match of text.matchAll(pattern)) {
-    const prefix = match[1] || "";
-    const rarity = Number(match[2]);
-    const value = Number(match[3]);
-    const rarities = rarity
-      ? (prefix.includes("以上") ? allRarities.filter((item) => item >= rarity) : [rarity])
-      : allRarities;
-    addToRarities(value, rarities);
+  const patterns = [
+    /((?:★([1-6])(?:以上)?(?:の)?)|(?:全ての|全|次回)?)(?:オペレーター)(?:を)?[招召]集(?:もしくは昇進させる際に消費する希望|する際に消費する希望|時の希望消費)([+-]\d+)/g,
+    /((?:★([1-6])(?:以上)?(?:の)?)|(?:全ての|全)?)(?:オペレーター)(?:の)?[招召]集に必要な希望([+-]\d+)/g,
+  ];
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const prefix = match[1] || "";
+      const rarity = Number(match[2]);
+      const value = Number(match[3]);
+      const rarities = rarity
+        ? (prefix.includes("以上") ? allRarities.filter((item) => item >= rarity) : [rarity])
+        : allRarities;
+      addToRarities(value, rarities);
+    }
   }
 }
 
@@ -441,33 +468,54 @@ function formatMetricSummary(metrics) {
   return [...grouped.entries()].map(([target, items]) => `${target} ${items.map(formatMetricValue).join(" / ")}`).join(" / ");
 }
 
-function summarizeRelicEffects() {
-  const runMetrics = new Map();
-  const operatorMetrics = new Map();
-  const enemyMetrics = new Map();
-  const recruitmentValues = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+function createEffectMetricSet() {
+  return {
+    runMetrics: new Map(),
+    operatorMetrics: new Map(),
+    enemyMetrics: new Map(),
+    recruitmentValues: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+  };
+}
 
-  for (const relic of getOwnedRelics()) {
-    const effect = relicEffectForDisplay(relic);
-    for (const match of effect.matchAll(/編成上限\s*([+-]\d+)/g)) addMetric(runMetrics, "ラン", "編成上限", Number(match[1]));
-    for (const match of effect.matchAll(/(?:同時)?配置可能人数\s*([+-]\d+)/g)) addMetric(runMetrics, "ラン", "配置数", Number(match[1]));
-    addRecruitmentHope(recruitmentValues, effect);
-    addTextMetrics(effect, operatorMetrics, enemyMetrics);
-  }
+function addEffectTextToMetrics(metrics, text) {
+  if (!text) return;
+  for (const match of text.matchAll(/編成上限\s*([+-]\d+)/g)) addMetric(metrics.runMetrics, "ラン", "編成上限", Number(match[1]));
+  for (const match of text.matchAll(/(?:同時)?配置可能人数\s*([+-]\d+)/g)) addMetric(metrics.runMetrics, "ラン", "配置数", Number(match[1]));
+  addRecruitmentHope(metrics.recruitmentValues, text);
+  addTextMetrics(text, metrics.operatorMetrics, metrics.enemyMetrics);
+}
 
+function summarizeEffectMetrics(sourceType, metrics) {
   const summaries = [];
-  const runSummary = formatMetricSummary(runMetrics).replace(/^ラン\s*/, "");
-  const recruitmentSummary = formatRecruitmentHope(recruitmentValues);
-  const operatorSummary = formatMetricSummary(operatorMetrics);
-  const enemySummary = formatMetricSummary(enemyMetrics);
-  if (runSummary) summaries.push({ type: "秘宝", title: "編成/配置", effect: runSummary });
-  if (recruitmentSummary) summaries.push({ type: "秘宝", title: "招集希望", effect: recruitmentSummary });
-  if (operatorSummary) summaries.push({ type: "秘宝", title: "オペレーター効果", effect: operatorSummary });
-  if (enemySummary) summaries.push({ type: "秘宝", title: "敵効果", effect: enemySummary });
+  const runSummary = formatMetricSummary(metrics.runMetrics).replace(/^ラン\s*/, "");
+  const recruitmentSummary = formatRecruitmentHope(metrics.recruitmentValues);
+  const operatorSummary = formatMetricSummary(metrics.operatorMetrics);
+  const enemySummary = formatMetricSummary(metrics.enemyMetrics);
+  if (runSummary) summaries.push({ type: sourceType, title: "【編成/配置】", effect: runSummary });
+  if (recruitmentSummary) summaries.push({ type: sourceType, title: "【招集希望】", effect: recruitmentSummary });
+  if (operatorSummary) summaries.push({ type: sourceType, title: "【オペレーター】", effect: operatorSummary });
+  if (enemySummary) summaries.push({ type: sourceType, title: "【敵】", effect: enemySummary });
   return summaries;
 }
 
-function getActiveEffects({ includeRelics = true } = {}) {
+function summarizeRelicEffects() {
+  const metrics = createEffectMetricSet();
+  for (const relic of getOwnedRelics()) addEffectTextToMetrics(metrics, relicEffectForDisplay(relic));
+  return summarizeEffectMetrics("秘宝", metrics);
+}
+
+function getDifficultyEffectTexts(grade = getSelectedDifficultyGrade()) {
+  const condition = grade?.condition || (grade?.fields || []).find((item) => item.key === "condition")?.value;
+  return condition ? [String(condition)] : [];
+}
+
+function summarizeDifficultyEffects(grade = getSelectedDifficultyGrade()) {
+  const metrics = createEffectMetricSet();
+  for (const text of getDifficultyEffectTexts(grade)) addEffectTextToMetrics(metrics, text);
+  return summarizeEffectMetrics("等級", metrics);
+}
+
+function getActiveEffects({ includeRelics = true, includeDifficulty = true } = {}) {
   const effects = [];
   const pushEffect = (type, title, effect) => {
     if (!effect) return;
@@ -479,6 +527,7 @@ function getActiveEffects({ includeRelics = true } = {}) {
   pushEffect("分隊", squad?.name, squad?.effect);
   pushEffect("分隊追加", option?.label || "ランダム効果", option?.effect);
   pushEffect("演目", performance?.name || performance?.title, performance?.effect);
+  if (includeDifficulty) effects.push(...summarizeDifficultyEffects());
   if (includeRelics) effects.push(...summarizeRelicEffects());
   return effects;
 }
@@ -737,7 +786,7 @@ function renderRunTab() {
           ${difficultyGrade ? renderDifficultyFields(difficultyGrade) : `<p class="panel-subtitle">等級は未選択です。</p>`}
           <div class="effect-block">
             <div class="effect-block-title">発動効果</div>
-            ${renderEffectList(activeEffects, "control-effect-list", "分隊・演目・秘宝の発動効果は未設定です。")}
+            ${renderEffectList(activeEffects, "control-effect-list", "分隊・演目・等級・秘宝の発動効果は未設定です。")}
           </div>
         </div>
       </div>
