@@ -56,15 +56,6 @@ function stableOverlayStateJson(value) {
 const normalizeText = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, "");
 const assetUrl = (localPath) => localPath ? `/${String(localPath).replaceAll("\\", "/")}` : "";
 const stars = (rarity) => "★".repeat(Number(rarity) || 0);
-const mizukiCursedRelicIds = new Set([
-  "is3_mizuki_relic_215",
-  "is3_mizuki_relic_216",
-  "is3_mizuki_relic_217",
-  "is3_mizuki_relic_218",
-  "is3_mizuki_relic_219",
-  "is3_mizuki_relic_220",
-  "is3_mizuki_relic_221",
-]);
 const overlayScrollSpeedDefaults = {
   compactRelicScrollSpeed: 9,
   verticalRelicScrollSpeed: 11,
@@ -87,8 +78,18 @@ function buildMaps() {
     relic: new Map(master.relics.map((item) => [item.id, item])),
     operator: new Map(master.operators.map((item) => [item.id, item])),
     performance: new Map((master.performances || []).map((item) => [item.id, item])),
+    selectableEffect: new Map((master.selectableEffects || []).map((item) => [item.id, item])),
     variantGroup: new Map((master.relicEffectVariants || []).map((item) => [item.relicId, item])),
+    effectRuleByRelic: new Map(),
+    effectRuleTags: master.relicEffectRules?.tagGroups || {},
   };
+
+  for (const rule of master.relicEffectRules?.rules || []) {
+    const relicId = rule?.relicId || rule?.source?.relicId;
+    if (!relicId || !isActiveManualRule(rule)) continue;
+    if (!maps.effectRuleByRelic.has(relicId)) maps.effectRuleByRelic.set(relicId, []);
+    maps.effectRuleByRelic.get(relicId).push(rule);
+  }
 }
 
 function getCampaign() {
@@ -114,6 +115,175 @@ function getSelectedPerformance() {
   return id ? maps.performance.get(id) : null;
 }
 
+function asSpecialArray(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (value === null || value === undefined || value === "") return [];
+  return [value];
+}
+
+function asSpecialObject(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  return {};
+}
+
+function getCampaignSelectableEffects(campaignId = getCampaign()?.id, slot = null) {
+  return (master.selectableEffects || [])
+    .filter((item) => item.campaignId === campaignId && (!slot || item.slot === slot))
+    .sort((a, b) => (a.order - b.order) || String(a.name).localeCompare(String(b.name), "ja"));
+}
+
+function getSelectableEffectsForField(field, campaignId = getCampaign()?.id) {
+  return getCampaignSelectableEffects(campaignId, field.effectSlot || field.id);
+}
+
+function getRankedEffectGroups(field, campaignId = getCampaign()?.id) {
+  const grouped = new Map();
+  for (const item of getSelectableEffectsForField(field, campaignId)) {
+    const key = item.parentKey || item.group || item.id;
+    if (!grouped.has(key)) grouped.set(key, { key, parentName: item.parentName || item.name, groupLabel: item.groupLabel || item.slotLabel || "", items: [] });
+    grouped.get(key).items.push(item);
+  }
+  const rankOrder = { lower: 1, upper: 2, formation: 1, expansion: 2, prime: 3, mourou: 1, meiryou: 2, nyuukotsu: 3 };
+  return [...grouped.values()].map((group) => ({
+    ...group,
+    items: group.items.sort((a, b) => (rankOrder[a.variantRank] || 99) - (rankOrder[b.variantRank] || 99) || (a.order - b.order)),
+  })).sort((a, b) => (a.items[0]?.order || 0) - (b.items[0]?.order || 0));
+}
+
+function getSpecialEffectName(id) {
+  const item = maps.selectableEffect.get(id);
+  return item?.name || item?.title || id;
+}
+
+function formatSpecialValue(field, value) {
+  if (field.type === "effectSelect") return value ? getSpecialEffectName(value) : "";
+  if (field.type === "effectMultiSelect") {
+    const names = asSpecialArray(value).map(getSpecialEffectName).filter(Boolean);
+    if (names.length <= 1) return names[0] || "";
+    return `${names.length}件`;
+  }
+  if (field.type === "effectRankedMultiSelect") {
+    const names = Object.values(asSpecialObject(value)).map(getSpecialEffectName).filter(Boolean);
+    if (names.length <= 1) return names[0] || "";
+    return `${names.length}件`;
+  }
+  return value ?? "";
+}
+
+function getSpecialTags(specialFields, special) {
+  return specialFields
+    .map((field) => ({ label: field.label, value: formatSpecialValue(field, special[field.id]) }))
+    .filter((item) => item.value !== null && item.value !== undefined && item.value !== "");
+}
+
+function getSelectedSpecialEffects(campaignId = getCampaign()?.id) {
+  const campaign = maps.campaign.get(campaignId);
+  const special = state.run.special?.[campaignId] || {};
+  const effects = [];
+  for (const field of campaign?.specialFields || []) {
+    if (field.type === "effectSelect") {
+      const item = maps.selectableEffect.get(special[field.id]);
+      if (item) effects.push(item);
+    } else if (field.type === "effectMultiSelect") {
+      for (const id of asSpecialArray(special[field.id])) {
+        const item = maps.selectableEffect.get(id);
+        if (item) effects.push(item);
+      }
+    } else if (field.type === "effectRankedMultiSelect") {
+      for (const id of Object.values(asSpecialObject(special[field.id]))) {
+        const item = maps.selectableEffect.get(id);
+        if (item) effects.push(item);
+      }
+    }
+  }
+  return effects;
+}
+
+function renderSpecialEffectOption(field, item, selected) {
+  const groupPrefix = item.groupLabel && item.groupLabel !== item.slotLabel ? `${item.groupLabel} / ` : "";
+  return `<label class="special-effect-option" title="${html(item.effect)}">
+    <input type="checkbox" value="${html(item.id)}" data-special-effect-toggle="${html(field.id)}" ${selected.has(item.id) ? "checked" : ""} />
+    <span>${html(groupPrefix + item.name)}</span>
+  </label>`;
+}
+
+function renderRankedSpecialEffectRow(field, group, selectedId) {
+  const groupLabel = group.groupLabel ? `<span>${html(group.groupLabel)}</span>` : "";
+  return `<div class="special-effect-ranked-row">
+    <div class="special-effect-ranked-title"><strong>${html(group.parentName)}</strong>${groupLabel}</div>
+    <select data-special-ranked-field="${html(field.id)}" data-effect-parent="${html(group.key)}">
+      <option value="">なし</option>
+      ${group.items.map((item) => {
+        const label = item.variantLabel && !String(item.name).includes(item.variantLabel) ? `${item.variantLabel}: ${item.name}` : item.name;
+        return `<option value="${html(item.id)}" ${item.id === selectedId ? "selected" : ""}>${html(label)}</option>`;
+      }).join("")}
+    </select>
+  </div>`;
+}
+
+function renderSpecialField(field, campaignId, special) {
+  if (field.type === "effectSelect") {
+    const options = getSelectableEffectsForField(field, campaignId);
+    const current = special[field.id] || "";
+    const grouped = new Map();
+    for (const item of options) {
+      const key = item.groupLabel || item.slotLabel || "その他";
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(item);
+    }
+    return `<label>${html(field.label)}
+      <select data-special-field="${html(field.id)}">
+        <option value="">未選択</option>
+        ${[...grouped.entries()].map(([group, items]) => `<optgroup label="${html(group)}">${items.map((item) => `<option value="${html(item.id)}" ${item.id === current ? "selected" : ""}>${html(item.name)}</option>`).join("")}</optgroup>`).join("")}
+      </select>
+    </label>`;
+  }
+  if (field.type === "effectMultiSelect") {
+    const options = getSelectableEffectsForField(field, campaignId);
+    const selected = new Set(asSpecialArray(special[field.id]));
+    return `<div class="field-wide special-effect-group">
+      <div class="special-effect-group-title">${html(field.label)}</div>
+      <div class="special-effect-options">
+        ${options.length ? options.map((item) => renderSpecialEffectOption(field, item, selected)).join("") : `<div class="empty-state">選択肢がありません。</div>`}
+      </div>
+    </div>`;
+  }
+  if (field.type === "effectRankedMultiSelect") {
+    const groups = getRankedEffectGroups(field, campaignId);
+    const selected = asSpecialObject(special[field.id]);
+    return `<div class="field-wide special-effect-group">
+      <div class="special-effect-group-title">${html(field.label)}</div>
+      <div class="special-effect-ranked-list">
+        ${groups.length ? groups.map((group) => renderRankedSpecialEffectRow(field, group, selected[group.key])).join("") : `<div class="empty-state">選択肢がありません。</div>`}
+      </div>
+    </div>`;
+  }
+  return `<label>${html(field.label)}
+    <input type="${field.type === "number" ? "number" : "text"}" value="${html(special[field.id] ?? "")}" data-special-field="${html(field.id)}" />
+  </label>`;
+}
+
+function normalizeSpecialFieldSelections() {
+  for (const campaign of master.campaigns) {
+    const special = state.run.special[campaign.id] ||= {};
+    for (const field of campaign.specialFields || []) {
+      if (field.type === "effectSelect") {
+        const validIds = new Set(getSelectableEffectsForField(field, campaign.id).map((item) => item.id));
+        if (special[field.id] && !validIds.has(special[field.id])) special[field.id] = null;
+      } else if (field.type === "effectMultiSelect") {
+        const validIds = new Set(getSelectableEffectsForField(field, campaign.id).map((item) => item.id));
+        special[field.id] = asSpecialArray(special[field.id]).filter((id) => validIds.has(id));
+      } else if (field.type === "effectRankedMultiSelect") {
+        const validIds = new Set(getSelectableEffectsForField(field, campaign.id).map((item) => item.id));
+        const next = {};
+        for (const [parentKey, id] of Object.entries(asSpecialObject(special[field.id]))) if (validIds.has(id)) next[parentKey] = id;
+        special[field.id] = next;
+      } else if (!(field.id in special)) {
+        special[field.id] = null;
+      }
+    }
+  }
+}
 function performanceGroupLabel(group) {
   if (group === "standard") return "通常";
   if (group === "crimson") return "緋染め";
@@ -151,6 +321,260 @@ function getSelectedSquadOption(squad = getSelectedSquad()) {
 
 function getOwnedRelics() {
   return (state.relics || []).map((id) => maps.relic.get(id)).filter(Boolean);
+}
+
+function mediaUrl(image) {
+  return image?.localPath ? assetUrl(image.localPath) : (image?.sourceUrl || "");
+}
+
+function bossImages(entry) {
+  if (Array.isArray(entry?.images)) return entry.images.filter(Boolean);
+  return entry?.image ? [entry.image] : [];
+}
+
+function getBossConfig(campaignId = getCampaign()?.id) {
+  return maps.campaign.get(campaignId)?.bossFlags || null;
+}
+
+function getBossManualSections(campaignId = getCampaign()?.id) {
+  const cfg = getBossConfig(campaignId);
+  if (!cfg) return [];
+  const sections = Array.isArray(cfg.manualSections) ? [...cfg.manualSections] : [];
+  if (cfg.floor3 && !sections.some((section) => section.field === cfg.floor3.field)) sections.unshift(cfg.floor3);
+  return sections.filter((section) => section?.field);
+}
+
+function getBossSelection(campaignId = getCampaign()?.id) {
+  state.bossSelections ||= {};
+  state.bossSelections[campaignId] ||= {};
+  return state.bossSelections[campaignId];
+}
+
+function bossSectionAllowsMultiple(section) {
+  return section?.mode === "multi" || section?.multiple === true;
+}
+
+function bossSelectionValues(section, campaignId = getCampaign()?.id) {
+  const selection = getBossSelection(campaignId);
+  const current = selection[section.field];
+  if (bossSectionAllowsMultiple(section)) return Array.isArray(current) ? current.filter(Boolean) : (current ? [current] : []);
+  return current ? [current] : [];
+}
+
+function normalizeBossSelections() {
+  state.bossSelections ||= {};
+  for (const campaign of master.campaigns) {
+    state.bossSelections[campaign.id] ||= {};
+    for (const section of getBossManualSections(campaign.id)) {
+      const validIds = new Set((section.options || []).map((item) => item.id));
+      if (bossSectionAllowsMultiple(section)) {
+        const current = state.bossSelections[campaign.id][section.field];
+        const values = Array.isArray(current) ? current : (current ? [current] : []);
+        state.bossSelections[campaign.id][section.field] = values.filter((id) => validIds.has(id));
+      } else {
+        const current = state.bossSelections[campaign.id][section.field] || null;
+        const id = Array.isArray(current) ? current[0] : current;
+        state.bossSelections[campaign.id][section.field] = validIds.has(id) ? id : null;
+      }
+    }
+  }
+}
+
+function getSelectedManualBosses(campaignId = getCampaign()?.id) {
+  return getBossManualSections(campaignId)
+    .flatMap((section) => bossSelectionValues(section, campaignId).map((id) => {
+      const item = (section.options || []).find((option) => option.id === id);
+      return item ? { ...item, type: "manualBoss", label: item.label || section.label || "手動", source: "manual", sectionId: section.id || section.field } : null;
+    }))
+    .filter(Boolean);
+}
+
+function getSelectedFloor3Boss(campaignId = getCampaign()?.id) {
+  return getSelectedManualBosses(campaignId).find((item) => Number(item.floor) === 3 || item.sectionId === "floor3BossId") || null;
+}
+
+function bossRouteTriggerIds(route) {
+  if (Array.isArray(route?.triggerRelicIds)) return route.triggerRelicIds.filter(Boolean);
+  return route?.triggerRelicId ? [route.triggerRelicId] : [];
+}
+
+function bossRouteTriggerRelics(route, owned = null) {
+  return bossRouteTriggerIds(route)
+    .filter((id) => !owned || owned.has(id))
+    .map((id) => maps.relic.get(id))
+    .filter(Boolean);
+}
+
+function bossRouteDisabledIds(route) {
+  if (Array.isArray(route?.disabledByRelicIds)) return route.disabledByRelicIds.filter(Boolean);
+  return route?.disabledByRelicId ? [route.disabledByRelicId] : [];
+}
+
+function isBossRouteActive(route, owned) {
+  if (bossRouteDisabledIds(route).some((id) => owned.has(id))) return false;
+  const ids = bossRouteTriggerIds(route);
+  if (!ids.length) return false;
+  if (route.triggerMode === "all") return ids.every((id) => owned.has(id));
+  return ids.some((id) => owned.has(id));
+}
+
+function selectedBossReplacementVariant(rule, entry) {
+  const variants = Array.isArray(rule?.variants) ? rule.variants : [];
+  return variants.find((variant) => {
+    const selectedIds = Array.isArray(variant?.selectedIds) ? variant.selectedIds : [];
+    return !selectedIds.length || selectedIds.includes(entry.id);
+  }) || rule;
+}
+
+function applyManualBossReplacements(entries, cfg, owned) {
+  const rules = Array.isArray(cfg?.manualReplacementRoutes) ? cfg.manualReplacementRoutes : [];
+  if (!rules.length) return entries;
+  return entries.map((entry) => {
+    const rule = rules.find((candidate) => {
+      if (!isBossRouteActive(candidate, owned)) return false;
+      const sectionIds = Array.isArray(candidate.sectionIds) ? candidate.sectionIds : (candidate.sectionId ? [candidate.sectionId] : []);
+      const selectedIds = Array.isArray(candidate.selectedIds) ? candidate.selectedIds : [];
+      if (sectionIds.length && !sectionIds.includes(entry.sectionId)) return false;
+      return !selectedIds.length || selectedIds.includes(entry.id);
+    });
+    if (!rule) return entry;
+    const variant = selectedBossReplacementVariant(rule, entry);
+    const triggerRelics = bossRouteTriggerRelics(rule, owned);
+    return {
+      ...entry,
+      ...variant,
+      id: variant.id || (entry.id + "__" + rule.id),
+      source: "relic",
+      type: "manualBossReplacement",
+      originalBoss: entry,
+      triggerRelics,
+      triggerRelic: triggerRelics[0] || null,
+      requiredNote: variant.requiredNote || rule.requiredNote || entry.requiredNote || "",
+    };
+  });
+}
+function uniqueById(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item?.id || item?.name;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function combineBossRouteGroups(routes) {
+  const grouped = new Map();
+  const output = [];
+  for (const route of routes) {
+    const groupId = route.combineGroupId || route.combineGroup;
+    if (!groupId) {
+      output.push(route);
+      continue;
+    }
+    if (!grouped.has(groupId)) {
+      const bucket = [];
+      grouped.set(groupId, bucket);
+      output.push(bucket);
+    }
+    grouped.get(groupId).push(route);
+  }
+  return output.flatMap((item) => {
+    if (!Array.isArray(item)) return [item];
+    if (item.length <= 1) return item;
+    const [first] = item;
+    const names = item
+      .map((route) => route.bossName || route.title || route.stageName)
+      .filter(Boolean);
+    const notes = [...new Set(item.map((route) => route.requiredNote || route.note).filter(Boolean))];
+    const triggerRelics = uniqueById(item.flatMap((route) => route.triggerRelics || (route.triggerRelic ? [route.triggerRelic] : [])));
+    return [{
+      ...first,
+      id: item.map((route) => route.id).join("__"),
+      bossName: names.join("+"),
+      title: names.join("+"),
+      requiredNote: notes.join(" / "),
+      triggerRelics,
+      triggerRelic: triggerRelics[0] || null,
+      combinedRoutes: item,
+    }];
+  });
+}
+
+function bossSortValue(entry) {
+  const sortOrder = Number(entry.sortOrder);
+  if (Number.isFinite(sortOrder)) return sortOrder;
+  const floor = Number(entry.floor);
+  if (Number.isFinite(floor)) return floor;
+  return 99;
+}
+
+function bossFloorLabel(entry) {
+  if (entry.floorLabel) return entry.floorLabel;
+  if (entry.floor) return `${entry.floor}層`;
+  return entry.label || "手動";
+}
+
+function getBossFlagEntries(campaignId = getCampaign()?.id) {
+  const cfg = getBossConfig(campaignId);
+  if (!cfg) return (state.bossFlags || []).map((flag, index) => ({ id: `manual_${index}`, type: "manual", label: "手動", title: flag, stageName: "" }));
+  const owned = new Set(state.relics || []);
+  const entries = applyManualBossReplacements([...getSelectedManualBosses(campaignId)], cfg, owned);
+  const activeRoutes = combineBossRouteGroups((cfg.relicRoutes || [])
+    .filter((route) => isBossRouteActive(route, owned))
+    .map((route) => {
+      const triggerRelics = bossRouteTriggerRelics(route, owned);
+      return { ...route, type: "relicBoss", source: "relic", triggerRelics, triggerRelic: triggerRelics[0] || null };
+    }));
+  for (const boss of cfg.defaultBosses || []) {
+    const replaced = activeRoutes.some((route) => Number(route.replacesDefaultFloor) === Number(boss.floor));
+    if (!replaced) entries.push({ ...boss, type: "defaultBoss", source: "default" });
+  }
+  entries.push(...activeRoutes);
+  for (const [index, flag] of (state.bossFlags || []).entries()) {
+    entries.push({ id: `manual_${index}`, type: "manual", label: "手動メモ", title: flag, stageName: "" });
+  }
+  return entries.sort((a, b) => (bossSortValue(a) - bossSortValue(b)) || String(a.id).localeCompare(String(b.id), "ja"));
+}
+function renderBossImages(entry) {
+  const images = bossImages(entry);
+  if (!images.length) return `<div class="boss-card-fallback">${html(String(entry.floor || "F").slice(0, 2))}</div>`;
+  return `<div class="boss-icon-stack">${images.map((image) => `<img src="${html(mediaUrl(image))}" alt="" />`).join("")}</div>`;
+}
+
+function bossDisplayTitle(entry) {
+  if (entry.primaryDisplay === "stage" && entry.stageName) return entry.stageName;
+  return entry.bossName || entry.title || entry.stageName || "未設定";
+}
+
+function bossDisplaySubline(entry, title = bossDisplayTitle(entry)) {
+  const subline = entry.primaryDisplay === "stage" ? (entry.bossName || entry.title || "") : (entry.stageName || "");
+  return subline && subline !== title ? subline : "";
+}
+
+function renderBossCard(entry, className = "") {
+  const title = bossDisplayTitle(entry);
+  const subline = bossDisplaySubline(entry, title);
+  const floor = bossFloorLabel(entry);
+  const triggerRelics = entry.triggerRelics?.length ? entry.triggerRelics : (entry.triggerRelic ? [entry.triggerRelic] : []);
+  const trigger = triggerRelics.length ? `<div class="boss-trigger">${triggerRelics.map((relic) => `<img src="${html(mediaUrl(relic.image))}" alt="" />`).join("")}<span>${html(triggerRelics.map((relic) => relic.name).join(" / "))}</span></div>` : "";
+  const note = entry.note || entry.requiredNote || "";
+  return `<div class="boss-card ${className}" title="${html(entry.effect || note || entry.stageName || title)}">
+    ${renderBossImages(entry)}
+    <div class="boss-card-main">
+      <div class="boss-card-meta"><span>${html(floor)}</span><span>${html(entry.label || "Boss")}</span></div>
+      <div class="boss-card-title">${html(title)}</div>
+      ${subline ? `<div class="boss-card-stage">${html(subline)}</div>` : ""}
+      ${note ? `<div class="boss-card-stage">${html(note)}</div>` : ""}
+      ${trigger}
+    </div>
+  </div>`;
+}
+function renderBossChip(entry) {
+  const title = bossDisplayTitle(entry);
+  const subline = bossDisplaySubline(entry, title);
+  const img = bossImages(entry)[0];
+  return `<span class="boss-chip" title="${html(subline || entry.stageName || title)}">${img ? `<img src="${html(mediaUrl(img))}" alt="" />` : ""}<span>${html(bossFloorLabel(entry))}</span><strong>${html(title)}</strong></span>`;
 }
 
 function getRecruitedOperators() {
@@ -453,6 +877,52 @@ function addRecruitmentHope(recruitmentValues, text) {
   }
 }
 
+function japaneseCountToNumber(value) {
+  const counts = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
+  if (Object.prototype.hasOwnProperty.call(counts, value)) return counts[value];
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function hasPerCountCondition(text, index) {
+  return /につき|ごとに|度に/.test(text.slice(Math.max(0, index - 28), index));
+}
+
+function addEffectNote(metrics, title, effect) {
+  if (!effect) return;
+  const key = `${title}|${effect}`;
+  if (metrics.effectNotes.some((item) => item.key === key)) return;
+  metrics.effectNotes.push({ key, title, effect });
+}
+
+function addBattleVictoryMetrics(metrics, rawText) {
+  const text = String(rawText || "").replaceAll("戦戦闘", "戦闘");
+  const isLimitedOnly = /でのみ有効/.test(text);
+  for (const match of text.matchAll(/戦闘勝利報酬の源石錐獲得量([+-]\d+(?:\.\d+)?)%/g)) {
+    if (!isLimitedOnly && !hasPerCountCondition(text, match.index)) addMetric(metrics.battleVictoryMetrics, "戦闘勝利時", "源石錐獲得量", Number(match[1]), "%");
+  }
+  for (const match of text.matchAll(/戦闘勝利時の指揮経験値の獲得量([+-]\d+(?:\.\d+)?)%/g)) {
+    if (!isLimitedOnly && !hasPerCountCondition(text, match.index)) addMetric(metrics.battleVictoryMetrics, "戦闘勝利時", "指揮経験値", Number(match[1]), "%");
+  }
+  for (const match of text.matchAll(/(?:戦闘勝利後|戦闘終了後)[、に\s]*(?:獲得できる)?(招集券|報酬|秘宝)の選択肢が([一二三四五六\d]+)つ増える/g)) {
+    const stat = match[1] === "招集券" ? "招集券選択肢" : `${match[1]}選択肢`;
+    addMetric(metrics.battleVictoryMetrics, "戦闘勝利時", stat, japaneseCountToNumber(match[2]));
+  }
+  for (const match of text.matchAll(/行商人の店で購入、あるいは戦闘(?:勝利報酬として出現する|でドロップする)招集券(【[^】]+】)が上級人員派遣書になる/g)) {
+    addEffectNote(metrics, "【戦闘勝利時/商店】", `${match[1]}招集券が上級人員派遣書`);
+  }
+}
+
+function addShopMetrics(metrics, rawText) {
+  const text = String(rawText || "");
+  for (const match of text.matchAll(/行商人の店の商品の値段([+-]\d+(?:\.\d+)?)%/g)) {
+    addMetric(metrics.shopMetrics, "商店", "商品価格", Number(match[1]), "%");
+  }
+  for (const match of text.matchAll(/(?:怪しい旅商人|行商人)[^。]*?消費する源石錐([+-]\d+(?:\.\d+)?)%/g)) {
+    addMetric(metrics.shopMetrics, "商店", "源石錐消費", Number(match[1]), "%");
+  }
+}
+
 function formatRecruitmentHope(recruitmentValues) {
   const parts = [];
   for (let rarity = 1; rarity <= 6; rarity++) {
@@ -480,9 +950,13 @@ function formatMetricSummary(metrics) {
 function createEffectMetricSet() {
   return {
     runMetrics: new Map(),
+    battleVictoryMetrics: new Map(),
+    shopMetrics: new Map(),
     operatorMetrics: new Map(),
     enemyMetrics: new Map(),
     recruitmentValues: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+    effectNotes: [],
+    uniqueEffectKeys: new Set(),
   };
 }
 
@@ -491,24 +965,139 @@ function addEffectTextToMetrics(metrics, text) {
   for (const match of text.matchAll(/編成上限\s*([+-]\d+)/g)) addMetric(metrics.runMetrics, "ラン", "編成上限", Number(match[1]));
   for (const match of text.matchAll(/(?:同時)?配置可能人数\s*([+-]\d+)/g)) addMetric(metrics.runMetrics, "ラン", "配置数", Number(match[1]));
   addRecruitmentHope(metrics.recruitmentValues, text);
+  addBattleVictoryMetrics(metrics, text);
+  addShopMetrics(metrics, text);
   addTextMetrics(text, metrics.operatorMetrics, metrics.enemyMetrics);
 }
 
-function addSpecialRelicMetrics(metrics, relic, ownedRelics) {
-  if (relic.id !== "is3_mizuki_relic_254") return false;
-  const cursedRelicCount = ownedRelics.filter((item) => mizukiCursedRelicIds.has(item.id)).length;
-  addMetric(metrics.operatorMetrics, "【味方全員】", "攻撃速度", cursedRelicCount * 35);
-  return true;
+function isActiveManualRule(rule) {
+  const status = normalizeText(rule?.status);
+  return ["approved", "implemented", "verified", "実装済み", "承認済み", "検証済み"].includes(status);
 }
 
+function getManualRelicRules(relicId) {
+  return maps?.effectRuleByRelic?.get(relicId) || [];
+}
+
+function ownedRelicTagCount(tagKey, ownedRelics) {
+  const group = maps?.effectRuleTags?.[tagKey];
+  const ids = new Set(group?.relicIds || []);
+  if (!ids.size) return 0;
+  return ownedRelics.filter((item) => ids.has(item.id)).length;
+}
+
+function ownedRelicCount(targetIds, ownedRelics) {
+  const ids = new Set((Array.isArray(targetIds) ? targetIds : [targetIds]).filter(Boolean));
+  if (!ids.size) return 0;
+  return ownedRelics.filter((item) => ids.has(item.id)).length;
+}
+
+function manualRuleConditionCount(rule, ownedRelics) {
+  const condition = rule?.condition || null;
+  if (!condition?.kind) return 1;
+  if (condition.kind === "owned_relic_tag_count") return ownedRelicTagCount(condition.target, ownedRelics);
+  if (condition.kind === "owned_relic_count") return ownedRelicCount(condition.relicIds || condition.target, ownedRelics);
+  return 0;
+}
+
+function manualRuleMultiplier(rule, effect, ownedRelics) {
+  const count = manualRuleConditionCount(rule, ownedRelics);
+  if (effect?.stackMode === "per_count" || rule?.condition?.countMode === "per_owned_count" || rule?.type === "owned_count") return count;
+  return count > 0 ? 1 : 0;
+}
+
+function manualRecruitmentRarities(effect) {
+  const all = [1, 2, 3, 4, 5, 6];
+  if (Array.isArray(effect?.rarities) && effect.rarities.length) return effect.rarities.map(Number).filter((item) => all.includes(item));
+  const rarity = Number(effect?.rarity);
+  if (all.includes(rarity)) return [rarity];
+  const min = Number(effect?.minRarity);
+  const max = Number(effect?.maxRarity);
+  return all.filter((item) => (!Number.isFinite(min) || item >= min) && (!Number.isFinite(max) || item <= max));
+}
+
+function normalizeManualStat(stat) {
+  if (stat === "同時配置可能人数") return "配置数";
+  if (["召集希望", "召集の希望", "招集の希望"].includes(stat)) return "招集希望";
+  return stat;
+}
+
+function addManualRecruitmentMetric(metrics, effect, value) {
+  for (const rarity of manualRecruitmentRarities(effect)) metrics.recruitmentValues[rarity] += value;
+}
+
+function addManualRuleEffect(metrics, effect, multiplier) {
+  if (!effect || !multiplier) return;
+  const domain = effect.domain || "";
+  if (domain === "note") {
+    const noteText = effect.text || effect.effect || effect.note || "";
+    if (noteText) metrics.effectNotes.push({ title: effect.title || "【特殊】", effect: noteText });
+    return;
+  }
+
+  const stat = normalizeManualStat(String(effect.stat || ""));
+  const value = Number(effect.value) * multiplier;
+  if (!stat || !Number.isFinite(value)) return;
+  const target = effect.target || "【味方全員】";
+  const unit = effect.unit || "";
+  const stackMode = effect.stackMode || "add";
+  if (["unique", "non_stack", "nonStack", "once"].includes(stackMode)) {
+    const stackKey = effect.stackKey || [target, stat, unit, value].join("|");
+    if (metrics.uniqueEffectKeys.has(stackKey)) return;
+    metrics.uniqueEffectKeys.add(stackKey);
+  }
+
+  if (domain === "run" || target === "ラン" || ["編成上限", "配置数"].includes(stat)) {
+    addMetric(metrics.runMetrics, "ラン", stat, value, unit);
+    return;
+  }
+
+  if (domain === "after_battle" || target === "【戦闘勝利時】") {
+    addMetric(metrics.battleVictoryMetrics, "戦闘勝利時", stat, value, unit);
+    return;
+  }
+
+  if (domain === "shop" || target === "【商店】") {
+    addMetric(metrics.shopMetrics, "商店", stat, value, unit);
+    return;
+  }
+
+  if (domain === "recruitment" || stat === "招集希望") {
+    addManualRecruitmentMetric(metrics, effect, value);
+    return;
+  }
+
+  if (domain === "enemy" || /^【敵/.test(target) || /^敵/.test(target)) {
+    addMetric(metrics.enemyMetrics, target, stat, value, unit);
+    return;
+  }
+
+  addMetric(metrics.operatorMetrics, target, stat, value, unit);
+}
+
+function addManualRelicRuleMetrics(metrics, relic, ownedRelics) {
+  const rules = getManualRelicRules(relic.id);
+  if (!rules.length) return false;
+  let suppressAuto = false;
+  for (const rule of rules) {
+    suppressAuto = suppressAuto || rule.suppressAuto === true;
+    for (const effect of rule.effects || []) addManualRuleEffect(metrics, effect, manualRuleMultiplier(rule, effect, ownedRelics));
+  }
+  return suppressAuto;
+}
 function summarizeEffectMetrics(sourceType, metrics) {
   const summaries = [];
   const runSummary = formatMetricSummary(metrics.runMetrics).replace(/^ラン\s*/, "");
   const recruitmentSummary = formatRecruitmentHope(metrics.recruitmentValues);
+  const battleVictorySummary = formatMetricSummary(metrics.battleVictoryMetrics).replace(/^戦闘勝利時\s*/, "");
+  const shopSummary = formatMetricSummary(metrics.shopMetrics).replace(/^商店\s*/, "");
   const operatorSummary = formatMetricSummary(metrics.operatorMetrics);
   const enemySummary = formatMetricSummary(metrics.enemyMetrics);
   if (runSummary) summaries.push({ type: sourceType, title: "【編成/配置】", effect: runSummary });
   if (recruitmentSummary) summaries.push({ type: sourceType, title: "【招集希望】", effect: recruitmentSummary });
+  if (battleVictorySummary) summaries.push({ type: sourceType, title: "【戦闘勝利時】", effect: battleVictorySummary });
+  if (shopSummary) summaries.push({ type: sourceType, title: "【商店】", effect: shopSummary });
+  for (const note of metrics.effectNotes) summaries.push({ type: sourceType, title: note.title, effect: note.effect });
   if (operatorSummary) summaries.push({ type: sourceType, title: "【オペレーター】", effect: operatorSummary });
   if (enemySummary) summaries.push({ type: sourceType, title: "【敵】", effect: enemySummary });
   return summaries;
@@ -518,8 +1107,8 @@ function summarizeRelicEffects() {
   const metrics = createEffectMetricSet();
   const ownedRelics = getOwnedRelics();
   for (const relic of ownedRelics) {
-    if (addSpecialRelicMetrics(metrics, relic, ownedRelics)) continue;
-    addEffectTextToMetrics(metrics, relicEffectForDisplay(relic));
+    const suppressAuto = addManualRelicRuleMetrics(metrics, relic, ownedRelics);
+    if (!suppressAuto) addEffectTextToMetrics(metrics, relicEffectForDisplay(relic));
   }
   return summarizeEffectMetrics("秘宝", metrics);
 }
@@ -547,6 +1136,7 @@ function getActiveEffects({ includeRelics = true, includeDifficulty = true } = {
   pushEffect("分隊", squad?.name, squad?.effect);
   pushEffect("分隊追加", option?.label || "ランダム効果", option?.effect);
   pushEffect("演目", performance?.name || performance?.title, performance?.effect);
+  for (const effect of getSelectedSpecialEffects()) pushEffect(effect.slotLabel || "特殊", effect.name || effect.title, effect.effect);
   if (includeDifficulty) effects.push(...summarizeDifficultyEffects());
   if (includeRelics) effects.push(...summarizeRelicEffects());
   return effects;
@@ -570,9 +1160,11 @@ function ensureStateShape() {
   state.run.special ||= {};
   for (const campaign of master.campaigns) state.run.special[campaign.id] ||= {};
   if (state.run.performanceId && !getCampaignPerformances(state.run.campaignId).some((item) => item.id === state.run.performanceId)) state.run.performanceId = null;
+  normalizeSpecialFieldSelections();
   state.relics = Array.isArray(state.relics) ? state.relics : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
+  normalizeBossSelections();
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
   state.preferences ||= {};
   state.preferences.showUnreleasedOperators ??= false;
@@ -744,6 +1336,8 @@ function renderRunTab() {
   const activeEffects = getActiveEffects();
   const specialFields = campaign.specialFields || [];
   const special = state.run.special?.[campaign.id] || {};
+  const specialTags = getSpecialTags(specialFields, special);
+  const bossEntries = getBossFlagEntries(campaign.id);
   const tierCfg = master.difficultyTiers?.[campaign.id];
   const difficultyGrade = getSelectedDifficultyGrade();
   return `
@@ -779,9 +1373,7 @@ function renderRunTab() {
       <div class="panel half">
         <div class="panel-header"><h2 class="panel-title">特殊表示</h2><span class="panel-subtitle">シリーズ固有値</span></div>
         <div class="panel-body form-grid two">
-          ${specialFields.length ? specialFields.map((field) => `<label>${html(field.label)}
-            <input type="${field.type === "number" ? "number" : "text"}" value="${html(special[field.id] ?? "")}" data-special-field="${field.id}" />
-          </label>`).join("") : `<div class="empty-state field-wide">この統合戦略に特殊表示はありません。</div>`}
+          ${specialFields.length ? specialFields.map((field) => renderSpecialField(field, campaign.id, special)).join("") : `<div class="empty-state field-wide">この統合戦略に特殊表示はありません。</div>`}
         </div>
       </div>
       <div class="panel">
@@ -796,10 +1388,11 @@ function renderRunTab() {
           <div class="tag-list">
             <span class="tag accent">秘宝 ${state.relics.length}</span>
             <span class="tag info">招集 ${state.operators.length}</span>
-            <span class="tag">ボスフラグ ${state.bossFlags.length}</span>
+            <span class="tag">ボス ${bossEntries.length}</span>
             <span class="tag">等級 ${html(difficultyGrade?.label || "未選択")}</span>
             <span class="tag">難易度ティア ${html(tierCfg ? getDifficultyTierLabel() : "対象外")}</span>
             ${performances.length ? `<span class="tag">演目 ${html(selectedPerformance?.title || "未選択")}</span>` : ""}
+            ${specialTags.map((item) => `<span class="tag info">${html(item.label)} ${html(item.value)}</span>`).join("")}
           </div>
           ${selectedSquad ? `<p><strong>${html(selectedSquad.name)}</strong><br><span class="panel-subtitle">${html(selectedSquad.effect)}</span></p>` : `<p class="panel-subtitle">分隊は未選択です。</p>`}
           ${selectedPerformance ? `<p><strong>${html(selectedPerformance.name)}</strong><br><span class="panel-subtitle">${html(selectedPerformance.effect)}</span></p>` : ""}
@@ -936,14 +1529,61 @@ function renderOperatorControlRow(item, active) {
   `;
 }
 
+function renderBossToggleSection(section, campaignId) {
+  const selected = new Set(bossSelectionValues(section, campaignId));
+  const helper = section.helper ? '<small>' + html(section.helper) + '</small>' : "";
+  const options = (section.options || []).map((item) => {
+    const checked = selected.has(item.id);
+    const title = bossDisplayTitle(item);
+    const subline = bossDisplaySubline(item, title);
+    return '<label class="boss-toggle-option ' + (checked ? "selected" : "") + '">' +
+      '<input type="checkbox" value="' + html(item.id) + '" data-boss-toggle="' + html(section.field) + '" ' + (checked ? "checked" : "") + ' />' +
+      '<span><strong>' + html(title) + '</strong><em>' + html([item.label, subline].filter(Boolean).join(" / ")) + '</em></span>' +
+    '</label>';
+  }).join("");
+  return '<div class="boss-toggle-section field-wide">' +
+    '<div class="boss-toggle-title"><span>' + html(section.label || "ボスフラグ") + '</span>' + helper + '</div>' +
+    '<div class="boss-toggle-grid">' + options + '</div>' +
+  '</div>';
+}
+
+function renderBossSelector(section, campaignId) {
+  if (bossSectionAllowsMultiple(section)) return renderBossToggleSection(section, campaignId);
+  const value = getBossSelection(campaignId)[section.field] || "";
+  const options = (section.options || []).map((item) => {
+    const prefix = item.optionLabel || item.group || item.label || "";
+    const name = item.stageName && item.bossName ? item.stageName + " / " + item.bossName : (item.stageName || item.bossName || item.title);
+    const text = [prefix, name].filter(Boolean).join(" - ");
+    return '<option value="' + html(item.id) + '" ' + (item.id === value ? "selected" : "") + '>' + html(text) + '</option>';
+  }).join("");
+  return '<label>' + html(section.label || "ボス") +
+    '<select data-boss-select="' + html(section.field) + '">' +
+      '<option value="">未確認</option>' + options +
+    '</select>' +
+  '</label>';
+}
 function renderFlagsTab() {
+  const campaign = getCampaign();
   const pending = state.tournament?.pendingState;
+  const entries = getBossFlagEntries(campaign.id);
+  const sections = getBossManualSections(campaign.id);
+  const bossConfig = getBossConfig(campaign.id);
+  const bossFlagSubtitle = bossConfig?.derivedFromRelics === false ? "手動切り替え / ランダム・追加ルートを統合表示" : "秘宝所持から自動判定 / ランダム・異相は手動選択";
   return `
     <section class="panel-grid">
+      <div class="panel">
+        <div class="panel-header"><h2 class="panel-title">ボスフラグ</h2><span class="panel-subtitle">${html(bossFlagSubtitle)}</span></div>
+        <div class="panel-body form-grid two">
+          ${sections.length ? sections.map((section) => renderBossSelector(section, campaign.id)).join("") : `<div class="empty-state field-wide">この統合戦略のボスフラグ定義は未登録です。</div>`}
+          <div class="field-wide boss-card-grid">
+            ${entries.length ? entries.map((entry) => renderBossCard(entry)).join("") : `<div class="empty-state">ボスフラグは未設定です。</div>`}
+          </div>
+        </div>
+      </div>
       <div class="panel half">
-        <div class="panel-header"><h2 class="panel-title">ボスフラグ</h2><span class="panel-subtitle">秘宝連動は後続実装、MVPは手動</span></div>
+        <div class="panel-header"><h2 class="panel-title">手動メモ</h2><span class="panel-subtitle">大会・例外用の自由入力</span></div>
         <div class="panel-body form-grid one">
-          <label>追加するフラグ<input value="${html(ui.bossDraft)}" data-ui="bossDraft" placeholder="例: 飛行ユニット系ボス条件" /></label>
+          <label>追加するメモ<input value="${html(ui.bossDraft)}" data-ui="bossDraft" placeholder="例: 3層で緊急、特殊ルールなど" /></label>
           <button class="primary" data-action="add-boss-flag">追加</button>
           <div class="tag-list">
             ${(state.bossFlags || []).map((flag, index) => `<span class="tag accent">${html(flag)} <button class="icon ghost" data-action="remove-boss-flag" data-index="${index}" title="削除">x</button></span>`).join("") || `<span class="panel-subtitle">未設定</span>`}
@@ -965,7 +1605,6 @@ function renderFlagsTab() {
     </section>
   `;
 }
-
 function renderJsonTab() {
   const exportJson = JSON.stringify(state, null, 2);
   return `
@@ -989,10 +1628,8 @@ function renderJsonTab() {
 }
 
 function renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade }) {
-  const specialTags = specialFields
-    .map((field) => ({ label: field.label, value: special[field.id] }))
-    .filter((item) => item.value !== null && item.value !== undefined && item.value !== "");
-  const flags = state.bossFlags || [];
+  const specialTags = getSpecialTags(specialFields, special);
+  const flags = getBossFlagEntries(campaign.id);
   return `
     <section class="compact-overlay-shell">
       <header class="compact-head">
@@ -1001,7 +1638,7 @@ function renderOverlayCompact({ campaign, squad, option, performance, activeEffe
           <div class="compact-title">${html(campaign.title)}</div>
         </div>
         <div class="compact-counts">
-          <span>秘宝 ${relics.length}</span><span>招集 ${operators.length}</span><span>Flag ${flags.length}</span>
+          <span>秘宝 ${relics.length}</span><span>招集 ${operators.length}</span><span>Boss ${flags.length}</span>
         </div>
       </header>
       <div class="compact-row"><span>分隊</span><strong>${html(squad?.name || "未選択")}</strong></div>
@@ -1033,16 +1670,14 @@ function renderOverlayCompact({ campaign, squad, option, performance, activeEffe
           ${operators.length > 8 ? `<span class="compact-more">+${operators.length - 8}</span>` : ""}
         </div>
       </section>
-      ${flags.length ? `<section class="compact-section"><div class="compact-section-head"><span>Boss flags</span><span>${flags.length}</span></div><div class="compact-chip-row">${flags.slice(0, 4).map((flag) => `<span class="tag accent">${html(flag)}</span>`).join("")}${flags.length > 4 ? `<span class="compact-more">+${flags.length - 4}</span>` : ""}</div></section>` : ""}
+      ${flags.length ? `<section class="compact-section"><div class="compact-section-head"><span>Boss</span><span>${flags.length}</span></div><div class="compact-boss-list">${flags.slice(0, 4).map((flag) => renderBossChip(flag)).join("")}${flags.length > 4 ? `<span class="compact-more">+${flags.length - 4}</span>` : ""}</div></section>` : ""}
     </section>
   `;
 }
 
 function renderOverlayDense({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, orientation }) {
-  const specialTags = specialFields
-    .map((field) => ({ label: field.label, value: special[field.id] }))
-    .filter((item) => item.value !== null && item.value !== undefined && item.value !== "");
-  const flags = state.bossFlags || [];
+  const specialTags = getSpecialTags(specialFields, special);
+  const flags = getBossFlagEntries(campaign.id);
   return `
     <section class="stream-overlay-shell stream-${orientation}">
       <header class="stream-head">
@@ -1051,7 +1686,7 @@ function renderOverlayDense({ campaign, squad, option, performance, activeEffect
           <div class="stream-title">${html(campaign.title)}</div>
         </div>
         <div class="stream-counts">
-          <span>秘宝 ${relics.length}</span><span>招集 ${operators.length}</span><span>Flag ${flags.length}</span>
+          <span>秘宝 ${relics.length}</span><span>招集 ${operators.length}</span><span>Boss ${flags.length}</span>
         </div>
       </header>
       <section class="stream-run">
@@ -1062,7 +1697,7 @@ function renderOverlayDense({ campaign, squad, option, performance, activeEffect
           <span class="tag accent">${html(difficultyGrade?.label || "等級未選択")}</span>
           <span class="tag">Tier ${html(getDifficultyTierLabel())}</span>
           ${specialTags.map((item) => `<span class="tag info">${html(item.label)} ${html(item.value)}</span>`).join("")}
-          ${flags.map((flag) => `<span class="tag accent">${html(flag)}</span>`).join("")}
+          ${flags.map((flag) => renderBossChip(flag)).join("")}
         </div>
         ${activeEffects.length ? `<div class="stream-scroll stream-effect-scroll" data-autoscroll data-scroll-speed="${getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
           ${renderEffectList(activeEffects, "stream-effect-list", "発動効果なし")}
@@ -1178,7 +1813,7 @@ function renderOverlay() {
         <div class="overlay-card-body overlay-kpis">
           <div class="kpi"><div class="kpi-label">等級</div><div class="kpi-value">${html(difficultyGrade?.label || (state.run.difficulty ?? "-"))}</div></div>
           <div class="kpi"><div class="kpi-label">Tier</div><div class="kpi-value">${html(getDifficultyTierLabel())}</div></div>
-          ${specialFields.map((field) => `<div class="kpi"><div class="kpi-label">${html(field.label)}</div><div class="kpi-value">${html(special[field.id] ?? "-")}</div></div>`).join("")}
+          ${getSpecialTags(specialFields, special).map((item) => `<div class="kpi"><div class="kpi-label">${html(item.label)}</div><div class="kpi-value">${html(item.value || "-")}</div></div>`).join("")}
           ${difficultyGrade ? renderDifficultyFields(difficultyGrade, "overlay") : ""}
         </div>
       </section>
@@ -1217,9 +1852,9 @@ function renderOverlay() {
       </div>
       <aside class="overlay-right">
         <section class="overlay-card">
-          <div class="overlay-card-header"><span>Boss flags</span><span>${state.bossFlags.length}</span></div>
+          <div class="overlay-card-header"><span>Boss</span><span>${getBossFlagEntries().length}</span></div>
           <div class="overlay-card-body boss-list">
-            ${state.bossFlags.length ? state.bossFlags.map((flag) => `<span class="tag accent">${html(flag)}</span>`).join("") : `<span class="panel-subtitle">未設定</span>`}
+            ${getBossFlagEntries().length ? getBossFlagEntries().map((flag) => renderBossCard(flag, "compact")).join("") : `<span class="panel-subtitle">未設定</span>`}
           </div>
         </section>
         <section class="overlay-card">
@@ -1358,6 +1993,8 @@ app.addEventListener("change", (event) => {
         s.run.difficultyTierId = null;
         s.relics = [];
         s.bossFlags = [];
+        s.bossSelections ||= {};
+        s.bossSelections[target.value] ||= {};
       } else if (field === "difficulty") {
         s.run.difficulty = target.value === "" ? null : Number(target.value);
       } else if (field === "squadId") {
@@ -1381,12 +2018,55 @@ app.addEventListener("change", (event) => {
       }
     });
   }
+  const bossSelect = target.dataset.bossSelect;
+  if (bossSelect) {
+    mutate((s) => {
+      const campaignId = getCampaign().id;
+      s.bossSelections ||= {};
+      s.bossSelections[campaignId] ||= {};
+      s.bossSelections[campaignId][bossSelect] = target.value || null;
+    });
+  }
+  const bossToggle = target.dataset.bossToggle;
+  if (bossToggle) {
+    mutate((s) => {
+      const campaignId = getCampaign().id;
+      s.bossSelections ||= {};
+      s.bossSelections[campaignId] ||= {};
+      const current = s.bossSelections[campaignId][bossToggle];
+      const next = new Set(Array.isArray(current) ? current : (current ? [current] : []));
+      if (target.checked) next.add(target.value);
+      else next.delete(target.value);
+      s.bossSelections[campaignId][bossToggle] = [...next];
+    });
+  }
   const specialField = target.dataset.specialField;
   if (specialField) {
     mutate((s) => {
       const campaignId = getCampaign().id;
       s.run.special[campaignId] ||= {};
       s.run.special[campaignId][specialField] = target.value === "" ? null : target.value;
+    });
+  }
+  const specialEffectToggle = target.dataset.specialEffectToggle;
+  if (specialEffectToggle) {
+    mutate((s) => {
+      const campaignId = getCampaign().id;
+      s.run.special[campaignId] ||= {};
+      const selected = new Set(asSpecialArray(s.run.special[campaignId][specialEffectToggle]));
+      if (target.checked) selected.add(target.value); else selected.delete(target.value);
+      s.run.special[campaignId][specialEffectToggle] = [...selected];
+    });
+  }
+  const specialRankedField = target.dataset.specialRankedField;
+  if (specialRankedField) {
+    mutate((s) => {
+      const campaignId = getCampaign().id;
+      const parentKey = target.dataset.effectParent;
+      s.run.special[campaignId] ||= {};
+      const selected = { ...asSpecialObject(s.run.special[campaignId][specialRankedField]) };
+      if (target.value) selected[parentKey] = target.value; else delete selected[parentKey];
+      s.run.special[campaignId][specialRankedField] = selected;
     });
   }
 });
@@ -1431,3 +2111,7 @@ async function boot() {
 }
 
 boot();
+
+
+
+

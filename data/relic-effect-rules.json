@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "meta": {
+    "purpose": "Reviewed relic effect rules for OBS aggregate display. One rule may contain multiple calculation effects.",
+    "sourceSpreadsheetId": "1EMhhYhFxrV2RZM6mv40nVxO-prJr_WNjGfYIcW6SlLg",
+    "sourceSheet": "Effect Rules"
+  },
+  "tagGroups": {
+    "is3_cursed_relic": {
+      "label": "IS#3 No.215-221 呪いの秘宝",
+      "relicIds": [
+        "is3_mizuki_relic_215",
+        "is3_mizuki_relic_216",
+        "is3_mizuki_relic_217",
+        "is3_mizuki_relic_218",
+        "is3_mizuki_relic_219",
+        "is3_mizuki_relic_220",
+        "is3_mizuki_relic_221"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "id": "is2_phantom_relic_213_static",
+      "campaignId": "is2_phantom",
+      "relicId": "is2_phantom_relic_213",
+      "no": 213,
+      "name": "インスピレーション",
+      "status": "approved",
+      "type": "static",
+      "suppressAuto": true,
+      "sourceEffect": "味方全員の配置コスト-3、攻撃力、防御力、最大HP+5%、探索を違う結末へと導く",
+      "effects": [
+        {
+          "target": "【味方全員】",
+          "stat": "配置コスト",
+          "value": -3,
+          "unit": "",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        },
+        {
+          "target": "【味方全員】",
+          "stat": "攻撃力",
+          "value": 5,
+          "unit": "%",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        },
+        {
+          "target": "【味方全員】",
+          "stat": "防御力",
+          "value": 5,
+          "unit": "%",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        },
+        {
+          "target": "【味方全員】",
+          "stat": "最大HP",
+          "value": 5,
+          "unit": "%",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        }
+      ]
+    },
+    {
+      "id": "is3_mizuki_relic_254_owned_count",
+      "campaignId": "is3_mizuki",
+      "relicId": "is3_mizuki_relic_254",
+      "no": 254,
+      "name": "『刀光剣影』",
+      "status": "implemented",
+      "type": "owned_count",
+      "suppressAuto": true,
+      "condition": {
+        "kind": "owned_relic_tag_count",
+        "target": "is3_cursed_relic",
+        "countMode": "per_owned_count"
+      },
+      "sourceEffect": "所持している呪いの秘宝1つにつき、全ての味方の攻撃速度+35",
+      "effects": [
+        {
+          "target": "【味方全員】",
+          "stat": "攻撃速度",
+          "value": 35,
+          "unit": "",
+          "stackMode": "per_count",
+          "displayGroup": "確定"
+        }
+      ]
+    },
+    {
+      "id": "is5_sarkaz_relic_255_static",
+      "campaignId": "is5_sarkaz",
+      "relicId": "is5_sarkaz_relic_255",
+      "no": 255,
+      "name": "終結の骨組み",
+      "status": "approved",
+      "type": "static",
+      "suppressAuto": true,
+      "sourceEffect": "全てのオペレーターの配置コスト+2、全ての敵が受ける物理・術ダメージ-20%",
+      "effects": [
+        {
+          "target": "【味方全員】",
+          "stat": "配置コスト",
+          "value": 2,
+          "unit": "",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        },
+        {
+          "target": "【敵全員】",
+          "stat": "物理・術被ダメージ",
+          "value": -20,
+          "unit": "%",
+          "stackMode": "unique",
+          "stackKey": "is5_endless_enemy_physical_arts_damage_taken",
+          "displayGroup": "確定"
+        }
+      ]
+    },
+    {
+      "id": "is5_sarkaz_relic_256_static",
+      "campaignId": "is5_sarkaz",
+      "relicId": "is5_sarkaz_relic_256",
+      "no": 256,
+      "name": "終結の肉体",
+      "status": "approved",
+      "type": "static",
+      "suppressAuto": true,
+      "sourceEffect": "全てのオペレーターの配置コスト+2、全ての敵が受ける物理・術ダメージ-20%、全ての敵の攻撃力+20%",
+      "effects": [
+        {
+          "target": "【味方全員】",
+          "stat": "配置コスト",
+          "value": 2,
+          "unit": "",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        },
+        {
+          "target": "【敵全員】",
+          "stat": "物理・術被ダメージ",
+          "value": -20,
+          "unit": "%",
+          "stackMode": "unique",
+          "stackKey": "is5_endless_enemy_physical_arts_damage_taken",
+          "displayGroup": "確定"
+        },
+        {
+          "target": "【敵全員】",
+          "stat": "攻撃力",
+          "value": 20,
+          "unit": "%",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        }
+      ]
+    },
+    {
+      "id": "is5_sarkaz_relic_257_static",
+      "campaignId": "is5_sarkaz",
+      "relicId": "is5_sarkaz_relic_257",
+      "no": 257,
+      "name": "終結の実相",
+      "status": "approved",
+      "type": "static",
+      "suppressAuto": true,
+      "sourceEffect": "全てのオペレーターの配置コスト+2、全ての敵が受ける物理・術ダメージ-20%、全ての敵の攻撃力+20%、最後の戦場に追加の敵が出現",
+      "effects": [
+        {
+          "target": "【味方全員】",
+          "stat": "配置コスト",
+          "value": 2,
+          "unit": "",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        },
+        {
+          "target": "【敵全員】",
+          "stat": "物理・術被ダメージ",
+          "value": -20,
+          "unit": "%",
+          "stackMode": "unique",
+          "stackKey": "is5_endless_enemy_physical_arts_damage_taken",
+          "displayGroup": "確定"
+        },
+        {
+          "target": "【敵全員】",
+          "stat": "攻撃力",
+          "value": 20,
+          "unit": "%",
+          "stackMode": "add",
+          "displayGroup": "確定"
+        },
+        {
+          "domain": "note",
+          "title": "【終局フラグ】",
+          "text": "最後の戦場に追加の敵が出現",
+          "displayGroup": "特殊"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 ﻿param(
   [string]$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path,
-  [ValidateSet('All', 'Campaigns', 'Performances', 'DifficultyVariants', 'DifficultyGrades', 'RelicImages', 'Operators', 'ReviewPages')]
+  [ValidateSet('All', 'Campaigns', 'Performances', 'SelectableEffects', 'DifficultyVariants', 'DifficultyGrades', 'RelicImages', 'Operators', 'ReviewPages')]
   [string[]]$Scope = @('All'),
   [string]$RunId = (Get-Date -Format 'yyyyMMdd-HHmmss'),
   [switch]$ForceDownload,
@@ -28,6 +28,8 @@ $DataFiles = @(
   'wikiru-campaign-sources.json',
   'wikiru-operator-sources.json',
   'performance-sources.json',
+  'selectable-effect-sources.json',
+  'selectable-effects.json',
   'difficulty-variant-sources.json',
   'difficulty-grade-sources.json',
   'relics.json',
@@ -43,9 +45,9 @@ $DataFiles = @(
 
 function Resolve-Scopes([string[]]$InputScopes) {
   if ($InputScopes -contains 'All') {
-    return @('Campaigns', 'Performances', 'DifficultyVariants', 'DifficultyGrades', 'RelicImages', 'Operators', 'ReviewPages')
+    return @('Campaigns', 'Performances', 'SelectableEffects', 'DifficultyVariants', 'DifficultyGrades', 'RelicImages', 'Operators', 'ReviewPages')
   }
-  $ordered = @('Campaigns', 'Performances', 'DifficultyVariants', 'DifficultyGrades', 'RelicImages', 'Operators', 'ReviewPages')
+  $ordered = @('Campaigns', 'Performances', 'SelectableEffects', 'DifficultyVariants', 'DifficultyGrades', 'RelicImages', 'Operators', 'ReviewPages')
   @($ordered | Where-Object { $InputScopes -contains $_ })
 }
 
@@ -106,6 +108,10 @@ foreach ($step in $steps) {
     }
     'Performances' {
       Invoke-ToolStep 'Performance extraction' 'extract-performances.ps1'
+      break
+    }
+    'SelectableEffects' {
+      Invoke-ToolStep 'Selectable special effect extraction' 'extract-selectable-effects.ps1'
       break
     }
     'DifficultyVariants' {

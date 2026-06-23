@@ -67,6 +67,7 @@ function initialStateFromExample(example) {
   state.relics = Array.isArray(state.relics) ? state.relics : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
+  state.bossSelections = state.bossSelections && typeof state.bossSelections === "object" && !Array.isArray(state.bossSelections) ? state.bossSelections : {};
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
   state.tournament = state.tournament || { pendingState: null, lastSubmissionAt: null, submittedBy: null };
   state.preferences = {
@@ -118,6 +119,7 @@ function normalizeState(state) {
   next.relics = Array.isArray(next.relics) ? [...new Set(next.relics.filter(Boolean))] : [];
   next.operators = Array.isArray(next.operators) ? [...new Set(next.operators.filter(Boolean))] : [];
   next.bossFlags = Array.isArray(next.bossFlags) ? next.bossFlags.filter(Boolean) : [];
+  next.bossSelections = next.bossSelections && typeof next.bossSelections === "object" && !Array.isArray(next.bossSelections) ? next.bossSelections : {};
   next.pendingSuggestions = Array.isArray(next.pendingSuggestions) ? next.pendingSuggestions : [];
   next.tournament = next.tournament || { pendingState: null, lastSubmissionAt: null, submittedBy: null };
   next.preferences = {
@@ -146,15 +148,17 @@ async function ensureState() {
 }
 
 async function masterData() {
-  const [campaigns, squadsRaw, relicsRaw, operatorsRaw, performancesRaw, tiersRaw, gradesRaw, variantsRaw] = await Promise.all([
+  const [campaigns, squadsRaw, relicsRaw, operatorsRaw, performancesRaw, selectableEffectsRaw, tiersRaw, gradesRaw, variantsRaw, effectRulesRaw] = await Promise.all([
     readJson(path.join(DATA, "campaigns.json")),
     readJson(path.join(DATA, "squads.json")),
     readJson(path.join(DATA, "relics.json")),
     readJson(path.join(DATA, "operators.json")),
     readJson(path.join(DATA, "performances.json")).catch(() => ({ performances: [] })),
+    readJson(path.join(DATA, "selectable-effects.json")).catch(() => ({ selectableEffects: [] })),
     readJson(path.join(DATA, "difficulty-tiers.json")),
     readJson(path.join(DATA, "difficulty-grades.json")).catch(() => ({ campaignDifficultyGrades: {} })),
     readJson(path.join(DATA, "relic-effect-variants.json")).catch(() => ({ variants: [] })),
+    readJson(path.join(DATA, "relic-effect-rules.json")).catch(() => ({ rules: [], tagGroups: {} })),
   ]);
   return {
     campaigns,
@@ -162,9 +166,15 @@ async function masterData() {
     relics: relicsRaw.relics || [],
     operators: operatorsRaw.operators || [],
     performances: performancesRaw.performances || [],
+    selectableEffects: selectableEffectsRaw.selectableEffects || [],
     difficultyTiers: tiersRaw.campaignDifficultyTiers || {},
     difficultyGrades: gradesRaw.campaignDifficultyGrades || {},
-    relicEffectVariants: variantsRaw.variants || variantsRaw.relicEffectVariants || [],
+    relicEffectVariants: variantsRaw.variantGroups || variantsRaw.variants || variantsRaw.relicEffectVariants || [],
+    relicEffectRules: {
+      version: effectRulesRaw.version || 1,
+      tagGroups: effectRulesRaw.tagGroups || {},
+      rules: effectRulesRaw.rules || [],
+    },
   };
 }
 

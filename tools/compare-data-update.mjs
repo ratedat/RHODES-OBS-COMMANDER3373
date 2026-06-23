@@ -194,6 +194,22 @@ function singletonConfig(id) {
   return (doc) => (doc ? [{ id, ...doc }] : []);
 }
 
+function flattenSelectableEffectSources(doc) {
+  if (!doc) return [];
+  const rows = [];
+  for (const source of doc.sources || []) {
+    for (const section of source.sections || []) {
+      rows.push({
+        campaignId: source.campaignId,
+        page: source.page,
+        sourceUrl: source.sourceUrl,
+        ...section,
+      });
+    }
+  }
+  return rows;
+}
+
 const simpleSummary = (fields) => (item) => Object.fromEntries(fields.map((field) => [field, getValue(item, field) ?? null]));
 
 const datasets = [
@@ -236,6 +252,16 @@ const datasets = [
     campaignId: (item) => item.campaignId,
     fields: ["page", "sectionAnchor", "sectionTitle", "sourceUrl"],
     summary: simpleSummary(["campaignId", "page", "sectionAnchor", "sectionTitle"]),
+  },
+  {
+    name: "selectableEffectSources",
+    file: "selectable-effect-sources.json",
+    listPath: flattenSelectableEffectSources,
+    key: (item) => `${item.campaignId}|${item.slot}|${item.sectionAnchor}`,
+    label: (item) => item.slotLabel || item.sectionTitle,
+    campaignId: (item) => item.campaignId,
+    fields: ["page", "sourceUrl", "slot", "slotLabel", "selectionMode", "rowMode", "sectionTitle", "sectionAnchor", "sectionLevel", "defaultGroup", "defaultGroupLabel", "groupTransitions", "lowerVariantLabel", "upperVariantLabel", "phaseVariants"],
+    summary: simpleSummary(["campaignId", "slot", "slotLabel", "selectionMode", "rowMode", "sectionAnchor"]),
   },
   {
     name: "difficultyVariantSources",
@@ -285,6 +311,16 @@ const datasets = [
     campaignId: (item) => item.campaignId,
     fields: ["campaignId", "order", "group", "title", "subtitle", "name", "effect", "flavorText", "sourcePage", "sourceAnchor", "image.sourcePath", "image.sourceUrl"],
     summary: simpleSummary(["campaignId", "order", "group", "name", "effect"]),
+  },
+  {
+    name: "selectableEffects",
+    file: "selectable-effects.json",
+    listPath: "selectableEffects",
+    key: (item) => item.id,
+    label: (item) => item.name,
+    campaignId: (item) => item.campaignId,
+    fields: ["campaignId", "order", "slot", "slotLabel", "selectionMode", "group", "groupLabel", "parentKey", "parentName", "variantRank", "variantLabel", "name", "effect", "flavorText", "sourcePage", "sourceAnchor", "image.sourcePath", "image.sourceUrl"],
+    summary: simpleSummary(["campaignId", "slot", "parentName", "variantLabel", "name", "effect"]),
   },
   {
     name: "operators",
