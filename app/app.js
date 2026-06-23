@@ -794,33 +794,63 @@ function renderRunTab() {
   `;
 }
 
-function renderRelicsTab() {
+function getRelicListView() {
   const relics = getCampaignRelics();
-  const categories = [...new Set(relics.map((item) => item.category || "未分類"))];
   const q = normalizeText(ui.relicSearch);
   const filtered = relics.filter((item) => {
     if (ui.relicCategory !== "all" && (item.category || "未分類") !== ui.relicCategory) return false;
     if (!q) return true;
     return normalizeText(`${item.number} ${item.name} ${item.category} ${item.effect}`).includes(q);
   });
-  const shown = filtered.slice(0, 500);
-  const owned = new Set(state.relics);
-  const gridColumns = getRelicGridColumns();
+  return {
+    filtered,
+    shown: filtered.slice(0, 500),
+    owned: new Set(state.relics),
+    gridColumns: getRelicGridColumns(),
+  };
+}
+
+function renderRelicListContent({ shown, filtered, owned }) {
+  return `
+    ${shown.map((item) => renderRelicControlRow(item, owned.has(item.id))).join("")}
+    ${shown.length < filtered.length ? `<div class="empty-state field-wide">表示を絞り込んでください。残り${filtered.length - shown.length}件があります。</div>` : ""}
+  `;
+}
+
+function renderRelicListArea(viewData) {
+  return `<div class="list-area relic-pick-grid" style="--relic-grid-columns: ${viewData.gridColumns}">
+    ${renderRelicListContent(viewData)}
+  </div>`;
+}
+
+function refreshRelicListOnly() {
+  if (view !== "control" || ui.tab !== "relics") return false;
+  const viewData = getRelicListView();
+  const subtitle = document.querySelector(".panel-header .panel-subtitle");
+  if (subtitle) subtitle.textContent = `${viewData.filtered.length}件 / 所持${viewData.owned.size}件`;
+  const list = document.querySelector(".relic-pick-grid");
+  if (!list) return false;
+  list.style.setProperty("--relic-grid-columns", viewData.gridColumns);
+  list.innerHTML = renderRelicListContent(viewData);
+  return true;
+}
+
+function renderRelicsTab() {
+  const relics = getCampaignRelics();
+  const categories = [...new Set(relics.map((item) => item.category || "未分類"))];
+  const viewData = getRelicListView();
   return `
     <section class="panel-grid">
       <div class="panel">
-        <div class="panel-header"><h2 class="panel-title">秘宝所持</h2><span class="panel-subtitle">${filtered.length}件 / 所持${owned.size}件</span></div>
+        <div class="panel-header"><h2 class="panel-title">秘宝所持</h2><span class="panel-subtitle">${viewData.filtered.length}件 / 所持${viewData.owned.size}件</span></div>
         <div class="panel-body">
           <div class="search-strip relic-filter-strip">
             <label>検索<input value="${html(ui.relicSearch)}" data-ui="relicSearch" placeholder="秘宝名、番号、効果" /></label>
             <label>カテゴリ<select data-ui="relicCategory"><option value="all">すべて</option>${categories.map((cat) => `<option value="${html(cat)}" ${cat === ui.relicCategory ? "selected" : ""}>${html(cat)}</option>`).join("")}</select></label>
-            <label>表示列<select data-field="relicGridColumns">${[1, 2, 3, 4, 5, 6].map((count) => `<option value="${count}" ${count === gridColumns ? "selected" : ""}>${count}列</option>`).join("")}</select></label>
+            <label>表示列<select data-field="relicGridColumns">${[1, 2, 3, 4, 5, 6].map((count) => `<option value="${count}" ${count === viewData.gridColumns ? "selected" : ""}>${count}列</option>`).join("")}</select></label>
             <button data-action="clear-relics">秘宝を全解除</button>
           </div>
-          <div class="list-area relic-pick-grid" style="--relic-grid-columns: ${gridColumns}">
-            ${shown.map((item) => renderRelicControlRow(item, owned.has(item.id))).join("")}
-            ${shown.length < filtered.length ? `<div class="empty-state field-wide">表示を絞り込んでください。残り${filtered.length - shown.length}件があります。</div>` : ""}
-          </div>
+          ${renderRelicListArea(viewData)}
         </div>
       </div>
     </section>
@@ -1272,8 +1302,19 @@ app.addEventListener("input", (event) => {
   if (view !== "control") return;
   const target = event.target;
   if (!target.matches("[data-ui]")) return;
-  ui[target.dataset.ui] = target.value;
-  if (["relicSearch", "relicCategory"].includes(target.dataset.ui)) renderControl();
+  const key = target.dataset.ui;
+  ui[key] = target.value;
+  if (key === "relicSearch") {
+    if (!event.isComposing && !refreshRelicListOnly()) renderControl();
+  }
+});
+
+app.addEventListener("compositionend", (event) => {
+  if (view !== "control") return;
+  const target = event.target;
+  if (!target.matches('[data-ui="relicSearch"]')) return;
+  ui.relicSearch = target.value;
+  if (!refreshRelicListOnly()) renderControl();
 });
 
 app.addEventListener("change", (event) => {
