@@ -16,6 +16,18 @@ Long strategy text and comments are not copied. Relic and operator images are mi
 - data/operator-images.json - operator image sync audit manifest, including source URLs, local paths, and failed downloads
 - assets/operators/wikiru/img - mirrored operator image files referenced by data/operators.json
 
+## Reviewable Update Runner
+
+Prefer `tools/update-data.ps1` for routine updates. It snapshots `data/` before and after the selected sync steps, then runs `tools/compare-data-update.mjs` to generate `summary.md`, `changes.csv`, and `changes.json` in `review/update-runs/<run-id>/`.
+
+```powershell
+npm.cmd run data:update:plan
+npm.cmd run data:update
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Operators
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Campaigns,DifficultyVariants,DifficultyGrades,RelicImages
+```
+
+Use the generated diff files as the first manual review surface. The older individual commands below are still useful for debugging a single extractor, but normal refreshes should go through the runner so additions, removals, and text/image changes are visible before commit.
 ## Source Pages
 
 - IS#2 main: https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E3%83%95%E3%82%A1%E3%83%B3%E3%83%88%E3%83%A0%E3%81%A8%E7%B7%8B%E3%81%8D%E8%B2%B4%E7%9F%B3%E3%80%8D

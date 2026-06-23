@@ -30,9 +30,7 @@ See:
 - `data/operators.json` for operator names, rarity, class, branch, and image metadata
 - `data/operator-images.json` for the operator image sync audit
 - `assets/operators/wikiru/img` for mirrored operator image files referenced by `data/operators.json`
-- AGENTS.md for agent/development rules
-- `CLAUDE.md` for Claude-specific project guidance
-- `PLANS.md` for the phased implementation plan
+
 ## Local MVP App
 
 The first manual-first MVP is implemented as a dependency-free Node app.
@@ -41,7 +39,7 @@ Start the local server:
 
 ```powershell
 cd O:\Arknights_Rogue_OBSTool
-npm run dev
+npm.cmd run dev
 ```
 
 Open the control panel:
@@ -63,8 +61,36 @@ The default overlay is the compact stream layout. The vertical and horizontal va
 - http://127.0.0.1:5173/overlay?layout=full
 
 Runtime state is stored in `data/current-state.json` and is intentionally ignored by Git. The committed example state remains `data/overlay-state.example.json`.
-Regenerate selectable difficulty grade data after wiki updates:
+
+## Data Update Workflow
+
+Use the data update runner when refreshing wiki-derived data. It snapshots the current data, runs the selected sync steps, snapshots the result, and writes a diff report under `review/update-runs/<run-id>/`.
+
+Preview the planned full update:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File O:\Arknights_Rogue_OBSTool\tools\extract-difficulty-grades.ps1 -ProjectRoot O:\Arknights_Rogue_OBSTool
+npm.cmd run data:update:plan
 ```
+
+Run the standard full update:
+
+```powershell
+npm.cmd run data:update
+```
+
+Run only part of the flow when checking a specific source:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Operators
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Campaigns,DifficultyVariants,DifficultyGrades,RelicImages
+```
+
+Each run produces:
+
+- `summary.md` - human-readable counts and changed item list
+- `changes.csv` - spreadsheet-friendly review file
+- `changes.json` - full machine-readable diff
+- `before/data` and `after/data` - snapshots used for comparison
+- `run.log` - executed commands and script output
+
+Generated update runs are intentionally ignored by Git. Commit data and asset changes only after reviewing the diff and the generated review pages.

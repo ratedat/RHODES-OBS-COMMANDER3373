@@ -42,3 +42,5 @@ experiments/adb/**/bench_*.png
 AGENTS.md
 CLAUDE.md
 PLANS.md
+# Generated data update reports
+review/update-runs/
