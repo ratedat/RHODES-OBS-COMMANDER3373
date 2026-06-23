@@ -27,7 +27,8 @@
                                             }
                             },
                 "squadRandomEffectOptionId":  null,
-                "difficultyTierId":  null
+                "difficultyTierId":  null,
+                "performanceId":  null
             },
     "relics":  [
 

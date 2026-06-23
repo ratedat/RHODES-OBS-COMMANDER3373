@@ -228,6 +228,16 @@ const datasets = [
     summary: simpleSummary(["sourcePage", "sourceUrl", "tablePagePattern", "fallbackTables"]),
   },
   {
+    name: "performanceSources",
+    file: "performance-sources.json",
+    listPath: "sources",
+    key: (item) => item.campaignId,
+    label: (item) => item.sectionTitle || item.page || item.campaignId,
+    campaignId: (item) => item.campaignId,
+    fields: ["page", "sectionAnchor", "sectionTitle", "sourceUrl"],
+    summary: simpleSummary(["campaignId", "page", "sectionAnchor", "sectionTitle"]),
+  },
+  {
     name: "difficultyVariantSources",
     file: "difficulty-variant-sources.json",
     listPath: "sources",
@@ -265,6 +275,16 @@ const datasets = [
     campaignId: (item) => item.campaignId,
     fields: ["campaignId", "name", "effect", "upgrades", "randomEffectOptions"],
     summary: simpleSummary(["campaignId", "name", "effect"]),
+  },
+  {
+    name: "performances",
+    file: "performances.json",
+    listPath: "performances",
+    key: (item) => item.id,
+    label: (item) => item.name || item.title,
+    campaignId: (item) => item.campaignId,
+    fields: ["campaignId", "order", "group", "title", "subtitle", "name", "effect", "flavorText", "sourcePage", "sourceAnchor", "image.sourcePath", "image.sourceUrl"],
+    summary: simpleSummary(["campaignId", "order", "group", "name", "effect"]),
   },
   {
     name: "operators",

@@ -12,6 +12,8 @@ Long strategy text and comments are not copied. Relic and operator images are mi
 - data/relic-images.json - image sync audit manifest, including source URLs, local paths, missing mappings, and failed downloads
 - assets/relics/wikiru/img - mirrored relic image files referenced by data/relics.json
 - data/squads.json - squad display name, effect, upgrade variants when present, and randomEffectOptions for special squads such as 奇想天外分隊 and 歳影反響分隊
+- data/performance-sources.json - wiki section configuration for selectable performance/event-buff extraction such as IS#2 演目
+- data/performances.json - generated performance/event-buff names, group labels, effects, optional flavor text, and source image metadata
 - data/operators.json - operator display name, rarity, class, branch, obtain/recruitment text, source page, source section, Japan-unreleased spoiler flags, display order, and image metadata
 - data/operator-images.json - operator image sync audit manifest, including source URLs, local paths, and failed downloads
 - assets/operators/wikiru/img - mirrored operator image files referenced by data/operators.json
@@ -24,7 +26,8 @@ Prefer `tools/update-data.ps1` for routine updates. It snapshots `data/` before 
 npm.cmd run data:update:plan
 npm.cmd run data:update
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Operators
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Campaigns,DifficultyVariants,DifficultyGrades,RelicImages
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Performances
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Campaigns,Performances,DifficultyVariants,DifficultyGrades,RelicImages
 ```
 
 Use the generated diff files as the first manual review surface. The older individual commands below are still useful for debugging a single extractor, but normal refreshes should go through the runner so additions, removals, and text/image changes are visible before commit.
@@ -58,12 +61,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\build-operator-i
 
 Campaign page sources are configured in `data/wikiru-campaign-sources.json`. Add future campaigns such as IS#7 there before running the main wiki extractor. User-facing campaign metadata still lives in `data/campaigns.json` because it also carries overlay-specific fields such as special counters and boss-flag behavior.
 
+Performance/event-buff section sources are configured in `data/performance-sources.json`. IS#2 演目 currently reads the `#e83e8373` section from the IS#2 main page and writes selectable rows to `data/performances.json`. Add future campaign-specific performance sections there before running `tools/extract-performances.ps1` or `tools/update-data.ps1 -Scope Performances`.
+
 Difficulty-dependent relic sources are configured in `data/difficulty-variant-sources.json`. IS#4 No.001-018, IS#5 No.001-020, and IS#6 No.001-015 多元化珍品 are currently enabled. The generator writes both `data/difficulty-tiers.json` and `data/relic-effect-variants.json`, so tier definitions are not maintained in two places.
 
 Standard refresh:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\extract-wikiru-data.ps1 -ProjectRoot .
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\extract-performances.ps1 -ProjectRoot .
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\sync-relic-images.ps1 -ProjectRoot .
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\extract-difficulty-variants.ps1 -ProjectRoot .
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\build-relic-review.ps1 -ProjectRoot .

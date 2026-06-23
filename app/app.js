@@ -77,6 +77,7 @@ function buildMaps() {
     squad: new Map(master.squads.map((item) => [item.id, item])),
     relic: new Map(master.relics.map((item) => [item.id, item])),
     operator: new Map(master.operators.map((item) => [item.id, item])),
+    performance: new Map((master.performances || []).map((item) => [item.id, item])),
     variantGroup: new Map((master.relicEffectVariants || []).map((item) => [item.relicId, item])),
   };
 }
@@ -93,6 +94,39 @@ function getCampaignSquads() {
 function getCampaignRelics() {
   const campaign = getCampaign();
   return master.relics.filter((item) => item.campaignId === campaign.id);
+}
+
+function getCampaignPerformances(campaignId = getCampaign()?.id) {
+  return (master.performances || []).filter((item) => item.campaignId === campaignId);
+}
+
+function getSelectedPerformance() {
+  const id = state?.run?.performanceId;
+  return id ? maps.performance.get(id) : null;
+}
+
+function performanceGroupLabel(group) {
+  if (group === "standard") return "通常";
+  if (group === "crimson") return "緋染め";
+  return group || "その他";
+}
+
+function renderPerformanceSelect(campaignId) {
+  const performances = getCampaignPerformances(campaignId);
+  const current = state?.run?.performanceId || "";
+  if (!performances.length) return `<select data-field="performanceId"><option value="">対象外</option></select>`;
+  const grouped = new Map();
+  for (const item of performances) {
+    const key = item.group || "other";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(item);
+  }
+  const preferred = ["standard", "crimson"];
+  const groupKeys = [...preferred.filter((key) => grouped.has(key)), ...[...grouped.keys()].filter((key) => !preferred.includes(key))];
+  return `<select data-field="performanceId">
+    <option value="">未選択</option>
+    ${groupKeys.map((group) => `<optgroup label="${html(performanceGroupLabel(group))}">${grouped.get(group).map((item) => `<option value="${html(item.id)}" ${item.id === current ? "selected" : ""}>${html(item.name)}</option>`).join("")}</optgroup>`).join("")}
+  </select>`;
 }
 
 function getSelectedSquad() {
@@ -259,11 +293,38 @@ function relicEffectForDisplay(relic) {
   return variant?.effect || relic.effect || "";
 }
 
+function getActiveEffects({ includeRelics = true } = {}) {
+  const effects = [];
+  const pushEffect = (type, title, effect) => {
+    if (!effect) return;
+    effects.push({ type, title: title || type, effect });
+  };
+  const squad = getSelectedSquad();
+  const option = getSelectedSquadOption(squad);
+  const performance = getSelectedPerformance();
+  pushEffect("分隊", squad?.name, squad?.effect);
+  pushEffect("分隊追加", option?.label || "ランダム効果", option?.effect);
+  pushEffect("演目", performance?.name || performance?.title, performance?.effect);
+  if (includeRelics) {
+    for (const relic of getOwnedRelics()) pushEffect("秘宝", relic.name, relicEffectForDisplay(relic));
+  }
+  return effects;
+}
+
+function renderEffectList(effects, className = "", emptyText = "発動効果はありません。") {
+  if (!effects.length) return `<div class="empty-state effect-empty">${html(emptyText)}</div>`;
+  return `<div class="effect-list ${className}">
+    ${effects.map((item) => `<div class="effect-row"><span class="effect-type">${html(item.type)}</span><strong class="effect-title">${html(item.title)}</strong><span class="effect-text">${html(item.effect)}</span></div>`).join("")}
+  </div>`;
+}
+
 function ensureStateShape() {
   state.run ||= {};
   state.run.campaignId ||= "is5_sarkaz";
+  state.run.performanceId ??= null;
   state.run.special ||= {};
   for (const campaign of master.campaigns) state.run.special[campaign.id] ||= {};
+  if (state.run.performanceId && !getCampaignPerformances(state.run.campaignId).some((item) => item.id === state.run.performanceId)) state.run.performanceId = null;
   state.relics = Array.isArray(state.relics) ? state.relics : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
@@ -433,6 +494,9 @@ function renderRunTab() {
   const squads = getCampaignSquads();
   const selectedSquad = getSelectedSquad();
   const randomOptions = selectedSquad?.randomEffectOptions || [];
+  const performances = getCampaignPerformances(campaign.id);
+  const selectedPerformance = getSelectedPerformance();
+  const activeEffects = getActiveEffects();
   const specialFields = campaign.specialFields || [];
   const special = state.run.special?.[campaign.id] || {};
   const tierCfg = master.difficultyTiers?.[campaign.id];
@@ -462,6 +526,9 @@ function renderRunTab() {
               ${randomOptions.map((item) => `<option value="${item.id}" ${item.id === state.run.squadRandomEffectOptionId ? "selected" : ""}>${html(item.label || item.id)}</option>`).join("")}
             </select>
           </label>` : ""}
+          ${performances.length ? `<label class="field-wide">演目
+            ${renderPerformanceSelect(campaign.id)}
+          </label>` : ""}
         </div>
       </div>
       <div class="panel half">
@@ -487,10 +554,15 @@ function renderRunTab() {
             <span class="tag">ボスフラグ ${state.bossFlags.length}</span>
             <span class="tag">等級 ${html(difficultyGrade?.label || "未選択")}</span>
             <span class="tag">難易度ティア ${html(tierCfg ? getDifficultyTierLabel() : "対象外")}</span>
+            ${performances.length ? `<span class="tag">演目 ${html(selectedPerformance?.title || "未選択")}</span>` : ""}
           </div>
           ${selectedSquad ? `<p><strong>${html(selectedSquad.name)}</strong><br><span class="panel-subtitle">${html(selectedSquad.effect)}</span></p>` : `<p class="panel-subtitle">分隊は未選択です。</p>`}
-          ${getSelectedSquadOption(selectedSquad) ? `<p><strong>${html(getSelectedSquadOption(selectedSquad).label)}</strong><br><span class="panel-subtitle">${html(getSelectedSquadOption(selectedSquad).effect)}</span></p>` : ""}
+          ${selectedPerformance ? `<p><strong>${html(selectedPerformance.name)}</strong><br><span class="panel-subtitle">${html(selectedPerformance.effect)}</span></p>` : ""}
           ${difficultyGrade ? renderDifficultyFields(difficultyGrade) : `<p class="panel-subtitle">等級は未選択です。</p>`}
+          <div class="effect-block">
+            <div class="effect-block-title">発動効果</div>
+            ${renderEffectList(activeEffects, "control-effect-list", "分隊・演目・秘宝の発動効果は未設定です。")}
+          </div>
         </div>
       </div>
     </section>
@@ -641,7 +713,7 @@ function renderJsonTab() {
   `;
 }
 
-function renderOverlayCompact({ campaign, squad, option, relics, operators, specialFields, special, difficultyGrade }) {
+function renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade }) {
   const specialTags = specialFields
     .map((field) => ({ label: field.label, value: special[field.id] }))
     .filter((item) => item.value !== null && item.value !== undefined && item.value !== "");
@@ -659,11 +731,18 @@ function renderOverlayCompact({ campaign, squad, option, relics, operators, spec
       </header>
       <div class="compact-row"><span>分隊</span><strong>${html(squad?.name || "未選択")}</strong></div>
       ${option?.label ? `<div class="compact-row compact-muted"><span>効果</span><strong>${html(option.label)}</strong></div>` : ""}
+      ${performance ? `<div class="compact-row compact-muted"><span>演目</span><strong>${html(performance.title || performance.name)}</strong></div>` : ""}
       <div class="compact-chip-row">
         <span class="tag accent">${html(difficultyGrade?.label || "等級未選択")}</span>
         <span class="tag">Tier ${html(getDifficultyTierLabel())}</span>
         ${specialTags.map((item) => `<span class="tag info">${html(item.label)} ${html(item.value)}</span>`).join("")}
       </div>
+      ${activeEffects.length ? `<section class="compact-section compact-effects-section">
+        <div class="compact-section-head"><span>Effects</span><span>${activeEffects.length}</span></div>
+        <div class="stream-scroll compact-effect-scroll" data-autoscroll data-scroll-speed="${getOverlayScrollSpeed("compactRelicScrollSpeed")}">
+          ${renderEffectList(activeEffects, "compact-effect-list", "発動効果なし")}
+        </div>
+      </section>` : ""}
       <section class="compact-section">
         <div class="compact-section-head"><span>Relics</span><span>${relics.length}</span></div>
         <div class="stream-scroll compact-relic-scroll" data-autoscroll data-scroll-speed="${getOverlayScrollSpeed("compactRelicScrollSpeed")}">
@@ -684,7 +763,7 @@ function renderOverlayCompact({ campaign, squad, option, relics, operators, spec
   `;
 }
 
-function renderOverlayDense({ campaign, squad, option, relics, operators, specialFields, special, difficultyGrade, orientation }) {
+function renderOverlayDense({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, orientation }) {
   const specialTags = specialFields
     .map((field) => ({ label: field.label, value: special[field.id] }))
     .filter((item) => item.value !== null && item.value !== undefined && item.value !== "");
@@ -703,12 +782,16 @@ function renderOverlayDense({ campaign, squad, option, relics, operators, specia
       <section class="stream-run">
         <div class="stream-line"><span>分隊</span><strong>${html(squad?.name || "未選択")}</strong></div>
         ${option?.label || option?.effect ? `<div class="stream-note">${html(option?.label || option?.effect)}</div>` : ""}
+        ${performance ? `<div class="stream-note"><strong>演目</strong> ${html(performance.title || performance.name)}</div>` : ""}
         <div class="stream-chip-row">
           <span class="tag accent">${html(difficultyGrade?.label || "等級未選択")}</span>
           <span class="tag">Tier ${html(getDifficultyTierLabel())}</span>
           ${specialTags.map((item) => `<span class="tag info">${html(item.label)} ${html(item.value)}</span>`).join("")}
           ${flags.map((flag) => `<span class="tag accent">${html(flag)}</span>`).join("")}
         </div>
+        ${activeEffects.length ? `<div class="stream-scroll stream-effect-scroll" data-autoscroll data-scroll-speed="${getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
+          ${renderEffectList(activeEffects, "stream-effect-list", "発動効果なし")}
+        </div>` : ""}
       </section>
       <section class="stream-panel stream-relic-panel">
         <div class="stream-section-head"><span>Relics</span><strong>${relics.length}</strong></div>
@@ -794,13 +877,15 @@ function renderOverlay() {
   const specialFields = campaign.specialFields || [];
   const special = state.run.special?.[campaign.id] || {};
   const difficultyGrade = getSelectedDifficultyGrade();
+  const performance = getSelectedPerformance();
+  const activeEffects = getActiveEffects();
   if (overlayLayout === "compact") {
-    app.innerHTML = renderOverlayCompact({ campaign, squad, option, relics, operators, specialFields, special, difficultyGrade });
+    app.innerHTML = renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade });
     setupOverlayAutoScroll();
     return;
   }
   if (overlayLayout === "vertical" || overlayLayout === "horizontal") {
-    app.innerHTML = renderOverlayDense({ campaign, squad, option, relics, operators, specialFields, special, difficultyGrade, orientation: overlayLayout });
+    app.innerHTML = renderOverlayDense({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, orientation: overlayLayout });
     setupOverlayAutoScroll();
     return;
   }
@@ -837,7 +922,15 @@ function renderOverlay() {
           <div class="overlay-card-header"><span>Squad</span><span>${squad ? "selected" : "none"}</span></div>
           <div class="overlay-card-body">
             <div class="squad-name">${html(squad?.name || "分隊未選択")}</div>
-            <div class="squad-effect">${html(option?.effect || squad?.effect || "")}</div>
+            <div class="squad-effect">${html(squad?.effect || "")}</div>
+            ${option?.effect ? `<div class="squad-effect squad-option-effect">${html(option.label || "ランダム分隊効果")}: ${html(option.effect)}</div>` : ""}
+            ${performance ? `<div class="squad-effect squad-option-effect">演目: ${html(performance.name)}</div>` : ""}
+          </div>
+        </section>
+        <section class="overlay-card">
+          <div class="overlay-card-header"><span>Active effects</span><span>${activeEffects.length}</span></div>
+          <div class="overlay-card-body overlay-effect-scroll stream-scroll" data-autoscroll data-scroll-speed="${getOverlayScrollSpeed("verticalRelicScrollSpeed")}">
+            ${renderEffectList(activeEffects, "overlay-effect-list", "発動効果なし")}
           </div>
         </section>
         <section class="overlay-card">
@@ -864,6 +957,7 @@ function renderOverlay() {
       </aside>
     </main>
   `;
+  setupOverlayAutoScroll();
 }
 
 function toggleId(list, id) {
@@ -973,6 +1067,7 @@ app.addEventListener("change", (event) => {
         s.run.squadId = null;
         s.run.squad = null;
         s.run.squadRandomEffectOptionId = null;
+        s.run.performanceId = null;
         s.run.difficulty = null;
         s.run.difficultyTierId = null;
         s.relics = [];
@@ -985,6 +1080,8 @@ app.addEventListener("change", (event) => {
         s.run.squadRandomEffectOptionId = null;
       } else if (field === "squadRandomEffectOptionId") {
         s.run.squadRandomEffectOptionId = target.value || null;
+      } else if (field === "performanceId") {
+        s.run.performanceId = target.value || null;
       } else if (field === "operatorSort") {
         s.preferences.operatorSort = target.value;
       } else if (field === "operatorGridColumns") {

@@ -62,6 +62,7 @@ function initialStateFromExample(example) {
   state.run.squad = state.run.squad ?? null;
   state.run.squadId = state.run.squadId ?? null;
   state.run.difficulty = state.run.difficulty ?? null;
+  state.run.performanceId = state.run.performanceId ?? null;
   state.run.squadRandomEffectOptionId = state.run.squadRandomEffectOptionId ?? null;
   state.relics = Array.isArray(state.relics) ? state.relics : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
@@ -112,6 +113,7 @@ function normalizeState(state) {
   next.run.squadId = next.run.squadId || null;
   next.run.squad = next.run.squad ?? null;
   next.run.difficulty = next.run.difficulty === "" ? null : next.run.difficulty;
+  next.run.performanceId = next.run.performanceId || null;
   next.run.squadRandomEffectOptionId = next.run.squadRandomEffectOptionId || null;
   next.relics = Array.isArray(next.relics) ? [...new Set(next.relics.filter(Boolean))] : [];
   next.operators = Array.isArray(next.operators) ? [...new Set(next.operators.filter(Boolean))] : [];
@@ -144,11 +146,12 @@ async function ensureState() {
 }
 
 async function masterData() {
-  const [campaigns, squadsRaw, relicsRaw, operatorsRaw, tiersRaw, gradesRaw, variantsRaw] = await Promise.all([
+  const [campaigns, squadsRaw, relicsRaw, operatorsRaw, performancesRaw, tiersRaw, gradesRaw, variantsRaw] = await Promise.all([
     readJson(path.join(DATA, "campaigns.json")),
     readJson(path.join(DATA, "squads.json")),
     readJson(path.join(DATA, "relics.json")),
     readJson(path.join(DATA, "operators.json")),
+    readJson(path.join(DATA, "performances.json")).catch(() => ({ performances: [] })),
     readJson(path.join(DATA, "difficulty-tiers.json")),
     readJson(path.join(DATA, "difficulty-grades.json")).catch(() => ({ campaignDifficultyGrades: {} })),
     readJson(path.join(DATA, "relic-effect-variants.json")).catch(() => ({ variants: [] })),
@@ -158,6 +161,7 @@ async function masterData() {
     squads: squadsRaw.squads || [],
     relics: relicsRaw.relics || [],
     operators: operatorsRaw.operators || [],
+    performances: performancesRaw.performances || [],
     difficultyTiers: tiersRaw.campaignDifficultyTiers || {},
     difficultyGrades: gradesRaw.campaignDifficultyGrades || {},
     relicEffectVariants: variantsRaw.variants || variantsRaw.relicEffectVariants || [],

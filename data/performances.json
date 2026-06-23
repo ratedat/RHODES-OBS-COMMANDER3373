@@ -1,0 +1,478 @@
+{
+    "version":  1,
+    "meta":  {
+                 "generatedAt":  "2026-06-23",
+                 "source":  "arknights.wikiru.jp PukiWiki source",
+                 "purpose":  "Selectable Integrated Strategies performance buffs such as IS#2 演目."
+             },
+    "performances":  [
+                         {
+                             "id":  "is2_phantom_performance_pcsp1",
+                             "campaignId":  "is2_phantom",
+                             "order":  1,
+                             "group":  "standard",
+                             "title":  "『凱旋の讃歌』",
+                             "subtitle":  "Ode au triomphe",
+                             "name":  "『凱旋の讃歌』 Ode au triomphe",
+                             "effect":  "このエリアでの次の戦闘では臨時耐久値を5獲得する",
+                             "flavorText":  "我らが皇帝陛下の凱旋を祝して、讃歌を捧げよ！皇帝陛下万歳！ガリア万歳！",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp1.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370312E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp2",
+                             "campaignId":  "is2_phantom",
+                             "order":  2,
+                             "group":  "standard",
+                             "title":  "『湖中の至宝』",
+                             "subtitle":  "Der Ring",
+                             "name":  "『湖中の至宝』 Der Ring",
+                             "effect":  "このエリアでの次の戦闘勝利報酬の源石錐獲得量+50%",
+                             "flavorText":  "たとえ高塔が倒壊し、人々が争っても、リターニアの至宝はキャプリニーの指に輝くことはないだろう。森の中の浅い湖こそ、夢に見た帰るべき場所なのだ。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp2.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370322E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp3",
+                             "campaignId":  "is2_phantom",
+                             "order":  3,
+                             "group":  "standard",
+                             "title":  "『百日一日物語』",
+                             "subtitle":  "One Hundred and One days",
+                             "name":  "『百日一日物語』 One Hundred and One days",
+                             "effect":  "このエリアでの次の戦闘で獲得する指揮経験値+100%",
+                             "flavorText":  "昔々、ある平民が商人に、それはそれは素晴らしい物語を語った。やがて物語は広く伝わり、101日後に首長の耳に入った。興味を持った首長はお忍びで物語の発端を探しに出かけた。最後に、物語を語った平民はとっくに自分が処刑していたとに気づいた。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp3.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370332E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp4",
+                             "campaignId":  "is2_phantom",
+                             "order":  4,
+                             "group":  "standard",
+                             "title":  "『独り往く者』",
+                             "subtitle":  "Lone Wander",
+                             "name":  "『独り往く者』 Lone Wander",
+                             "effect":  "このエリアで次に入った行商人の店で任意に消費をすると、おまけにランダムな秘宝を1つ獲得する",
+                             "flavorText":  "大地の隙間を、都市の影を、一人往く怪人は、全てを覗き見る。醜い鉄のマスクの裏には、陰謀と狂気が隠れている。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp4.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370342E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp5",
+                             "campaignId":  "is2_phantom",
+                             "order":  5,
+                             "group":  "standard",
+                             "title":  "『夢の国の冒険譚』",
+                             "subtitle":  "Wonderland in Dream",
+                             "name":  "『夢の国の冒険譚』 Wonderland in Dream",
+                             "effect":  "このエリアで次に入った「安全な片隅」で選択肢を選ぶと、ランダムな招集券を1枚獲得する",
+                             "flavorText":  "たとえ遥か遠い城に辿りつけなくても、少なくともあなたには仲間がいる、少なくとも私にはあなたがいる。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp5.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370352E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp6",
+                             "campaignId":  "is2_phantom",
+                             "order":  6,
+                             "group":  "standard",
+                             "title":  "『霜の牡鹿と雪の牝鹿』",
+                             "subtitle":  "Frost Deer and Snow Doe",
+                             "name":  "『霜の牡鹿と雪の牝鹿』 Frost Deer and Snow Doe",
+                             "effect":  "このエリアでの次の戦闘中、味方全員の攻撃力と最大HP+15%",
+                             "flavorText":  "雪の祭司の血に連なる衛士として、我らの願いは冷たい鉄に倒れて死ぬこと。血で結ばれた双子として、我らの願いは共に生き、共に死ぬこと。汝らの願いは多すぎる。一つだけ叶えてやる、どれにするかは私が選ぼう。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp6.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370362E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp7",
+                             "campaignId":  "is2_phantom",
+                             "order":  7,
+                             "group":  "standard",
+                             "title":  "『ヘリアの輝き』",
+                             "subtitle":  "Light of Heria",
+                             "name":  "『ヘリアの輝き』 Light of Heria",
+                             "effect":  "このエリアでの次の緊急作戦で、ランダムなエリートオペレーター1名が臨時加入し編成可能",
+                             "flavorText":  "最大の危難に見舞われるとき、英雄たちは太陽を降り、ヘリアの頂を越えて、ミノスのそばへとやってきた。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp7.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370372E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp8",
+                             "campaignId":  "is2_phantom",
+                             "order":  8,
+                             "group":  "standard",
+                             "title":  "『七丘の母狼』",
+                             "subtitle":  "Sette collis Mother Wolf",
+                             "name":  "『七丘の母狼』 Sette collis Mother Wolf",
+                             "effect":  "このエリアでの次の緊急作戦で、非BOSS敵の移動速度-50%",
+                             "flavorText":  "母狼が巣から離れたのは後世の教訓にせねばなるまい。こうならないよう、規則を犯すべきではない、と。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp8.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370382E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp9",
+                             "campaignId":  "is2_phantom",
+                             "order":  9,
+                             "group":  "standard",
+                             "title":  "『曙光』",
+                             "subtitle":  "The Dawn",
+                             "name":  "『曙光』 The Dawn",
+                             "effect":  "このエリアで、次に「思わぬ遭遇」に進んだ時、耐久値+1",
+                             "flavorText":  "一筋の光の帯が背後から走り、都市の喧騒を掠めて水平線へと飛び出した。突然、大地が早朝のまどろみを振り払い、その双眸を見開くと、露と光を現した。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp9.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370392E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp10",
+                             "campaignId":  "is2_phantom",
+                             "order":  10,
+                             "group":  "standard",
+                             "title":  "『金色の羽獣』",
+                             "subtitle":  "The Golden Fowlbeast",
+                             "name":  "『金色の羽獣』 The Golden Fowlbeast",
+                             "effect":  "このエリアで、次に「思わぬ遭遇」に進んだ時、源石錐+3",
+                             "flavorText":  "純金の羽獣に純金の卵、純金の羽毛を並べに並べ、純金の雛獣がギャアギャア鳴けど、純金と人間風情に何の関係があろうか？",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp10.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031302E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp11",
+                             "campaignId":  "is2_phantom",
+                             "order":  11,
+                             "group":  "standard",
+                             "title":  "『ワイルドゴールド』",
+                             "subtitle":  "Wild Gold",
+                             "name":  "『ワイルドゴールド』 Wild Gold",
+                             "effect":  "このエリアで次に入った行商人の店で買い物の際に消費する源石錐-50%",
+                             "flavorText":  "「何をするにも、こいつが必要だ。多いに越したことはない」",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp11.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031312E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp12",
+                             "campaignId":  "is2_phantom",
+                             "order":  12,
+                             "group":  "standard",
+                             "title":  "『子守り歌』",
+                             "subtitle":  "The Lullaby",
+                             "name":  "『子守り歌』 The Lullaby",
+                             "effect":  "このエリアで次に入った「安全な片隅」で獲得できる収益が倍増する",
+                             "flavorText":  "清潔で、快適で、安らかな夢は、子守歌から始まる。眠りから目覚めた時、全てが素晴らしくなっていることだろう。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp12.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031322E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp13",
+                             "campaignId":  "is2_phantom",
+                             "order":  13,
+                             "group":  "standard",
+                             "title":  "『カーニバル』",
+                             "subtitle":  "The Carnival",
+                             "name":  "『カーニバル』 The Carnival",
+                             "effect":  "このエリアで次に入った「幕間の余興」の最初の出費が減少する",
+                             "flavorText":  "祝え、友よ！こんなに良いことは、毎日あるわけじゃないぞ。",
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp13.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031332E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp14",
+                             "campaignId":  "is2_phantom",
+                             "order":  14,
+                             "group":  "crimson",
+                             "title":  "緋染めの『凱旋の讃歌』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『凱旋の讃歌』",
+                             "effect":  "このエリアで次に戦闘スポットに入った時、耐久値-5、戦闘後耐久値+10",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp14.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031342E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp15",
+                             "campaignId":  "is2_phantom",
+                             "order":  15,
+                             "group":  "crimson",
+                             "title":  "緋染めの『湖中の至宝』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『湖中の至宝』",
+                             "effect":  "このエリアでの次の戦闘で＜主なき財宝＞が出現しやすくなり、宝箱の源石錐が+5されるが、敵に触れられた際に耐久値-1",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp15.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031352E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp16",
+                             "campaignId":  "is2_phantom",
+                             "order":  16,
+                             "group":  "crimson",
+                             "title":  "緋染めの『百日一日物語』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『百日一日物語』",
+                             "effect":  "このエリアでの次の戦闘で耐久値（臨時耐久値を含めず）を失うと、戦闘後にランダムで秘宝を1つ獲得",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp16.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031362E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp17",
+                             "campaignId":  "is2_phantom",
+                             "order":  17,
+                             "group":  "crimson",
+                             "title":  "緋染めの『独り往く者』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『独り往く者』",
+                             "effect":  "このエリアで次に入った行商人の店でアイテムを2つ購入すると、ランダムに特殊な秘宝を1つ獲得",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp17.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031372E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp18",
+                             "campaignId":  "is2_phantom",
+                             "order":  18,
+                             "group":  "crimson",
+                             "title":  "緋染めの『夢の国の冒険譚』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『夢の国の冒険譚』",
+                             "effect":  "このエリアで次に【安全な片隅】に入った時、耐久値-2、招集券を1枚獲得（★6臨時招集出現確定）",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp18.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031382E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp19",
+                             "campaignId":  "is2_phantom",
+                             "order":  19,
+                             "group":  "crimson",
+                             "title":  "緋染めの『霜の牡鹿と雪の牝鹿』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『霜の牡鹿と雪の牝鹿』",
+                             "effect":  "このエリアでの次の戦闘中、全ての味方ユニットの攻撃力+30%、最大HP-30%",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp19.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031392E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp20",
+                             "campaignId":  "is2_phantom",
+                             "order":  20,
+                             "group":  "crimson",
+                             "title":  "緋染めの『ヘリアの輝き』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『ヘリアの輝き』",
+                             "effect":  "このエリアでの次の【緊急作戦】にて、新たな敵が出現し、戦闘後にランダムで秘宝を1つ獲得",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp20.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032302E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp21",
+                             "campaignId":  "is2_phantom",
+                             "order":  21,
+                             "group":  "crimson",
+                             "title":  "緋染めの『七丘の母狼』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『七丘の母狼』",
+                             "effect":  "このエリアでの次の【緊急作戦】にて、【ボス】以外の敵の最大HP+100%、移動速度-75%",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp21.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032312E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp22",
+                             "campaignId":  "is2_phantom",
+                             "order":  22,
+                             "group":  "crimson",
+                             "title":  "緋染めの『曙光』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『曙光』",
+                             "effect":  "このエリアで、次に【思わぬ遭遇】に入った時、確率でランダムに秘宝を1つ獲得。獲得できなかった場合、耐久値-1、かつこの演目を保持",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp22.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032322E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp23",
+                             "campaignId":  "is2_phantom",
+                             "order":  23,
+                             "group":  "crimson",
+                             "title":  "緋染めの『金色の羽獣』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『金色の羽獣』",
+                             "effect":  "このエリアで、次に【思わぬ遭遇】に入った時、確率で源石錐+10。獲得できなかった場合、耐久値-1、かつこの演目を保持",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp23.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032332E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp24",
+                             "campaignId":  "is2_phantom",
+                             "order":  24,
+                             "group":  "crimson",
+                             "title":  "緋染めの『ワイルドゴールド』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『ワイルドゴールド』",
+                             "effect":  "このエリアで次に入った行商人の店で買い物の際に消費する源石錐が-90%から+50%の間でランダムに変化",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp24.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032342E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp25",
+                             "campaignId":  "is2_phantom",
+                             "order":  25,
+                             "group":  "crimson",
+                             "title":  "緋染めの『子守り歌』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『子守り歌』",
+                             "effect":  "このエリアで次に【安全な片隅】に入った時、耐久値と源石錐を半分失うが、獲得できるものが3倍になる",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp25.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032352E706E67.png"
+                                       }
+                         },
+                         {
+                             "id":  "is2_phantom_performance_pcsp26",
+                             "campaignId":  "is2_phantom",
+                             "order":  26,
+                             "group":  "crimson",
+                             "title":  "緋染めの『カーニバル』",
+                             "subtitle":  null,
+                             "name":  "緋染めの『カーニバル』",
+                             "effect":  "次に【幕間の余興】に入った時、耐久値、希望、源石錐+3。終了時に50%の確率でスポット内で消費した分の資源を再び獲得",
+                             "flavorText":  null,
+                             "sourcePage":  "統合戦略「ファントムと緋き貴石」",
+                             "sourceAnchor":  "e83e8373",
+                             "image":  {
+                                           "source":  "arknights.wikiru.jp",
+                                           "sourcePath":  "img/pcsp26.png",
+                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032362E706E67.png"
+                                       }
+                         }
+                     ]
+}

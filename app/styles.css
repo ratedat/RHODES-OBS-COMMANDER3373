@@ -196,6 +196,24 @@ a:hover { text-decoration: underline; }
 .overlay-kpis .difficulty-field-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; }
 .overlay-kpis .difficulty-field { grid-template-columns: 70px minmax(0, 1fr); gap: 5px; font-size: 10px; }
 .overlay-kpis .difficulty-field strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.effect-block { margin-top: 12px; }
+.effect-block-title { margin-bottom: 8px; color: #fff7e2; font-weight: 800; font-size: 12px; }
+.effect-list { display: grid; gap: 6px; }
+.effect-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 68px minmax(128px, 0.65fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.effect-type { color: var(--accent-2); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.effect-title { min-width: 0; color: #fff7e2; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+.effect-text { min-width: 0; color: #ded6c9; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+.effect-empty { padding: 12px; }
 .list-area { display: grid; gap: 10px; max-height: calc(100vh - 260px); overflow: auto; padding-right: 4px; }
 .operator-pick-grid { grid-template-columns: repeat(var(--operator-grid-columns, 2), minmax(0, 1fr)); align-items: stretch; }
 .relic-pick-grid { grid-template-columns: repeat(var(--relic-grid-columns, 2), minmax(0, 1fr)); align-items: stretch; }
@@ -308,6 +326,12 @@ a:hover { text-decoration: underline; }
 .compact-chip-row .tag { min-height: 21px; padding: 2px 6px; font-size: 10px; }
 .compact-section { display: grid; gap: 5px; }
 .compact-section-head { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; text-transform: uppercase; }
+.compact-effect-scroll { max-height: 58px; }
+.compact-effect-list { gap: 4px; }
+.compact-effect-list .effect-row { grid-template-columns: 40px minmax(0, 1fr); gap: 3px 5px; padding: 4px 5px; border-radius: 5px; }
+.compact-effect-list .effect-type { font-size: 9px; }
+.compact-effect-list .effect-title { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compact-effect-list .effect-text { grid-column: 1 / -1; font-size: 9px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .compact-relic-scroll { max-height: 72px; }
 .compact-relic-strip { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
 .compact-relic-strip img { width: 30px; height: 30px; object-fit: contain; border-radius: 5px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
@@ -434,6 +458,13 @@ a:hover { text-decoration: underline; }
 .stream-note { margin-top: 5px; color: #e7dfd0; font-size: 10px; line-height: 1.35; }
 .stream-chip-row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
 .stream-chip-row .tag { min-height: 20px; padding: 2px 6px; font-size: 10px; }
+.stream-effect-scroll { max-height: 72px; margin-top: 6px; }
+.stream-effect-list { gap: 4px; }
+.stream-effect-list .effect-row { grid-template-columns: 42px minmax(0, 1fr); gap: 3px 5px; padding: 4px 5px; border-radius: 5px; }
+.stream-effect-list .effect-type { font-size: 9px; }
+.stream-effect-list .effect-title { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stream-effect-list .effect-text { grid-column: 1 / -1; font-size: 9px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.stream-horizontal .stream-effect-scroll { max-height: 50px; }
 .stream-section-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; color: var(--muted); font-size: 10px; text-transform: uppercase; }
 .stream-section-head strong { color: var(--accent-2); }
 .stream-scroll { overflow: hidden; min-width: 0; position: relative; scrollbar-width: none; }
@@ -539,10 +570,16 @@ a:hover { text-decoration: underline; }
   gap: 12px;
   min-height: 0;
 }
-.overlay-left { display: grid; grid-template-rows: auto 1fr; gap: 12px; min-width: 0; }
+.overlay-left { display: grid; grid-template-rows: auto auto 1fr; gap: 12px; min-width: 0; }
 .overlay-right { display: grid; grid-template-rows: auto 1fr auto; gap: 12px; min-width: 0; }
 .squad-name { font-size: 18px; font-weight: 800; color: #fff7e2; }
 .squad-effect { color: #ded6c9; font-size: 13px; margin-top: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.squad-option-effect { color: var(--muted); font-size: 12px; }
+.overlay-effect-scroll { max-height: 188px; overflow: hidden; }
+.overlay-effect-list .effect-row { grid-template-columns: 58px minmax(110px, 0.75fr) minmax(0, 1fr); padding: 6px 7px; }
+.overlay-effect-list .effect-type { font-size: 10px; }
+.overlay-effect-list .effect-title,
+.overlay-effect-list .effect-text { font-size: 11px; }
 .relic-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
@@ -582,6 +619,7 @@ a:hover { text-decoration: underline; }
   .panel.half, .panel.third { grid-column: span 12; }
   .form-grid, .form-grid.two { grid-template-columns: 1fr; }
   .search-strip { grid-template-columns: 1fr; }
+  .effect-row { grid-template-columns: 1fr; }
   .operator-pick-grid,
   .relic-pick-grid { grid-template-columns: 1fr; }
 }

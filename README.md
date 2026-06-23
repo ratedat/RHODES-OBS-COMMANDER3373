@@ -19,6 +19,8 @@ See:
 - `docs/data-summary.md` for extracted campaign data coverage
 - `docs/effect-calculation.md` for relic/squad effect calculation design
 - `data/wikiru-campaign-sources.json` for adding or updating campaign wiki extraction targets
+- `data/performance-sources.json` for adding or updating campaign performance/event-buff extraction targets such as IS#2 演目
+- `data/performances.json` for generated selectable performance/event-buff names and effects
 - `data/difficulty-variant-sources.json` for adding or updating difficulty-dependent relic groups
 - `data/difficulty-tiers.json` for campaign-specific difficulty tier mapping such as IS#4/IS#5/IS#6 多元化珍品
 - `data/difficulty-grade-sources.json` for selectable grade ranges and wiki table column mappings
@@ -82,7 +84,8 @@ Run only part of the flow when checking a specific source:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Operators
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Campaigns,DifficultyVariants,DifficultyGrades,RelicImages
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Performances
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Campaigns,Performances,DifficultyVariants,DifficultyGrades,RelicImages
 ```
 
 Each run produces:

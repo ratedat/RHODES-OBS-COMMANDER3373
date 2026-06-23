@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "meta": {
+    "purpose": "Wiki source pages used to extract Integrated Strategies performance buffs such as IS#2 演目."
+  },
+  "sources": [
+    {
+      "campaignId": "is2_phantom",
+      "page": "統合戦略「ファントムと緋き貴石」",
+      "sectionAnchor": "e83e8373",
+      "sectionTitle": "演目",
+      "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E3%83%95%E3%82%A1%E3%83%B3%E3%83%88%E3%83%A0%E3%81%A8%E7%B7%8B%E3%81%8D%E8%B2%B4%E7%9F%B3%E3%80%8D#e83e8373"
+    }
+  ]
+}
