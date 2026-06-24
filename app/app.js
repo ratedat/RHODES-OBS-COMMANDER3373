@@ -2,6 +2,7 @@ import { bossDisplaySubline, bossDisplayTitle, renderBossCard, renderBossChip } 
 import { renderOperatorControlRow as renderOperatorControlRowComponent, renderRelicControlRow as renderRelicControlRowComponent } from "./components/choice-cards.js";
 import { renderOperatorListArea as renderOperatorListAreaComponent, renderRelicListArea as renderRelicListAreaComponent, renderRelicListContent as renderRelicListContentComponent } from "./components/choice-lists.js";
 import { renderOverlayCompact as renderOverlayCompactComponent, renderOverlayDefault as renderOverlayDefaultComponent, renderOverlayDense as renderOverlayDenseComponent } from "./components/overlay-layouts.js";
+import { overlayPartOptions, renderOverlayPart as renderOverlayPartComponent } from "./components/overlay-parts.js";
 import { renderEffectList } from "./components/effects.js";
 import * as specialControls from "./components/special-controls.js";
 import { renderCompactSpecialPicker as renderCompactSpecialPickerComponent, renderSpecialField as renderSpecialFieldComponent } from "./components/special-fields.js";
@@ -21,7 +22,7 @@ import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
 import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
-import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlaySize } from "./lib/overlay-config.js";
+import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
 import { clampGridColumns, gridColumnOptions, normalizePreferences } from "./lib/preferences.js";
 import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
@@ -29,6 +30,7 @@ import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autos
 const app = document.querySelector("#app");
 const routeParams = new URLSearchParams(location.search);
 const view = location.pathname.includes("overlay") || routeParams.get("view") === "overlay" ? "overlay" : "control";
+const overlayPart = resolveOverlayPart(routeParams.get("part") || location.pathname.match(/^\/overlay\/part\/([^/]+)/)?.[1]);
 const overlayLayout = resolveOverlayLayout(routeParams.get("layout"));
 const overlaySize = resolveOverlaySize(routeParams.get("size") || routeParams.get("scale"));
 if (view === "overlay") document.documentElement.classList.add("overlay-mode");
@@ -177,6 +179,10 @@ function renderModeOrderedNavButtons() {
 
 function absoluteAppUrl(path) {
   return `${location.origin}${path}`;
+}
+
+function renderObsPartCards() {
+  return overlayPartOptions.map((item) => renderObsUrlCard(item.label, item.hint, `/overlay/part/${item.id}`)).join("");
 }
 
 function renderObsUrlCard(title, subtitle, path) {
@@ -988,15 +994,9 @@ function renderObsPartsTab() {
           ${renderObsUrlCard("縦長 L", "左右サイドバー向け / 大", "/overlay?layout=vertical&size=large")}
         </div>
       </div>
-      <div class="panel half">
-        <div class="panel-header"><h2 class="panel-title">パーツ分離予定</h2><span class="panel-subtitle">次の実装単位</span></div>
-        <div class="panel-body obs-part-list">
-          <div><strong>Top Bar</strong><span>統合戦略、等級、分隊、更新状態</span></div>
-          <div><strong>Relics</strong><span>秘宝アイコン列と自動スクロール</span></div>
-          <div><strong>Operators</strong><span>レア度別招集オペレーター</span></div>
-          <div><strong>Effects</strong><span>等級、秘宝、特殊効果の合算表示</span></div>
-          <div><strong>Boss Flags</strong><span>3層/5層/6層以降のフラグ表示</span></div>
-        </div>
+      <div class="panel">
+        <div class="panel-header"><h2 class="panel-title">分割パーツ</h2><span class="panel-subtitle">OBSで個別ソースとして配置</span></div>
+        <div class="panel-body obs-url-grid">${renderObsPartCards()}</div>
       </div>
       <div class="panel half">
         <div class="panel-header"><h2 class="panel-title">サイドカー想定</h2><span class="panel-subtitle">配信外の支援画面</span></div>
@@ -1054,6 +1054,10 @@ function renderOverlayCompact(args) {
   return renderOverlayCompactComponent(args, renderOverlayContext());
 }
 
+function renderOverlayPart(args) {
+  return renderOverlayPartComponent(overlayPart, args, renderOverlayContext());
+}
+
 function renderOverlayDense(args) {
   return renderOverlayDenseComponent(args, renderOverlayContext());
 }
@@ -1061,7 +1065,7 @@ function renderOverlayDense(args) {
 function renderOverlay() {
   cancelOverlayAutoScroll();
   app.dataset.loading = "false";
-  app.className = `overlay-app overlay-${overlayLayout} overlay-size-${overlaySize}`;
+  app.className = overlayPart ? `overlay-app overlay-part overlay-part-${overlayPart} overlay-size-${overlaySize}` : `overlay-app overlay-${overlayLayout} overlay-size-${overlaySize}`;
   document.body.className = "overlay-body";
   const campaign = getCampaign();
   const squad = getSelectedSquad();
@@ -1073,6 +1077,11 @@ function renderOverlay() {
   const difficultyGrade = getSelectedDifficultyGrade();
   const performance = getSelectedPerformance();
   const activeEffects = getActiveEffects({ overlay: true });
+  if (overlayPart) {
+    app.innerHTML = renderOverlayPart({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, runDifficulty: state.run.difficulty, updatedAt: state.updatedAt });
+    setupOverlayAutoScroll(app);
+    return;
+  }
   if (overlayLayout === "compact") {
     app.innerHTML = renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade });
     setupOverlayAutoScroll(app);

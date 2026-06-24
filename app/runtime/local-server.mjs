@@ -37,6 +37,10 @@ export function overlayUrl(port, query = "") {
   return `http://127.0.0.1:${port}/overlay${query}`;
 }
 
+export function overlayPartUrl(port, part) {
+  return `http://127.0.0.1:${port}/overlay/part/${part}`;
+}
+
 export function waitForReady(url, attempts = 60) {
   return new Promise((resolve, reject) => {
     let remaining = attempts;

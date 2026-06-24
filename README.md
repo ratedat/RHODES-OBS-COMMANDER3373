@@ -83,6 +83,15 @@ The desktop shell is intentionally thin: OBS still uses browser-source URLs, whi
 - http://127.0.0.1:5173/overlay?layout=horizontal&size=large
 - http://127.0.0.1:5173/overlay?layout=full
 
+OBS parts can be added as separate Browser Sources when you want to arrange each element freely:
+
+- http://127.0.0.1:5173/overlay/part/status
+- http://127.0.0.1:5173/overlay/part/relics
+- http://127.0.0.1:5173/overlay/part/operators
+- http://127.0.0.1:5173/overlay/part/effects
+- http://127.0.0.1:5173/overlay/part/bosses
+- http://127.0.0.1:5173/overlay/part/special
+
 Runtime state is stored in `data/current-state.json` and is intentionally ignored by Git. The committed example state remains `data/overlay-state.example.json`.
 
 ## Data Update Workflow

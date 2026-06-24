@@ -81,6 +81,7 @@ Responsibilities are intentionally separated:
 - `app/launcher.mjs` remains a browser-based fallback for environments where Electron is not desired.
 - `start-windows.vbs` and `tools/windows/start-app.ps1` provide a double-click source-folder launcher for non-technical Windows users.
 - OBS remains a browser-source consumer of `/overlay` URLs, so desktop packaging must not make OBS depend on an embedded runtime.
+- Split OBS parts are routed under `/overlay/part/<part>`, currently `status`, `relics`, `operators`, `effects`, `bosses`, and `special`.
 - The control UI acts as the sidecar surface for manual input, tournament review, and future OCR/ADB suggestions.
 
 Packaged builds wrap these same local URLs. Runtime state is stored outside the packaged app via `ARKNIGHTS_STATE_DIR`, while master data remains bundled with the app.

@@ -6,6 +6,7 @@ import {
   hasFlag,
   normalizePort,
   normalizeView,
+  overlayPartUrl,
   overlayUrl,
   readArg,
   waitForReady,
@@ -35,6 +36,18 @@ function buildMenu() {
         { label: "OBS Compact URLを開く", click: () => shell.openExternal(overlayUrl(port, "?layout=compact")) },
         { label: "OBS 横長URLを開く", click: () => shell.openExternal(overlayUrl(port, "?layout=horizontal&size=medium")) },
         { label: "OBS 縦長URLを開く", click: () => shell.openExternal(overlayUrl(port, "?layout=vertical&size=medium")) },
+        { type: "separator" },
+        {
+          label: "分割パーツURL",
+          submenu: [
+            { label: "ラン状態", click: () => shell.openExternal(overlayPartUrl(port, "status")) },
+            { label: "秘宝", click: () => shell.openExternal(overlayPartUrl(port, "relics")) },
+            { label: "招集", click: () => shell.openExternal(overlayPartUrl(port, "operators")) },
+            { label: "効果", click: () => shell.openExternal(overlayPartUrl(port, "effects")) },
+            { label: "ボス", click: () => shell.openExternal(overlayPartUrl(port, "bosses")) },
+            { label: "特殊値", click: () => shell.openExternal(overlayPartUrl(port, "special")) },
+          ],
+        },
       ],
     },
     {

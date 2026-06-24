@@ -24,9 +24,14 @@ export const overlayScrollSpeedLabels = {
 };
 
 const overlayLayouts = new Set(["compact", "vertical", "horizontal", "full"]);
+const overlayParts = new Set(["status", "relics", "operators", "effects", "bosses", "special"]);
 
 export function resolveOverlayLayout(value) {
   return overlayLayouts.has(value) ? value : "compact";
+}
+
+export function resolveOverlayPart(value) {
+  return overlayParts.has(value) ? value : null;
 }
 
 export function resolveOverlaySize(value) {
