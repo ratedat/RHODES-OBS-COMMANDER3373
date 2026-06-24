@@ -1,5 +1,6 @@
 import { bossDisplaySubline, bossDisplayTitle, renderBossCard, renderBossChip } from "./components/boss.js";
 import { renderOperatorControlRow as renderOperatorControlRowComponent, renderRelicControlRow as renderRelicControlRowComponent } from "./components/choice-cards.js";
+import { renderOperatorListArea as renderOperatorListAreaComponent, renderRelicListArea as renderRelicListAreaComponent, renderRelicListContent as renderRelicListContentComponent } from "./components/choice-lists.js";
 import { renderEffectList } from "./components/effects.js";
 import * as specialControls from "./components/special-controls.js";
 import { renderCompactSpecialPicker as renderCompactSpecialPickerComponent, renderSpecialField as renderSpecialFieldComponent } from "./components/special-fields.js";
@@ -968,17 +969,12 @@ function getRelicListView() {
   };
 }
 
-function renderRelicListContent({ shown, filtered, owned }) {
-  return `
-    ${shown.map((item) => renderRelicControlRow(item, owned.has(item.id))).join("")}
-    ${shown.length < filtered.length ? `<div class="empty-state field-wide">表示を絞り込んでください。残り${filtered.length - shown.length}件があります。</div>` : ""}
-  `;
+function renderRelicListContent(viewData) {
+  return renderRelicListContentComponent(viewData, renderRelicControlRow);
 }
 
 function renderRelicListArea(viewData) {
-  return `<div class="list-area relic-pick-grid" style="--relic-grid-columns: ${viewData.gridColumns}">
-    ${renderRelicListContent(viewData)}
-  </div>`;
+  return renderRelicListAreaComponent(viewData, renderRelicListContent);
 }
 
 function refreshRelicListOnly() {
@@ -1044,10 +1040,7 @@ function renderOperatorsTab() {
             <label>並び順<select data-field="operatorSort"><option value="rarity_desc" ${state.preferences.operatorSort === "rarity_desc" ? "selected" : ""}>レア度 高い順</option><option value="rarity_asc" ${state.preferences.operatorSort === "rarity_asc" ? "selected" : ""}>レア度 低い順</option><option value="name" ${state.preferences.operatorSort === "name" ? "selected" : ""}>名前順</option></select></label>
             <label>表示列<select data-field="operatorGridColumns">${gridColumnOptions.map((count) => `<option value="${count}" ${count === gridColumns ? "selected" : ""}>${count}列</option>`).join("")}</select></label>
           </div>
-          <div class="list-area operator-pick-grid" style="--operator-grid-columns: ${gridColumns}">
-            ${shown.map((item) => renderOperatorControlRow(item, selected.has(item.id))).join("")}
-            ${shown.length < operators.length ? `<div class="empty-state field-wide">表示を絞り込んでください。残り${operators.length - shown.length}件があります。</div>` : ""}
-          </div>
+          ${renderOperatorListAreaComponent({ shown, operators, selected, gridColumns }, renderOperatorControlRow)}
         </div>
       </div>
     </section>
