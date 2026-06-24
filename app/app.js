@@ -19,7 +19,7 @@ import { asCoinEntries, asSpecialArray, asSpecialObject, clampSpecialNumber } fr
 import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
 import * as specialDisplay from "./domain/special-display.js";
-import { assetUrl, html, normalizeText, stableOverlayStateJson, stars } from "./lib/format.js";
+import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlaySize } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
 import { clampGridColumns, gridColumnOptions, normalizePreferences } from "./lib/preferences.js";
