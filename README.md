@@ -37,20 +37,26 @@ See:
 
 The first manual-first MVP is implemented as a dependency-free Node app.
 
-Start the desktop app window:
+For streamers and tournament staff, use the Windows desktop app build when available: download `Arknights Rogue OBS Tool.exe` from the release package and double-click it.
+
+When running from the source folder on Windows, double-click this file instead of typing commands:
+
+- `start-windows.vbs`
+
+The first launch may run a one-time setup if dependencies are missing. After that, the desktop window opens directly. The top menu can switch between Control and Overlay Preview, and can open common OBS overlay URLs in the system browser.
+
+Developer fallback commands:
 
 ```powershell
 cd O:\Arknights_Rogue_OBSTool
 npm.cmd run app
 ```
 
-If port 5173 is already in use:
+Build a portable Windows exe for distribution:
 
 ```powershell
-npm.cmd run app:5174
+npm.cmd run dist:win
 ```
-
-The desktop window is the beginner-friendly sidecar for input and review. The top menu can switch between Control and Overlay Preview, and can open common OBS overlay URLs in the system browser.
 
 Start only the local server without the desktop window:
 

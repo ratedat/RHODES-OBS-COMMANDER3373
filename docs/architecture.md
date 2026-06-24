@@ -77,9 +77,10 @@ Responsibilities are intentionally separated:
 
 - `app/server.mjs` owns the local HTTP API, static file serving, and runtime state persistence.
 - `app/runtime/local-server.mjs` owns the shared server startup, readiness probe, URL building, and external browser opening helpers.
-- `app/electron/main.mjs` owns the desktop window, app menu, and common OBS URL shortcuts.
+- `app/electron/main.mjs` owns the desktop window, app menu, common OBS URL shortcuts, and packaged-app state directory setup.
 - `app/launcher.mjs` remains a browser-based fallback for environments where Electron is not desired.
+- `start-windows.vbs` and `tools/windows/start-app.ps1` provide a double-click source-folder launcher for non-technical Windows users.
 - OBS remains a browser-source consumer of `/overlay` URLs, so desktop packaging must not make OBS depend on an embedded runtime.
 - The control UI acts as the sidecar surface for manual input, tournament review, and future OCR/ADB suggestions.
 
-Future packaging work should wrap these same local URLs rather than moving state or calculation logic into the Electron main process.
+Packaged builds wrap these same local URLs. Runtime state is stored outside the packaged app via `ARKNIGHTS_STATE_DIR`, while master data remains bundled with the app.

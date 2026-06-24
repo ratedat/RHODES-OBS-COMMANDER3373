@@ -1,3 +1,4 @@
+import path from "node:path";
 import { app, BrowserWindow, Menu, shell } from "electron";
 import {
   appUrl,
@@ -7,8 +8,6 @@ import {
   normalizeView,
   overlayUrl,
   readArg,
-  startLocalServer,
-  stopLocalServer,
   waitForReady,
 } from "../runtime/local-server.mjs";
 
@@ -16,7 +15,7 @@ const port = normalizePort(readArg(process.argv, "--port", process.env.PORT || D
 const initialView = normalizeView(readArg(process.argv, "--view", "control"));
 const smokeTest = hasFlag(process.argv, "--smoke-test");
 
-let serverProcess = null;
+let serverController = null;
 let mainWindow = null;
 let isQuitting = false;
 
@@ -77,21 +76,11 @@ function createWindow(targetUrl) {
   mainWindow.loadURL(targetUrl);
 }
 
-function wireServerLogs() {
-  serverProcess.stdout?.on("data", (chunk) => process.stdout.write(chunk));
-  serverProcess.stderr?.on("data", (chunk) => process.stderr.write(chunk));
-  serverProcess.on("exit", (code) => {
-    if (!isQuitting) {
-      console.error(`Local server exited with code ${code ?? "unknown"}`);
-      app.quit();
-    }
-  });
-}
-
 async function startDesktopApp() {
-  serverProcess = startLocalServer({ port });
-  wireServerLogs();
-  const targetUrl = appUrl(port, initialView);
+  process.env.ARKNIGHTS_STATE_DIR = process.env.ARKNIGHTS_STATE_DIR || path.join(app.getPath("userData"), "state");
+  const { startServer } = await import("../server.mjs");
+  serverController = await startServer({ port });
+  const targetUrl = appUrl(serverController.port, initialView);
   await waitForReady(targetUrl);
   console.log(`Desktop: ${targetUrl}`);
   if (smokeTest) {
@@ -112,7 +101,7 @@ app.on("activate", () => {
 
 app.on("before-quit", () => {
   isQuitting = true;
-  stopLocalServer(serverProcess);
+  serverController?.server?.close();
 });
 
 app.on("window-all-closed", () => {

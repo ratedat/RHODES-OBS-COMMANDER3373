@@ -9,7 +9,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const DATA = path.join(ROOT, "data");
 const APP = path.join(ROOT, "app");
-const CURRENT_STATE = path.join(DATA, "current-state.json");
+const STATE_DIR = process.env.ARKNIGHTS_STATE_DIR ? path.resolve(process.env.ARKNIGHTS_STATE_DIR) : DATA;
+const CURRENT_STATE = path.join(STATE_DIR, "current-state.json");
 const EXAMPLE_STATE = path.join(DATA, "overlay-state.example.json");
 
 const argvPort = (() => {
@@ -46,6 +47,7 @@ async function readJson(file) {
 }
 
 async function writeJsonAtomic(file, value) {
+  await fs.mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
   await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   await fs.rename(tmp, file);
@@ -223,7 +225,8 @@ async function serveFile(res, file) {
   }
 }
 
-const server = http.createServer(async (req, res) => {
+export function createAppServer() {
+  return http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
@@ -266,10 +269,29 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     sendJson(res, 500, { error: error instanceof Error ? error.message : String(error) });
   }
-});
+  });
+}
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`Arknights Rogue OBS Tool`);
-  console.log(`Control: http://127.0.0.1:${PORT}/control`);
-  console.log(`Overlay: http://127.0.0.1:${PORT}/overlay`);
-});
+export function startServer({ port = PORT, host = "127.0.0.1" } = {}) {
+  const server = createAppServer();
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, host, () => {
+      server.off("error", reject);
+      const address = server.address();
+      const actualPort = typeof address === "object" && address ? address.port : port;
+      console.log(`Arknights Rogue OBS Tool`);
+      console.log(`Control: http://${host}:${actualPort}/control`);
+      console.log(`Overlay: http://${host}:${actualPort}/overlay`);
+      resolve({ server, port: actualPort, host });
+    });
+  });
+}
+
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectRun) {
+  startServer().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}

@@ -1,6 +1,8 @@
 {
   "name": "arknights-rogue-obs-tool",
   "version": "0.1.0",
+  "description": "Desktop sidecar and OBS overlay tool for Arknights Integrated Strategies.",
+  "author": "ratedat",
   "private": true,
   "type": "module",
   "main": "app/electron/main.mjs",
@@ -11,11 +13,40 @@
     "app:5174": "electron . --port 5174",
     "app:web": "node app/launcher.mjs",
     "app:web:5174": "node app/launcher.mjs --port 5174",
+    "dist:win": "electron-builder --win portable --x64 --publish never",
+    "pack:win": "electron-builder --win portable --x64 --dir --publish never",
     "data:update": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1",
     "data:update:plan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1 -PlanOnly",
     "data:diff": "node tools/compare-data-update.mjs --before data --after data --out review/update-runs/manual-compare"
   },
   "devDependencies": {
-    "electron": "^42.5.0"
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.ratedat.arknights-rogue-obs-tool",
+    "productName": "Arknights Rogue OBS Tool",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "app/**/*",
+      "assets/**/*",
+      "data/**/*",
+      "package.json",
+      "!data/current-state.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
   }
 }
