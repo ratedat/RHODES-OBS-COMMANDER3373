@@ -1,6 +1,7 @@
 import { asCoinEntries, asEffectStackEntries, asSpecialArray, asSpecialObject, clampCoinCount, clampSpecialNumber, mergeCoinEntries, normalizeCoinFace } from "./domain/special-values.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults } from "./lib/overlay-config.js";
 import { clampGridColumns } from "./lib/preferences.js";
+import { normalizeControlMode } from "./domain/ui-modes.js";
 
 function ensureCampaignSpecial(state, campaignId) {
   state.run.special[campaignId] ||= {};
@@ -76,7 +77,9 @@ export function clearTournamentState(state) {
 }
 
 export function updateRunField(state, field, value, checked) {
-  if (field === "campaignId") {
+  if (field === "mode") {
+    state.mode = normalizeControlMode(value);
+  } else if (field === "campaignId") {
     state.run.campaignId = value;
     state.run.squadId = null;
     state.run.squad = null;

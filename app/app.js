@@ -14,6 +14,7 @@ import { applyDifficultyTier, difficultyEffectTexts, difficultySummary as summar
 import { isActiveManualRule, summarizeRelicEffects as summarizeRelicEffectMetrics, summarizeTextEffects } from "./domain/effect-metrics.js";
 import { getOperatorFilterView, sortOperators as sortOperatorsByPreference } from "./domain/operators.js";
 import { getRelicCategories, getRelicListView as buildRelicListView } from "./domain/relics.js";
+import { controlModeOptions, getControlMode, getModeOrderedTabs, normalizeControlMode } from "./domain/ui-modes.js";
 import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
 import { asCoinEntries, asSpecialArray, asSpecialObject, clampSpecialNumber } from "./domain/special-values.js";
 import * as selectableEffects from "./domain/selectable-effects.js";
@@ -134,6 +135,62 @@ function getSpecialFieldConfig(campaignId, fieldId) {
 
 function getCoinOptions(field, campaignId = getCampaign()?.id) {
   return selectableEffects.getCoinOptions(getSelectableEffectSource(), field, campaignId);
+}
+
+function getCurrentControlMode() {
+  return getControlMode(state?.mode);
+}
+
+function renderControlModeOptions() {
+  const selected = getCurrentControlMode().id;
+  return controlModeOptions.map((option) => `<option value="${option.id}" ${option.id === selected ? "selected" : ""}>${html(option.label)}</option>`).join("");
+}
+
+function renderModeCards() {
+  const selected = getCurrentControlMode().id;
+  return controlModeOptions.map((option) => `
+    <label class="mode-card ${option.id === selected ? "active" : ""}">
+      <input type="radio" name="control-mode" data-field="mode" value="${option.id}" ${option.id === selected ? "checked" : ""}>
+      <span class="mode-card-title">${html(option.label)}</span>
+      <span class="mode-card-meta">${html(option.subtitle)}</span>
+      <span class="mode-card-copy">${html(option.description)}</span>
+    </label>
+  `).join("");
+}
+
+function renderModeOrderedNavButtons() {
+  const tabs = [
+    { id: "run", label: "ラン状態", icon: "R" },
+    { id: "relics", label: "秘宝", icon: "T" },
+    { id: "operators", label: "招集", icon: "O" },
+    { id: "flags", label: "ボス/大会", icon: "F" },
+    { id: "obs", label: "OBSパーツ", icon: "P" },
+    { id: "json", label: "入出力", icon: "J" },
+  ];
+  const tabMap = new Map(tabs.map((tab) => [tab.id, tab]));
+  return getModeOrderedTabs(state?.mode, tabs.map((tab) => tab.id))
+    .map((tabId) => tabMap.get(tabId))
+    .filter(Boolean)
+    .map((tab) => navButton(tab.id, tab.label, tab.icon))
+    .join("");
+}
+
+function absoluteAppUrl(path) {
+  return `${location.origin}${path}`;
+}
+
+function renderObsUrlCard(title, subtitle, path) {
+  const url = absoluteAppUrl(path);
+  return `
+    <div class="obs-url-card">
+      <div class="obs-url-head">
+        <strong>${html(title)}</strong>
+        <span>${html(subtitle)}</span>
+      </div>
+      <input readonly value="${html(url)}" aria-label="${html(title)} URL">
+      <a href="${html(path)}" target="_blank">別画面で開く</a>
+    </div>
+  `;
 }
 
 function getCoinStatusOptions(field, campaignId = getCampaign()?.id) {
@@ -550,6 +607,7 @@ function ensureStateShape() {
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
   normalizeBossSelections();
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
+  state.mode = normalizeControlMode(state.mode);
   state.preferences = normalizePreferences(state.preferences);
   state.tournament ||= { pendingState: null, lastSubmissionAt: null, submittedBy: null };
   deriveDifficultyTier();
@@ -630,6 +688,7 @@ function navButton(id, label, icon) {
 }
 
 function renderControl() {
+  const mode = getCurrentControlMode();
   app.dataset.loading = "false";
   document.body.className = "";
   app.className = "control-app";
@@ -639,10 +698,11 @@ function renderControl() {
         <div class="brand-mark">IS</div>
         <div>
           <h1>Arknights Rogue OBS Tool</h1>
-          <p>${html(getCampaign()?.fullTitle)} / ${html(state.mode || "manual")}</p>
+          <p>${html(getCampaign()?.fullTitle)} / ${html(mode.label)}</p>
         </div>
       </div>
       <div class="topbar-actions">
+        <label class="topbar-mode">モード<select data-field="mode">${renderControlModeOptions()}</select></label>
         <a href="/overlay" target="_blank">Overlay</a>
         <a href="/control" target="_self">Control</a>
         <span class="save-status">${html(ui.saveStatus)}</span>
@@ -651,11 +711,7 @@ function renderControl() {
     </header>
     <div class="control-layout">
       <nav class="control-nav">
-        ${navButton("run", "ラン状態", "R")}
-        ${navButton("relics", "秘宝", "T")}
-        ${navButton("operators", "招集", "O")}
-        ${navButton("flags", "ボス/大会", "F")}
-        ${navButton("json", "入出力", "J")}
+        ${renderModeOrderedNavButtons()}
       </nav>
       <main class="control-main">
         ${ui.notice ? `<div class="panel" style="margin-bottom:14px"><div class="panel-body">${html(ui.notice)}</div></div>` : ""}
@@ -669,6 +725,7 @@ function renderCurrentTab() {
   if (ui.tab === "relics") return renderRelicsTab();
   if (ui.tab === "operators") return renderOperatorsTab();
   if (ui.tab === "flags") return renderFlagsTab();
+  if (ui.tab === "obs") return renderObsPartsTab();
   if (ui.tab === "json") return renderJsonTab();
   return renderRunTab();
 }
@@ -687,8 +744,16 @@ function renderRunTab() {
   const bossEntries = getBossFlagEntries(campaign.id);
   const tierCfg = master.difficultyTiers?.[campaign.id];
   const difficultyGrade = getSelectedDifficultyGrade();
+  const mode = getCurrentControlMode();
   return `
     <section class="panel-grid">
+      <div class="panel">
+        <div class="panel-header"><h2 class="panel-title">マザーUIモード</h2><span class="panel-subtitle">${html(mode.subtitle)}</span></div>
+        <div class="panel-body">
+          <div class="mode-card-grid">${renderModeCards()}</div>
+        </div>
+      </div>
+
       <div class="panel half">
         <div class="panel-header"><h2 class="panel-title">ラン基本情報</h2><span class="panel-subtitle">OBS表示の主状態</span></div>
         <div class="panel-body form-grid two">
@@ -907,10 +972,49 @@ function renderFlagsTab() {
     </section>
   `;
 }
+function renderObsPartsTab() {
+  return `
+    <section class="panel-grid">
+      <div class="panel">
+        <div class="panel-header"><h2 class="panel-title">OBSプリセット</h2><span class="panel-subtitle">現行でそのまま使えるURL</span></div>
+        <div class="panel-body obs-url-grid">
+          ${renderObsUrlCard("標準オーバーレイ", "全体情報を1枚で表示", "/overlay")}
+          ${renderObsUrlCard("コンパクト", "ゲーム画面上に重ねる小型表示", "/overlay?layout=compact")}
+          ${renderObsUrlCard("横長 S", "下帯向け / 小", "/overlay?layout=horizontal&size=small")}
+          ${renderObsUrlCard("横長 M", "下帯向け / 中", "/overlay?layout=horizontal&size=medium")}
+          ${renderObsUrlCard("横長 L", "下帯向け / 大", "/overlay?layout=horizontal&size=large")}
+          ${renderObsUrlCard("縦長 S", "左右サイドバー向け / 小", "/overlay?layout=vertical&size=small")}
+          ${renderObsUrlCard("縦長 M", "左右サイドバー向け / 中", "/overlay?layout=vertical&size=medium")}
+          ${renderObsUrlCard("縦長 L", "左右サイドバー向け / 大", "/overlay?layout=vertical&size=large")}
+        </div>
+      </div>
+      <div class="panel half">
+        <div class="panel-header"><h2 class="panel-title">パーツ分離予定</h2><span class="panel-subtitle">次の実装単位</span></div>
+        <div class="panel-body obs-part-list">
+          <div><strong>Top Bar</strong><span>統合戦略、等級、分隊、更新状態</span></div>
+          <div><strong>Relics</strong><span>秘宝アイコン列と自動スクロール</span></div>
+          <div><strong>Operators</strong><span>レア度別招集オペレーター</span></div>
+          <div><strong>Effects</strong><span>等級、秘宝、特殊効果の合算表示</span></div>
+          <div><strong>Boss Flags</strong><span>3層/5層/6層以降のフラグ表示</span></div>
+        </div>
+      </div>
+      <div class="panel half">
+        <div class="panel-header"><h2 class="panel-title">サイドカー想定</h2><span class="panel-subtitle">配信外の支援画面</span></div>
+        <div class="panel-body obs-part-list">
+          <div><strong>Run Console</strong><span>入力、検索、選択操作を集約</span></div>
+          <div><strong>Review Queue</strong><span>大会入力やOCR候補の確認</span></div>
+          <div><strong>Effect Inspector</strong><span>条件付き効果と合算根拠の確認</span></div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function renderJsonTab() {
   const exportJson = JSON.stringify(state, null, 2);
   return `
     <section class="panel-grid">
+
       <div class="panel half">
         <div class="panel-header"><h2 class="panel-title">現在状態をエクスポート</h2><span class="panel-subtitle">大会共有・バックアップ用</span></div>
         <div class="panel-body form-grid one">
@@ -931,7 +1035,7 @@ function renderJsonTab() {
 
 function renderOverlayContext() {
   return {
-    mode: state.mode,
+    mode: getCurrentControlMode().label,
     getSpecialTags,
     getOverlaySpecialEffects,
     getBossFlagEntries,
@@ -990,7 +1094,7 @@ function renderOverlay() {
     specialFields,
     special,
     difficultyGrade,
-    mode: state.mode,
+    mode: getCurrentControlMode().label,
     runDifficulty: state.run.difficulty,
     updatedAt: state.updatedAt,
     bossFlagCount: state.bossFlags.length,
