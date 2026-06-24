@@ -27,6 +27,7 @@ export function normalizePort(value) {
 export function normalizeView(value) {
   if (value === "overlay") return "overlay";
   if (value === "sidecar") return "sidecar";
+  if (value === "control-v2") return "control-v2";
   return "control";
 }
 

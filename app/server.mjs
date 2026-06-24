@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeControlMode } from "./domain/ui-modes.js";
 import { mergeImplementationHistory } from "./domain/operator-implementation-history.js";
+import { isAppShellPath } from "./lib/view-route.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -271,7 +272,7 @@ export function createAppServer() {
       return res.end();
     }
 
-    if (url.pathname === "/control" || url.pathname === "/sidecar" || url.pathname === "/overlay" || url.pathname.startsWith("/overlay/")) {
+    if (isAppShellPath(url.pathname)) {
       return serveFile(res, path.join(APP, "index.html"));
     }
 

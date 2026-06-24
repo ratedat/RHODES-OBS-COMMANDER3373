@@ -26,11 +26,12 @@ import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
 import { clampGridColumns, gridColumnOptions, normalizePreferences } from "./lib/preferences.js";
+import { resolveAppView } from "./lib/view-route.js";
 import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
 
 const app = document.querySelector("#app");
 const routeParams = new URLSearchParams(location.search);
-const view = location.pathname.includes("overlay") || routeParams.get("view") === "overlay" ? "overlay" : location.pathname.includes("sidecar") || routeParams.get("view") === "sidecar" ? "sidecar" : "control";
+const view = resolveAppView(location.pathname, location.search);
 const overlayPart = resolveOverlayPart(routeParams.get("part") || location.pathname.match(/^\/overlay\/part\/([^/]+)/)?.[1]);
 const overlayLayout = resolveOverlayLayout(routeParams.get("layout"));
 const overlaySize = resolveOverlaySize(routeParams.get("size") || routeParams.get("scale"));
@@ -678,7 +679,7 @@ function ensureStateShape() {
 
 
 function isInteractiveView() {
-  return view === "control" || view === "sidecar";
+  return view === "control" || view === "control-v2" || view === "sidecar";
 }
 
 function renderInteractive() {

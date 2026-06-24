@@ -13,6 +13,11 @@ test("app shell and module files are served with strict no-cache headers", async
     const control = await fetch(`http://127.0.0.1:${port}/control`);
     assert.equal(control.headers.get("cache-control"), "no-store, max-age=0, must-revalidate");
     assert.equal(control.headers.get("clear-site-data"), '"cache"');
+
+    const controlV2 = await fetch(`http://127.0.0.1:${port}/control-v2`);
+    assert.equal(controlV2.status, 200);
+    assert.equal(controlV2.headers.get("cache-control"), "no-store, max-age=0, must-revalidate");
+    assert.equal(controlV2.headers.get("clear-site-data"), '"cache"');
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }

@@ -66,7 +66,7 @@ function toggleChoiceElement(element, type, id, context) {
 }
 
 function isControlView(context) {
-  return context.view === "control" || context.view === "sidecar";
+  return context.view === "control" || context.view === "control-v2" || context.view === "sidecar";
 }
 
 export function registerControlEvents(app, context) {
