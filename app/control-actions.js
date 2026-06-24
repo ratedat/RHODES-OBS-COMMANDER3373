@@ -1,4 +1,4 @@
-import { asCoinEntries, asEffectStackEntries, asSpecialArray, asSpecialObject, clampSpecialNumber, mergeCoinEntries } from "./domain/special-values.js";
+import { asCoinEntries, asEffectStackEntries, asSpecialArray, asSpecialObject, clampCoinCount, clampSpecialNumber, mergeCoinEntries, normalizeCoinFace } from "./domain/special-values.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults } from "./lib/overlay-config.js";
 import { clampGridColumns } from "./lib/preferences.js";
 
@@ -156,4 +156,44 @@ export function updateSpecialRankedField(state, campaignId, fieldId, parentKey, 
   if (value) selected[parentKey] = value;
   else delete selected[parentKey];
   special[fieldId] = selected;
+}
+
+export function updateEffectStackEntryCount(state, campaignId, fieldId, index, value, fieldConfig, mergeEffectStackEntries) {
+  const entries = asEffectStackEntries(state.run.special[campaignId]?.[fieldId]);
+  const entry = entries[index];
+  if (entry) entry.count = clampCoinCount(value);
+  const special = ensureCampaignSpecial(state, campaignId);
+  special[fieldId] = mergeEffectStackEntries(fieldConfig, entries, campaignId);
+}
+
+export function updateEffectStackEntryState(state, campaignId, fieldId, index, stateId, fieldConfig, mergeEffectStackEntries) {
+  const entries = asEffectStackEntries(state.run.special[campaignId]?.[fieldId]);
+  const entry = entries[index];
+  if (entry) entry.stateId = stateId;
+  const special = ensureCampaignSpecial(state, campaignId);
+  special[fieldId] = mergeEffectStackEntries(fieldConfig, entries, campaignId);
+}
+
+export function updateCoinEntryCount(state, campaignId, fieldId, index, value) {
+  const entries = asCoinEntries(state.run.special[campaignId]?.[fieldId]);
+  const entry = entries[index];
+  if (entry) entry.count = clampCoinCount(value);
+  const special = ensureCampaignSpecial(state, campaignId);
+  special[fieldId] = mergeCoinEntries(entries);
+}
+
+export function updateCoinEntryStatus(state, campaignId, fieldId, index, value) {
+  const entries = asCoinEntries(state.run.special[campaignId]?.[fieldId]);
+  const entry = entries[index];
+  if (entry) entry.statusId = value || null;
+  const special = ensureCampaignSpecial(state, campaignId);
+  special[fieldId] = mergeCoinEntries(entries);
+}
+
+export function updateCoinEntryFace(state, campaignId, fieldId, index, value) {
+  const entries = asCoinEntries(state.run.special[campaignId]?.[fieldId]);
+  const entry = entries[index];
+  if (entry) entry.face = normalizeCoinFace(value);
+  const special = ensureCampaignSpecial(state, campaignId);
+  special[fieldId] = mergeCoinEntries(entries);
 }

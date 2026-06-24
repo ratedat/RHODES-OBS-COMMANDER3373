@@ -1423,60 +1423,28 @@ app.addEventListener("change", (event) => {
 
   const effectStackEntryCount = target.dataset.effectStackEntryCount;
   if (effectStackEntryCount) {
-    mutate((s) => {
-      const campaignId = getCampaign().id;
-      const fieldConfig = getSpecialFieldConfig(campaignId, effectStackEntryCount) || { id: effectStackEntryCount };
-      const entries = asEffectStackEntries(s.run.special[campaignId]?.[effectStackEntryCount]);
-      const entry = entries[Number(target.dataset.index)];
-      if (entry) entry.count = clampCoinCount(target.value);
-      s.run.special[campaignId] ||= {};
-      s.run.special[campaignId][effectStackEntryCount] = mergeEffectStackEntries(fieldConfig, entries, campaignId);
-    });
+    const campaignId = getCampaign().id;
+    const fieldConfig = getSpecialFieldConfig(campaignId, effectStackEntryCount) || { id: effectStackEntryCount };
+    mutate((s) => controlActions.updateEffectStackEntryCount(s, campaignId, effectStackEntryCount, Number(target.dataset.index), target.value, fieldConfig, mergeEffectStackEntries));
   }
   const effectStackEntryState = target.dataset.effectStackEntryState;
   if (effectStackEntryState) {
-    mutate((s) => {
-      const campaignId = getCampaign().id;
-      const fieldConfig = getSpecialFieldConfig(campaignId, effectStackEntryState) || { id: effectStackEntryState };
-      const entries = asEffectStackEntries(s.run.special[campaignId]?.[effectStackEntryState]);
-      const entry = entries[Number(target.dataset.index)];
-      if (entry) entry.stateId = normalizeStackState(fieldConfig, target.value, campaignId);
-      s.run.special[campaignId] ||= {};
-      s.run.special[campaignId][effectStackEntryState] = mergeEffectStackEntries(fieldConfig, entries, campaignId);
-    });
+    const campaignId = getCampaign().id;
+    const fieldConfig = getSpecialFieldConfig(campaignId, effectStackEntryState) || { id: effectStackEntryState };
+    const stateId = normalizeStackState(fieldConfig, target.value, campaignId);
+    mutate((s) => controlActions.updateEffectStackEntryState(s, campaignId, effectStackEntryState, Number(target.dataset.index), stateId, fieldConfig, mergeEffectStackEntries));
   }
   const coinEntryCount = target.dataset.coinEntryCount;
   if (coinEntryCount) {
-    mutate((s) => {
-      const campaignId = getCampaign().id;
-      const entries = asCoinEntries(s.run.special[campaignId]?.[coinEntryCount]);
-      const entry = entries[Number(target.dataset.index)];
-      if (entry) entry.count = clampCoinCount(target.value);
-      s.run.special[campaignId] ||= {};
-      s.run.special[campaignId][coinEntryCount] = mergeCoinEntries(entries);
-    });
+    mutate((s) => controlActions.updateCoinEntryCount(s, getCampaign().id, coinEntryCount, Number(target.dataset.index), target.value));
   }
   const coinEntryStatus = target.dataset.coinEntryStatus;
   if (coinEntryStatus) {
-    mutate((s) => {
-      const campaignId = getCampaign().id;
-      const entries = asCoinEntries(s.run.special[campaignId]?.[coinEntryStatus]);
-      const entry = entries[Number(target.dataset.index)];
-      if (entry) entry.statusId = target.value || null;
-      s.run.special[campaignId] ||= {};
-      s.run.special[campaignId][coinEntryStatus] = mergeCoinEntries(entries);
-    });
+    mutate((s) => controlActions.updateCoinEntryStatus(s, getCampaign().id, coinEntryStatus, Number(target.dataset.index), target.value));
   }
   const coinEntryFace = target.dataset.coinEntryFace;
   if (coinEntryFace) {
-    mutate((s) => {
-      const campaignId = getCampaign().id;
-      const entries = asCoinEntries(s.run.special[campaignId]?.[coinEntryFace]);
-      const entry = entries[Number(target.dataset.index)];
-      if (entry) entry.face = normalizeCoinFace(target.value);
-      s.run.special[campaignId] ||= {};
-      s.run.special[campaignId][coinEntryFace] = mergeCoinEntries(entries);
-    });
+    mutate((s) => controlActions.updateCoinEntryFace(s, getCampaign().id, coinEntryFace, Number(target.dataset.index), target.value));
   }
 });
 
