@@ -69,6 +69,10 @@ Open the control panel:
 
 - http://127.0.0.1:5173/control
 
+Open the sidecar support window when you want a compact emulator-adjacent view for run state, effects, relics, operators, boss flags, and review queues:
+
+- http://127.0.0.1:5173/sidecar
+
 Use this URL as an OBS Browser Source:
 
 - http://127.0.0.1:5173/overlay

@@ -26,6 +26,10 @@ function refreshChoiceCountLabels(ui, state) {
 }
 
 function toggleChoiceElement(element, type, id, context) {
+  if (context.view === "sidecar") {
+    context.mutate((state) => controlActions.toggleChoice(state, type, id));
+    return;
+  }
   context.mutate((state) => controlActions.toggleChoice(state, type, id), { render: false });
   const state = context.getState();
   const active = type === "relic" ? state.relics.includes(id) : state.operators.includes(id);
@@ -34,7 +38,7 @@ function toggleChoiceElement(element, type, id, context) {
 }
 
 function isControlView(context) {
-  return context.view === "control";
+  return context.view === "control" || context.view === "sidecar";
 }
 
 export function registerControlEvents(app, context) {

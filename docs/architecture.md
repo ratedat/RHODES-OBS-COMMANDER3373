@@ -82,6 +82,7 @@ Responsibilities are intentionally separated:
 - `start-windows.vbs` and `tools/windows/start-app.ps1` provide a double-click source-folder launcher for non-technical Windows users.
 - OBS remains a browser-source consumer of `/overlay` URLs, so desktop packaging must not make OBS depend on an embedded runtime.
 - Split OBS parts are routed under `/overlay/part/<part>`, currently `status`, `relics`, `operators`, `effects`, `bosses`, and `special`.
-- The control UI acts as the sidecar surface for manual input, tournament review, and future OCR/ADB suggestions.
+- `/control` remains the full editing surface for manual input, tournament review, and future OCR/ADB suggestions.
+- `/sidecar` is the compact emulator-adjacent support surface for run state, effects, selected relics/operators, boss flags, and review queues.
 
 Packaged builds wrap these same local URLs. Runtime state is stored outside the packaged app via `ARKNIGHTS_STATE_DIR`, while master data remains bundled with the app.

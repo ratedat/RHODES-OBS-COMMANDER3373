@@ -31,7 +31,8 @@ function buildMenu() {
       label: "表示",
       submenu: [
         { label: "Control", accelerator: "CmdOrCtrl+1", click: () => loadView("control") },
-        { label: "Overlay Preview", accelerator: "CmdOrCtrl+2", click: () => loadView("overlay") },
+        { label: "Sidecar", accelerator: "CmdOrCtrl+2", click: () => loadView("sidecar") },
+        { label: "Overlay Preview", accelerator: "CmdOrCtrl+3", click: () => loadView("overlay") },
         { type: "separator" },
         { label: "OBS Compact URLを開く", click: () => shell.openExternal(overlayUrl(port, "?layout=compact")) },
         { label: "OBS 横長URLを開く", click: () => shell.openExternal(overlayUrl(port, "?layout=horizontal&size=medium")) },

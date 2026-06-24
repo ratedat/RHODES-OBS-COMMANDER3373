@@ -29,14 +29,23 @@ import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autos
 
 const app = document.querySelector("#app");
 const routeParams = new URLSearchParams(location.search);
-const view = location.pathname.includes("overlay") || routeParams.get("view") === "overlay" ? "overlay" : "control";
+const view = location.pathname.includes("overlay") || routeParams.get("view") === "overlay" ? "overlay" : location.pathname.includes("sidecar") || routeParams.get("view") === "sidecar" ? "sidecar" : "control";
 const overlayPart = resolveOverlayPart(routeParams.get("part") || location.pathname.match(/^\/overlay\/part\/([^/]+)/)?.[1]);
 const overlayLayout = resolveOverlayLayout(routeParams.get("layout"));
 const overlaySize = resolveOverlaySize(routeParams.get("size") || routeParams.get("scale"));
 if (view === "overlay") document.documentElement.classList.add("overlay-mode");
 
+const controlTabs = [
+  { id: "run", label: "ラン状態", icon: "R" },
+  { id: "relics", label: "秘宝", icon: "T" },
+  { id: "operators", label: "招集", icon: "O" },
+  { id: "flags", label: "ボス/大会", icon: "F" },
+  { id: "obs", label: "OBSパーツ", icon: "P" },
+  { id: "json", label: "入出力", icon: "J" },
+];
+
 const ui = {
-  tab: "run",
+  tab: controlTabs.some((tab) => tab.id === routeParams.get("tab")) ? routeParams.get("tab") : "run",
   relicSearch: "",
   relicCategory: "all",
   operatorRarity: "all",
@@ -161,16 +170,8 @@ function renderModeCards() {
 }
 
 function renderModeOrderedNavButtons() {
-  const tabs = [
-    { id: "run", label: "ラン状態", icon: "R" },
-    { id: "relics", label: "秘宝", icon: "T" },
-    { id: "operators", label: "招集", icon: "O" },
-    { id: "flags", label: "ボス/大会", icon: "F" },
-    { id: "obs", label: "OBSパーツ", icon: "P" },
-    { id: "json", label: "入出力", icon: "J" },
-  ];
-  const tabMap = new Map(tabs.map((tab) => [tab.id, tab]));
-  return getModeOrderedTabs(state?.mode, tabs.map((tab) => tab.id))
+  const tabMap = new Map(controlTabs.map((tab) => [tab.id, tab]));
+  return getModeOrderedTabs(state?.mode, controlTabs.map((tab) => tab.id))
     .map((tabId) => tabMap.get(tabId))
     .filter(Boolean)
     .map((tab) => navButton(tab.id, tab.label, tab.icon))
@@ -620,9 +621,17 @@ function ensureStateShape() {
 }
 
 
+function isInteractiveView() {
+  return view === "control" || view === "sidecar";
+}
+
+function renderInteractive() {
+  if (view === "sidecar") return renderSidecar();
+  return renderControl();
+}
 function setNotice(text) {
   ui.notice = text;
-  if (view === "control") renderControl();
+  if (isInteractiveView()) renderInteractive();
 }
 
 function scheduleSave() {
@@ -676,8 +685,8 @@ function mutate(fn, options = {}) {
   const scrollSnapshot = render ? captureListScroll() : null;
   fn(state);
   ensureStateShape();
-  if (view === "control" && render) {
-    renderControl();
+  if (isInteractiveView() && render) {
+    renderInteractive();
     restoreListScroll(scrollSnapshot);
   }
   scheduleSave();
@@ -709,6 +718,7 @@ function renderControl() {
       </div>
       <div class="topbar-actions">
         <label class="topbar-mode">モード<select data-field="mode">${renderControlModeOptions()}</select></label>
+        <a href="/sidecar" target="_self">Sidecar</a>
         <a href="/overlay" target="_blank">Overlay</a>
         <a href="/control" target="_self">Control</a>
         <span class="save-status">${html(ui.saveStatus)}</span>
@@ -1033,6 +1043,118 @@ function renderJsonTab() {
   `;
 }
 
+function renderSidecarRelics(relics) {
+  if (!relics.length) return `<div class="empty-state">所持秘宝はありません。</div>`;
+  return `<div class="sidecar-mini-list sidecar-relic-list">
+    ${relics.map((item) => renderRelicControlRow(item, true)).join("")}
+  </div>`;
+}
+
+function renderSidecarOperators(operators) {
+  if (!operators.length) return `<div class="empty-state">招集オペレーターはありません。</div>`;
+  const groups = [6, 5, 4, 3, 2, 1]
+    .map((rarity) => ({ rarity, items: operators.filter((item) => Number(item.rarity) === rarity) }))
+    .filter((group) => group.items.length);
+  return `<div class="sidecar-operator-groups">
+    ${groups.map((group) => `<section class="sidecar-operator-group"><h3>${stars(group.rarity)} <span>${group.items.length}</span></h3><div class="sidecar-mini-list">${group.items.map((item) => renderOperatorControlRow(item, true)).join("")}</div></section>`).join("")}
+  </div>`;
+}
+
+function renderSidecarReviewQueue() {
+  const pending = state.tournament?.pendingState;
+  const suggestions = state.pendingSuggestions || [];
+  if (!pending && !suggestions.length) return `<div class="empty-state">保留中の大会入力・OCR候補はありません。</div>`;
+  return `
+    ${pending ? `<div class="sidecar-review-item"><strong>大会入力が保留中</strong><span>反映前に確認してください。</span><div class="inline-row"><button class="primary" data-action="approve-tournament">反映</button><button data-action="reject-tournament">破棄</button></div></div>` : ""}
+    ${suggestions.map((item, index) => `<div class="sidecar-review-item"><strong>${html(item.label || item.type || "候補")}</strong><span>${html(item.rawText || item.value || "")}</span><button data-action="dismiss-suggestion" data-index="${index}">削除</button></div>`).join("")}
+  `;
+}
+
+function renderSidecar() {
+  cancelOverlayAutoScroll();
+  const campaign = getCampaign();
+  const mode = getCurrentControlMode();
+  const squads = getCampaignSquads();
+  const selectedSquad = getSelectedSquad();
+  const randomOptions = selectedSquad?.randomEffectOptions || [];
+  const performances = getCampaignPerformances(campaign.id);
+  const selectedPerformance = getSelectedPerformance();
+  const relics = getOwnedRelics();
+  const operators = getRecruitedOperators();
+  const specialFields = campaign.specialFields || [];
+  const special = state.run.special?.[campaign.id] || {};
+  const specialTags = getSpecialTags(specialFields, special);
+  const bossEntries = getBossFlagEntries(campaign.id);
+  const bossSections = getBossManualSections(campaign.id);
+  const difficultyGrade = getSelectedDifficultyGrade();
+  const activeEffects = getActiveEffects();
+  app.dataset.loading = "false";
+  document.body.className = "sidecar-body";
+  app.className = "sidecar-app";
+  app.innerHTML = `
+    <header class="sidecar-topbar">
+      <div class="sidecar-brand">
+        <span class="brand-mark">IS</span>
+        <div><h1>Sidecar</h1><p>IS#${html(campaign.number)} ${html(campaign.title)} / ${html(mode.label)}</p></div>
+      </div>
+      <div class="sidecar-actions">
+        <label>モード<select data-field="mode">${renderControlModeOptions()}</select></label>
+        <a href="/control" target="_self">Control</a>
+        <a href="/overlay" target="_blank">Overlay</a>
+        <span class="save-status">${html(ui.saveStatus)}</span>
+      </div>
+    </header>
+    <main class="sidecar-main">
+      <div class="sidecar-column">
+        ${ui.notice ? `<div class="sidecar-notice">${html(ui.notice)}</div>` : ""}
+        <section class="sidecar-panel">
+          <div class="sidecar-panel-head"><h2>ラン状態</h2><span>${html(difficultyGrade?.label || state.run.difficulty || "等級未選択")}</span></div>
+          <div class="sidecar-kpis">
+            <div><span>秘宝</span><strong>${relics.length}</strong></div>
+            <div><span>招集</span><strong>${operators.length}</strong></div>
+            <div><span>Boss</span><strong>${bossEntries.length}</strong></div>
+          </div>
+          <div class="sidecar-form-grid">
+            <label>統合戦略<select data-field="campaignId">${master.campaigns.map((item) => `<option value="${item.id}" ${item.id === campaign.id ? "selected" : ""}>IS#${item.number} ${html(item.title)}</option>`).join("")}</select></label>
+            <label>等級${renderDifficultySelect(campaign.id)}</label>
+            <label class="sidecar-wide">分隊<select data-field="squadId"><option value="">未選択</option>${squads.map((item) => `<option value="${item.id}" ${item.id === state.run.squadId ? "selected" : ""}>${html(item.name)}</option>`).join("")}</select></label>
+            ${randomOptions.length ? `<label class="sidecar-wide">ランダム分隊効果<select data-field="squadRandomEffectOptionId"><option value="">未選択</option>${randomOptions.map((item) => `<option value="${item.id}" ${item.id === state.run.squadRandomEffectOptionId ? "selected" : ""}>${html(item.label || item.id)}</option>`).join("")}</select></label>` : ""}
+            ${performances.length ? `<label class="sidecar-wide">演目${renderPerformanceSelect(campaign.id)}</label>` : ""}
+          </div>
+          <div class="tag-list sidecar-tags">
+            ${selectedSquad ? `<span class="tag accent">${html(selectedSquad.name)}</span>` : `<span class="tag">分隊未選択</span>`}
+            ${selectedPerformance ? `<span class="tag info">${html(selectedPerformance.title || selectedPerformance.name)}</span>` : ""}
+            ${specialTags.map((item) => `<span class="tag info">${html(item.label)} ${html(item.value)}</span>`).join("")}
+          </div>
+        </section>
+        ${specialFields.length ? `<section class="sidecar-panel"><div class="sidecar-panel-head"><h2>特殊値</h2><span>${specialFields.length}</span></div><div class="sidecar-form-grid sidecar-special-grid">${specialFields.map((field) => renderSpecialField(field, campaign.id, special)).join("")}</div></section>` : ""}
+        <section class="sidecar-panel">
+          <div class="sidecar-panel-head"><h2>ボス</h2><span>${bossEntries.length}</span></div>
+          <div class="sidecar-form-grid">${bossSections.length ? bossSections.map((section) => renderBossSelector(section, campaign.id)).join("") : `<div class="empty-state sidecar-wide">この統合戦略のボスフラグ定義は未登録です。</div>`}</div>
+          <div class="sidecar-boss-grid">${bossEntries.length ? bossEntries.map((entry) => renderBossCard(entry, "compact")).join("") : `<div class="empty-state">ボスフラグは未設定です。</div>`}</div>
+        </section>
+      </div>
+      <div class="sidecar-column">
+        <section class="sidecar-panel">
+          <div class="sidecar-panel-head"><h2>発動効果</h2><span>${activeEffects.length}</span></div>
+          <div class="sidecar-scroll sidecar-effect-scroll">${renderEffectList(activeEffects, "sidecar-effect-list", "分隊・演目・等級・秘宝の発動効果は未設定です。")}</div>
+        </section>
+        <section class="sidecar-panel">
+          <div class="sidecar-panel-head"><h2>所持秘宝</h2><a href="/control?tab=relics" target="_self">編集</a></div>
+          ${renderSidecarRelics(relics)}
+        </section>
+        <section class="sidecar-panel">
+          <div class="sidecar-panel-head"><h2>招集オペレーター</h2><a href="/control?tab=operators" target="_self">編集</a></div>
+          ${renderSidecarOperators(operators)}
+        </section>
+        <section class="sidecar-panel">
+          <div class="sidecar-panel-head"><h2>レビュー</h2><a href="/control?tab=flags" target="_self">詳細</a></div>
+          <div class="sidecar-review-list">${renderSidecarReviewQueue()}</div>
+        </section>
+      </div>
+    </main>
+  `;
+}
 function renderOverlayContext() {
   return {
     mode: getCurrentControlMode().label,
@@ -1124,7 +1246,7 @@ function getControlEventContext() {
     getState: () => state,
     replaceState,
     mutate,
-    renderControl,
+    renderControl: renderInteractive,
     scheduleSave,
     setNotice,
     refreshRelicListOnly,
@@ -1167,7 +1289,7 @@ async function boot() {
       pollOverlay();
     } else {
       ui.saveStatus = "保存済み";
-      renderControl();
+      renderInteractive();
     }
   } catch (error) {
     app.dataset.loading = "false";

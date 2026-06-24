@@ -259,7 +259,7 @@ export function createAppServer() {
       return res.end();
     }
 
-    if (url.pathname === "/control" || url.pathname === "/overlay" || url.pathname.startsWith("/overlay/")) {
+    if (url.pathname === "/control" || url.pathname === "/sidecar" || url.pathname === "/overlay" || url.pathname.startsWith("/overlay/")) {
       return serveFile(res, path.join(APP, "index.html"));
     }
 
