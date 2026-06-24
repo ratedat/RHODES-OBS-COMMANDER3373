@@ -37,7 +37,20 @@ See:
 
 The first manual-first MVP is implemented as a dependency-free Node app.
 
-Start the local server:
+Start it like a local desktop-style app. This starts the local server and opens the control panel in your browser:
+
+```powershell
+cd O:\Arknights_Rogue_OBSTool
+npm.cmd run app
+```
+
+If port 5173 is already in use:
+
+```powershell
+npm.cmd run app:5174
+```
+
+Start only the local server:
 
 ```powershell
 cd O:\Arknights_Rogue_OBSTool
@@ -52,7 +65,7 @@ Use this URL as an OBS Browser Source:
 
 - http://127.0.0.1:5173/overlay
 
-The default overlay is the compact stream layout. The vertical and horizontal variants use auto-scrolling relic/operator panes so entries are not omitted:
+The launcher is intentionally thin: OBS still uses browser-source URLs, while the control panel can be treated as the sidecar app. The default overlay is the compact stream layout. The vertical and horizontal variants use auto-scrolling relic/operator panes so entries are not omitted:
 
 - http://127.0.0.1:5173/overlay?layout=vertical&size=small
 - http://127.0.0.1:5173/overlay?layout=vertical&size=medium

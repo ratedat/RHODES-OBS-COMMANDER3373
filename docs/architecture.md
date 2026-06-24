@@ -69,3 +69,15 @@ Important constraints:
 ## Variant Effects
 
 For IS#4 No.001-018, IS#5 No.001-020, and IS#6 No.001-015, 多元化珍品 use `data/relic-effect-variants.json` layered over the base relic data. The state stores numeric `run.difficulty`; the app derives `run.difficultyTierId` from `data/difficulty-tiers.json` and selects the matching variant for display and calculation. If the difficulty is unknown, the base effect is shown with an unresolved-variant warning.
+## Application Shell
+
+The current app shell is a thin local launcher rather than a packaged Electron/Tauri runtime. This keeps the dependency-free OBS browser-source path stable while making everyday use closer to a desktop app.
+
+Responsibilities are intentionally separated:
+
+- `app/server.mjs` owns the local HTTP API, static file serving, and runtime state persistence.
+- `app/launcher.mjs` owns desktop-style startup: choose a port, start the local server, wait until it is ready, and open the control or overlay URL.
+- OBS remains a browser-source consumer of `/overlay` URLs, so packaged app work must not make OBS depend on an embedded desktop runtime.
+- The control UI acts as the sidecar surface for manual input, tournament review, and future OCR/ADB suggestions.
+
+A later packaged build can wrap the same local URLs in Electron or Tauri. That wrapper should stay outside the state and calculation domains so the web app, OBS overlay, and sidecar continue to share one contract.

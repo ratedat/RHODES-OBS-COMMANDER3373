@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { normalizeControlMode } from "./domain/ui-modes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -54,7 +55,7 @@ function initialStateFromExample(example) {
   const state = structuredClone(example);
   state.version = state.version || 1;
   state.theme = state.theme || "obs-compact";
-  state.mode = "manual";
+  state.mode = normalizeControlMode("casual");
   state.updatedAt = new Date().toISOString();
   state.run = state.run || {};
   state.run.campaignId = "is5_sarkaz";
@@ -106,7 +107,7 @@ function normalizeState(state) {
   if (!state || typeof state !== "object") throw new Error("state must be an object");
   const next = structuredClone(state);
   next.version = next.version || 1;
-  next.mode = next.mode || "manual";
+  next.mode = normalizeControlMode(next.mode);
   next.updatedAt = new Date().toISOString();
   next.run = next.run || {};
   next.run.campaignId = next.run.campaignId || "is5_sarkaz";
