@@ -14,8 +14,9 @@ import { difficultyEffectTexts, difficultySummary as summarizeDifficultyGrade, g
 import { isActiveManualRule, summarizeRelicEffects as summarizeRelicEffectMetrics, summarizeTextEffects } from "./domain/effect-metrics.js";
 import { operatorReleaseMatches as operatorMatchesRelease, sortOperators as sortOperatorsByPreference, uniqueValues } from "./domain/operators.js";
 import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
-import { asCoinEntries, asEffectStackEntries, asSpecialArray, asSpecialObject, clampCoinCount, clampSpecialNumber, coinFaceLabels, mergeCoinEntries, normalizeCoinFace } from "./domain/special-values.js";
+import { asCoinEntries, asEffectStackEntries, asSpecialArray, asSpecialObject, clampCoinCount, clampSpecialNumber, coinFaceLabels } from "./domain/special-values.js";
 import * as selectableEffects from "./domain/selectable-effects.js";
+import * as specialLoadouts from "./domain/special-loadouts.js";
 import { assetUrl, html, normalizeText, stableOverlayStateJson, stars } from "./lib/format.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlaySize } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
@@ -109,30 +110,11 @@ function getStackStateEffect(field, value, campaignId = getCampaign()?.id) {
 }
 
 function normalizeEffectStackEntry(field, entry, campaignId = getCampaign()?.id) {
-  return {
-    ...entry,
-    count: clampCoinCount(entry.count),
-    stateId: normalizeStackState(field, entry.stateId, campaignId),
-  };
-}
-
-function effectStackEntryKey(entry) {
-  return `${entry.effectId}\u001f${entry.stateId || ""}`;
+  return specialLoadouts.normalizeEffectStackEntry(field, entry, campaignId, getSelectableEffectSource());
 }
 
 function mergeEffectStackEntries(field, entries, campaignId = getCampaign()?.id) {
-  const merged = new Map();
-  for (const rawEntry of asEffectStackEntries(entries)) {
-    const entry = normalizeEffectStackEntry(field, rawEntry, campaignId);
-    const key = effectStackEntryKey(entry);
-    if (merged.has(key)) {
-      const current = merged.get(key);
-      current.count = clampCoinCount(current.count + entry.count);
-    } else {
-      merged.set(key, entry);
-    }
-  }
-  return [...merged.values()];
+  return specialLoadouts.mergeEffectStackEntries(field, entries, campaignId, getSelectableEffectSource());
 }
 
 function getCampaignSelectableEffects(campaignId = getCampaign()?.id, slot = null) {
@@ -161,25 +143,11 @@ function getEffectStackOptions(field, campaignId = getCampaign()?.id) {
 }
 
 function normalizeEffectStackEntries(field, campaignId, value) {
-  const validEffects = new Set(getEffectStackOptions(field, campaignId).map((item) => item.id));
-  const normalized = asEffectStackEntries(value)
-    .filter((entry) => validEffects.has(entry.effectId))
-    .map((entry) => normalizeEffectStackEntry(field, entry, campaignId));
-  return mergeEffectStackEntries(field, normalized, campaignId);
+  return specialLoadouts.normalizeEffectStackEntries(field, campaignId, value, getSelectableEffectSource());
 }
 
 function normalizeCoinLoadoutEntries(field, campaignId, value) {
-  const validCoins = new Set(getCoinOptions(field, campaignId).map((item) => item.id));
-  const validStatuses = new Set(getCoinStatusOptions(field, campaignId).map((item) => item.id));
-  const normalized = asCoinEntries(value)
-    .filter((entry) => validCoins.has(entry.coinId))
-    .map((entry) => ({
-      ...entry,
-      count: clampCoinCount(entry.count),
-      statusId: validStatuses.has(entry.statusId) ? entry.statusId : null,
-      face: normalizeCoinFace(entry.face),
-    }));
-  return mergeCoinEntries(normalized);
+  return specialLoadouts.normalizeCoinLoadoutEntries(field, campaignId, value, getSelectableEffectSource());
 }
 
 function getRankedEffectGroups(field, campaignId = getCampaign()?.id) {
