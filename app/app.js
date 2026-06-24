@@ -1,4 +1,5 @@
 import { assetUrl, html, normalizeText, stableOverlayStateJson, stars } from "./lib/format.js";
+import { mediaUrl, specialEffectImageSrc } from "./lib/media.js";
 
 const app = document.querySelector("#app");
 const routeParams = new URLSearchParams(location.search);
@@ -459,9 +460,6 @@ function getOverlaySpecialEffects(campaignId, specialFields, special) {
   return effects;
 }
 
-function specialEffectImageSrc(item) {
-  return item.image?.localPath ? assetUrl(item.image.localPath) : (item.image?.sourceUrl || "");
-}
 
 function renderSpecialOverlayItems(items) {
   return `<div class="special-overlay-grid">
@@ -753,9 +751,6 @@ function getOwnedRelics() {
   return (state.relics || []).map((id) => maps.relic.get(id)).filter(Boolean);
 }
 
-function mediaUrl(image) {
-  return image?.localPath ? assetUrl(image.localPath) : (image?.sourceUrl || "");
-}
 
 function bossImages(entry) {
   if (Array.isArray(entry?.images)) return entry.images.filter(Boolean);
