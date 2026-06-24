@@ -1,14 +1,12 @@
 import { assetUrl, html, normalizeText, stableOverlayStateJson, stars } from "./lib/format.js";
+import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlaySize } from "./lib/overlay-config.js";
 import { mediaUrl, specialEffectImageSrc } from "./lib/media.js";
 
 const app = document.querySelector("#app");
 const routeParams = new URLSearchParams(location.search);
 const view = location.pathname.includes("overlay") || routeParams.get("view") === "overlay" ? "overlay" : "control";
-const requestedOverlayLayout = routeParams.get("layout") || "compact";
-const overlayLayout = ["compact", "vertical", "horizontal", "full"].includes(requestedOverlayLayout) ? requestedOverlayLayout : "compact";
-const requestedOverlaySize = routeParams.get("size") || routeParams.get("scale") || "medium";
-const overlaySizeAliases = { s: "small", small: "small", m: "medium", medium: "medium", l: "large", large: "large" };
-const overlaySize = overlaySizeAliases[requestedOverlaySize] || "medium";
+const overlayLayout = resolveOverlayLayout(routeParams.get("layout"));
+const overlaySize = resolveOverlaySize(routeParams.get("size") || routeParams.get("scale"));
 let overlayAutoScrollFrame = null;
 if (view === "overlay") document.documentElement.classList.add("overlay-mode");
 
@@ -35,20 +33,7 @@ let saveTimer = null;
 let lastStateJson = "";
 
 
-const overlayScrollSpeedDefaults = {
-  compactRelicScrollSpeed: 9,
-  verticalRelicScrollSpeed: 11,
-  verticalOperatorScrollSpeed: 13,
-  horizontalRelicScrollSpeed: 14,
-  horizontalOperatorScrollSpeed: 16,
-};
-const overlayScrollSpeedLabels = {
-  compactRelicScrollSpeed: "コンパクト 秘宝",
-  verticalRelicScrollSpeed: "縦長 秘宝",
-  verticalOperatorScrollSpeed: "縦長 オペレーター",
-  horizontalRelicScrollSpeed: "横長 秘宝",
-  horizontalOperatorScrollSpeed: "横長 オペレーター",
-};
+
 
 function buildMaps() {
   maps = {
@@ -1074,18 +1059,8 @@ function clampOperatorGridColumns(value) {
   return Math.min(6, Math.max(1, Math.trunc(numeric)));
 }
 
-function clampOverlayScrollSpeed(value, fallback = 12) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return fallback;
-  return Math.min(30, Math.max(0, Math.round(numeric)));
-}
-
 function getOverlayScrollSpeed(key) {
   return clampOverlayScrollSpeed(state?.preferences?.[key], overlayScrollSpeedDefaults[key] ?? 12);
-}
-
-function isOverlayScrollSpeedField(field) {
-  return Object.prototype.hasOwnProperty.call(overlayScrollSpeedDefaults, field);
 }
 
 function renderScrollSpeedControl(key) {
