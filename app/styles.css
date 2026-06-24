@@ -1111,3 +1111,81 @@ a:hover { text-decoration: underline; }
   .operator-pick-grid,
   .relic-pick-grid { grid-template-columns: 1fr; }
 }
+
+/* Control v2 keeps the first refresh isolated from the existing tabbed control UI. */
+.control-v2-body { min-height: 100vh; background: #10100f; overflow: hidden; }
+.control-v2-app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: linear-gradient(90deg, rgba(216,72,63,0.08), transparent 42%), var(--bg);
+}
+.control-v2-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 10, 9, 0.94);
+}
+.control-v2-title { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; align-items: center; min-width: 0; }
+.control-v2-title > span { display: grid; place-items: center; min-height: 36px; border: 1px solid rgba(215,168,71,0.48); border-radius: 6px; color: var(--accent-2); font-weight: 900; }
+.control-v2-title h1 { margin: 0; font-size: 17px; line-height: 1.15; letter-spacing: 0; }
+.control-v2-title p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.control-v2-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: end; }
+.control-v2-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(360px, 1.05fr) minmax(390px, 1.18fr);
+  gap: 10px;
+  padding: 10px;
+}
+.control-v2-notice { grid-column: 1 / -1; border: 1px solid rgba(91,181,176,0.36); border-radius: 7px; padding: 8px 10px; background: rgba(91,181,176,0.1); color: #e9fffb; }
+.control-v2-panel {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(22, 22, 20, 0.9);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.24);
+  overflow: hidden;
+}
+.control-v2-panel-head {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,0.035);
+}
+.control-v2-panel-head h2 { margin: 0; font-size: 14px; line-height: 1.15; letter-spacing: 0; }
+.control-v2-panel-head span { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.control-v2-run-panel { display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+.control-v2-form-stack { display: grid; gap: 9px; padding: 10px; border-bottom: 1px solid var(--line); }
+.control-v2-summary-block { min-height: 0; overflow: auto; padding: 10px; display: grid; align-content: start; gap: 10px; }
+.control-v2-summary-block p { margin: 0; display: grid; gap: 3px; }
+.control-v2-summary-block p strong { color: #fff7e2; }
+.control-v2-summary-block p span { color: var(--muted); font-size: 12px; }
+.control-v2-choice-panel { display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+.control-v2-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.control-v2-filter-grid.compact { grid-template-columns: minmax(170px, 1.4fr) minmax(120px, 1fr) 88px auto; align-items: end; }
+.control-v2-choice-panel .list-area { height: 100%; max-height: none; border: 0; border-radius: 0; padding: 9px; }
+.control-v2-choice-panel .operator-pick-grid { grid-template-columns: repeat(var(--operator-grid-columns), minmax(0, 1fr)); }
+.control-v2-choice-panel .relic-pick-grid { grid-template-columns: repeat(var(--relic-grid-columns), minmax(0, 1fr)); }
+.control-v2-choice-panel .item-row { min-height: 78px; }
+.control-v2-choice-panel .operator-choice { min-height: 62px; }
+.control-v2-choice-panel .item-effect { max-height: 3.9em; overflow: hidden; }
+@media (max-width: 1120px) {
+  .control-v2-body { overflow: auto; }
+  .control-v2-grid { grid-template-columns: 1fr; }
+  .control-v2-choice-panel .list-area { max-height: 520px; }
+}

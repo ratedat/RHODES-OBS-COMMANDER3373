@@ -77,6 +77,7 @@ npm.cmd run dev
 Open the control panel:
 
 - http://127.0.0.1:5173/control
+- http://127.0.0.1:5173/control-v2
 
 The examples below use the default port `5173`. If you selected another port in the desktop app, replace `5173` with that port in OBS Browser Source URLs.
 

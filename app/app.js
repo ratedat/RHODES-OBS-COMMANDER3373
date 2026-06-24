@@ -684,6 +684,7 @@ function isInteractiveView() {
 
 function renderInteractive() {
   if (view === "sidecar") return renderSidecar();
+  if (view === "control-v2") return renderControlV2();
   return renderControl();
 }
 function setNotice(text) {
@@ -775,6 +776,7 @@ function renderControl() {
       </div>
       <div class="topbar-actions">
         <label class="topbar-mode">モード<select data-field="mode">${renderControlModeOptions()}</select></label>
+        <a href="/control-v2" target="_self">Control v2</a>
         <a href="/sidecar" target="_self">Sidecar</a>
         <a href="/overlay" target="_blank">Overlay</a>
         <a href="/control" target="_self">Control</a>
@@ -784,7 +786,8 @@ function renderControl() {
     </header>
     <div class="control-layout">
       <nav class="control-nav">
-        ${renderModeOrderedNavButtons()}
+        <a class="nav-button" href="/control-v2" target="_self"><span class="nav-icon">V2</span><span>Control v2</span></a>
+          ${renderModeOrderedNavButtons()}
       </nav>
       <main class="control-main">
         ${ui.notice ? `<div class="panel" style="margin-bottom:14px"><div class="panel-body">${html(ui.notice)}</div></div>` : ""}
@@ -794,6 +797,124 @@ function renderControl() {
   `;
 }
 
+function renderControlV2RunPanel() {
+  const campaign = getCampaign();
+  const squads = getCampaignSquads();
+  const selectedSquad = getSelectedSquad();
+  const randomOptions = selectedSquad?.randomEffectOptions || [];
+  const performances = getCampaignPerformances(campaign.id);
+  const difficultyGrade = getSelectedDifficultyGrade();
+  const startTemplateSummary = getStartTemplateSummary();
+  const specialFields = campaign.specialFields || [];
+  const special = state.run.special?.[campaign.id] || {};
+  const specialTags = getSpecialTags(specialFields, special);
+  return `
+    <section class="control-v2-panel control-v2-run-panel">
+      <div class="control-v2-panel-head"><h2>ラン設定</h2><span>run setup</span></div>
+      <div class="control-v2-form-stack">
+        <label>統合戦略
+          <select data-field="campaignId">
+            ${master.campaigns.map((item) => `<option value="${item.id}" ${item.id === campaign.id ? "selected" : ""}>IS#${item.number} ${html(item.title)}</option>`).join("")}
+          </select>
+        </label>
+        <label>等級 / 難易度
+          ${renderDifficultySelect(campaign.id)}
+        </label>
+        <label>分隊
+          <select data-field="squadId">
+            <option value="">未選択</option>
+            ${squads.map((item) => `<option value="${item.id}" ${item.id === state.run.squadId ? "selected" : ""}>${html(item.name)}</option>`).join("")}
+          </select>
+        </label>
+        ${randomOptions.length ? `<label>ランダム分隊効果
+          <select data-field="squadRandomEffectOptionId">
+            <option value="">未選択</option>
+            ${randomOptions.map((item) => `<option value="${item.id}" ${item.id === state.run.squadRandomEffectOptionId ? "selected" : ""}>${html(item.label || item.id)}</option>`).join("")}
+          </select>
+        </label>` : ""}
+        ${performances.length ? `<label>演目${renderPerformanceSelect(campaign.id)}</label>` : ""}
+      </div>
+      <div class="control-v2-summary-block">
+        <div class="tag-list">
+          <span class="tag accent">秘宝 ${getEffectiveRelicIdList().length}</span>
+          <span class="tag info">招集 ${state.operators.length}</span>
+          <span class="tag">等級 ${html(difficultyGrade?.label || "未選択")}</span>
+          ${specialTags.slice(0, 4).map((item) => `<span class="tag info">${html(item.label)} ${html(item.value)}</span>`).join("")}
+        </div>
+        ${selectedSquad ? `<p><strong>${html(selectedSquad.name)}</strong><span>${html(selectedSquad.effect)}</span></p>` : `<p><strong>分隊未選択</strong><span>選択すると分隊効果がここに出ます。</span></p>`}
+        ${difficultyGrade ? renderDifficultyFields(difficultyGrade) : ""}
+        ${renderStartTemplateSummary(startTemplateSummary)}
+      </div>
+    </section>
+  `;
+}
+
+function renderControlV2OperatorsPanel() {
+  const { rarityOptions, classOptions, branchOptions, operators } = getOperatorFilterViewForUi();
+  const shown = sortOperators(operators).slice(0, 500);
+  const selected = new Set(state.operators);
+  const gridColumns = getOperatorGridColumns();
+  return `
+    <section class="control-v2-panel control-v2-choice-panel">
+      <div class="control-v2-panel-head"><h2>オペレーター</h2><span class="control-v2-operator-count">${operators.length}件 / 招集${selected.size}名</span></div>
+      <div class="control-v2-filter-grid">
+        <label>実装状態<select data-ui="operatorRelease"><option value="released" ${ui.operatorRelease === "released" ? "selected" : ""}>日本実装のみ</option><option value="all" ${ui.operatorRelease === "all" ? "selected" : ""}>すべて</option><option value="unreleased" ${ui.operatorRelease === "unreleased" ? "selected" : ""}>日本未実装のみ</option></select></label>
+        <label>レア度<select data-ui="operatorRarity"><option value="all">すべて</option>${rarityOptions.map((rarity) => `<option value="${rarity}" ${String(rarity) === ui.operatorRarity ? "selected" : ""}>★${rarity}</option>`).join("")}</select></label>
+        <label>職業<select data-ui="operatorClass"><option value="all">すべて</option>${classOptions.map((value) => `<option value="${html(value)}" ${value === ui.operatorClass ? "selected" : ""}>${html(value)}</option>`).join("")}</select></label>
+        <label>職分<select data-ui="operatorBranch"><option value="all">すべて</option>${branchOptions.map((value) => `<option value="${html(value)}" ${value === ui.operatorBranch ? "selected" : ""}>${html(value)}</option>`).join("")}</select></label>
+        <label>並び順<select data-field="operatorSort"><option value="rarity_desc" ${state.preferences.operatorSort === "rarity_desc" ? "selected" : ""}>レア度 高い順</option><option value="rarity_asc" ${state.preferences.operatorSort === "rarity_asc" ? "selected" : ""}>レア度 低い順</option><option value="implementation_desc" ${state.preferences.operatorSort === "implementation_desc" ? "selected" : ""}>実装順 新しい順</option><option value="implementation_asc" ${state.preferences.operatorSort === "implementation_asc" ? "selected" : ""}>実装順 古い順</option><option value="name" ${state.preferences.operatorSort === "name" ? "selected" : ""}>名前順</option></select></label>
+        <label>表示列<select data-field="operatorGridColumns">${gridColumnOptions.map((count) => `<option value="${count}" ${count === gridColumns ? "selected" : ""}>${count}列</option>`).join("")}</select></label>
+      </div>
+      ${renderOperatorListAreaComponent({ shown, operators, selected, gridColumns }, renderOperatorControlRow)}
+    </section>
+  `;
+}
+
+function renderControlV2RelicsPanel() {
+  const categories = getRelicCategories(getCampaignRelics());
+  const viewData = getRelicListView();
+  return `
+    <section class="control-v2-panel control-v2-choice-panel">
+      <div class="control-v2-panel-head"><h2>秘宝</h2><span class="control-v2-relic-count">${viewData.filtered.length}件 / 所持${viewData.owned.size}件</span></div>
+      <div class="control-v2-filter-grid compact">
+        <label>検索<input value="${html(ui.relicSearch)}" data-ui="relicSearch" placeholder="秘宝名、番号、効果" /></label>
+        <label>カテゴリ<select data-ui="relicCategory"><option value="all">すべて</option>${categories.map((cat) => `<option value="${html(cat)}" ${cat === ui.relicCategory ? "selected" : ""}>${html(cat)}</option>`).join("")}</select></label>
+        <label>表示列<select data-field="relicGridColumns">${gridColumnOptions.map((count) => `<option value="${count}" ${count === viewData.gridColumns ? "selected" : ""}>${count}列</option>`).join("")}</select></label>
+        <button data-action="clear-relics">手入力秘宝を全解除</button>
+      </div>
+      ${renderRelicListArea(viewData)}
+    </section>
+  `;
+}
+
+function renderControlV2() {
+  const campaign = getCampaign();
+  const difficultyGrade = getSelectedDifficultyGrade();
+  app.dataset.loading = "false";
+  document.body.className = "control-v2-body";
+  app.className = "control-v2-app";
+  app.innerHTML = `
+    <header class="control-v2-topbar">
+      <div class="control-v2-title">
+        <span>IS#${campaign.number}</span>
+        <div><h1>${html(campaign.title)}</h1><p>${html(difficultyGrade?.label || "等級未選択")} / ${html(getSelectedSquad()?.name || "分隊未選択")}</p></div>
+      </div>
+      <div class="control-v2-actions">
+        <a href="/control" target="_self">旧Control</a>
+        <a href="/sidecar" target="_self">Sidecar</a>
+        <a href="/overlay" target="_blank">Overlay</a>
+        <span class="save-status">${html(ui.saveStatus)}</span>
+        <button class="ghost" data-action="reset-state">リセット</button>
+      </div>
+    </header>
+    <main class="control-v2-grid">
+      ${ui.notice ? `<div class="control-v2-notice">${html(ui.notice)}</div>` : ""}
+      ${renderControlV2RunPanel()}
+      ${renderControlV2OperatorsPanel()}
+      ${renderControlV2RelicsPanel()}
+    </main>
+  `;
+}
 function renderCurrentTab() {
   if (ui.tab === "relics") return renderRelicsTab();
   if (ui.tab === "operators") return renderOperatorsTab();
@@ -908,10 +1029,13 @@ function renderRelicListArea(viewData) {
 }
 
 function refreshRelicListOnly() {
-  if (view !== "control" || ui.tab !== "relics") return false;
+  if (view !== "control" && view !== "control-v2") return false;
+  if (view === "control" && ui.tab !== "relics") return false;
   const viewData = getRelicListView();
   const subtitle = document.querySelector(".panel-header .panel-subtitle");
   if (subtitle) subtitle.textContent = `${viewData.filtered.length}件 / 所持${viewData.owned.size}件`;
+  const v2Count = document.querySelector(".control-v2-relic-count");
+  if (v2Count) v2Count.textContent = `${viewData.filtered.length}件 / 所持${viewData.owned.size}件`;
   const list = document.querySelector(".relic-pick-grid");
   if (!list) return false;
   list.style.setProperty("--relic-grid-columns", viewData.gridColumns);

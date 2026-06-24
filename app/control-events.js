@@ -44,12 +44,17 @@ function updateRelicChoiceMeta(element, meta) {
 
 function refreshChoiceCountLabels(ui, state, context) {
   const subtitle = document.querySelector(".panel-header .panel-subtitle");
-  if (!subtitle) return;
-  if (ui.tab === "relics") {
-    subtitle.textContent = subtitle.textContent.replace(/所持\d+件/, `所持${getChoiceCount(ui, state, context)}件`);
-  } else if (ui.tab === "operators") {
-    subtitle.textContent = subtitle.textContent.replace(/招集\d+名/, `招集${getChoiceCount(ui, state, context)}名`);
+  if (subtitle) {
+    if (ui.tab === "relics") {
+      subtitle.textContent = subtitle.textContent.replace(/所持\d+件/, `所持${getChoiceCount(ui, state, context)}件`);
+    } else if (ui.tab === "operators") {
+      subtitle.textContent = subtitle.textContent.replace(/招集\d+名/, `招集${getChoiceCount(ui, state, context)}名`);
+    }
   }
+  const v2RelicCount = document.querySelector(".control-v2-relic-count");
+  if (v2RelicCount) v2RelicCount.textContent = v2RelicCount.textContent.replace(/所持\d+件/, `所持${context.getEffectiveRelicCount?.() ?? (state.relics || []).length}件`);
+  const v2OperatorCount = document.querySelector(".control-v2-operator-count");
+  if (v2OperatorCount) v2OperatorCount.textContent = v2OperatorCount.textContent.replace(/招集\d+名/, `招集${(state.operators || []).length}名`);
 }
 
 function toggleChoiceElement(element, type, id, context) {
