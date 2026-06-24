@@ -1,6 +1,7 @@
 import { bossDisplaySubline, bossDisplayTitle, renderBossCard, renderBossChip } from "./components/boss.js";
 import { renderEffectList } from "./components/effects.js";
 import * as specialControls from "./components/special-controls.js";
+import { renderCompactSpecialPicker as renderCompactSpecialPickerComponent, renderSpecialField as renderSpecialFieldComponent } from "./components/special-fields.js";
 import { renderSpecialOverlayBlock as renderSpecialOverlayBlockComponent } from "./components/special-overlay.js";
 import { bossSectionAllowsMultiple, buildBossFlagEntries } from "./domain/boss-flags.js";
 import { createLookupMaps } from "./domain/master-maps.js";
@@ -347,23 +348,25 @@ function renderSpecialSelectedChip(field, item) {
   return specialControls.renderSpecialSelectedChip(field, item);
 }
 
+function renderSpecialFieldContext() {
+  return {
+    getSelectableEffectsForField,
+    asSpecialArray,
+    asSpecialObject,
+    selectableEffectById: maps.selectableEffect,
+    renderSpecialEffectGroupHeader,
+    renderSpecialEffectSelectOptions,
+    renderSpecialEffectOption,
+    renderSpecialSelectedChip,
+    getRankedEffectGroups,
+    renderRankedSpecialEffectRow,
+    renderEffectStackLoadoutField,
+    renderCoinLoadoutField,
+  };
+}
+
 function renderCompactSpecialPicker(field, campaignId, special) {
-  const options = getSelectableEffectsForField(field, campaignId);
-  const selectedIds = asSpecialArray(special[field.id]);
-  const selected = new Set(selectedIds);
-  const selectedItems = selectedIds.map((id) => maps.selectableEffect.get(id)).filter(Boolean);
-  return `<div class="field-wide special-effect-group compact-special-picker" data-special-picker="${html(field.id)}">
-    ${renderSpecialEffectGroupHeader(field, special)}
-    <div class="special-picker-row">
-      <select data-special-picker-select="${html(field.id)}">
-        ${renderSpecialEffectSelectOptions(options, "", `${field.label}を追加`, selected)}
-      </select>
-      <button type="button" data-action="add-special-effect" data-special-picker-field="${html(field.id)}">追加</button>
-    </div>
-    <div class="special-selected-list">
-      ${selectedItems.length ? selectedItems.map((item) => renderSpecialSelectedChip(field, item)).join("") : `<div class="empty-state">未選択</div>`}
-    </div>
-  </div>`;
+  return renderCompactSpecialPickerComponent(field, campaignId, special, renderSpecialFieldContext());
 }
 
 function renderCoinFaceOptions(current) {
@@ -449,43 +452,7 @@ function renderEffectStackLoadoutField(field, campaignId, special) {
 }
 
 function renderSpecialField(field, campaignId, special) {
-  if (field.type === "effectSelect") {
-    const options = getSelectableEffectsForField(field, campaignId);
-    const current = special[field.id] || "";
-    return `<label>${html(field.label)}
-      <select data-special-field="${html(field.id)}">
-        ${renderSpecialEffectSelectOptions(options, current, "未選択")}
-      </select>
-    </label>`;
-  }
-  if (field.type === "effectMultiSelect") {
-    if (field.compact) return renderCompactSpecialPicker(field, campaignId, special);
-    const options = getSelectableEffectsForField(field, campaignId);
-    const selected = new Set(asSpecialArray(special[field.id]));
-    return `<div class="field-wide special-effect-group">
-      ${renderSpecialEffectGroupHeader(field, special)}
-      <div class="special-effect-options">
-        ${options.length ? options.map((item) => renderSpecialEffectOption(field, item, selected)).join("") : `<div class="empty-state">選択肢がありません。</div>`}
-      </div>
-    </div>`;
-  }
-  if (field.type === "effectRankedMultiSelect") {
-    const groups = getRankedEffectGroups(field, campaignId);
-    const selected = asSpecialObject(special[field.id]);
-    return `<div class="field-wide special-effect-group">
-      ${renderSpecialEffectGroupHeader(field, special)}
-      <div class="special-effect-ranked-list">
-        ${groups.length ? groups.map((group) => renderRankedSpecialEffectRow(field, group, selected[group.key])).join("") : `<div class="empty-state">選択肢がありません。</div>`}
-      </div>
-    </div>`;
-  }
-  if (field.type === "effectStackLoadout") return renderEffectStackLoadoutField(field, campaignId, special);
-  if (field.type === "coinLoadout") return renderCoinLoadoutField(field, campaignId, special);
-  const minAttr = field.min !== undefined ? ` min="${html(field.min)}"` : "";
-  const maxAttr = field.max !== undefined ? ` max="${html(field.max)}"` : "";
-  return `<label>${html(field.label)}
-    <input type="${field.type === "number" ? "number" : "text"}"${minAttr}${maxAttr} value="${html(special[field.id] ?? "")}" data-special-field="${html(field.id)}" />
-  </label>`;
+  return renderSpecialFieldComponent(field, campaignId, special, renderSpecialFieldContext());
 }
 
 function normalizeSpecialFieldSelections() {
