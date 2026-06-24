@@ -1,7 +1,7 @@
 import { bossDisplaySubline, bossDisplayTitle, renderBossCard, renderBossChip } from "./components/boss.js";
 import { renderOperatorControlRow as renderOperatorControlRowComponent, renderRelicControlRow as renderRelicControlRowComponent } from "./components/choice-cards.js";
 import { renderOperatorListArea as renderOperatorListAreaComponent, renderRelicListArea as renderRelicListAreaComponent, renderRelicListContent as renderRelicListContentComponent } from "./components/choice-lists.js";
-import { renderOverlayCompact as renderOverlayCompactComponent, renderOverlayDense as renderOverlayDenseComponent } from "./components/overlay-layouts.js";
+import { renderOverlayCompact as renderOverlayCompactComponent, renderOverlayDefault as renderOverlayDefaultComponent, renderOverlayDense as renderOverlayDenseComponent } from "./components/overlay-layouts.js";
 import { renderEffectList } from "./components/effects.js";
 import * as specialControls from "./components/special-controls.js";
 import { renderCompactSpecialPicker as renderCompactSpecialPickerComponent, renderSpecialField as renderSpecialFieldComponent } from "./components/special-fields.js";
@@ -1160,6 +1160,8 @@ function renderOverlayContext() {
     renderSpecialOverlayBlock,
     renderEffectList,
     renderBossChip,
+    renderBossCard,
+    renderDifficultyFields,
     relicEffectForDisplay,
   };
 }
@@ -1197,74 +1199,22 @@ function renderOverlay() {
     setupOverlayAutoScroll(app);
     return;
   }
-  app.innerHTML = `
-    <header class="overlay-top">
-      <section class="overlay-card">
-        <div class="overlay-card-header"><span>Campaign</span><span>IS#${campaign.number}</span></div>
-        <div class="overlay-card-body">
-          <div class="campaign-title">${html(campaign.title)}</div>
-          <div class="campaign-sub">${html(campaign.fullTitle)}</div>
-        </div>
-      </section>
-      <section class="overlay-card">
-        <div class="overlay-card-header"><span>Run</span><span>${html(state.mode || "manual")}</span></div>
-        <div class="overlay-card-body overlay-kpis">
-          <div class="kpi"><div class="kpi-label">等級</div><div class="kpi-value">${html(difficultyGrade?.label || (state.run.difficulty ?? "-"))}</div></div>
-          <div class="kpi"><div class="kpi-label">Tier</div><div class="kpi-value">${html(getDifficultyTierLabel())}</div></div>
-          ${getSpecialTags(specialFields, special, { overlay: true }).map((item) => `<div class="kpi"><div class="kpi-label">${html(item.label)}</div><div class="kpi-value">${html(item.value || "-")}</div></div>`).join("")}
-          ${difficultyGrade ? renderDifficultyFields(difficultyGrade, "overlay") : ""}
-        </div>
-      </section>
-      <section class="overlay-card">
-        <div class="overlay-card-header"><span>Count</span><span>${html(new Date(state.updatedAt || Date.now()).toLocaleTimeString("ja-JP"))}</span></div>
-        <div class="overlay-card-body overlay-kpis">
-          <div class="kpi"><div class="kpi-label">秘宝</div><div class="kpi-value">${relics.length}</div></div>
-          <div class="kpi"><div class="kpi-label">招集</div><div class="kpi-value">${operators.length}</div></div>
-          <div class="kpi"><div class="kpi-label">Flag</div><div class="kpi-value">${state.bossFlags.length}</div></div>
-        </div>
-      </section>
-    </header>
-    <main class="overlay-main">
-      <div class="overlay-left">
-        <section class="overlay-card">
-          <div class="overlay-card-header"><span>Squad</span><span>${squad ? "selected" : "none"}</span></div>
-          <div class="overlay-card-body">
-            <div class="squad-name">${html(squad?.name || "分隊未選択")}</div>
-            <div class="squad-effect">${html(squad?.effect || "")}</div>
-            ${option?.effect ? `<div class="squad-effect squad-option-effect">${html(option.label || "ランダム分隊効果")}: ${html(option.effect)}</div>` : ""}
-            ${performance ? `<div class="squad-effect squad-option-effect">演目: ${html(performance.name)}</div>` : ""}
-          </div>
-        </section>
-        <section class="overlay-card">
-          <div class="overlay-card-header"><span>Active effects</span><span>${activeEffects.length}</span></div>
-          <div class="overlay-card-body overlay-effect-scroll stream-scroll" data-autoscroll data-scroll-speed="${getOverlayScrollSpeed("verticalRelicScrollSpeed")}">
-            ${renderEffectList(activeEffects, "overlay-effect-list", "発動効果なし")}
-          </div>
-        </section>
-        <section class="overlay-card">
-          <div class="overlay-card-header"><span>Relics</span><span>${relics.length}</span></div>
-          <div class="overlay-card-body relic-grid">
-            ${relics.length ? relics.map((item) => `<div class="relic-tile" title="${html(relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div>${html(item.name)}</div></div>`).join("") : `<div class="empty-state">秘宝なし</div>`}
-          </div>
-        </section>
-      </div>
-      <aside class="overlay-right">
-        <section class="overlay-card">
-          <div class="overlay-card-header"><span>Boss</span><span>${getBossFlagEntries().length}</span></div>
-          <div class="overlay-card-body boss-list">
-            ${getBossFlagEntries().length ? getBossFlagEntries().map((flag) => renderBossCard(flag, "compact")).join("") : `<span class="panel-subtitle">未設定</span>`}
-          </div>
-        </section>
-        <section class="overlay-card">
-          <div class="overlay-card-header"><span>Operators</span><span>${operators.length}</span></div>
-          <div class="overlay-card-body operator-list">
-            ${operators.length ? operators.slice(0, 14).map((item) => `<div class="operator-row"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><div class="operator-name">${html(item.name)}</div><div class="operator-meta">${html(item.class)} / ${html(item.branch)}</div></div><div class="stars">${stars(item.rarity)}</div></div>`).join("") : `<div class="empty-state">未招集</div>`}
-          </div>
-        </section>
-        <div class="footer-note">Manual state / OCR suggestions require confirmation</div>
-      </aside>
-    </main>
-  `;
+  app.innerHTML = renderOverlayDefaultComponent({
+    campaign,
+    squad,
+    option,
+    performance,
+    activeEffects,
+    relics,
+    operators,
+    specialFields,
+    special,
+    difficultyGrade,
+    mode: state.mode,
+    runDifficulty: state.run.difficulty,
+    updatedAt: state.updatedAt,
+    bossFlagCount: state.bossFlags.length,
+  }, renderOverlayContext());
   setupOverlayAutoScroll(app);
 }
 

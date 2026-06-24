@@ -99,3 +99,74 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
     </section>
   `;
 }
+export function renderOverlayDefault({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, mode, runDifficulty, updatedAt, bossFlagCount }, context) {
+  const bossEntries = context.getBossFlagEntries();
+  return `
+    <header class="overlay-top">
+      <section class="overlay-card">
+        <div class="overlay-card-header"><span>Campaign</span><span>IS#${campaign.number}</span></div>
+        <div class="overlay-card-body">
+          <div class="campaign-title">${html(campaign.title)}</div>
+          <div class="campaign-sub">${html(campaign.fullTitle)}</div>
+        </div>
+      </section>
+      <section class="overlay-card">
+        <div class="overlay-card-header"><span>Run</span><span>${html(mode || "manual")}</span></div>
+        <div class="overlay-card-body overlay-kpis">
+          <div class="kpi"><div class="kpi-label">等級</div><div class="kpi-value">${html(difficultyGrade?.label || (runDifficulty ?? "-"))}</div></div>
+          <div class="kpi"><div class="kpi-label">Tier</div><div class="kpi-value">${html(context.getDifficultyTierLabel())}</div></div>
+          ${context.getSpecialTags(specialFields, special, { overlay: true }).map((item) => `<div class="kpi"><div class="kpi-label">${html(item.label)}</div><div class="kpi-value">${html(item.value || "-")}</div></div>`).join("")}
+          ${difficultyGrade ? context.renderDifficultyFields(difficultyGrade, "overlay") : ""}
+        </div>
+      </section>
+      <section class="overlay-card">
+        <div class="overlay-card-header"><span>Count</span><span>${html(new Date(updatedAt || Date.now()).toLocaleTimeString("ja-JP"))}</span></div>
+        <div class="overlay-card-body overlay-kpis">
+          <div class="kpi"><div class="kpi-label">秘宝</div><div class="kpi-value">${relics.length}</div></div>
+          <div class="kpi"><div class="kpi-label">招集</div><div class="kpi-value">${operators.length}</div></div>
+          <div class="kpi"><div class="kpi-label">Flag</div><div class="kpi-value">${bossFlagCount}</div></div>
+        </div>
+      </section>
+    </header>
+    <main class="overlay-main">
+      <div class="overlay-left">
+        <section class="overlay-card">
+          <div class="overlay-card-header"><span>Squad</span><span>${squad ? "selected" : "none"}</span></div>
+          <div class="overlay-card-body">
+            <div class="squad-name">${html(squad?.name || "分隊未選択")}</div>
+            <div class="squad-effect">${html(squad?.effect || "")}</div>
+            ${option?.effect ? `<div class="squad-effect squad-option-effect">${html(option.label || "ランダム分隊効果")}: ${html(option.effect)}</div>` : ""}
+            ${performance ? `<div class="squad-effect squad-option-effect">演目: ${html(performance.name)}</div>` : ""}
+          </div>
+        </section>
+        <section class="overlay-card">
+          <div class="overlay-card-header"><span>Active effects</span><span>${activeEffects.length}</span></div>
+          <div class="overlay-card-body overlay-effect-scroll stream-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("verticalRelicScrollSpeed")}">
+            ${context.renderEffectList(activeEffects, "overlay-effect-list", "発動効果なし")}
+          </div>
+        </section>
+        <section class="overlay-card">
+          <div class="overlay-card-header"><span>Relics</span><span>${relics.length}</span></div>
+          <div class="overlay-card-body relic-grid">
+            ${relics.length ? relics.map((item) => `<div class="relic-tile" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div>${html(item.name)}</div></div>`).join("") : `<div class="empty-state">秘宝なし</div>`}
+          </div>
+        </section>
+      </div>
+      <aside class="overlay-right">
+        <section class="overlay-card">
+          <div class="overlay-card-header"><span>Boss</span><span>${bossEntries.length}</span></div>
+          <div class="overlay-card-body boss-list">
+            ${bossEntries.length ? bossEntries.map((flag) => context.renderBossCard(flag, "compact")).join("") : `<span class="panel-subtitle">未設定</span>`}
+          </div>
+        </section>
+        <section class="overlay-card">
+          <div class="overlay-card-header"><span>Operators</span><span>${operators.length}</span></div>
+          <div class="overlay-card-body operator-list">
+            ${operators.length ? operators.slice(0, 14).map((item) => `<div class="operator-row"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><div class="operator-name">${html(item.name)}</div><div class="operator-meta">${html(item.class)} / ${html(item.branch)}</div></div><div class="stars">${stars(item.rarity)}</div></div>`).join("") : `<div class="empty-state">未招集</div>`}
+          </div>
+        </section>
+        <div class="footer-note">Manual state / OCR suggestions require confirmation</div>
+      </aside>
+    </main>
+  `;
+}
