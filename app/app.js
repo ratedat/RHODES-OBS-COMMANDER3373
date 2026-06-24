@@ -14,9 +14,10 @@ import { difficultyEffectTexts, difficultySummary as summarizeDifficultyGrade, g
 import { isActiveManualRule, summarizeRelicEffects as summarizeRelicEffectMetrics, summarizeTextEffects } from "./domain/effect-metrics.js";
 import { operatorReleaseMatches as operatorMatchesRelease, sortOperators as sortOperatorsByPreference, uniqueValues } from "./domain/operators.js";
 import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
-import { asCoinEntries, asEffectStackEntries, asSpecialArray, asSpecialObject, clampCoinCount, clampSpecialNumber, coinFaceLabels } from "./domain/special-values.js";
+import { asCoinEntries, asSpecialArray, asSpecialObject, clampSpecialNumber } from "./domain/special-values.js";
 import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
+import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, normalizeText, stableOverlayStateJson, stars } from "./lib/format.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlaySize } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
@@ -154,142 +155,50 @@ function getRankedEffectGroups(field, campaignId = getCampaign()?.id) {
   return selectableEffects.getRankedEffectGroups(getSelectableEffectSource(), field, campaignId);
 }
 
-function getSpecialEffectName(id) {
-  const item = maps.selectableEffect.get(id);
-  return item?.name || item?.title || id;
+function getSpecialDisplayContext(campaignId = getCampaign()?.id) {
+  return {
+    campaignId,
+    selectableEffectMap: maps.selectableEffect,
+    selectableEffectSource: getSelectableEffectSource(),
+  };
 }
 
-function formatCoinLoadoutValue(field, value) {
-  const entries = asCoinEntries(value).filter((entry) => maps.selectableEffect.has(entry.coinId));
-  if (!entries.length) return "";
-  const total = entries.reduce((sum, entry) => sum + clampCoinCount(entry.count), 0);
-  if (entries.length === 1) {
-    const entry = entries[0];
-    const coin = maps.selectableEffect.get(entry.coinId);
-    const status = entry.statusId ? maps.selectableEffect.get(entry.statusId) : null;
-    return [coin?.name, `x${entry.count}`, status?.name, coinFaceLabels[entry.face]].filter(Boolean).join(" / ");
-  }
-  return `${total}枚 / ${entries.length}枠`;
+function getSpecialEffectName(id) {
+  return specialDisplay.getSpecialEffectName(id, maps.selectableEffect);
 }
 
 function formatEffectStackValue(field, value) {
-  const entries = asEffectStackEntries(value)
-    .map((entry) => normalizeEffectStackEntry(field, entry))
-    .filter((entry) => maps.selectableEffect.has(entry.effectId));
-  if (!entries.length) return "";
-  const total = entries.reduce((sum, entry) => sum + clampCoinCount(entry.count), 0);
-  const unit = field.unitLabel || "件";
-  if (entries.length === 1) {
-    const entry = entries[0];
-    const item = maps.selectableEffect.get(entry.effectId);
-    const stateLabel = isEmptyStackState(field, entry.stateId) ? "" : getStackStateLabel(field, entry.stateId);
-    return [item?.name, `x${entry.count}`, stateLabel].filter(Boolean).join(" / ");
-  }
-  return `${total}${unit} / ${entries.length}枠`;
+  return specialDisplay.formatEffectStackValue(field, value, getSpecialDisplayContext());
 }
 
 function formatSpecialValue(field, value) {
-  if (field.type === "effectSelect") return value ? getSpecialEffectName(value) : "";
-  if (field.type === "effectMultiSelect") {
-    const names = asSpecialArray(value).map(getSpecialEffectName).filter(Boolean);
-    if (names.length <= 1) return names[0] || "";
-    return `${names.length}件`;
-  }
-  if (field.type === "effectRankedMultiSelect") {
-    const names = Object.values(asSpecialObject(value)).map(getSpecialEffectName).filter(Boolean);
-    if (names.length <= 1) return names[0] || "";
-    return `${names.length}件`;
-  }
-  if (field.type === "effectStackLoadout") return formatEffectStackValue(field, value);
-  if (field.type === "coinLoadout") return formatCoinLoadoutValue(field, value);
-  if (field.type === "number") return value === null || value === undefined || value === "" ? "" : String(value);
-  return value ?? "";
+  return specialDisplay.formatSpecialValue(field, value, getSpecialDisplayContext());
 }
 
 function getSpecialOverlayToggleKey(field) {
-  return field.overlayToggleKey || `${field.id}OverlayVisible`;
+  return specialDisplay.getSpecialOverlayToggleKey(field);
 }
 
 function isSpecialFieldVisibleOnOverlay(field, special) {
-  if (!field.overlayToggle) return true;
-  return Boolean(special[getSpecialOverlayToggleKey(field)]);
+  return specialDisplay.isSpecialFieldVisibleOnOverlay(field, special);
 }
 
 function getSpecialTags(specialFields, special, options = {}) {
-  return specialFields
-    .filter((field) => !options.overlay || isSpecialFieldVisibleOnOverlay(field, special))
-    .map((field) => ({ label: field.label, value: formatSpecialValue(field, special[field.id]) }))
-    .filter((item) => item.value !== null && item.value !== undefined && item.value !== "");
+  return specialDisplay.getSpecialTags(specialFields, special, getSpecialDisplayContext(), options);
 }
 
-function getSelectedSpecialEffectsForField(field, special) {
-  const effects = [];
-  if (field.type === "effectSelect") {
-    const item = maps.selectableEffect.get(special[field.id]);
-    if (item) effects.push(item);
-  } else if (field.type === "effectMultiSelect") {
-    for (const id of asSpecialArray(special[field.id])) {
-      const item = maps.selectableEffect.get(id);
-      if (item) effects.push(item);
-    }
-  } else if (field.type === "effectRankedMultiSelect") {
-    for (const id of Object.values(asSpecialObject(special[field.id]))) {
-      const item = maps.selectableEffect.get(id);
-      if (item) effects.push(item);
-    }
-  } else if (field.type === "effectStackLoadout") {
-    for (const rawEntry of asEffectStackEntries(special[field.id])) {
-      const entry = normalizeEffectStackEntry(field, rawEntry);
-      const item = maps.selectableEffect.get(entry.effectId);
-      if (!item) continue;
-      const hasState = !isEmptyStackState(field, entry.stateId);
-      const stateLabel = hasState ? getStackStateLabel(field, entry.stateId) : "";
-      const stateEffect = hasState ? getStackStateEffect(field, entry.stateId) : "";
-      const titleParts = [`x${entry.count}`, stateLabel].filter(Boolean);
-      const effectParts = [item.effect, stateEffect ? `${field.stateLabel || "状態"} ${stateLabel}: ${stateEffect}` : ""].filter(Boolean);
-      effects.push({
-        ...item,
-        slotLabel: field.label || item.slotLabel,
-        name: `${item.name} ${titleParts.join(" / ")}`,
-        effect: effectParts.join(" / "),
-      });
-    }
-  } else if (field.type === "coinLoadout") {
-    for (const entry of asCoinEntries(special[field.id])) {
-      const coin = maps.selectableEffect.get(entry.coinId);
-      if (!coin) continue;
-      const status = entry.statusId ? maps.selectableEffect.get(entry.statusId) : null;
-      const titleParts = [`x${entry.count}`, coinFaceLabels[entry.face], status?.name].filter(Boolean);
-      const effectParts = [coin.effect, status?.effect ? `${status.name}: ${status.effect}` : ""].filter(Boolean);
-      effects.push({
-        ...coin,
-        slotLabel: field.label || coin.slotLabel,
-        name: `${coin.name} ${titleParts.join(" / ")}`,
-        effect: effectParts.join(" / "),
-      });
-    }
-  }
-  return effects;
+function getSelectedSpecialEffectsForField(field, special, campaignId = getCampaign()?.id) {
+  return specialDisplay.getSelectedSpecialEffectsForField(field, special, getSpecialDisplayContext(campaignId));
 }
 
 function getSelectedSpecialEffects(campaignId = getCampaign()?.id, options = {}) {
   const campaign = maps.campaign.get(campaignId);
   const special = state.run.special?.[campaignId] || {};
-  const effects = [];
-  for (const field of campaign?.specialFields || []) {
-    if (options.overlay && !isSpecialFieldVisibleOnOverlay(field, special)) continue;
-    effects.push(...getSelectedSpecialEffectsForField(field, special));
-  }
-  return effects;
+  return specialDisplay.getSelectedSpecialEffects(campaign?.specialFields || [], special, getSpecialDisplayContext(campaignId), options);
 }
 
 function getOverlaySpecialEffects(campaignId, specialFields, special) {
-  const effects = [];
-  for (const field of specialFields || []) {
-    if (!field.overlayToggle || !isSpecialFieldVisibleOnOverlay(field, special)) continue;
-    effects.push(...getSelectedSpecialEffectsForField(field, special));
-  }
-  return effects;
+  return specialDisplay.getOverlaySpecialEffects(specialFields, special, getSpecialDisplayContext(campaignId));
 }
 
 
