@@ -7,6 +7,52 @@ export function bossSectionAllowsMultiple(section) {
   return section?.mode === "multi" || section?.multiple === true;
 }
 
+export function getBossManualSections(config) {
+  if (!config) return [];
+  const sections = Array.isArray(config.manualSections) ? [...config.manualSections] : [];
+  if (config.floor3 && !sections.some((section) => section.field === config.floor3.field)) sections.unshift(config.floor3);
+  return sections.filter((section) => section?.field);
+}
+
+export function bossSelectionValues(section, selection = {}) {
+  const current = selection?.[section.field];
+  if (bossSectionAllowsMultiple(section)) return Array.isArray(current) ? current.filter(Boolean) : (current ? [current] : []);
+  return current ? [current] : [];
+}
+
+export function normalizeBossSelections(campaigns, bossSelections = {}) {
+  const normalized = bossSelections || {};
+  for (const campaign of campaigns || []) {
+    normalized[campaign.id] ||= {};
+    for (const section of getBossManualSections(campaign.bossFlags)) {
+      const validIds = new Set((section.options || []).map((item) => item.id));
+      if (bossSectionAllowsMultiple(section)) {
+        const current = normalized[campaign.id][section.field];
+        const values = Array.isArray(current) ? current : (current ? [current] : []);
+        normalized[campaign.id][section.field] = values.filter((id) => validIds.has(id));
+      } else {
+        const current = normalized[campaign.id][section.field] || null;
+        const id = Array.isArray(current) ? current[0] : current;
+        normalized[campaign.id][section.field] = validIds.has(id) ? id : null;
+      }
+    }
+  }
+  return normalized;
+}
+
+export function getSelectedManualBosses(sections, selection = {}) {
+  return (sections || [])
+    .flatMap((section) => bossSelectionValues(section, selection).map((id) => {
+      const item = (section.options || []).find((option) => option.id === id);
+      return item ? { ...item, type: "manualBoss", label: item.label || section.label || "手動", source: "manual", sectionId: section.id || section.field } : null;
+    }))
+    .filter(Boolean);
+}
+
+export function getSelectedFloor3Boss(manualBosses) {
+  return (manualBosses || []).find((item) => Number(item.floor) === 3 || item.sectionId === "floor3BossId") || null;
+}
+
 function bossRouteTriggerIds(route) {
   if (Array.isArray(route?.triggerRelicIds)) return route.triggerRelicIds.filter(Boolean);
   return route?.triggerRelicId ? [route.triggerRelicId] : [];

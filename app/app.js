@@ -8,7 +8,7 @@ import { renderCompactSpecialPicker as renderCompactSpecialPickerComponent, rend
 import { renderCoinEntryRow as renderCoinEntryRowComponent, renderCoinLoadoutField as renderCoinLoadoutFieldComponent, renderEffectStackEntryRow as renderEffectStackEntryRowComponent, renderEffectStackLoadoutField as renderEffectStackLoadoutFieldComponent, renderEffectStackStateOptions as renderEffectStackStateOptionsComponent } from "./components/special-loadouts.js";
 import { renderSpecialOverlayBlock as renderSpecialOverlayBlockComponent } from "./components/special-overlay.js";
 import { registerControlEvents } from "./control-events.js";
-import { bossSectionAllowsMultiple, buildBossFlagEntries } from "./domain/boss-flags.js";
+import { bossSectionAllowsMultiple, bossSelectionValues as readBossSelectionValues, buildBossFlagEntries, getBossManualSections as readBossManualSections, getSelectedFloor3Boss as readSelectedFloor3Boss, getSelectedManualBosses as readSelectedManualBosses, normalizeBossSelections as normalizeBossSelectionsState } from "./domain/boss-flags.js";
 import { createLookupMaps } from "./domain/master-maps.js";
 import { difficultyEffectTexts, difficultySummary as summarizeDifficultyGrade, getDifficultyGradeConfig as readDifficultyGradeConfig, getSelectedDifficultyGrade as readSelectedDifficultyGrade } from "./domain/difficulty.js";
 import { isActiveManualRule, summarizeRelicEffects as summarizeRelicEffectMetrics, summarizeTextEffects } from "./domain/effect-metrics.js";
@@ -376,11 +376,7 @@ function getBossConfig(campaignId = getCampaign()?.id) {
 }
 
 function getBossManualSections(campaignId = getCampaign()?.id) {
-  const cfg = getBossConfig(campaignId);
-  if (!cfg) return [];
-  const sections = Array.isArray(cfg.manualSections) ? [...cfg.manualSections] : [];
-  if (cfg.floor3 && !sections.some((section) => section.field === cfg.floor3.field)) sections.unshift(cfg.floor3);
-  return sections.filter((section) => section?.field);
+  return readBossManualSections(getBossConfig(campaignId));
 }
 
 function getBossSelection(campaignId = getCampaign()?.id) {
@@ -391,42 +387,19 @@ function getBossSelection(campaignId = getCampaign()?.id) {
 
 
 function bossSelectionValues(section, campaignId = getCampaign()?.id) {
-  const selection = getBossSelection(campaignId);
-  const current = selection[section.field];
-  if (bossSectionAllowsMultiple(section)) return Array.isArray(current) ? current.filter(Boolean) : (current ? [current] : []);
-  return current ? [current] : [];
+  return readBossSelectionValues(section, getBossSelection(campaignId));
 }
 
 function normalizeBossSelections() {
-  state.bossSelections ||= {};
-  for (const campaign of master.campaigns) {
-    state.bossSelections[campaign.id] ||= {};
-    for (const section of getBossManualSections(campaign.id)) {
-      const validIds = new Set((section.options || []).map((item) => item.id));
-      if (bossSectionAllowsMultiple(section)) {
-        const current = state.bossSelections[campaign.id][section.field];
-        const values = Array.isArray(current) ? current : (current ? [current] : []);
-        state.bossSelections[campaign.id][section.field] = values.filter((id) => validIds.has(id));
-      } else {
-        const current = state.bossSelections[campaign.id][section.field] || null;
-        const id = Array.isArray(current) ? current[0] : current;
-        state.bossSelections[campaign.id][section.field] = validIds.has(id) ? id : null;
-      }
-    }
-  }
+  state.bossSelections = normalizeBossSelectionsState(master.campaigns, state.bossSelections || {});
 }
 
 function getSelectedManualBosses(campaignId = getCampaign()?.id) {
-  return getBossManualSections(campaignId)
-    .flatMap((section) => bossSelectionValues(section, campaignId).map((id) => {
-      const item = (section.options || []).find((option) => option.id === id);
-      return item ? { ...item, type: "manualBoss", label: item.label || section.label || "手動", source: "manual", sectionId: section.id || section.field } : null;
-    }))
-    .filter(Boolean);
+  return readSelectedManualBosses(getBossManualSections(campaignId), getBossSelection(campaignId));
 }
 
 function getSelectedFloor3Boss(campaignId = getCampaign()?.id) {
-  return getSelectedManualBosses(campaignId).find((item) => Number(item.floor) === 3 || item.sectionId === "floor3BossId") || null;
+  return readSelectedFloor3Boss(getSelectedManualBosses(campaignId));
 }
 
 
