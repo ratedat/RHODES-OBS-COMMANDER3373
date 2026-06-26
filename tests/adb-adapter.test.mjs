@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { detectAdbConnections, parseAdbDisplayResolution } from "../app/recognition/adapters/adb-adapter.js";
+import { adbExecOptions, detectAdbConnections, parseAdbDisplayResolution } from "../app/recognition/adapters/adb-adapter.js";
 
 test("parseAdbDisplayResolution prefers active app bounds over portrait wm size", () => {
   const resolution = parseAdbDisplayResolution({
@@ -20,6 +20,15 @@ test("parseAdbDisplayResolution falls back to wm size when dumpsys has no bounds
   assert.deepEqual(resolution, { width: 1440, height: 2560 });
 });
 
+
+
+test("adbExecOptions can pin adb child processes to the configured storage directory", () => {
+  const options = adbExecOptions({ encoding: "buffer", workDir: "O:/GameData/RHODES OBS COMMANDER3373 Data/adb-work" });
+
+  assert.equal(options.encoding, "buffer");
+  assert.equal(options.cwd, "O:/GameData/RHODES OBS COMMANDER3373 Data/adb-work");
+  assert.equal(options.windowsHide, true);
+});
 
 test("detectAdbConnections returns available adb candidates and parsed devices without touching real adb", async () => {
   const calls = [];

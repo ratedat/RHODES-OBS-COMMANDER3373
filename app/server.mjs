@@ -23,6 +23,7 @@ const DATA = path.join(ROOT, "data");
 const APP = path.join(ROOT, "app");
 const STATE_DIR = process.env.ARKNIGHTS_STATE_DIR ? path.resolve(process.env.ARKNIGHTS_STATE_DIR) : DATA;
 const CURRENT_STATE = path.join(STATE_DIR, "current-state.json");
+const ADB_WORK_DIR = path.join(STATE_DIR, "adb-work");
 const EXAMPLE_STATE = path.join(DATA, "overlay-state.example.json");
 const SCAN_PROFILES = path.join(DATA, "recognition", "scan-profiles.json");
 const MAA_TASKS = path.join(DATA, "recognition", "maa-tasks.json");
@@ -199,7 +200,7 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal } = {}
     : [];
   return runScanProfile({
     profile,
-    adapter: createAdbAdapter({ settings: state.adb }),
+    adapter: createAdbAdapter({ settings: state.adb, workDir: ADB_WORK_DIR }),
     recognizer: createMaaStyleRecognizer({
       tasks,
       textExtractor: createDefaultOcrTextExtractor(),
@@ -238,7 +239,7 @@ export async function saveAdbScreenshotFrame(frame, { stateDir = STATE_DIR, now 
 
 async function defaultAdbTester({ settings = {}, capture = false } = {}) {
   const normalized = normalizeAdbSettings(settings);
-  const adapter = createAdbAdapter({ settings: normalized });
+  const adapter = createAdbAdapter({ settings: normalized, workDir: ADB_WORK_DIR });
   const resolution = await adapter.getActualResolution();
   let screenshot = null;
   if (capture) {

@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import { buildAdbCandidatePaths, normalizeAdbPathKey, normalizeAdbSettings, parseAdbDevices, resolveAdbRuntimeSettings } from "../../domain/adb-settings.js";
 
@@ -67,9 +68,15 @@ export function parseAdbDisplayResolution({ windowDisplaysOutput = "", wmSizeOut
   return parseWindowDisplayResolution(windowDisplaysOutput) || parseWmSize(wmSizeOutput);
 }
 
-function execAdbCommand(adbPath, args, { encoding = "utf8", execFileImpl = execFile } = {}) {
+export function adbExecOptions({ encoding = "utf8", workDir = null } = {}) {
+  const options = { encoding, maxBuffer: 64 * 1024 * 1024, windowsHide: true };
+  if (workDir) options.cwd = workDir;
+  return options;
+}
+
+function execAdbCommand(adbPath, args, { encoding = "utf8", execFileImpl = execFile, workDir = null } = {}) {
   return new Promise((resolve, reject) => {
-    execFileImpl(adbPath, args, { encoding, maxBuffer: 64 * 1024 * 1024, windowsHide: true }, (error, stdout, stderr) => {
+    execFileImpl(adbPath, args, adbExecOptions({ encoding, workDir }), (error, stdout, stderr) => {
       if (error) {
         error.stderr = stderr;
         reject(normalizeAdbError(error, { adbPath, args }));
@@ -176,13 +183,14 @@ export async function detectAdbConnections({ settings = {}, env = process.env, c
   };
 }
 
-export function createAdbAdapter({ adbPath = null, serial = null, settings = {}, env = process.env } = {}) {
+export function createAdbAdapter({ adbPath = null, serial = null, settings = {}, env = process.env, workDir = null } = {}) {
   const runtime = resolveAdbRuntimeSettings({ ...settings, ...(adbPath ? { adbPath } : {}), ...(serial ? { serial } : {}) }, env);
   adbPath = runtime.adbPath;
   serial = runtime.serial;
+  if (workDir) fsSync.mkdirSync(workDir, { recursive: true });
   function run(args, { encoding = "utf8" } = {}) {
     return new Promise((resolve, reject) => {
-      execFile(adbPath, adbArgs(serial, args), { encoding, maxBuffer: 64 * 1024 * 1024, windowsHide: true }, (error, stdout, stderr) => {
+      execFile(adbPath, adbArgs(serial, args), adbExecOptions({ encoding, workDir }), (error, stdout, stderr) => {
         if (error) {
           error.stderr = stderr;
           reject(normalizeAdbError(error, { adbPath, args }));

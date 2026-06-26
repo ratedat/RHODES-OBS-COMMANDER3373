@@ -35,6 +35,8 @@ temp/
 
 # Runtime local state
 data/current-state.json
+data/electron/
+user-data/
 data/adb-screenshots/
 # Local ADB/OCR experiments
 experiments/adb/
@@ -54,3 +56,4 @@ review/*.png
 .agent-work/
 .venv-ocr/
 third_party/maa/**/inference.onnx
+MuMu-*.png

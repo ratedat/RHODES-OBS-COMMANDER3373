@@ -30,11 +30,17 @@ test("resolveStartupPort uses explicit, saved, then default values", () => {
 });
 
 test("desktop settings parsing tolerates malformed input", () => {
-  assert.deepEqual(parseDesktopSettings('{"port":5174}'), { port: 5174 });
-  assert.deepEqual(parseDesktopSettings("{broken"), { port: null });
+  assert.deepEqual(parseDesktopSettings('{"port":5174}'), { port: 5174, storageMode: null, storageDir: "" });
+  assert.deepEqual(parseDesktopSettings('{"port":5174,"storageMode":"documents","storageDir":"C:/Docs/RHODES"}'), { port: 5174, storageMode: "documents", storageDir: "C:/Docs/RHODES" });
+  assert.deepEqual(parseDesktopSettings("{broken"), { port: null, storageMode: null, storageDir: "" });
 });
 
-test("serializeDesktopSettings normalizes invalid ports", () => {
+test("serializeDesktopSettings normalizes invalid ports and preserves storage choice", () => {
   assert.equal(JSON.parse(serializeDesktopSettings({ port: 5188 })).port, 5188);
   assert.equal(JSON.parse(serializeDesktopSettings({ port: "bad" })).port, 5173);
+  assert.deepEqual(JSON.parse(serializeDesktopSettings({ port: 5188, storageMode: "documents", storageDir: "C:/Docs/RHODES" })), {
+    port: 5188,
+    storageMode: "documents",
+    storageDir: "C:/Docs/RHODES",
+  });
 });

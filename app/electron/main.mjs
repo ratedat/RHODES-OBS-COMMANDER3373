@@ -1,5 +1,8 @@
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, Menu, dialog, shell } from "electron";
 import {
   appUrl,
@@ -13,22 +16,121 @@ import {
   waitForReady,
 } from "../runtime/local-server.mjs";
 import {
-  DESKTOP_SETTINGS_FILE,
   parseDesktopSettings,
   resolveStartupPort,
   serializeDesktopSettings,
   shouldPromptForPort,
 } from "../runtime/port-config.mjs";
 import { launchRequestData, resolveSecondInstanceView } from "../runtime/launch-guard.mjs";
+import {
+  parseStoragePointer,
+  serializeStoragePointer,
+  storagePointerPath,
+  storageTarget,
+  targetFromStoredSelection,
+} from "../runtime/storage-config.mjs";
 import { isInternalAppUrl } from "../runtime/window-open.mjs";
 
 let port = resolveStartupPort({ args: process.argv, env: process.env });
 const initialView = normalizeView(readArg(process.argv, "--view", "control-v2"));
 const smokeTest = hasFlag(process.argv, "--smoke-test");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = path.resolve(__dirname, "../..");
+const storageContext = {
+  appRoot: APP_ROOT,
+  execPath: process.execPath,
+  documentsPath: path.join(os.homedir(), "Documents"),
+  isPackaged: app.isPackaged,
+};
+
+let storageSelectionSaved = false;
+let storageTargetCurrent = resolveInitialStorageTarget();
+try {
+  app.setPath("userData", storageTargetCurrent.userDataDir);
+} catch (error) {
+  console.warn(error instanceof Error ? error.message : String(error));
+}
 
 let serverController = null;
 let mainWindow = null;
 let isQuitting = false;
+
+function readJsonFileSync(file) {
+  try {
+    return fsSync.readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function targetFromDesktopSettingsText(textValue) {
+  if (!textValue) return null;
+  const settings = parseDesktopSettings(textValue);
+  if (!settings.storageMode) return null;
+  return targetFromStoredSelection({ mode: settings.storageMode, storageDir: settings.storageDir }, storageContext);
+}
+
+function defaultPortableTarget() {
+  return storageTarget({ ...storageContext, mode: "portable" });
+}
+
+function defaultDocumentsTarget() {
+  return storageTarget({ ...storageContext, mode: "documents" });
+}
+
+function envStateTarget() {
+  if (!process.env.ARKNIGHTS_STATE_DIR) return null;
+  const stateDir = path.resolve(process.env.ARKNIGHTS_STATE_DIR);
+  return storageTarget({ ...storageContext, mode: "custom", storageDir: stateDir });
+}
+
+function resolveInitialStorageTarget() {
+  const envTarget = envStateTarget();
+  if (envTarget) {
+    storageSelectionSaved = true;
+    return envTarget;
+  }
+
+  const pointer = parseStoragePointer(readJsonFileSync(storagePointerPath(storageContext)) || "");
+  const pointedTarget = targetFromStoredSelection(pointer, storageContext);
+  if (pointedTarget) {
+    storageSelectionSaved = true;
+    return pointedTarget;
+  }
+
+  for (const target of [defaultPortableTarget(), defaultDocumentsTarget()]) {
+    const storedTarget = targetFromDesktopSettingsText(readJsonFileSync(target.settingsFile));
+    if (storedTarget) {
+      storageSelectionSaved = true;
+      return storedTarget;
+    }
+  }
+
+  return defaultPortableTarget();
+}
+
+async function writeStoragePointer(target) {
+  if (target.mode === "custom") return;
+  const file = storagePointerPath(storageContext);
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, serializeStoragePointer(target), "utf8");
+}
+
+async function writeDesktopSettingsForTarget(target, { port: selectedPort = port } = {}) {
+  await fs.mkdir(path.dirname(target.settingsFile), { recursive: true });
+  await fs.writeFile(target.settingsFile, serializeDesktopSettings({
+    port: selectedPort,
+    storageMode: target.mode === "custom" ? null : target.mode,
+    storageDir: target.mode === "custom" ? "" : target.storageDir,
+  }), "utf8");
+  await writeStoragePointer(target);
+}
+
+function storageTargetSummary(target) {
+  if (target.mode === "documents") return `ドキュメント: ${target.storageDir}`;
+  if (target.mode === "custom") return `指定: ${target.stateDir}`;
+  return `実行ファイル側: ${target.storageDir}`;
+}
 
 function currentPort() {
   return serverController?.port || port;
@@ -106,6 +208,8 @@ function buildMenu() {
     {
       label: "操作",
       submenu: [
+        { label: "保存先設定", click: () => changeStorageLocation() },
+        { type: "separator" },
         { role: "reload", label: "再読み込み" },
         { role: "toggleDevTools", label: "開発者ツール" },
         { type: "separator" },
@@ -226,7 +330,7 @@ async function validateRendererSmoke(targetUrl) {
 }
 
 function settingsPath() {
-  return path.join(app.getPath("userData"), DESKTOP_SETTINGS_FILE);
+  return storageTargetCurrent.settingsFile;
 }
 
 async function readSavedPort() {
@@ -240,9 +344,7 @@ async function readSavedPort() {
 }
 
 async function saveSelectedPort(value) {
-  const file = settingsPath();
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, serializeDesktopSettings({ port: value }), "utf8");
+  await writeDesktopSettingsForTarget(storageTargetCurrent, { port: value });
 }
 
 function portPickerHtml(defaultPort) {
@@ -383,6 +485,64 @@ function showPortPicker(defaultPort) {
   });
 }
 
+async function showStoragePicker() {
+  const portableTarget = defaultPortableTarget();
+  const documentsTarget = defaultDocumentsTarget();
+  const result = await dialog.showMessageBox({
+    type: "question",
+    title: "保存先設定",
+    message: "設定とスクリーンショットの保存先を選択してください",
+    detail: [
+      `実行ファイル側: ${portableTarget.storageDir}`,
+      `ドキュメント: ${documentsTarget.storageDir}`,
+      "後から 操作 > 保存先設定 で変更できます。",
+    ].join("\n"),
+    buttons: ["実行ファイル側に保存（推奨）", "ドキュメントに保存", "終了"],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  if (result.response === 0) return portableTarget;
+  if (result.response === 1) return documentsTarget;
+  return null;
+}
+
+async function chooseStorageTarget() {
+  if (process.env.ARKNIGHTS_STATE_DIR || smokeTest || storageSelectionSaved) return storageTargetCurrent;
+  const selected = await showStoragePicker();
+  if (!selected) return null;
+  storageTargetCurrent = selected;
+  storageSelectionSaved = true;
+  try {
+    app.setPath("userData", storageTargetCurrent.userDataDir);
+  } catch (error) {
+    console.warn(error instanceof Error ? error.message : String(error));
+  }
+  await writeDesktopSettingsForTarget(storageTargetCurrent, { port });
+  return storageTargetCurrent;
+}
+
+async function changeStorageLocation() {
+  const selected = await showStoragePicker();
+  if (!selected) return;
+  if (selected.storageDir === storageTargetCurrent.storageDir) return;
+  await writeDesktopSettingsForTarget(selected, { port: currentPort() });
+  const result = await dialog.showMessageBox(mainWindow || undefined, {
+    type: "info",
+    title: "保存先設定",
+    message: "保存先を変更しました",
+    detail: `${storageTargetSummary(selected)}\n変更を反映するため再起動します。`,
+    buttons: ["再起動", "後で"],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (result.response === 0) {
+    app.relaunch({ args: process.argv.slice(1) });
+    app.exit(0);
+  }
+}
+
 async function chooseStartupPort() {
   const savedPort = await readSavedPort();
   const resolvedPort = resolveStartupPort({ args: process.argv, env: process.env, savedPort });
@@ -411,7 +571,12 @@ async function pickAdbPath() {
 }
 
 async function startDesktopApp() {
-  process.env.ARKNIGHTS_STATE_DIR = process.env.ARKNIGHTS_STATE_DIR || path.join(app.getPath("userData"), "state");
+  const selectedStorageTarget = await chooseStorageTarget();
+  if (!selectedStorageTarget) {
+    app.quit();
+    return;
+  }
+  process.env.ARKNIGHTS_STATE_DIR = process.env.ARKNIGHTS_STATE_DIR || selectedStorageTarget.stateDir;
   const startupPort = await chooseStartupPort();
   if (startupPort == null) {
     app.quit();
