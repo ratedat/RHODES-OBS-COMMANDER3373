@@ -15,6 +15,7 @@ Target campaigns:
 See:
 
 - `docs/startup-guide.md` for app startup, OBS URL, port, and ADB setup notes
+- `docs/licenses.md` for license, source availability, and third-party notices
 - `docs/architecture.md` for state and overlay architecture
 - `docs/data-sources.md` for source extraction notes
 - `docs/data-summary.md` for extracted campaign data coverage
@@ -118,6 +119,12 @@ OBS parts can be added as separate Browser Sources when you want to arrange each
 - http://127.0.0.1:5173/overlay/part/special
 
 Runtime state is stored in `data/current-state.json` and is intentionally ignored by Git. The committed example state remains `data/overlay-state.example.json`.
+
+## License
+
+RHODES OBS COMMANDER3373 is licensed under AGPL-3.0-only. The full license text is included in `LICENSE`.
+
+Source code is available at https://github.com/ratedat/RHODES-OBS-COMMANDER3373. Third-party attribution, including MaaAssistantArknights notes for future ADB/OCR work, is tracked in `THIRD_PARTY_NOTICES.md` and `docs/licenses.md`.
 
 ## Data Update Workflow
 

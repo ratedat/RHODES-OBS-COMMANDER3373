@@ -28,6 +28,7 @@ export function normalizeView(value) {
   if (value === "overlay") return "overlay";
   if (value === "sidecar") return "sidecar";
   if (value === "control-v2") return "control-v2";
+  if (value === "licenses") return "licenses";
   return "control";
 }
 

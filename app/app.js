@@ -719,10 +719,60 @@ function ensureStateShape() {
 
 
 function isInteractiveView() {
-  return view === "control" || view === "control-v2" || view === "sidecar";
+  return view === "control" || view === "control-v2" || view === "sidecar" || view === "licenses";
+}
+
+function renderLicensesPage() {
+  cancelOverlayAutoScroll();
+  app.dataset.loading = "false";
+  document.body.className = "licenses-body";
+  app.className = "licenses-app";
+  app.innerHTML = `
+    <header class="licenses-topbar">
+      <div class="licenses-brand">
+        <span>AGPL</span>
+        <div><h1>ライセンス / 謝辞</h1><p>RHODES OBS COMMANDER3373 のソース提供と第三者表記</p></div>
+      </div>
+      <nav class="licenses-actions" aria-label="ライセンス画面ナビゲーション">
+        <a href="/control-v2" target="_self">Control v2</a>
+        <a href="/sidecar" target="_self">Sidecar</a>
+        <a href="/overlay" target="_blank" rel="noreferrer">Overlay</a>
+      </nav>
+    </header>
+    <main class="licenses-main">
+      <section class="licenses-panel hero">
+        <h2>AGPL-3.0-only</h2>
+        <p>このアプリは AGPL-3.0-only で公開します。配布exeに対応するソースコードはGitHubで公開します。</p>
+        <div class="licenses-link-grid">
+          <a href="https://github.com/ratedat/RHODES-OBS-COMMANDER3373" target="_blank" rel="noreferrer">GitHubリポジトリ</a>
+          <a href="/LICENSE" target="_blank" rel="noreferrer">AGPL本文</a>
+          <a href="/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">第三者表記</a>
+          <a href="/docs/licenses.md" target="_blank" rel="noreferrer">運用メモ</a>
+        </div>
+      </section>
+      <section class="licenses-panel">
+        <h2>MAAについて</h2>
+        <p>ADB/OCR認識の設計・実装では MaaAssistantArknights を参考にし、必要に応じてAGPL互換の形で移植します。</p>
+        <ul>
+          <li>MaaAssistantArknights: <a href="https://github.com/MaaAssistantArknights/MaaAssistantArknights" target="_blank" rel="noreferrer">GitHub</a></li>
+          <li>License: AGPL-3.0-only</li>
+          <li>MAAのロゴ・商標・ブランド素材はこのアプリへ取り込みません。</li>
+        </ul>
+      </section>
+      <section class="licenses-panel">
+        <h2>開発時のルール</h2>
+        <ul>
+          <li>MAA由来コードをコピーまたは改変した場合は、該当ファイル付近に由来を残します。</li>
+          <li>AGPL-3.0-onlyと衝突するSDK、モデル、再配布制限付きリソースは追加しません。</li>
+          <li>配布物にはGitHubのソース取得導線を維持します。</li>
+        </ul>
+      </section>
+    </main>
+  `;
 }
 
 function renderInteractive() {
+  if (view === "licenses") return renderLicensesPage();
   if (view === "sidecar") return renderSidecar();
   if (view === "control-v2") return renderControlV2();
   return renderControl();
@@ -819,6 +869,7 @@ function renderControl() {
         <a href="/control-v2" target="_self">Control v2</a>
         <a href="/sidecar" target="_self">Sidecar</a>
         <a href="/overlay" target="_blank">Overlay</a>
+        <a href="/licenses" target="_self">ライセンス</a>
         <a href="/control" target="_self">Control</a>
         <span class="save-status">${html(ui.saveStatus)}</span>
         <button class="ghost" data-action="reset-state">リセット</button>
@@ -1119,6 +1170,7 @@ function renderControlV2Nav() {
         ${controlV2ScreenOptions.map((item) => `<button type="button" role="tab" aria-selected="${screen === item.id ? "true" : "false"}" class="control-v2-nav-button ${screen === item.id ? "active" : ""}" data-action="control-v2-screen" data-screen="${html(item.id)}">${html(item.label)}</button>`).join("")}
       </div>
       <div class="control-v2-utility-actions">
+        <a class="control-v2-nav-button" href="/licenses" target="_self">ライセンス</a>
         <span class="save-status">${html(ui.saveStatus)}</span>
         <button class="ghost" data-action="reset-state">リセット</button>
       </div>
@@ -1684,6 +1736,7 @@ function renderSidecar() {
         <label>モード<select data-field="mode">${renderControlModeOptions()}</select></label>
         <a href="/control" target="_self">Control</a>
         <a href="/overlay" target="_blank">Overlay</a>
+        <a href="/licenses" target="_self">ライセンス</a>
         <span class="save-status">${html(ui.saveStatus)}</span>
       </div>
     </header>

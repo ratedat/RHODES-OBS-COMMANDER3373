@@ -48,6 +48,7 @@ const mime = new Map([
   [".mjs", "text/javascript; charset=utf-8"],
   [".css", "text/css; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
+  [".md", "text/markdown; charset=utf-8"],
   [".png", "image/png"],
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
@@ -258,9 +259,10 @@ async function serveFile(res, file) {
     const stat = await fs.stat(file);
     if (stat.isDirectory()) return false;
     const ext = path.extname(file).toLowerCase();
-    const noCache = [".html", ".js", ".mjs", ".css", ".json"].includes(ext);
+    const base = path.basename(file);
+    const noCache = [".html", ".js", ".mjs", ".css", ".json", ".md"].includes(ext) || base === "LICENSE";
     res.writeHead(200, {
-      "content-type": mime.get(ext) || "application/octet-stream",
+      "content-type": base === "LICENSE" ? "text/plain; charset=utf-8" : (mime.get(ext) || "application/octet-stream"),
       ...(noCache ? NO_CACHE_HEADERS : { "cache-control": "public, max-age=600" }),
       ...(ext === ".html" ? { "clear-site-data": '"cache"' } : {}),
     });

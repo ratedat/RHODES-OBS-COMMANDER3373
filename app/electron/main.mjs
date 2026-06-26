@@ -73,6 +73,7 @@ function buildMenu() {
         { label: "Control v2", accelerator: "CmdOrCtrl+Shift+1", click: () => loadView("control-v2") },
         { label: "Sidecar", accelerator: "CmdOrCtrl+2", click: () => loadView("sidecar") },
         { label: "Overlay Preview", accelerator: "CmdOrCtrl+3", click: () => loadView("overlay") },
+        { label: "ライセンス / 謝辞", accelerator: "CmdOrCtrl+4", click: () => loadView("licenses") },
         { type: "separator" },
         {
           label: "Control v2 別ウィンドウ",

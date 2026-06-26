@@ -7,6 +7,7 @@ Do not place Codex/Stitch working notes, prompt handoff files, generated design 
 ## Key Documents
 
 - `startup-guide.md` - app startup, OBS URLs, port usage, and ADB setup notes
+- `licenses.md` - license, source availability, and third-party attribution policy
 - `architecture.md` - state and overlay architecture
 - `data-sources.md` - source extraction notes
 - `data-summary.md` - extracted campaign data coverage

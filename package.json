@@ -38,7 +38,11 @@
       "assets/**/*",
       "data/**/*",
       "package.json",
-      "!data/current-state.json"
+      "!data/current-state.json",
+      "LICENSE",
+      "README.md",
+      "THIRD_PARTY_NOTICES.md",
+      "docs/**/*"
     ],
     "asar": true,
     "win": {
@@ -52,5 +56,6 @@
       ],
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
-  }
+  },
+  "license": "AGPL-3.0-only"
 }

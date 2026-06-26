@@ -5,6 +5,7 @@ import { isInternalAppUrl } from "../app/runtime/window-open.mjs";
 test("isInternalAppUrl accepts same-port local app shell URLs", () => {
   assert.equal(isInternalAppUrl("http://127.0.0.1:5173/control-v2?screen=operators", 5173), true);
   assert.equal(isInternalAppUrl("http://localhost:5173/sidecar", 5173), true);
+  assert.equal(isInternalAppUrl("http://127.0.0.1:5173/licenses", 5173), true);
   assert.equal(isInternalAppUrl("http://127.0.0.1:5173/overlay/part/relics", 5173), true);
 });
 
