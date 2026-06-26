@@ -160,6 +160,19 @@
       "scale": 8
     },
     {
+      "id": "run.idea",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        1190,
+        274,
+        80,
+        48
+      ],
+      "scale": 8
+    },
+    {
       "id": "run.squad_card",
       "profileIds": [
         "runStatusFull"

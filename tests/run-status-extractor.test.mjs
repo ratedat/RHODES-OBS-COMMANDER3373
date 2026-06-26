@@ -87,6 +87,22 @@ test("run status extractor does not use command exp 0/10 as command level", () =
 });
 
 
+
+test("run status extractor reads Sarkaz idea count from the thought-side region", () => {
+  const candidates = extractRunStatusCandidates({
+    ocrResults: [
+      { text: "3", regionId: "run.idea" },
+      { text: "位 置 測 定 分 隊", regionId: "run.squad_card" },
+      { text: "魂 に 直 面", regionId: "run.difficulty_block" },
+      { text: "18", regionId: "run.difficulty_grade" },
+    ],
+  }, { campaignId: "is5_sarkaz", squads, difficultyGrades });
+
+  const idea = candidates.find((item) => item.field === "idea");
+  assert.equal(idea.label, "構想");
+  assert.equal(idea.value, 3);
+});
+
 test("run status extractor reads hope and originium ingots from dedicated resource regions", () => {
   const candidates = extractRunStatusCandidates({
     ocrResults: [

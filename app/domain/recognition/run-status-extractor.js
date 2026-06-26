@@ -156,6 +156,11 @@ function findIngotCandidate(frame) {
   return findRegionNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPart: "ingot", min: 0, max: 9999, prefer: "first" });
 }
 
+function findIdeaCandidate(frame, { campaignId } = {}) {
+  if (campaignId !== "is5_sarkaz") return null;
+  return findRegionNumberCandidate(frame, { field: "idea", label: "構想", regionIdPart: "idea", min: 0, max: 999, prefer: "first" });
+}
+
 function findLifePointsCandidate(frame) {
   const direct = findRegionNumberCandidate(frame, { field: "lifePoints", label: "耐久値", regionIdPart: "life_points", min: 0, prefer: "first" });
   if (direct) return direct;
@@ -205,6 +210,7 @@ export function extractRunStatusCandidates(frame, { campaignId, squads = [], dif
     commandLevel,
     findHopeCandidate(frame),
     findIngotCandidate(frame),
+    findIdeaCandidate(frame, { campaignId }),
     findLifePointsCandidate(frame),
     findRegionNumberCandidate(frame, { field: "shield", label: "シールド", regionIdPart: "shield", min: 0, prefer: "first" }),
   ].filter(Boolean);

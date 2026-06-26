@@ -15,7 +15,21 @@
         "run-home",
         "run-status"
       ],
-      "openSteps": [],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 96,
+            "y": 650
+          },
+          "label": "左下の分隊情報を開く"
+        },
+        {
+          "type": "wait",
+          "durationMs": 220,
+          "label": "表示待ち"
+        }
+      ],
       "scanRegion": {
         "x": 700,
         "y": 24,
@@ -24,11 +38,17 @@
       },
       "scrollAxis": "none",
       "scrollDirection": "none",
-      "restoreSteps": [],
+      "restoreSteps": [
+        {
+          "type": "back",
+          "label": "分隊情報を閉じる"
+        }
+      ],
       "maxScrolls": 0,
       "endFingerprintStableCount": 1,
-      "captureDelayMs": 120,
-      "inferredScreenId": "run-squad-info-panel"
+      "captureDelayMs": 180,
+      "inferredScreenId": "run-squad-info-panel",
+      "navigationNote": "分隊は左下をクリックすると等級と同時に表示される。構想は思案の右側に表示される数値を別ROIで読む。"
     },
     {
       "id": "operatorsFull",
@@ -44,7 +64,21 @@
         "operator-list",
         "squad-list"
       ],
-      "openSteps": [],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 1186,
+            "y": 300
+          },
+          "label": "隊員を開く"
+        },
+        {
+          "type": "wait",
+          "durationMs": 220,
+          "label": "表示待ち"
+        }
+      ],
       "scanRegion": {
         "x": 90,
         "y": 84,
@@ -72,7 +106,8 @@
       ],
       "maxScrolls": 18,
       "endFingerprintStableCount": 2,
-      "captureDelayMs": 160
+      "captureDelayMs": 160,
+      "navigationNote": "隊員表示をクリックして招集済みオペレーター一覧を開く。"
     },
     {
       "id": "relicsFull",
@@ -87,7 +122,21 @@
         "run-home",
         "relic-list"
       ],
-      "openSteps": [],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 1186,
+            "y": 190
+          },
+          "label": "右側の秘宝を開く"
+        },
+        {
+          "type": "wait",
+          "durationMs": 220,
+          "label": "表示待ち"
+        }
+      ],
       "scanRegion": {
         "x": 90,
         "y": 84,
@@ -115,7 +164,8 @@
       ],
       "maxScrolls": 20,
       "endFingerprintStableCount": 2,
-      "captureDelayMs": 160
+      "captureDelayMs": 160,
+      "navigationNote": "右側の秘宝表示をクリックして秘宝一覧を開く。"
     },
     {
       "id": "is4RevelationFull",
@@ -175,7 +225,21 @@
         "run-home",
         "sarkaz-thought-list"
       ],
-      "openSteps": [],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 1118,
+            "y": 300
+          },
+          "label": "思案を開く"
+        },
+        {
+          "type": "wait",
+          "durationMs": 220,
+          "label": "表示待ち"
+        }
+      ],
       "scanRegion": {
         "x": 90,
         "y": 84,
@@ -203,7 +267,8 @@
       ],
       "maxScrolls": 16,
       "endFingerprintStableCount": 2,
-      "captureDelayMs": 160
+      "captureDelayMs": 160,
+      "navigationNote": "思案表示をクリックして思案一覧を開く。構想の個数は思案の右に表示される。"
     },
     {
       "id": "is6CoinsFull",
