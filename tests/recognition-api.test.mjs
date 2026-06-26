@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
-import { startServer } from "../app/server.mjs";
+import { saveAdbScreenshotFrame, startServer } from "../app/server.mjs";
 
 async function closeServer(server) {
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
@@ -136,4 +139,36 @@ test("ADB test API reports resolution and optional screenshot size", async () =>
   } finally {
     await closeServer(server);
   }
+});
+
+
+test("ADB path picker API returns the desktop selected path", async () => {
+  const selectedPath = "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe";
+  const { server, port } = await startServer({
+    port: 0,
+    adbPathPicker: async () => ({ canceled: false, path: selectedPath }),
+  });
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/adb/select-path`, { method: "POST" });
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.canceled, false);
+    assert.equal(payload.path, selectedPath);
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("saveAdbScreenshotFrame writes PNG bytes to the local state screenshot directory", async () => {
+  const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "rhodes-adb-shot-"));
+  const screenshot = await saveAdbScreenshotFrame({
+    bytes: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    capturedAt: "2026-06-27T00:00:00.000Z",
+  }, { stateDir, now: new Date("2026-06-27T00:00:00.000Z") });
+
+  assert.equal(screenshot.bytes, 4);
+  assert.equal(screenshot.capturedAt, "2026-06-27T00:00:00.000Z");
+  assert.equal(screenshot.path.endsWith(path.join("adb-screenshots", "adb-test-2026-06-27T00-00-00-000Z.png")), true);
+  assert.deepEqual([...await fs.readFile(screenshot.path)], [0x89, 0x50, 0x4e, 0x47]);
 });

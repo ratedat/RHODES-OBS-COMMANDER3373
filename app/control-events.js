@@ -1,6 +1,6 @@
 import * as controlActions from "./control-actions.js";
 import { clampCoinCount, normalizeCoinFace } from "./domain/special-values.js";
-import { adbDetectUrl, adbTestUrl, apiJson, recognitionScanCancelUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
+import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, recognitionScanCancelUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
 import { normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 
 function parseImportDraft(ui) {
@@ -39,6 +39,10 @@ async function postAdbTest(settings, { capture = false } = {}) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ settings, capture }),
   });
+}
+
+async function postAdbPathPicker() {
+  return apiJson(adbSelectPathUrl, { method: "POST" });
 }
 
 function setChoicePressed(element, active) {
@@ -226,6 +230,24 @@ export function registerControlEvents(app, context) {
     if (action === "toggle-relic") { toggleChoiceElement(button, "relic", id, context); return; }
     if (action === "toggle-operator") { toggleChoiceElement(button, "operator", id, context); return; }
     if (action === "clear-relics") context.mutate(controlActions.clearRelics);
+    if (action === "adb-browse-path") {
+      button.disabled = true;
+      context.setNotice("ADB実行ファイルを選択してください。");
+      try {
+        const result = await postAdbPathPicker();
+        if (!result.canceled && result.path) {
+          context.mutate((state) => controlActions.updateAdbSetting(state, "adbPath", result.path));
+          context.setNotice("ADBパスを反映しました。");
+        } else {
+          context.setNotice("ADBパス選択をキャンセルしました。");
+        }
+      } catch (error) {
+        context.setNotice(`ADBパス選択失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
     if (action === "adb-detect") {
       button.disabled = true;
       context.setNotice("ADB接続候補を検出しています。");
@@ -250,7 +272,8 @@ export function registerControlEvents(app, context) {
       try {
         context.ui.adbTestResult = await postAdbTest(context.getState().adb, { capture });
         context.renderControl();
-        context.setNotice("ADBテストが完了しました。");
+        const path = context.ui.adbTestResult?.screenshot?.path;
+        context.setNotice(path ? `ADBスクリーンショットを保存しました: ${path}` : "ADBテストが完了しました。");
       } catch (error) {
         context.ui.adbTestResult = { ok: false, error: error.message };
         context.renderControl();

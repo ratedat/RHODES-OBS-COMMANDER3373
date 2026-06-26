@@ -5,6 +5,7 @@ export const recognitionScanUrl = "/api/recognition/scan";
 export const recognitionScanCancelUrl = "/api/recognition/scan/cancel";
 export const adbDetectUrl = "/api/adb/detect";
 export const adbTestUrl = "/api/adb/test";
+export const adbSelectPathUrl = "/api/adb/select-path";
 
 export async function apiJson(url, options) {
   const response = await fetch(url, options);

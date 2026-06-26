@@ -35,6 +35,7 @@ temp/
 
 # Runtime local state
 data/current-state.json
+data/adb-screenshots/
 # Local ADB/OCR experiments
 experiments/adb/
 experiments/adb/**/screenshot*.png

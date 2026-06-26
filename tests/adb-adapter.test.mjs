@@ -54,3 +54,25 @@ test("detectAdbConnections reports unavailable candidates without failing the wh
   assert.equal(result.adbCandidates[0].available, false);
   assert.equal(result.devices.length, 0);
 });
+
+
+test("detectAdbConnections prefers an available MuMu candidate over an earlier BlueStacks candidate", async () => {
+  const result = await detectAdbConnections({
+    settings: { connectionPreset: "auto" },
+    env: {},
+    candidatePaths: [
+      { path: "C:/Program Files/BlueStacks_nxt/HD-Adb.exe", source: "known-path", preset: "bluestacks" },
+      { path: "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe", source: "known-path", preset: "mumu" },
+    ],
+    fileExists: async () => true,
+    runCommand: async (adbPath, args) => {
+      if (args[0] === "version") return "Android Debug Bridge version 1.0.41";
+      if (args[0] === "devices") return `List of devices attached\n127.0.0.1:16384 device product:MuMu model:MuMu_Player path:${adbPath}\n`;
+      throw new Error("unexpected command");
+    },
+  });
+
+  assert.equal(result.selectedAdbPath, "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe");
+  assert.equal(result.adbCandidates[0].preset, "mumu");
+  assert.equal(result.adbCandidates[0].selected, true);
+});

@@ -969,7 +969,7 @@ function renderAdbSettingPanel() {
         <label>接続構成<select data-adb-setting="connectionPreset">
           ${adbConnectionPresetOptions.map((option) => `<option value="${option.id}" ${option.id === adb.connectionPreset ? "selected" : ""}>${html(option.label)}</option>`).join("")}
         </select></label>
-        <label class="adb-field-wide">ADBパス<input data-adb-setting="adbPath" value="${html(adb.adbPath)}" placeholder="adb または MuMu の shell\\adb.exe" /></label>
+        <div class="adb-field-wide adb-path-row"><label>ADBパス<input data-adb-setting="adbPath" value="${html(adb.adbPath)}" placeholder="adb または MuMu の shell\\adb.exe" /></label><button type="button" data-action="adb-browse-path">選択</button></div>
         <label>接続先 / serial<input data-adb-setting="serial" value="${html(adb.serial)}" placeholder="127.0.0.1:16384" /></label>
         <label class="adb-field-wide">エミュレータパス<input data-adb-setting="emulatorPath" value="${html(adb.emulatorPath)}" placeholder="任意 / 後続の起動補助用" /></label>
         <label class="adb-check-row"><input type="checkbox" data-adb-setting="screenshotExtension" ${adb.screenshotExtension ? "checked" : ""} /> MuMuスクリーンショット拡張を使う</label>
@@ -993,7 +993,7 @@ function renderAdbProbeResult(detection, testResult) {
     const devices = detection.devices || [];
     blocks.push(`<div class="adb-probe-block"><strong>検出結果</strong><span>${html(detection.selectedAdbPath || "ADB未選択")}</span></div>`);
     blocks.push(`<div class="adb-candidate-list">
-      ${candidates.slice(0, 6).map((item) => `<div class="adb-candidate-row ${item.available ? "available" : "missing"}"><span>${item.available ? "OK" : "--"}</span><code>${html(item.path)}</code>${item.available ? `<button type="button" data-action="adb-use-candidate" data-adb-path="${html(item.path)}">使用</button>` : ""}</div>`).join("") || `<div class="empty-state">ADB候補は見つかりません。</div>`}
+      ${candidates.slice(0, 8).map((item) => `<div class="adb-candidate-row ${item.available ? "available" : "missing"} ${item.selected ? "selected" : ""}"><span>${item.selected ? "選択" : (item.available ? "OK" : "--")}</span><code>${html(item.path)}</code>${item.available ? `<button type="button" data-action="adb-use-candidate" data-adb-path="${html(item.path)}">使用</button>` : ""}</div>`).join("") || `<div class="empty-state">ADB候補は見つかりません。</div>`}
     </div>`);
     blocks.push(`<div class="adb-device-list">
       ${devices.map((item) => `<div class="adb-candidate-row ${item.state === "device" ? "available" : "missing"}"><span>${html(item.state)}</span><code>${html(item.serial)}</code><em>${html(item.detail || "")}</em><button type="button" data-action="adb-use-device" data-adb-serial="${html(item.serial)}">使用</button></div>`).join("") || `<div class="empty-state">接続中の端末はありません。</div>`}
@@ -1002,8 +1002,8 @@ function renderAdbProbeResult(detection, testResult) {
   if (testResult) {
     if (testResult.ok) {
       const resolution = testResult.resolution ? `${testResult.resolution.width}x${testResult.resolution.height}` : "解像度不明";
-      const shot = testResult.screenshot ? ` / screenshot ${testResult.screenshot.bytes} bytes` : "";
-      blocks.push(`<div class="adb-probe-block success"><strong>テスト成功</strong><span>${html(resolution + shot)}</span></div>`);
+      const shot = testResult.screenshot ? ` / screenshot ${testResult.screenshot.bytes} bytes${testResult.screenshot.path ? ` / ${testResult.screenshot.path}` : ""}` : "";
+      blocks.push(`<div class="adb-probe-block success"><strong>テスト成功</strong><span title="${html(testResult.screenshot?.path || "")}">${html(resolution + shot)}</span></div>`);
     } else {
       blocks.push(`<div class="adb-probe-block error"><strong>テスト失敗</strong><span>${html(testResult.error || "unknown error")}</span></div>`);
     }

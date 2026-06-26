@@ -1963,3 +1963,8 @@ a:hover { text-decoration: underline; }
   .overlay-scroll-speed-grid,
   .local-config-summary { grid-template-columns: 1fr; }
 }
+
+.adb-path-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.adb-path-row button { min-height: 38px; }
+.adb-candidate-row.selected { border-color: rgba(215, 168, 71, 0.68); background: rgba(215, 168, 71, 0.08); }
+.adb-candidate-row.selected span { color: var(--accent-2); }

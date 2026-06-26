@@ -7,6 +7,7 @@ import {
   normalizeAdbSettings,
   parseAdbDevices,
   resolveAdbRuntimeSettings,
+  normalizeAdbPathKey,
 } from "../app/domain/adb-settings.js";
 import { updateAdbSetting } from "../app/control-actions.js";
 
@@ -101,4 +102,21 @@ test("updateAdbSetting normalizes GUI values into state.adb", () => {
   assert.equal(state.adb.autoDetect, false);
   assert.equal(state.adb.connectionPreset, "mumu");
   assert.equal(state.adb.serial, "127.0.0.1:16384");
+});
+
+
+test("normalizes equivalent adb paths with dot path segments", () => {
+  assert.equal(
+    normalizeAdbPathKey("M:\\Program Files\\Netease\\MuMu Player 12\\shell\\.\\adb.exe"),
+    normalizeAdbPathKey("M:/Program Files/Netease/MuMu Player 12/shell/adb.exe"),
+  );
+});
+
+test("buildAdbCandidatePaths includes MuMu installs from non-C system drives", () => {
+  const candidates = buildAdbCandidatePaths({
+    env: { ProgramFiles: "C:/Program Files" },
+    driveLetters: ["M"],
+  });
+
+  assert.equal(candidates.some((item) => item.path === "M:\\Program Files\\Netease\\MuMu Player 12\\shell\\adb.exe"), true);
 });

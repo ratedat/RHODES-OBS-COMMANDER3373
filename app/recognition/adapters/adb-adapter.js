@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
-import { buildAdbCandidatePaths, normalizeAdbSettings, parseAdbDevices, resolveAdbRuntimeSettings } from "../../domain/adb-settings.js";
+import { buildAdbCandidatePaths, normalizeAdbPathKey, normalizeAdbSettings, parseAdbDevices, resolveAdbRuntimeSettings } from "../../domain/adb-settings.js";
 
 function adbArgs(serial, args) {
   return serial ? ["-s", serial, ...args] : args;
@@ -103,11 +103,36 @@ function mergeCandidatePaths(settings, env, candidatePaths, driveLetters) {
   ];
   const seen = new Set();
   return raw.filter((candidate) => {
-    const key = String(candidate?.path || "").toLowerCase().replace(/\\/g, "/");
+    const key = normalizeAdbPathKey(candidate?.path || "");
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+
+function adbCandidateScore(candidate, normalized, runtime) {
+  let score = candidate.available ? 0 : 1000;
+  const candidatePathKey = normalizeAdbPathKey(candidate.path);
+  const explicitPathKey = normalizeAdbPathKey(normalized.adbPath);
+  const runtimePathKey = normalizeAdbPathKey(runtime.adbPath);
+  if (explicitPathKey && candidatePathKey === explicitPathKey) score -= 120;
+  if (candidate.source === "settings") score -= 90;
+  if (candidate.source === "env") score -= 80;
+  if (normalized.connectionPreset !== "auto") {
+    score += candidate.preset === normalized.connectionPreset ? -60 : 35;
+  } else {
+    if (candidate.preset === "mumu") score -= 45;
+    if (candidate.preset === "bluestacks") score += 35;
+    if (candidate.preset === "ldplayer") score += 20;
+  }
+  if (candidatePathKey === "adb") score += 60;
+  if (runtimePathKey && runtimePathKey !== "adb" && candidatePathKey === runtimePathKey) score -= 20;
+  return score;
+}
+
+function sortAdbCandidates(candidates, normalized, runtime) {
+  return [...candidates].sort((a, b) => adbCandidateScore(a, normalized, runtime) - adbCandidateScore(b, normalized, runtime) || String(a.path).localeCompare(String(b.path)));
 }
 
 export async function detectAdbConnections({ settings = {}, env = process.env, candidatePaths = null, driveLetters = defaultDriveLetters(), fileExists = defaultFileExists, runCommand = execAdbCommand } = {}) {
@@ -130,7 +155,9 @@ export async function detectAdbConnections({ settings = {}, env = process.env, c
     adbCandidates.push(entry);
   }
 
-  const selected = adbCandidates.find((item) => item.available && item.path === runtime.adbPath) || adbCandidates.find((item) => item.available) || null;
+  const orderedCandidates = sortAdbCandidates(adbCandidates, normalized, runtime);
+  const selected = orderedCandidates.find((item) => item.available) || null;
+  const selectedPathKey = normalizeAdbPathKey(selected?.path || "");
   let devices = [];
   if (selected) {
     try {
@@ -144,7 +171,7 @@ export async function detectAdbConnections({ settings = {}, env = process.env, c
     settings: normalized,
     runtime: { ...runtime, adbPath: selected?.path || runtime.adbPath },
     selectedAdbPath: selected?.path || runtime.adbPath,
-    adbCandidates,
+    adbCandidates: orderedCandidates.map((item) => ({ ...item, selected: normalizeAdbPathKey(item.path) === selectedPathKey })),
     devices,
   };
 }

@@ -219,6 +219,23 @@ function adbSettingsFromRequest(body, state) {
   return normalizeAdbSettings(body?.settings || state?.adb || {});
 }
 
+function timestampForFile(value = new Date()) {
+  return new Date(value).toISOString().replace(/[:.]/g, "-");
+}
+
+export async function saveAdbScreenshotFrame(frame, { stateDir = STATE_DIR, now = new Date() } = {}) {
+  if (!frame?.bytes) throw new Error("screenshot frame has no bytes");
+  const dir = path.join(stateDir, "adb-screenshots");
+  await fs.mkdir(dir, { recursive: true });
+  const file = path.join(dir, `adb-test-${timestampForFile(now)}.png`);
+  await fs.writeFile(file, frame.bytes);
+  return {
+    bytes: frame.bytes.length || 0,
+    capturedAt: frame.capturedAt || new Date(now).toISOString(),
+    path: file,
+  };
+}
+
 async function defaultAdbTester({ settings = {}, capture = false } = {}) {
   const normalized = normalizeAdbSettings(settings);
   const adapter = createAdbAdapter({ settings: normalized });
@@ -226,7 +243,7 @@ async function defaultAdbTester({ settings = {}, capture = false } = {}) {
   let screenshot = null;
   if (capture) {
     const frame = await adapter.capture({ profileId: "adbTest", stage: "screenshot-test" });
-    screenshot = { bytes: frame.bytes?.length || 0, capturedAt: frame.capturedAt || null };
+    screenshot = await saveAdbScreenshotFrame(frame);
   }
   return { ok: true, settings: normalized, resolution, screenshot };
 }
@@ -328,7 +345,7 @@ function legacyControlRedirectLocation(url) {
   return `/control-v2${query ? `?${query}` : ""}`;
 }
 
-export function createAppServer({ recognitionRunner = defaultRecognitionRunner, adbDetector = detectAdbConnections, adbTester = defaultAdbTester } = {}) {
+export function createAppServer({ recognitionRunner = defaultRecognitionRunner, adbDetector = detectAdbConnections, adbTester = defaultAdbTester, adbPathPicker = null } = {}) {
   let activeScanController = null;
 
   async function runRecognitionRequest({ profile, source = "adb" }) {
@@ -374,6 +391,13 @@ export function createAppServer({ recognitionRunner = defaultRecognitionRunner, 
       return sendJson(res, 200, state);
     }
 
+
+
+    if (req.method === "POST" && url.pathname === "/api/adb/select-path") {
+      if (typeof adbPathPicker !== "function") throw httpError(501, "ADB file picker is available only in the desktop app.", { code: "adb_picker_unavailable" });
+      const result = await adbPathPicker();
+      return sendJson(res, 200, { canceled: Boolean(result?.canceled), path: result?.path || result?.filePath || "" });
+    }
 
     if (req.method === "POST" && url.pathname === "/api/adb/detect") {
       const bodyText = await readBody(req);
@@ -441,8 +465,8 @@ export function createAppServer({ recognitionRunner = defaultRecognitionRunner, 
   });
 }
 
-export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester } = {}) {
-  const server = createAppServer({ recognitionRunner, adbDetector, adbTester });
+export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester, adbPathPicker } = {}) {
+  const server = createAppServer({ recognitionRunner, adbDetector, adbTester, adbPathPicker });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {

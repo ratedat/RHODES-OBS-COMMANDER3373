@@ -29,6 +29,10 @@ function cleanText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function normalizeAdbPathKey(value) {
+  return cleanText(value).replace(/[\\/]+\.[\\/]+/g, "\\").replace(/\\/g, "/").toLowerCase();
+}
+
 export function normalizeAdbSettings(input = {}) {
   const source = input && typeof input === "object" ? input : {};
   const connectionPreset = validPresets.has(source.connectionPreset) ? source.connectionPreset : defaultAdbSettings.connectionPreset;
@@ -71,7 +75,7 @@ export function parseAdbDevices(output = "") {
 function pushCandidate(candidates, seen, path, source, preset = "custom") {
   const normalized = cleanText(path);
   if (!normalized) return;
-  const key = normalized.toLowerCase().replace(/\\/g, "/");
+  const key = normalizeAdbPathKey(normalized);
   if (seen.has(key)) return;
   seen.add(key);
   candidates.push({ path: normalized, source, preset });
@@ -85,7 +89,6 @@ export function buildAdbCandidatePaths({ env = process.env, driveLetters = [] } 
   const candidates = [];
   const seen = new Set();
   pushCandidate(candidates, seen, env.ARKNIGHTS_ADB_PATH, "env", "custom");
-  pushCandidate(candidates, seen, "adb", "path", "custom");
 
   const roots = [
     ...programFilesRoots(env),
@@ -98,5 +101,6 @@ export function buildAdbCandidatePaths({ env = process.env, driveLetters = [] } 
     pushCandidate(candidates, seen, `${root}\\BlueStacks_nxt\\HD-Adb.exe`, "known-path", "bluestacks");
     pushCandidate(candidates, seen, `${root}\\LDPlayer\\LDPlayer9\\adb.exe`, "known-path", "ldplayer");
   }
+  pushCandidate(candidates, seen, "adb", "path", "custom");
   return candidates;
 }

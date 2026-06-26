@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { app, BrowserWindow, Menu, shell } from "electron";
+import { app, BrowserWindow, Menu, dialog, shell } from "electron";
 import {
   appUrl,
   DEFAULT_PORT,
@@ -397,6 +397,19 @@ async function chooseStartupPort() {
   return pickedPort;
 }
 
+
+async function pickAdbPath() {
+  const owner = BrowserWindow.getFocusedWindow() || mainWindow || undefined;
+  const result = await dialog.showOpenDialog(owner, {
+    title: "ADB実行ファイルを選択",
+    properties: ["openFile"],
+    filters: process.platform === "win32"
+      ? [{ name: "ADB executable", extensions: ["exe"] }, { name: "All files", extensions: ["*"] }]
+      : [{ name: "All files", extensions: ["*"] }],
+  });
+  return { canceled: result.canceled, path: result.filePaths?.[0] || "" };
+}
+
 async function startDesktopApp() {
   process.env.ARKNIGHTS_STATE_DIR = process.env.ARKNIGHTS_STATE_DIR || path.join(app.getPath("userData"), "state");
   const startupPort = await chooseStartupPort();
@@ -406,7 +419,7 @@ async function startDesktopApp() {
   }
   port = startupPort;
   const { startServer } = await import("../server.mjs");
-  serverController = await startServer({ port });
+  serverController = await startServer({ port, adbPathPicker: pickAdbPath });
   port = serverController.port;
   const targetUrl = appUrl(serverController.port, initialView);
   await waitForReady(targetUrl);
