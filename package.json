@@ -21,7 +21,11 @@
     "data:diff": "node tools/compare-data-update.mjs --before data --after data --out review/update-runs/manual-compare",
     "app:debug": "set \"ARKNIGHTS_STATE_DIR=data\" && electron . --view control-v2 --port 5173",
     "app:smoke": "set \"ARKNIGHTS_STATE_DIR=data\" && electron . --smoke-test --view control-v2 --port 5174",
-    "verify:desktop": "npm test && npm run pack:win"
+    "verify:desktop": "npm test && npm run pack:win",
+    "ocr:probe": "node tools/probe-ocr-runtime.mjs",
+    "ocr:probe:strict": "node tools/probe-ocr-runtime.mjs --strict",
+    "ocr:sync-maa": "node tools/sync-maa-ocr-assets.mjs",
+    "ocr:sync-maa:models": "node tools/sync-maa-ocr-assets.mjs --models"
   },
   "devDependencies": {
     "electron": "^42.5.0",
@@ -42,7 +46,9 @@
       "LICENSE",
       "README.md",
       "THIRD_PARTY_NOTICES.md",
-      "docs/**/*"
+      "docs/**/*",
+      "third_party/**/*",
+      "!third_party/maa/**/inference.onnx"
     ],
     "asar": true,
     "win": {

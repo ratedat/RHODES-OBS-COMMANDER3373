@@ -65,7 +65,7 @@ export async function runScanProfile({ profile, adapter, recognizer = createMeta
     throwIfAborted(signal);
     logEvent(log, "capture", { stage: "known-screen" });
     const initialFrame = await adapter.capture({ profileId: profile.id, stage: "known-screen" });
-    const classification = await recognizer.classify(initialFrame, { profile, source });
+    const classification = await recognizer.classify(initialFrame, { profile, source, actualResolution, scale });
     logEvent(log, "classify", classification);
     if (!classification?.known) {
       status = "aborted";
@@ -99,13 +99,13 @@ export async function runScanProfile({ profile, adapter, recognizer = createMeta
       throwIfAborted(signal);
       logEvent(log, "capture", { stage: "scan", iteration });
       const frame = await adapter.capture({ profileId: profile.id, stage: "scan", iteration });
-      const fingerprint = await recognizer.fingerprint(frame, { profile, region: scanRegion, iteration });
+      const fingerprint = await recognizer.fingerprint(frame, { profile, region: scanRegion, iteration, actualResolution, scale });
       logEvent(log, "fingerprint", { iteration, fingerprint });
       if (fingerprints.length && fingerprintsEqual(fingerprints[fingerprints.length - 1], fingerprint)) stableMatches += 1;
       else stableMatches = 0;
       fingerprints.push(fingerprint);
 
-      const candidates = await recognizer.recognize(frame, { profile, region: scanRegion, iteration });
+      const candidates = await recognizer.recognize(frame, { profile, region: scanRegion, iteration, actualResolution, scale });
       logEvent(log, "recognize", { iteration, count: Array.isArray(candidates) ? candidates.length : 0 });
       if (Array.isArray(candidates)) rawCandidates.push(...candidates);
 

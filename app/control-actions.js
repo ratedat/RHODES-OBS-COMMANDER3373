@@ -3,6 +3,7 @@ import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedD
 import { clampGridColumns } from "./lib/preferences.js";
 import { normalizeControlMode } from "./domain/ui-modes.js";
 import { RUN_STAT_FIELD_IDS, normalizeRunStatValue } from "./domain/run-stats.js";
+import { normalizeAdbSettings } from "./domain/adb-settings.js";
 
 function ensureCampaignSpecial(state, campaignId) {
   state.run.special[campaignId] ||= {};
@@ -105,6 +106,13 @@ export function holdTournamentState(state, pendingState) {
 
 export function clearTournamentState(state) {
   state.tournament = { pendingState: null, lastSubmissionAt: null, submittedBy: null };
+}
+
+export function updateAdbSetting(state, field, value, checked) {
+  const current = normalizeAdbSettings(state.adb);
+  const booleanFields = new Set(["autoDetect", "screenshotExtension", "restartServerOnFailure", "restartProcessOnFailure", "closeAdbOnExit", "lightweightAdb"]);
+  const nextValue = booleanFields.has(field) ? Boolean(checked) : value;
+  state.adb = normalizeAdbSettings({ ...current, [field]: nextValue });
 }
 
 export function updateRunField(state, field, value, checked) {

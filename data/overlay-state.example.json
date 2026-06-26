@@ -70,5 +70,17 @@
       "floor3BossId": null,
       "isomericBossId": null
     }
+  },
+  "adb": {
+    "autoDetect": true,
+    "connectionPreset": "auto",
+    "adbPath": "",
+    "serial": "",
+    "emulatorPath": "",
+    "screenshotExtension": true,
+    "restartServerOnFailure": true,
+    "restartProcessOnFailure": true,
+    "closeAdbOnExit": false,
+    "lightweightAdb": false
   }
 }

@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "sourceNote": "MAA-style task schema for RHODES OBS COMMANDER3373. This file does not copy MAA source code or assets; it mirrors the ROI/expected-text/normalization structure used by image-recognition task pipelines.",
+  "screens": [
+    {
+      "id": "run.squad_info_panel",
+      "screenId": "run-squad-info-panel",
+      "label": "分隊情報パネル",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "recognition": {
+        "type": "OCR",
+        "expected": [
+          "指揮",
+          "秘宝"
+        ],
+        "match": "all",
+        "normalize": [
+          "remove_spaces"
+        ]
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "id": "is5.sarkaz.map_select.campaign",
+      "label": "IS#5 campaign marker",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "recognition": {
+        "type": "OCR",
+        "roi": [
+          0,
+          0,
+          520,
+          126
+        ],
+        "expected": [
+          "サルカズの炉辺奇談"
+        ],
+        "normalize": [
+          "remove_spaces"
+        ]
+      },
+      "candidate": {
+        "kind": "runStatus",
+        "field": "campaignId",
+        "label": "統合戦略",
+        "value": "is5_sarkaz",
+        "confidence": 0.82,
+        "needsReview": true
+      }
+    }
+  ],
+  "ocrRegions": [
+    {
+      "id": "run.status_top",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        310,
+        0,
+        490,
+        68
+      ],
+      "scale": 4
+    },
+    {
+      "id": "run.status_band",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        125,
+        0,
+        650,
+        65
+      ],
+      "scale": 1
+    },
+    {
+      "id": "run.command_level",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        310,
+        15,
+        55,
+        50
+      ],
+      "scale": 8
+    },
+    {
+      "id": "run.life_points",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        185,
+        32,
+        50,
+        33
+      ],
+      "scale": 8
+    },
+    {
+      "id": "run.shield",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        260,
+        32,
+        55,
+        33
+      ],
+      "scale": 8
+    },
+    {
+      "id": "run.top_right_status",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        900,
+        0,
+        380,
+        70
+      ],
+      "scale": 5
+    },
+    {
+      "id": "run.squad_card",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        20,
+        380,
+        260,
+        135
+      ],
+      "scale": 3
+    },
+    {
+      "id": "run.squad_name",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        45,
+        410,
+        190,
+        52
+      ],
+      "scale": 4
+    },
+    {
+      "id": "run.difficulty_grade",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        125,
+        530,
+        110,
+        85
+      ],
+      "scale": 6
+    },
+    {
+      "id": "run.difficulty_block",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        0,
+        520,
+        900,
+        190
+      ],
+      "scale": 2
+    }
+  ]
+}

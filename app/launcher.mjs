@@ -32,7 +32,7 @@ process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
 try {
-  if (await isLocalServerReady(targetUrl, 2)) {
+  if (await isLocalServerReady(targetUrl, 8)) {
     console.log(`App already running: ${targetUrl}`);
     if (!noOpen) openExternalUrl(targetUrl);
     process.exit(0);

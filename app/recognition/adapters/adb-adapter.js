@@ -1,4 +1,6 @@
 import { execFile } from "node:child_process";
+import fs from "node:fs/promises";
+import { buildAdbCandidatePaths, normalizeAdbSettings, parseAdbDevices, resolveAdbRuntimeSettings } from "../../domain/adb-settings.js";
 
 function adbArgs(serial, args) {
   return serial ? ["-s", serial, ...args] : args;
@@ -50,7 +52,107 @@ function parseWmSize(output) {
   return { width: Number(match[1]), height: Number(match[2]) };
 }
 
-export function createAdbAdapter({ adbPath = process.env.ARKNIGHTS_ADB_PATH || "adb", serial = process.env.ARKNIGHTS_ADB_SERIAL || "" } = {}) {
+function parseWindowDisplayResolution(output) {
+  const text = String(output || "");
+  const appMatch = text.match(/\bapp=(\d+)x(\d+)\b/i);
+  if (appMatch) return { width: Number(appMatch[1]), height: Number(appMatch[2]) };
+  const curMatch = text.match(/\bcur=(\d+)x(\d+)\b/i);
+  if (curMatch) return { width: Number(curMatch[1]), height: Number(curMatch[2]) };
+  const boundsMatch = text.match(/mAppBounds=Rect\(\s*0\s*,\s*0\s*-\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+  if (boundsMatch) return { width: Number(boundsMatch[1]), height: Number(boundsMatch[2]) };
+  return null;
+}
+
+export function parseAdbDisplayResolution({ windowDisplaysOutput = "", wmSizeOutput = "" } = {}) {
+  return parseWindowDisplayResolution(windowDisplaysOutput) || parseWmSize(wmSizeOutput);
+}
+
+function execAdbCommand(adbPath, args, { encoding = "utf8", execFileImpl = execFile } = {}) {
+  return new Promise((resolve, reject) => {
+    execFileImpl(adbPath, args, { encoding, maxBuffer: 64 * 1024 * 1024, windowsHide: true }, (error, stdout, stderr) => {
+      if (error) {
+        error.stderr = stderr;
+        reject(normalizeAdbError(error, { adbPath, args }));
+        return;
+      }
+      resolve(stdout);
+    });
+  });
+}
+
+async function defaultFileExists(file) {
+  if (!file || file === "adb") return true;
+  try {
+    await fs.access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function defaultDriveLetters() {
+  if (process.platform !== "win32") return [];
+  return "CDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+}
+
+function mergeCandidatePaths(settings, env, candidatePaths, driveLetters) {
+  const normalized = normalizeAdbSettings(settings);
+  const raw = candidatePaths || [
+    ...(normalized.adbPath ? [{ path: normalized.adbPath, source: "settings", preset: normalized.connectionPreset }] : []),
+    ...buildAdbCandidatePaths({ env, driveLetters }),
+  ];
+  const seen = new Set();
+  return raw.filter((candidate) => {
+    const key = String(candidate?.path || "").toLowerCase().replace(/\\/g, "/");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export async function detectAdbConnections({ settings = {}, env = process.env, candidatePaths = null, driveLetters = defaultDriveLetters(), fileExists = defaultFileExists, runCommand = execAdbCommand } = {}) {
+  const normalized = normalizeAdbSettings(settings);
+  const runtime = resolveAdbRuntimeSettings(normalized, env);
+  const candidates = mergeCandidatePaths(normalized, env, candidatePaths, driveLetters);
+  const adbCandidates = [];
+
+  for (const candidate of candidates) {
+    const exists = await fileExists(candidate.path);
+    const entry = { ...candidate, exists, available: false, error: null };
+    if (exists) {
+      try {
+        await runCommand(candidate.path, ["version"]);
+        entry.available = true;
+      } catch (error) {
+        entry.error = error?.message || String(error);
+      }
+    }
+    adbCandidates.push(entry);
+  }
+
+  const selected = adbCandidates.find((item) => item.available && item.path === runtime.adbPath) || adbCandidates.find((item) => item.available) || null;
+  let devices = [];
+  if (selected) {
+    try {
+      devices = parseAdbDevices(await runCommand(selected.path, ["devices", "-l"]));
+    } catch {
+      devices = [];
+    }
+  }
+
+  return {
+    settings: normalized,
+    runtime: { ...runtime, adbPath: selected?.path || runtime.adbPath },
+    selectedAdbPath: selected?.path || runtime.adbPath,
+    adbCandidates,
+    devices,
+  };
+}
+
+export function createAdbAdapter({ adbPath = null, serial = null, settings = {}, env = process.env } = {}) {
+  const runtime = resolveAdbRuntimeSettings({ ...settings, ...(adbPath ? { adbPath } : {}), ...(serial ? { serial } : {}) }, env);
+  adbPath = runtime.adbPath;
+  serial = runtime.serial;
   function run(args, { encoding = "utf8" } = {}) {
     return new Promise((resolve, reject) => {
       execFile(adbPath, adbArgs(serial, args), { encoding, maxBuffer: 64 * 1024 * 1024, windowsHide: true }, (error, stdout, stderr) => {
@@ -66,7 +168,14 @@ export function createAdbAdapter({ adbPath = process.env.ARKNIGHTS_ADB_PATH || "
 
   return {
     async getActualResolution() {
-      return parseWmSize(await run(["shell", "wm", "size"]));
+      const wmSizeOutput = await run(["shell", "wm", "size"]);
+      let windowDisplaysOutput = "";
+      try {
+        windowDisplaysOutput = await run(["shell", "dumpsys", "window", "displays"]);
+      } catch {
+        windowDisplaysOutput = "";
+      }
+      return parseAdbDisplayResolution({ windowDisplaysOutput, wmSizeOutput });
     },
     async capture(meta = {}) {
       const bytes = await run(["exec-out", "screencap", "-p"], { encoding: "buffer" });

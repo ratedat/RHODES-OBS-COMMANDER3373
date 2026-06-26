@@ -83,3 +83,57 @@ test("default recognition runner reports missing adb as service unavailable", as
     else process.env.ARKNIGHTS_ADB_PATH = previousAdbPath;
   }
 });
+
+test("ADB detect API uses saved settings and returns candidates", async () => {
+  const { server, port } = await startServer({
+    port: 0,
+    adbDetector: async ({ settings }) => ({
+      settings,
+      runtime: { adbPath: settings.adbPath || "adb", serial: settings.serial || "", autoDetect: settings.autoDetect, connectionPreset: settings.connectionPreset },
+      selectedAdbPath: settings.adbPath || "adb",
+      adbCandidates: [{ path: settings.adbPath || "adb", source: "settings", preset: settings.connectionPreset, exists: true, available: true, error: null }],
+      devices: [{ serial: settings.serial || "127.0.0.1:16384", state: "device", detail: "product:MuMu" }],
+    }),
+  });
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/adb/detect`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ settings: { autoDetect: false, connectionPreset: "mumu", adbPath: "C:/adb.exe", serial: "127.0.0.1:16384" } }),
+    });
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.settings.connectionPreset, "mumu");
+    assert.equal(payload.devices[0].serial, "127.0.0.1:16384");
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("ADB test API reports resolution and optional screenshot size", async () => {
+  const { server, port } = await startServer({
+    port: 0,
+    adbTester: async ({ settings, capture }) => ({
+      ok: true,
+      settings,
+      runtime: { adbPath: settings.adbPath || "adb", serial: settings.serial || "" },
+      resolution: { width: 2560, height: 1440 },
+      screenshot: capture ? { bytes: 123456, capturedAt: "2026-06-27T00:00:00.000Z" } : null,
+    }),
+  });
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/adb/test`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ capture: true, settings: { adbPath: "adb", serial: "127.0.0.1:16384" } }),
+    });
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(payload.resolution, { width: 2560, height: 1440 });
+    assert.equal(payload.screenshot.bytes, 123456);
+  } finally {
+    await closeServer(server);
+  }
+});

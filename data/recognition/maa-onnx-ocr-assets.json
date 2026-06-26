@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "source": {
+    "project": "MaaAssistantArknights/MaaAssistantArknights",
+    "branch": "dev-v2",
+    "license": "AGPL-3.0-only",
+    "rawBaseUrl": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2"
+  },
+  "modelFilesIncluded": false,
+  "notes": [
+    "MAA uses FastDeploy PPOCRv3 with ONNX Runtime for these model files.",
+    "RHODES keeps model files optional so normal Git history stays lightweight."
+  ],
+  "assets": [
+    {
+      "id": "common.ocr_config",
+      "role": "config",
+      "locale": "common",
+      "rawPath": "resource/ocr_config.json",
+      "localPath": "third_party/maa/resource/ocr_config.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/ocr_config.json",
+      "present": true
+    },
+    {
+      "id": "jp.ocr_config",
+      "role": "config",
+      "locale": "YoStarJP",
+      "rawPath": "resource/global/YoStarJP/resource/ocr_config.json",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/ocr_config.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/ocr_config.json",
+      "present": true
+    },
+    {
+      "id": "common.det.version",
+      "role": "detector-version",
+      "locale": "common",
+      "rawPath": "resource/PaddleOCR/det/version.txt",
+      "localPath": "third_party/maa/resource/PaddleOCR/det/version.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/PaddleOCR/det/version.txt",
+      "present": true
+    },
+    {
+      "id": "common.rec.keys",
+      "role": "recognizer-keys",
+      "locale": "common",
+      "rawPath": "resource/PaddleOCR/rec/keys.txt",
+      "localPath": "third_party/maa/resource/PaddleOCR/rec/keys.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/PaddleOCR/rec/keys.txt",
+      "present": true
+    },
+    {
+      "id": "common.rec.version",
+      "role": "recognizer-version",
+      "locale": "common",
+      "rawPath": "resource/PaddleOCR/rec/version.txt",
+      "localPath": "third_party/maa/resource/PaddleOCR/rec/version.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/PaddleOCR/rec/version.txt",
+      "present": true
+    },
+    {
+      "id": "jp.rec.keys",
+      "role": "recognizer-keys",
+      "locale": "YoStarJP",
+      "rawPath": "resource/global/YoStarJP/resource/PaddleOCR/rec/keys.txt",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/PaddleOCR/rec/keys.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/PaddleOCR/rec/keys.txt",
+      "present": true
+    },
+    {
+      "id": "jp.rec.version",
+      "role": "recognizer-version",
+      "locale": "YoStarJP",
+      "rawPath": "resource/global/YoStarJP/resource/PaddleOCR/rec/version.txt",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/PaddleOCR/rec/version.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/PaddleOCR/rec/version.txt",
+      "present": true
+    }
+  ],
+  "syncedAt": "2026-06-26T16:07:43.747Z",
+  "downloaded": [
+    {
+      "id": "common.ocr_config",
+      "localPath": "third_party/maa/resource/ocr_config.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/ocr_config.json",
+      "bytes": 34
+    },
+    {
+      "id": "jp.ocr_config",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/ocr_config.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/ocr_config.json",
+      "bytes": 729
+    },
+    {
+      "id": "common.det.version",
+      "localPath": "third_party/maa/resource/PaddleOCR/det/version.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/PaddleOCR/det/version.txt",
+      "bytes": 22
+    },
+    {
+      "id": "common.rec.keys",
+      "localPath": "third_party/maa/resource/PaddleOCR/rec/keys.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/PaddleOCR/rec/keys.txt",
+      "bytes": 27339
+    },
+    {
+      "id": "common.rec.version",
+      "localPath": "third_party/maa/resource/PaddleOCR/rec/version.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/PaddleOCR/rec/version.txt",
+      "bytes": 256
+    },
+    {
+      "id": "jp.rec.keys",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/PaddleOCR/rec/keys.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/PaddleOCR/rec/keys.txt",
+      "bytes": 19052
+    },
+    {
+      "id": "jp.rec.version",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/PaddleOCR/rec/version.txt",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/PaddleOCR/rec/version.txt",
+      "bytes": 169
+    }
+  ]
+}

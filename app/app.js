@@ -19,6 +19,7 @@ import { buildStartTemplateSummary, getEffectiveRelicIds, mergeEffectiveSpecial,
 import { controlModeOptions, getControlMode, normalizeControlMode } from "./domain/ui-modes.js";
 import { controlV2ScreenOptions, getControlV2ScreenMeta, normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
+import { createSaveRequestTracker } from "./lib/save-request-tracker.js";
 import { asCoinEntries, asSpecialArray, asSpecialObject, clampSpecialNumber } from "./domain/special-values.js";
 import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
@@ -31,6 +32,7 @@ import { resolveAppView } from "./lib/view-route.js";
 import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
 import { RUN_STAT_FIELDS, formatRunStatValue, normalizeRunStats, runStatDisplayItems } from "./domain/run-stats.js";
 import { getRecognitionScanActions } from "./domain/recognition/scan-actions.js";
+import { adbConnectionPresetOptions, normalizeAdbSettings } from "./domain/adb-settings.js";
 
 const app = document.querySelector("#app");
 const routeParams = new URLSearchParams(location.search);
@@ -53,6 +55,8 @@ const ui = {
   importDraft: "",
   notice: "",
   saveStatus: "未保存",
+  adbDetection: null,
+  adbTestResult: null,
 };
 
 let master = null;
@@ -60,6 +64,7 @@ let state = null;
 let maps = null;
 let saveTimer = null;
 let lastStateJson = "";
+const saveRequestTracker = createSaveRequestTracker();
 
 
 
@@ -598,6 +603,30 @@ function renderScrollSpeedControl(key) {
   </label>`;
 }
 
+function renderOverlayScrollSpeedPanel() {
+  return `
+    <section class="control-v2-panel control-v2-obs-panel control-v2-obs-speed-panel">
+      <div class="control-v2-panel-head"><h2>スクロール速度</h2><span>local config</span></div>
+      <div class="control-v2-panel-body overlay-scroll-speed-grid">
+        ${Object.keys(overlayScrollSpeedDefaults).map((key) => renderScrollSpeedControl(key)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderLocalConfigPanel() {
+  return `
+    <section class="control-v2-panel control-v2-obs-panel control-v2-local-config-panel">
+      <div class="control-v2-panel-head"><h2>ローカル設定</h2><span>saved locally</span></div>
+      <div class="control-v2-panel-body local-config-summary">
+        <div><strong>ADB</strong><span>接続構成 / パス / serial</span></div>
+        <div><strong>OBS</strong><span>スクロール速度 / 表示設定</span></div>
+        <div><strong>Reset</strong><span>ラン状態のみ初期化</span></div>
+      </div>
+    </section>
+  `;
+}
+
 function getOperatorGridColumns() {
   return clampGridColumns(state?.preferences?.operatorGridColumns ?? 2);
 }
@@ -680,6 +709,7 @@ function ensureStateShape() {
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
   normalizeBossSelections();
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
+  state.adb = normalizeAdbSettings(state.adb);
   state.mode = normalizeControlMode(state.mode);
   state.preferences = normalizePreferences(state.preferences);
   state.tournament ||= { pendingState: null, lastSubmissionAt: null, submittedBy: null };
@@ -751,24 +781,29 @@ function setNotice(text) {
 }
 
 function scheduleSave() {
+  const token = saveRequestTracker.issue();
   ui.saveStatus = "保存中";
   renderControlHeaderStatus();
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveState, 220);
+  saveTimer = setTimeout(() => saveState(token), 220);
 }
 
-async function saveState() {
+async function saveState(token) {
+  if (!saveRequestTracker.isCurrent(token)) return;
   try {
     deriveDifficultyTier();
-    state = await apiJson(stateUrl, {
+    const nextState = await apiJson(stateUrl, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(state),
     });
+    if (!saveRequestTracker.isCurrent(token)) return;
+    state = nextState;
     ensureStateShape();
     lastStateJson = stableOverlayStateJson(state);
     ui.saveStatus = "保存済み";
   } catch (error) {
+    if (!saveRequestTracker.isCurrent(token)) return;
     ui.saveStatus = "保存失敗";
     console.error(error);
   }
@@ -918,6 +953,62 @@ function renderControlV2SpecialScreen() {
       </aside>
     </section>
   `;
+}
+
+function renderAdbSettingPanel() {
+  const adb = normalizeAdbSettings(state.adb);
+  const detection = ui.adbDetection;
+  const testResult = ui.adbTestResult;
+  const availableCount = detection?.adbCandidates?.filter((item) => item.available).length || 0;
+  const deviceCount = detection?.devices?.length || 0;
+  return `
+    <div class="control-v2-subsection adb-settings-panel">
+      <div class="control-v2-subhead"><strong>接続設定</strong><span>${adb.autoDetect ? "自動検出あり" : "手動指定"} / ADB候補${availableCount} / 端末${deviceCount}</span></div>
+      <div class="adb-settings-grid">
+        <label class="adb-check-row"><input type="checkbox" data-adb-setting="autoDetect" ${adb.autoDetect ? "checked" : ""} /> 接続自動検出</label>
+        <label>接続構成<select data-adb-setting="connectionPreset">
+          ${adbConnectionPresetOptions.map((option) => `<option value="${option.id}" ${option.id === adb.connectionPreset ? "selected" : ""}>${html(option.label)}</option>`).join("")}
+        </select></label>
+        <label class="adb-field-wide">ADBパス<input data-adb-setting="adbPath" value="${html(adb.adbPath)}" placeholder="adb または MuMu の shell\\adb.exe" /></label>
+        <label>接続先 / serial<input data-adb-setting="serial" value="${html(adb.serial)}" placeholder="127.0.0.1:16384" /></label>
+        <label class="adb-field-wide">エミュレータパス<input data-adb-setting="emulatorPath" value="${html(adb.emulatorPath)}" placeholder="任意 / 後続の起動補助用" /></label>
+        <label class="adb-check-row"><input type="checkbox" data-adb-setting="screenshotExtension" ${adb.screenshotExtension ? "checked" : ""} /> MuMuスクリーンショット拡張を使う</label>
+        <label class="adb-check-row"><input type="checkbox" data-adb-setting="restartServerOnFailure" ${adb.restartServerOnFailure ? "checked" : ""} /> 失敗時にADBサーバー再起動を試す</label>
+        <label class="adb-check-row"><input type="checkbox" data-adb-setting="restartProcessOnFailure" ${adb.restartProcessOnFailure ? "checked" : ""} /> 失敗時にADBプロセス再起動を試す</label>
+      </div>
+      <div class="inline-row adb-action-row">
+        <button type="button" data-action="adb-detect">自動検出</button>
+        <button type="button" data-action="adb-test">接続テスト</button>
+        <button type="button" data-action="adb-screenshot-test">スクリーンショットテスト</button>
+      </div>
+      ${renderAdbProbeResult(detection, testResult)}
+    </div>
+  `;
+}
+
+function renderAdbProbeResult(detection, testResult) {
+  const blocks = [];
+  if (detection) {
+    const candidates = detection.adbCandidates || [];
+    const devices = detection.devices || [];
+    blocks.push(`<div class="adb-probe-block"><strong>検出結果</strong><span>${html(detection.selectedAdbPath || "ADB未選択")}</span></div>`);
+    blocks.push(`<div class="adb-candidate-list">
+      ${candidates.slice(0, 6).map((item) => `<div class="adb-candidate-row ${item.available ? "available" : "missing"}"><span>${item.available ? "OK" : "--"}</span><code>${html(item.path)}</code>${item.available ? `<button type="button" data-action="adb-use-candidate" data-adb-path="${html(item.path)}">使用</button>` : ""}</div>`).join("") || `<div class="empty-state">ADB候補は見つかりません。</div>`}
+    </div>`);
+    blocks.push(`<div class="adb-device-list">
+      ${devices.map((item) => `<div class="adb-candidate-row ${item.state === "device" ? "available" : "missing"}"><span>${html(item.state)}</span><code>${html(item.serial)}</code><em>${html(item.detail || "")}</em><button type="button" data-action="adb-use-device" data-adb-serial="${html(item.serial)}">使用</button></div>`).join("") || `<div class="empty-state">接続中の端末はありません。</div>`}
+    </div>`);
+  }
+  if (testResult) {
+    if (testResult.ok) {
+      const resolution = testResult.resolution ? `${testResult.resolution.width}x${testResult.resolution.height}` : "解像度不明";
+      const shot = testResult.screenshot ? ` / screenshot ${testResult.screenshot.bytes} bytes` : "";
+      blocks.push(`<div class="adb-probe-block success"><strong>テスト成功</strong><span>${html(resolution + shot)}</span></div>`);
+    } else {
+      blocks.push(`<div class="adb-probe-block error"><strong>テスト失敗</strong><span>${html(testResult.error || "unknown error")}</span></div>`);
+    }
+  }
+  return blocks.length ? `<div class="adb-probe-result">${blocks.join("")}</div>` : "";
 }
 
 function renderRecognitionScanControls() {
@@ -1176,6 +1267,14 @@ function renderControlV2ObsScreen() {
         <div class="control-v2-panel-head"><h2>分割パーツ</h2><span>OBSで個別ソースとして配置</span></div>
         <div class="control-v2-panel-body obs-url-grid">${renderObsPartCards()}</div>
       </section>
+      ${renderOverlayScrollSpeedPanel()}
+      <section class="control-v2-panel control-v2-obs-panel control-v2-obs-adb-panel">
+        <div class="control-v2-panel-head"><h2>ADB / OCR接続</h2><span>local config</span></div>
+        <div class="control-v2-panel-body control-v2-sidecar-stack">
+          ${renderAdbSettingPanel()}
+        </div>
+      </section>
+      ${renderLocalConfigPanel()}
       <section class="control-v2-panel control-v2-obs-panel control-v2-obs-sidecar-note">
         <div class="control-v2-panel-head"><h2>サイドカー / 大会運用</h2><span>operator review workflow</span></div>
         <div class="control-v2-panel-body obs-part-list">
@@ -1527,8 +1626,14 @@ function renderOverlay() {
 
 
 function replaceState(nextState) {
+  saveRequestTracker.invalidate();
+  clearTimeout(saveTimer);
+  saveTimer = null;
   state = nextState;
   ensureStateShape();
+  lastStateJson = stableOverlayStateJson(state);
+  ui.saveStatus = "保存済み";
+  renderControlHeaderStatus();
 }
 
 function getControlEventContext() {
@@ -1538,6 +1643,7 @@ function getControlEventContext() {
     getState: () => state,
     replaceState,
     mutate,
+    reloadView: () => location.reload(),
     renderControl: renderInteractive,
     scheduleSave,
     setNotice,

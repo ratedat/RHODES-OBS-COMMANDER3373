@@ -1,6 +1,6 @@
 import * as controlActions from "./control-actions.js";
 import { clampCoinCount, normalizeCoinFace } from "./domain/special-values.js";
-import { apiJson, recognitionScanCancelUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
+import { adbDetectUrl, adbTestUrl, apiJson, recognitionScanCancelUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
 import { normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 
 function parseImportDraft(ui) {
@@ -25,6 +25,22 @@ async function postRecognitionScan(profileId) {
   }
   return payload;
 }
+async function postAdbDetect(settings) {
+  return apiJson(adbDetectUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ settings }),
+  });
+}
+
+async function postAdbTest(settings, { capture = false } = {}) {
+  return apiJson(adbTestUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ settings, capture }),
+  });
+}
+
 function setChoicePressed(element, active) {
   if (!element) return;
   element.classList.toggle("active", active);
@@ -42,6 +58,27 @@ export function getChoiceCount(ui, state, context = {}) {
   if (choiceTab === "relics") return typeof context.getEffectiveRelicCount === "function" ? context.getEffectiveRelicCount() : (state.relics || []).length;
   if (choiceTab === "operators") return (state.operators || []).length;
   return 0;
+}
+
+export function syncControlV2UiAfterStateReplace(ui) {
+  const screen = normalizeControlV2Screen(ui.controlV2Screen);
+  ui.controlV2Screen = screen;
+  if (screen === "operators" || screen === "relics") {
+    ui.controlV2ChoiceTab = screen;
+  } else if (ui.controlV2ChoiceTab !== "operators" && ui.controlV2ChoiceTab !== "relics") {
+    ui.controlV2ChoiceTab = "operators";
+  }
+  ui.forceFullChoiceRender = true;
+}
+
+function replaceControlState(context, nextState) {
+  context.replaceState(nextState);
+  syncControlV2UiAfterStateReplace(context.ui);
+}
+
+function reloadAfterReset(context) {
+  if (typeof context.reloadView !== "function") return;
+  setTimeout(() => context.reloadView(), 0);
 }
 
 function relicBadges(meta = {}) {
@@ -73,7 +110,10 @@ function toggleChoiceElement(element, type, id, context) {
     context.mutate((state) => controlActions.toggleChoice(state, type, id));
     return;
   }
-  context.mutate((state) => controlActions.toggleChoice(state, type, id), { render: false });
+  const renderAfterToggle = Boolean(context.ui.forceFullChoiceRender);
+  context.ui.forceFullChoiceRender = false;
+  context.mutate((state) => controlActions.toggleChoice(state, type, id), { render: renderAfterToggle });
+  if (renderAfterToggle) return;
   const state = context.getState();
   const active = getChoiceActive(type, id, state, context);
   setChoicePressed(element, active);
@@ -186,6 +226,52 @@ export function registerControlEvents(app, context) {
     if (action === "toggle-relic") { toggleChoiceElement(button, "relic", id, context); return; }
     if (action === "toggle-operator") { toggleChoiceElement(button, "operator", id, context); return; }
     if (action === "clear-relics") context.mutate(controlActions.clearRelics);
+    if (action === "adb-detect") {
+      button.disabled = true;
+      context.setNotice("ADB接続候補を検出しています。");
+      try {
+        context.ui.adbDetection = await postAdbDetect(context.getState().adb);
+        context.ui.adbTestResult = null;
+        context.renderControl();
+        const deviceCount = context.ui.adbDetection?.devices?.length || 0;
+        context.setNotice(`ADB検出完了: 端末${deviceCount}件`);
+      } catch (error) {
+        context.ui.adbDetection = null;
+        context.setNotice(`ADB検出失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "adb-test" || action === "adb-screenshot-test") {
+      button.disabled = true;
+      const capture = action === "adb-screenshot-test";
+      context.setNotice(capture ? "ADBスクリーンショットテストを実行しています。" : "ADB接続テストを実行しています。");
+      try {
+        context.ui.adbTestResult = await postAdbTest(context.getState().adb, { capture });
+        context.renderControl();
+        context.setNotice("ADBテストが完了しました。");
+      } catch (error) {
+        context.ui.adbTestResult = { ok: false, error: error.message };
+        context.renderControl();
+        context.setNotice(`ADBテスト失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "adb-use-candidate") {
+      const adbPath = button.dataset.adbPath || "";
+      context.mutate((state) => controlActions.updateAdbSetting(state, "adbPath", adbPath));
+      context.setNotice("ADBパスを反映しました。");
+      return;
+    }
+    if (action === "adb-use-device") {
+      const serial = button.dataset.adbSerial || "";
+      context.mutate((state) => controlActions.updateAdbSetting(state, "serial", serial));
+      context.setNotice("接続先を反映しました。");
+      return;
+    }
     if (action === "trigger-recognition-scan") {
       const profileId = button.dataset.profile;
       if (!profileId) return;
@@ -193,7 +279,7 @@ export function registerControlEvents(app, context) {
       context.setNotice("ADBスキャンを開始しました。完了後に候補だけ追加します。");
       try {
         const payload = await postRecognitionScan(profileId);
-        if (payload.state) context.replaceState(payload.state);
+        if (payload.state) replaceControlState(context, payload.state);
         context.renderControl();
         const count = payload.result?.suggestions?.length || 0;
         context.setNotice(`ADBスキャン完了: 候補${count}件をレビュー待ちに追加しました。`);
@@ -211,10 +297,11 @@ export function registerControlEvents(app, context) {
     }
     if (action === "reset-state") {
       if (confirm("状態を初期化しますか？")) {
-        context.replaceState(await apiJson(resetStateUrl, { method: "POST" }));
-        context.renderControl();
-        context.setNotice("状態を初期化しました。");
+        replaceControlState(context, await apiJson(resetStateUrl, { method: "POST" }));
+        context.setNotice("状態を初期化しました。画面を再読み込みします。");
+        reloadAfterReset(context);
       }
+      return;
     }
     if (action === "add-boss-flag") {
       const text = context.ui.bossDraft.trim();
@@ -235,7 +322,7 @@ export function registerControlEvents(app, context) {
     }
     if (action === "import-state-now") {
       try {
-        context.replaceState(parseImportDraft(context.ui));
+        replaceControlState(context, parseImportDraft(context.ui));
         context.renderControl();
         context.scheduleSave();
         context.setNotice("JSONを直接反映しました。");
@@ -251,7 +338,7 @@ export function registerControlEvents(app, context) {
     if (action === "approve-tournament") {
       const pending = context.getState().tournament?.pendingState;
       if (pending) {
-        context.replaceState(pending);
+        replaceControlState(context, pending);
         context.getState().tournament = { pendingState: null, lastSubmissionAt: null, submittedBy: null };
         context.renderControl();
         context.scheduleSave();
@@ -278,6 +365,12 @@ export function registerControlEvents(app, context) {
   app.addEventListener("input", (event) => {
     if (!isControlView(context)) return;
     const target = event.target;
+    if (target.matches("[data-adb-setting]")) {
+      context.ui.adbDetection = null;
+      context.ui.adbTestResult = null;
+      context.mutate((state) => controlActions.updateAdbSetting(state, target.dataset.adbSetting, target.value, target.checked), { render: false });
+      return;
+    }
     if (!target.matches("[data-ui]")) return;
     const key = target.dataset.ui;
     context.ui[key] = target.value;
@@ -297,6 +390,12 @@ export function registerControlEvents(app, context) {
   app.addEventListener("change", (event) => {
     if (!isControlView(context)) return;
     const target = event.target;
+    if (target.matches("[data-adb-setting]")) {
+      context.ui.adbDetection = null;
+      context.ui.adbTestResult = null;
+      context.mutate((state) => controlActions.updateAdbSetting(state, target.dataset.adbSetting, target.value, target.checked));
+      return;
+    }
     if (target.matches("[data-ui]")) {
       context.ui[target.dataset.ui] = target.value;
       context.renderControl();

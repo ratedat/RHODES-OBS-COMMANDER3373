@@ -7,11 +7,15 @@ import { normalizeControlMode } from "./domain/ui-modes.js";
 import { mergeImplementationHistory } from "./domain/operator-implementation-history.js";
 import { isAppShellPath } from "./lib/view-route.js";
 import { normalizeRunStats } from "./domain/run-stats.js";
-import { createMetadataRecognizer } from "./domain/recognition/placeholder-recognizer.js";
+import { normalizeAdbSettings } from "./domain/adb-settings.js";
+import { preserveLocalConfigOnReset } from "./domain/local-config.js";
+import { createMaaStyleRecognizer } from "./domain/recognition/maa-style-recognizer.js";
+import { extractRunStatusCandidates } from "./domain/recognition/run-status-extractor.js";
 import { findScanProfile, findScanProfileByTriggerPath, normalizeScanProfiles, profileIdFromScanBody } from "./domain/recognition/profiles.js";
 import { runScanProfile } from "./domain/recognition/scan-runner.js";
 import { appendRecognitionSuggestionsToState } from "./domain/recognition/suggestions.js";
-import { createAdbAdapter } from "./recognition/adapters/adb-adapter.js";
+import { createAdbAdapter, detectAdbConnections } from "./recognition/adapters/adb-adapter.js";
+import { createDefaultOcrTextExtractor } from "./recognition/adapters/ocr-text-extractor.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -21,6 +25,7 @@ const STATE_DIR = process.env.ARKNIGHTS_STATE_DIR ? path.resolve(process.env.ARK
 const CURRENT_STATE = path.join(STATE_DIR, "current-state.json");
 const EXAMPLE_STATE = path.join(DATA, "overlay-state.example.json");
 const SCAN_PROFILES = path.join(DATA, "recognition", "scan-profiles.json");
+const MAA_TASKS = path.join(DATA, "recognition", "maa-tasks.json");
 
 const argvPort = (() => {
   const index = process.argv.indexOf("--port");
@@ -90,6 +95,7 @@ function initialStateFromExample(example) {
   state.bossSelections = state.bossSelections && typeof state.bossSelections === "object" && !Array.isArray(state.bossSelections) ? state.bossSelections : {};
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
   state.tournament = state.tournament || { pendingState: null, lastSubmissionAt: null, submittedBy: null };
+  state.adb = normalizeAdbSettings(state.adb);
   state.preferences = {
     showUnreleasedOperators: false,
     operatorSort: "rarity_desc",
@@ -143,6 +149,7 @@ function normalizeState(state) {
   next.bossSelections = next.bossSelections && typeof next.bossSelections === "object" && !Array.isArray(next.bossSelections) ? next.bossSelections : {};
   next.pendingSuggestions = Array.isArray(next.pendingSuggestions) ? next.pendingSuggestions : [];
   next.tournament = next.tournament || { pendingState: null, lastSubmissionAt: null, submittedBy: null };
+  next.adb = normalizeAdbSettings(next.adb);
   next.preferences = {
     showUnreleasedOperators: false,
     operatorSort: "rarity_desc",
@@ -172,16 +179,32 @@ async function recognitionProfiles() {
   return normalizeScanProfiles(await readJson(SCAN_PROFILES).catch(() => ({ profiles: [] })));
 }
 
+async function recognitionTasks() {
+  return readJson(MAA_TASKS).catch(() => ({ screens: [], candidates: [] }));
+}
+
 function httpError(status, message, details = {}) {
   return Object.assign(new Error(message), { status, details });
 }
 
 async function defaultRecognitionRunner({ profile, source = "adb", signal } = {}) {
   if (source !== "adb") throw httpError(400, `unsupported recognition source: ${source}`);
+  const [tasks, state, master] = await Promise.all([recognitionTasks(), ensureState(), masterData()]);
+  const runStatusExtractor = (frame, context) => context.profile?.id === "runStatusFull"
+    ? extractRunStatusCandidates(frame, {
+      campaignId: state.run?.campaignId,
+      squads: master.squads,
+      difficultyGrades: master.difficultyGrades,
+    })
+    : [];
   return runScanProfile({
     profile,
-    adapter: createAdbAdapter(),
-    recognizer: createMetadataRecognizer(),
+    adapter: createAdbAdapter({ settings: state.adb }),
+    recognizer: createMaaStyleRecognizer({
+      tasks,
+      textExtractor: createDefaultOcrTextExtractor(),
+      candidateExtractors: [runStatusExtractor],
+    }),
     source,
     signal,
   });
@@ -191,6 +214,23 @@ function responseStatusForScanResult(result) {
   if (result?.status === "aborted") return 409;
   return 200;
 }
+
+function adbSettingsFromRequest(body, state) {
+  return normalizeAdbSettings(body?.settings || state?.adb || {});
+}
+
+async function defaultAdbTester({ settings = {}, capture = false } = {}) {
+  const normalized = normalizeAdbSettings(settings);
+  const adapter = createAdbAdapter({ settings: normalized });
+  const resolution = await adapter.getActualResolution();
+  let screenshot = null;
+  if (capture) {
+    const frame = await adapter.capture({ profileId: "adbTest", stage: "screenshot-test" });
+    screenshot = { bytes: frame.bytes?.length || 0, capturedAt: frame.capturedAt || null };
+  }
+  return { ok: true, settings: normalized, resolution, screenshot };
+}
+
 
 async function masterData() {
   const [campaigns, squadsRaw, relicsRaw, operatorsRaw, performancesRaw, selectableEffectsRaw, tiersRaw, gradesRaw, variantsRaw, effectRulesRaw, startTemplatesRaw, operatorHistoryRaw] = await Promise.all([
@@ -288,7 +328,7 @@ function legacyControlRedirectLocation(url) {
   return `/control-v2${query ? `?${query}` : ""}`;
 }
 
-export function createAppServer({ recognitionRunner = defaultRecognitionRunner } = {}) {
+export function createAppServer({ recognitionRunner = defaultRecognitionRunner, adbDetector = detectAdbConnections, adbTester = defaultAdbTester } = {}) {
   let activeScanController = null;
 
   async function runRecognitionRequest({ profile, source = "adb" }) {
@@ -328,9 +368,27 @@ export function createAppServer({ recognitionRunner = defaultRecognitionRunner }
     }
 
     if (req.method === "POST" && url.pathname === "/api/state/reset") {
-      const state = initialStateFromExample(await readJson(EXAMPLE_STATE));
+      const previousState = await ensureState().catch(() => null);
+      const state = normalizeState(preserveLocalConfigOnReset(initialStateFromExample(await readJson(EXAMPLE_STATE)), previousState));
       await writeJsonAtomic(CURRENT_STATE, state);
       return sendJson(res, 200, state);
+    }
+
+
+    if (req.method === "POST" && url.pathname === "/api/adb/detect") {
+      const bodyText = await readBody(req);
+      const body = bodyText ? JSON.parse(bodyText) : {};
+      const state = await ensureState();
+      const settings = adbSettingsFromRequest(body, state);
+      return sendJson(res, 200, await adbDetector({ settings }));
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/adb/test") {
+      const bodyText = await readBody(req);
+      const body = bodyText ? JSON.parse(bodyText) : {};
+      const state = await ensureState();
+      const settings = adbSettingsFromRequest(body, state);
+      return sendJson(res, 200, await adbTester({ settings, capture: Boolean(body.capture) }));
     }
 
     if (req.method === "POST" && url.pathname === "/api/recognition/scan") {
@@ -383,8 +441,8 @@ export function createAppServer({ recognitionRunner = defaultRecognitionRunner }
   });
 }
 
-export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner } = {}) {
-  const server = createAppServer({ recognitionRunner });
+export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester } = {}) {
+  const server = createAppServer({ recognitionRunner, adbDetector, adbTester });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {

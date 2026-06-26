@@ -1,0 +1,2471 @@
+{
+  "version": 1,
+  "source": {
+    "project": "MaaAssistantArknights/MaaAssistantArknights",
+    "branch": "dev-v2",
+    "license": "AGPL-3.0-only",
+    "localPath": "third_party/maa"
+  },
+  "numberOcrReplace": [
+    [
+      "[Oo]",
+      "0"
+    ],
+    [
+      "[Ii]",
+      "1"
+    ],
+    [
+      "[Ll]",
+      "1"
+    ],
+    [
+      "[\\{\\}\\[\\]]",
+      "1"
+    ],
+    [
+      "B",
+      "8"
+    ],
+    [
+      "台",
+      "8"
+    ],
+    [
+      "十",
+      "+"
+    ],
+    [
+      "萬",
+      "万"
+    ],
+    [
+      "만",
+      "万"
+    ],
+    [
+      "億",
+      "亿"
+    ],
+    [
+      "억",
+      "亿"
+    ],
+    [
+      "^\\.",
+      ""
+    ],
+    [
+      " ",
+      ""
+    ]
+  ],
+  "commonOcrReplaceTasks": [
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "EpisodeOcrReplace",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "[EF]PIS[O0]DE",
+          "EPISODE"
+        ],
+        [
+          "[Oo]$",
+          "0"
+        ],
+        [
+          "[Oo](\\d)",
+          "0$1"
+        ],
+        [
+          " ",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "ClickStageName",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "-\\]",
+          "-1"
+        ],
+        [
+          " ",
+          ""
+        ],
+        [
+          "s",
+          "S"
+        ],
+        [
+          "c",
+          "C"
+        ],
+        [
+          "o",
+          "O"
+        ],
+        [
+          "g",
+          "8"
+        ],
+        [
+          "t",
+          "T"
+        ],
+        [
+          ":",
+          ""
+        ],
+        [
+          "'",
+          ""
+        ],
+        [
+          "(H\\d+)O(?=-)",
+          "$010"
+        ],
+        [
+          "(-\\d+)O",
+          "$010"
+        ],
+        [
+          ".*?([A-Z]{2}-EX-\\d+)",
+          "$1"
+        ],
+        [
+          "-I$",
+          "-1"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": [
+        0,
+        0,
+        1280,
+        720
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "ClickedCorrectStage",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "OPERATION",
+          ""
+        ],
+        [
+          "-\\]",
+          "-1"
+        ],
+        [
+          " ",
+          ""
+        ],
+        [
+          "s",
+          "S"
+        ],
+        [
+          "c",
+          "C"
+        ],
+        [
+          "o",
+          "O"
+        ],
+        [
+          "g",
+          "8"
+        ],
+        [
+          "t",
+          "T"
+        ],
+        [
+          ":",
+          ""
+        ],
+        [
+          "'",
+          ""
+        ],
+        [
+          "(H\\d+)O(?=-)",
+          "$010"
+        ],
+        [
+          "(-\\d+)O",
+          "$010"
+        ],
+        [
+          ".*?([A-Z]{2}-EX-\\d+)",
+          "$1"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": [
+        845,
+        72,
+        220,
+        50
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "SideStoryStage",
+      "baseTask": "Stage",
+      "ocrReplace": [
+        [
+          " ",
+          ""
+        ],
+        [
+          "s",
+          "S"
+        ],
+        [
+          "c",
+          "C"
+        ],
+        [
+          "o",
+          "O"
+        ],
+        [
+          ":",
+          ""
+        ],
+        [
+          "'",
+          ""
+        ],
+        [
+          " (\\d)",
+          "-$1"
+        ],
+        [
+          "-1O$",
+          "-10$"
+        ],
+        [
+          ".*?([A-Z]{2}-EX-\\d+)",
+          "$1"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": [
+        0,
+        60,
+        1280,
+        550
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "CharsNameOcrReplace",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "^(?:[<4~]|《|。ぐ)+",
+          ""
+        ],
+        [
+          "^c(?!ast)",
+          ""
+        ],
+        [
+          "^\\^一",
+          ""
+        ],
+        [
+          "^[_<>]*(?=.)",
+          ""
+        ],
+        [
+          "[_<>]*$",
+          ""
+        ],
+        [
+          ".*弦惊.*",
+          "“弦惊”"
+        ],
+        [
+          ".*亚梅塔",
+          "菲亚梅塔"
+        ],
+        [
+          ".*逍遥.*",
+          "“逍遥”"
+        ],
+        [
+          ".*清平.*",
+          "“清平”"
+        ],
+        [
+          ".*打字机.*",
+          "“打字机”"
+        ],
+        [
+          ".*耀阳.*",
+          "“耀阳”"
+        ],
+        [
+          "玛恩.*",
+          "玛恩纳"
+        ],
+        [
+          ".*默德克萨.*",
+          "缄默德克萨斯"
+        ],
+        [
+          ".*芜拉普兰.*",
+          "荒芜拉普兰德"
+        ],
+        [
+          "^持克诺$",
+          "特克诺"
+        ],
+        [
+          "^重岳.+",
+          "重岳"
+        ],
+        [
+          "(麒.+夜刀|.*麟.*夜刀)$",
+          "麒麟R夜刀"
+        ],
+        [
+          ".*龙.*黑角$",
+          "火龙S黑角"
+        ],
+        [
+          "[Uu]-[O0o]f{1,2}icial",
+          "U-Official"
+        ],
+        [
+          ".*威龙陈",
+          "假日威龙陈"
+        ],
+        [
+          "青积",
+          "青枳"
+        ],
+        [
+          ".*烬艾雅法.*",
+          "纯烬艾雅法拉"
+        ],
+        [
+          "^[委泰黍]$",
+          "黍"
+        ],
+        [
+          "^[H夕]$",
+          "夕"
+        ],
+        [
+          "12E",
+          "12F"
+        ],
+        [
+          "归.*幽灵鲨",
+          "归溟幽灵鲨"
+        ],
+        [
+          "(临六$|^临光.*)",
+          "临光"
+        ],
+        [
+          ".*甜蜜狂搅.*",
+          "“甜蜜狂搅”"
+        ],
+        [
+          "^尖端研究成果共享.*",
+          "尖端研究成果共享终端"
+        ],
+        [
+          "^w$",
+          "W"
+        ],
+        [
+          "维获",
+          "维荻"
+        ],
+        [
+          ".*ancet-2",
+          "Lancet-2"
+        ],
+        [
+          "[CcOo0]ast.*le-3",
+          "Castle-3"
+        ],
+        [
+          "phonoR-0",
+          "PhonoR-0"
+        ],
+        [
+          ".*HRM-EX$",
+          "THRM-EX"
+        ],
+        [
+          ".*心斯卡蒂$",
+          "浊心斯卡蒂"
+        ],
+        [
+          "^预备干员-近.*",
+          "预备干员-近战"
+        ],
+        [
+          "^预备干员-术.*",
+          "预备干员-术师"
+        ],
+        [
+          "^预备干员-后.*",
+          "预备干员-后勤"
+        ],
+        [
+          "^预备干员-狙.*",
+          "预备干员-狙击"
+        ],
+        [
+          "^预备干员-重.*",
+          "预备干员-重装"
+        ],
+        [
+          "^折光.*",
+          "折光"
+        ],
+        [
+          "^红集$",
+          "红隼"
+        ],
+        [
+          "小.?满",
+          "小满"
+        ],
+        [
+          ".*夹子.*",
+          "“夹子”"
+        ],
+        [
+          "应泡普卡",
+          "泡普卡"
+        ],
+        [
+          "特米米.+",
+          "特米米"
+        ],
+        [
+          "崖心.+",
+          "崖心"
+        ],
+        [
+          ".*芙利特$",
+          "伊芙利特"
+        ],
+        [
+          "^提非$",
+          "提丰"
+        ],
+        [
+          "^华琳$",
+          "华法琳"
+        ],
+        [
+          "^宝箱的肉.*",
+          "宝箱的肉？"
+        ],
+        [
+          ".*维多利亚$",
+          "维娜·维多利亚"
+        ],
+        [
+          "^盥心$",
+          "塑心"
+        ],
+        [
+          "^(钳|钥)铅$",
+          "钼铅"
+        ],
+        [
+          ".*NFESS-47$",
+          "CONFESS-47"
+        ],
+        [
+          "^焰影苇.*",
+          "焰影苇草"
+        ],
+        [
+          "Miss\\.[Cc]hristine",
+          "Miss.Christine"
+        ],
+        [
+          "^野.{0,2}$",
+          "野鬃"
+        ],
+        [
+          "^(“|”|\\\\|\")?斩(“|”|\\\\|\")?$",
+          "“斩”"
+        ],
+        [
+          "八.*海铃",
+          "八幡海铃"
+        ],
+        [
+          ".*英调香师",
+          "撷英调香师"
+        ],
+        [
+          "矿石.*杀手.*",
+          "矿石“杀手”"
+        ],
+        [
+          ".*涤火杰西卡",
+          "涤火杰西卡"
+        ],
+        [
+          "GALLU.*",
+          "GALLUS²"
+        ],
+        [
+          "凯尔希.*思衡托",
+          "凯尔希·思衡托"
+        ],
+        [
+          ".*反壳龟$",
+          "御龙：反壳龟"
+        ],
+        [
+          ".*影丝蛛$",
+          "御龙：影丝蛛"
+        ],
+        [
+          ".*岩甲兽$",
+          "御龙：岩甲兽"
+        ],
+        [
+          ".*雷狼龙$",
+          "御龙：雷狼龙"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "StageSanityCostOcr",
+      "baseTask": "NumberOcrReplace",
+      "ocrReplace": [
+        [
+          "-",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        40,
+        0,
+        49,
+        24
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "MedicineExpiringTime",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "[^\\d]*(\\d+)天",
+          "${1}"
+        ],
+        [
+          ".+(小时|分钟)",
+          "0"
+        ],
+        [
+          "^\\d+(小|分)$",
+          "0"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "UsingMedicine-Target",
+      "baseTask": "NumberOcrReplace",
+      "ocrReplace": [
+        [
+          "[^\\d]",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        255,
+        390,
+        315,
+        140
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "UsingMedicine-SanityMax",
+      "baseTask": "NumberOcrReplace",
+      "ocrReplace": [
+        [
+          "[^\\d]",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        440,
+        330,
+        150,
+        55
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "CreditShop-DiscountOcr",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "o",
+          "0"
+        ],
+        [
+          "O",
+          "0"
+        ],
+        [
+          "I",
+          "1"
+        ],
+        [
+          "l",
+          "1"
+        ],
+        [
+          "%",
+          ""
+        ],
+        [
+          "-",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": [
+        -5,
+        23,
+        65,
+        30
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "RecruitTags",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          ".*高级.+",
+          "高级资深干员"
+        ],
+        [
+          "^资深.+",
+          "资深干员"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        375,
+        360,
+        480,
+        120
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "InfrastTrainingOperatorAndSkill",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "^\\[",
+          ""
+        ],
+        [
+          "\\]",
+          "\n"
+        ],
+        [
+          "(·|\\*|;|；)+",
+          ""
+        ],
+        [
+          "(A|a|α)+型$",
+          "·α型"
+        ],
+        [
+          "(B|b|β)+型$",
+          "·β型"
+        ],
+        [
+          "(Y|y|γ)+型$",
+          "·γ型"
+        ],
+        [
+          " [Aa]$",
+          " α"
+        ],
+        [
+          " [Bb]$",
+          " β"
+        ],
+        [
+          " [Yy]$",
+          " γ"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        150,
+        620,
+        365,
+        35
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "BattleStageName",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          ".*前顾后",
+          "瞻前顾后"
+        ],
+        [
+          ".*命运的宠儿.*",
+          "“命运的宠儿”"
+        ],
+        [
+          ".*骑士对决.*",
+          "“骑士对决”"
+        ],
+        [
+          "巍峨银.*",
+          "巍峨银凇"
+        ],
+        [
+          "猩红.*道",
+          "猩红甬道"
+        ],
+        [
+          ".*之以利",
+          "啖之以利"
+        ],
+        [
+          "((睁)|(峰))蝶战功",
+          "峥嵘战功"
+        ],
+        [
+          "夕娅忆",
+          "夕娥忆"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        250,
+        435,
+        800,
+        100
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "BattleStartOCR",
+      "baseTask": "BattleStart",
+      "ocrReplace": [
+        [
+          "干始",
+          "开始"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        999,
+        398,
+        222,
+        237
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "StageDrops-StageName",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "—{1,2}",
+          "-"
+        ],
+        [
+          "-[IiLl\\|]",
+          "-1"
+        ],
+        [
+          "(-\\d+)[Oo]",
+          "${1}0"
+        ],
+        [
+          "^.+-EX-?\\d+.*$",
+          "_INVALID_"
+        ],
+        [
+          "^.+-S-?\\d+.*$",
+          "_INVALID_"
+        ],
+        [
+          "^.+-MO-?\\d+.*$",
+          "_INVALID_"
+        ],
+        [
+          "^OF-1$",
+          "_INVALID_"
+        ],
+        [
+          "^Ap-",
+          "AP-"
+        ],
+        [
+          "^Bl-",
+          "BI-"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": [
+        140,
+        60,
+        200,
+        55
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "NumberOcrReplace",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "[Oo]",
+          "0"
+        ],
+        [
+          "[Ii]",
+          "1"
+        ],
+        [
+          "[Ll]",
+          "1"
+        ],
+        [
+          "[\\{\\}\\[\\]]",
+          "1"
+        ],
+        [
+          "B",
+          "8"
+        ],
+        [
+          "台",
+          "8"
+        ],
+        [
+          "十",
+          "+"
+        ],
+        [
+          "萬",
+          "万"
+        ],
+        [
+          "만",
+          "万"
+        ],
+        [
+          "億",
+          "亿"
+        ],
+        [
+          "억",
+          "亿"
+        ],
+        [
+          "^\\.",
+          ""
+        ],
+        [
+          " ",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "SSSStageNameOCR",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "Lt",
+          "LT"
+        ],
+        [
+          "LT(?=\\d)",
+          "LT-"
+        ],
+        [
+          "LT[^\\d]{0,3}(?=\\d)",
+          "LT-"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": true,
+      "roi": [
+        33,
+        272,
+        85,
+        36
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/tasks.json",
+      "taskId": "Copilot@EndOfAction-Sandbox",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "l",
+          "I"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": [
+        540,
+        645,
+        200,
+        25
+      ]
+    }
+  ],
+  "roguelikeOcrReplaceTasks": [
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "taskId": "RoguelikeCustom-HijackSquad",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "蓝图测绘分.*",
+          "蓝图测绘分队"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        0,
+        383,
+        1280,
+        142
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "taskId": "RoguelikeSettlementOcr-Difficulty",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "^[^\\d]+(?=\\d+$)",
+          ""
+        ],
+        [
+          "^[^\\d]+$",
+          "0"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        750,
+        372,
+        120,
+        31
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "taskId": "RoguelikeTraderShoppingOcr",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "指路.*",
+          "指路鳞"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        406,
+        90,
+        825,
+        284
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "taskId": "Roguelike@CheckLevelMax",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "[1/]",
+          ""
+        ],
+        [
+          "[0-9]",
+          "nope"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": [
+        1024,
+        20,
+        47,
+        27
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "taskId": "Roguelike@ChooseDifficulty_Specified",
+      "baseTask": "NumberOcrReplace",
+      "ocrReplace": [
+        [
+          "[Oo]",
+          "0"
+        ],
+        [
+          "[IiLl]",
+          "1"
+        ],
+        [
+          "\\|",
+          "1"
+        ],
+        [
+          "B",
+          "8"
+        ],
+        [
+          "\\.",
+          ""
+        ],
+        [
+          " ",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        400,
+        450,
+        225,
+        160
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "taskId": "Roguelike@StageEncounterOcr",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "绝境(？|\\?)抉择(？|\\?)",
+          "绝境？抉择？"
+        ],
+        [
+          "魂灵见闻.*以血还血",
+          "魂灵见闻：以血还血"
+        ],
+        [
+          "魂灵见闻.*善恶.*道",
+          "魂灵见闻：善恶同道"
+        ],
+        [
+          "魂灵见闻.*石心双(子)?",
+          "魂灵见闻：石心双子"
+        ],
+        [
+          ".*餮廊",
+          "饕餮廊"
+        ],
+        [
+          "掌灯与引.*",
+          "掌灯与引烛"
+        ],
+        [
+          "禧解",
+          "禳解"
+        ],
+        [
+          "祠堂(口)?",
+          "祠堂口"
+        ],
+        [
+          "见字祠立于际山之",
+          "祠堂口"
+        ],
+        [
+          ".*地有声",
+          "掷地有声"
+        ],
+        [
+          "入暂.*",
+          "入暂亭"
+        ],
+        [
+          ".*海的遗产",
+          "大海的遗产"
+        ],
+        [
+          "狗眼婆.*",
+          "狗眼婆娑"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        0,
+        405,
+        725,
+        225
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "taskId": "Roguelike@StageTraderInvest-Deposit",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          ">",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": true,
+      "roi": [
+        570,
+        335,
+        150,
+        60
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "taskId": "Sarkaz@Roguelike@StrategyChange-FastInvestment",
+      "baseTask": "Sarkaz@Roguelike@StrategyChange_mode1",
+      "ocrReplace": [
+        [
+          "熔魂之始",
+          "_fastInvestment"
+        ],
+        [
+          "锻铁根须",
+          "_exit"
+        ],
+        [
+          "灰铸迷城",
+          "_exit"
+        ],
+        [
+          "或然歧域",
+          "_exit"
+        ],
+        [
+          "虚实疆界",
+          "_exit"
+        ],
+        [
+          "辉光天顶",
+          "_exit"
+        ],
+        [
+          "诡.*断章",
+          "_exit"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "taskId": "Sarkaz@Roguelike@StrategyChange_mode0",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "熔魂之始",
+          "_default"
+        ],
+        [
+          "锻铁根须",
+          "_default"
+        ],
+        [
+          "灰铸迷城",
+          "_default"
+        ],
+        [
+          "或然歧域",
+          "_default"
+        ],
+        [
+          "虚实疆界",
+          "_default"
+        ],
+        [
+          "辉光天顶",
+          "_default"
+        ],
+        [
+          "诡.*断章",
+          "_SKIP_"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "taskId": "Sarkaz@Roguelike@StrategyChange_mode0_NOT_IN_USE",
+      "baseTask": "Roguelike@StrategyChange_default",
+      "ocrReplace": [
+        [
+          "熔魂之始",
+          "_aggressive"
+        ],
+        [
+          "锻铁根须",
+          "_aggressive"
+        ],
+        [
+          "灰铸迷城",
+          "_pragmatic"
+        ],
+        [
+          "或然歧域",
+          "_pragmatic"
+        ],
+        [
+          "虚实疆界",
+          "_default"
+        ],
+        [
+          "辉光天顶",
+          "_default"
+        ],
+        [
+          "诡.*断章",
+          "_SKIP_"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "taskId": "Sarkaz@Roguelike@StrategyChange_mode1",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "熔魂之始",
+          "_default"
+        ],
+        [
+          "锻铁根须",
+          "_exit"
+        ],
+        [
+          "灰铸迷城",
+          "_exit"
+        ],
+        [
+          "或然歧域",
+          "_exit"
+        ],
+        [
+          "虚实疆界",
+          "_exit"
+        ],
+        [
+          "辉光天顶",
+          "_exit"
+        ],
+        [
+          "诡.*断章",
+          "_exit"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "taskId": "Sarkaz@Roguelike@StrategyChange_mode10001",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "熔魂之始",
+          "_routing"
+        ],
+        [
+          "锻铁根须",
+          "_exit"
+        ],
+        [
+          "灰铸迷城",
+          "_exit"
+        ],
+        [
+          "或然歧域",
+          "_exit"
+        ],
+        [
+          "虚实疆界",
+          "_exit"
+        ],
+        [
+          "辉光天顶",
+          "_exit"
+        ],
+        [
+          "诡.*断章",
+          "_exit"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "taskId": "Sarkaz@Roguelike@StrategyChange_mode4",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "熔魂之始",
+          "_default"
+        ],
+        [
+          "锻铁根须",
+          "_default"
+        ],
+        [
+          "灰铸迷城",
+          "_exit"
+        ],
+        [
+          "或然歧域",
+          "_exit"
+        ],
+        [
+          "虚实疆界",
+          "_exit"
+        ],
+        [
+          "辉光天顶",
+          "_exit"
+        ],
+        [
+          "诡.*断章",
+          "_exit"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "taskId": "Sarkaz@Roguelike@StrategyChange_mode6",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "熔魂之始",
+          "_default"
+        ],
+        [
+          "锻铁根须",
+          "_default"
+        ],
+        [
+          "灰铸迷城",
+          "_default"
+        ],
+        [
+          "或然歧域",
+          "_default"
+        ],
+        [
+          "虚实疆界",
+          "_default"
+        ],
+        [
+          "辉光天顶",
+          "_default"
+        ],
+        [
+          "诡.*断章",
+          "_SKIP_"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "taskId": "Sarkaz@Roguelike@StrategyChange_mode7",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "熔魂之始",
+          "_default"
+        ],
+        [
+          "锻铁根须",
+          "_default"
+        ],
+        [
+          "灰铸迷城",
+          "_default"
+        ],
+        [
+          "或然歧域",
+          "_default"
+        ],
+        [
+          "虚实疆界",
+          "_default"
+        ],
+        [
+          "辉光天顶",
+          "_default"
+        ],
+        [
+          "诡.*断章",
+          "_SKIP_"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@CheckCollapsalParadigms_loading",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "正在提交反馈神经",
+          "正在提交反馈至神经"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        720,
+        645,
+        355,
+        45
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@CollapsalParadigmTaskPanelCheckConfig",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "Sami@Roguelike@OnStage_0.png",
+          "深埋迷境"
+        ],
+        [
+          "Sami@Roguelike@OnStage_1.png",
+          "初霜湖泽"
+        ],
+        [
+          "Sami@Roguelike@OnStage_2.png",
+          "密静林地"
+        ],
+        [
+          "Sami@Roguelike@OnStage_3.png",
+          "昧明冻土"
+        ],
+        [
+          "Sami@Roguelike@OnStage_4.png",
+          "积冰岩骸"
+        ],
+        [
+          "Sami@Roguelike@OnStage_5.png",
+          "无瑕花园"
+        ],
+        [
+          "Sami@Roguelike@OnStage_6.png",
+          "远见之构"
+        ],
+        [
+          "Sami@Roguelike@OnStage_7.png",
+          "永恒之尘"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@FoldartalGainOcr",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "黜",
+          "黜人"
+        ],
+        [
+          "满",
+          "萨满"
+        ],
+        [
+          "\"",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        584,
+        261,
+        315,
+        46
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@FoldartalUseConfirm",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "开始告",
+          "开始宣告"
+        ],
+        [
+          "^开始宣.*",
+          "开始宣告"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        953,
+        597,
+        302,
+        113
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@FoldartalUseOcr",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "黜",
+          "黜人"
+        ],
+        [
+          "满",
+          "萨满"
+        ],
+        [
+          "\"",
+          ""
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        38,
+        64,
+        85,
+        578
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@StagesChaosZero",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "O",
+          "0"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": [
+        615,
+        0,
+        80,
+        45
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@StrategyChange_mode0",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "初霜湖泽",
+          "_aggressive"
+        ],
+        [
+          "密静林地",
+          "_aggressive"
+        ],
+        [
+          ".*明冻土",
+          "昧明冻土"
+        ],
+        [
+          "昧明冻土",
+          "_pragmatic"
+        ],
+        [
+          "积冰岩.*",
+          "_pragmatic"
+        ],
+        [
+          "无瑕花园",
+          "_default"
+        ],
+        [
+          "远见之构",
+          "_default"
+        ],
+        [
+          "深埋迷境",
+          "_SKIP_"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@StrategyChange_mode1",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "初霜湖泽",
+          "_default"
+        ],
+        [
+          "密静林地",
+          "_exit"
+        ],
+        [
+          "昧明冻土",
+          "_exit"
+        ],
+        [
+          "积冰岩骸",
+          "_exit"
+        ],
+        [
+          "无瑕花园",
+          "_exit"
+        ],
+        [
+          "远见之构",
+          "_exit"
+        ],
+        [
+          "深埋迷境",
+          "_exit"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@StrategyChange_mode4",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "初霜湖泽",
+          "_default"
+        ],
+        [
+          "密静林地",
+          "_default"
+        ],
+        [
+          "昧明冻土",
+          "_exit"
+        ],
+        [
+          "积冰岩骸",
+          "_exit"
+        ],
+        [
+          "无瑕花园",
+          "_exit"
+        ],
+        [
+          "远见之构",
+          "_exit"
+        ],
+        [
+          "深埋迷境",
+          "_exit"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@StrategyChange_mode5",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "初霜湖泽",
+          "_collapsal_paradigms"
+        ],
+        [
+          "密静林地",
+          "_collapsal_paradigms"
+        ],
+        [
+          "昧明冻土",
+          "_SKIP_"
+        ],
+        [
+          "积冰岩骸",
+          "_SKIP_"
+        ],
+        [
+          "无瑕花园",
+          "_SKIP_"
+        ],
+        [
+          "远见之构",
+          "_SKIP_"
+        ],
+        [
+          "深埋迷境",
+          "_SKIP_"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@StrategyChange_mode6",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "初霜湖泽",
+          "_aggressive"
+        ],
+        [
+          "密静林地",
+          "_aggressive"
+        ],
+        [
+          ".*明冻土",
+          "昧明冻土"
+        ],
+        [
+          "昧明冻土",
+          "_pragmatic"
+        ],
+        [
+          "积冰岩.*",
+          "_pragmatic"
+        ],
+        [
+          "无瑕花园",
+          "_default"
+        ],
+        [
+          "远见之构",
+          "_default"
+        ],
+        [
+          "深埋迷境",
+          "_SKIP_"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "taskId": "Sami@Roguelike@StrategyChange_mode7",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "初霜湖泽",
+          "_aggressive"
+        ],
+        [
+          "密静林地",
+          "_aggressive"
+        ],
+        [
+          ".*明冻土",
+          "昧明冻土"
+        ],
+        [
+          "昧明冻土",
+          "_pragmatic"
+        ],
+        [
+          "积冰岩.*",
+          "_pragmatic"
+        ],
+        [
+          "无瑕花园",
+          "_default"
+        ],
+        [
+          "远见之构",
+          "_default"
+        ],
+        [
+          "深埋迷境",
+          "_SKIP_"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@CoppersNameOcrReplace",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "_+$",
+          ""
+        ],
+        [
+          "\\.+$",
+          ""
+        ],
+        [
+          "衡-露.*",
+          "衡-霹雳"
+        ],
+        [
+          "厉-安硕.*",
+          "厉-安硕鼷"
+        ],
+        [
+          "花-圣迢封神",
+          "花-圣诏封神"
+        ],
+        [
+          "衡-军.*",
+          "衡-军屯垦"
+        ],
+        [
+          "衡-早热",
+          "衡-旱热"
+        ],
+        [
+          "厉[-—一]+字落",
+          "厉-一字落"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": false,
+      "isAscii": false,
+      "roi": null
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode0",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_default"
+        ],
+        [
+          "山水阁",
+          "_default"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_default"
+        ],
+        [
+          "汝吾(门)?",
+          "_default"
+        ],
+        [
+          "见字祠",
+          "_default"
+        ],
+        [
+          "始末陵",
+          "_default"
+        ],
+        [
+          "是非(境|坍)",
+          "_boskyPassageDefault"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode0_NOT_IN_USE",
+      "baseTask": "Roguelike@StrategyChange_default",
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_aggressive"
+        ],
+        [
+          "山水阁",
+          "_aggressive"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_pragmatic"
+        ],
+        [
+          "汝吾(门)?",
+          "_pragmatic"
+        ],
+        [
+          "见字祠",
+          "_default"
+        ],
+        [
+          "始末陵",
+          "_default"
+        ],
+        [
+          "是非(境|坍)",
+          "_boskyPassageDefault"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode1",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_default"
+        ],
+        [
+          "山水阁",
+          "_restart"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_restart"
+        ],
+        [
+          "汝吾(门)?",
+          "_restart"
+        ],
+        [
+          "见字祠",
+          "_restart"
+        ],
+        [
+          "始末陵",
+          "_restart"
+        ],
+        [
+          "是非(境|坍)",
+          "_leaveBoskyPassage"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode1-FastPass",
+      "baseTask": "JieGarden@Roguelike@StrategyChange_mode1",
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_fastPass"
+        ],
+        [
+          "山水阁",
+          "_restart"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_restart"
+        ],
+        [
+          "汝吾(门)?",
+          "_restart"
+        ],
+        [
+          "见字祠",
+          "_restart"
+        ],
+        [
+          "始末陵",
+          "_restart"
+        ],
+        [
+          "是非(境|坍)",
+          "_leaveBoskyPassage"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode10001",
+      "baseTask": "JieGarden@Roguelike@StrategyChange_mode1",
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_fastPass"
+        ],
+        [
+          "山水阁",
+          "_restart"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_restart"
+        ],
+        [
+          "汝吾(门)?",
+          "_restart"
+        ],
+        [
+          "见字祠",
+          "_restart"
+        ],
+        [
+          "始末陵",
+          "_restart"
+        ],
+        [
+          "是非(境|坍)",
+          "_leaveBoskyPassage"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode20001",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_default"
+        ],
+        [
+          "山水阁",
+          "_restart"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_restart"
+        ],
+        [
+          "汝吾(门)?",
+          "_restart"
+        ],
+        [
+          "见字祠",
+          "_restart"
+        ],
+        [
+          "始末陵",
+          "_restart"
+        ],
+        [
+          "是非(境|坍)",
+          "_boskyPassageDefault"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode4",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_default"
+        ],
+        [
+          "山水阁",
+          "_exit"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_exit"
+        ],
+        [
+          "汝吾(门)?",
+          "_exit"
+        ],
+        [
+          "见字祠",
+          "_exit"
+        ],
+        [
+          "始末陵",
+          "_exit"
+        ],
+        [
+          "是非(境|坍)",
+          "_leaveBoskyPassage"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode4-FastPass",
+      "baseTask": "JieGarden@Roguelike@StrategyChange_mode1",
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_fastPass"
+        ],
+        [
+          "山水阁",
+          "_exit"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_exit"
+        ],
+        [
+          "汝吾(门)?",
+          "_exit"
+        ],
+        [
+          "见字祠",
+          "_exit"
+        ],
+        [
+          "始末陵",
+          "_exit"
+        ],
+        [
+          "是非(境|坍)",
+          "_leaveBoskyPassage"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode6",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_default"
+        ],
+        [
+          "山水阁",
+          "_default"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_default"
+        ],
+        [
+          "汝吾(门)?",
+          "_default"
+        ],
+        [
+          "见字祠",
+          "_default"
+        ],
+        [
+          "始末陵",
+          "_default"
+        ],
+        [
+          "是非(境|坍)",
+          "_boskyPassageDefault"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@Roguelike@StrategyChange_mode7",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "洪陆楼",
+          "_default"
+        ],
+        [
+          "山水阁",
+          "_default"
+        ],
+        [
+          "云(瓦)?(亭|亨)",
+          "_default"
+        ],
+        [
+          "汝吾(门)?",
+          "_default"
+        ],
+        [
+          "见字祠",
+          "_default"
+        ],
+        [
+          "始末陵",
+          "_default"
+        ],
+        [
+          "是非(境|坍)",
+          "_boskyPassageDefault"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        627,
+        14,
+        71,
+        28
+      ]
+    },
+    {
+      "source": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "taskId": "JieGarden@RoguelikeEncounterOptionAnalyzer-OptionHeaderBar-Text",
+      "baseTask": null,
+      "ocrReplace": [
+        [
+          "[_—,，\\.]+$",
+          ""
+        ],
+        [
+          "^[_—,，\\.]+",
+          ""
+        ],
+        [
+          "^[儡蟹]+",
+          ""
+        ],
+        [
+          "想要时的",
+          "想要亥时的"
+        ],
+        [
+          "找委溯果",
+          "找黍溯果"
+        ],
+        [
+          "睁开双眼.*",
+          "睁开双眼——"
+        ],
+        [
+          "^饮一口缸中水[,，].*",
+          "饮一口缸中水，祈求好运"
+        ],
+        [
+          "奉碑行仪.*",
+          "奉碑行仪"
+        ]
+      ],
+      "replaceFull": false,
+      "withoutDet": true,
+      "isAscii": false,
+      "roi": [
+        0,
+        0,
+        300,
+        43
+      ]
+    }
+  ]
+}

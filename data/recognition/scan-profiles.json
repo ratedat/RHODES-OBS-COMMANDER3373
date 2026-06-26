@@ -27,7 +27,8 @@
       "restoreSteps": [],
       "maxScrolls": 0,
       "endFingerprintStableCount": 1,
-      "captureDelayMs": 120
+      "captureDelayMs": 120,
+      "inferredScreenId": "run-squad-info-panel"
     },
     {
       "id": "operatorsFull",
