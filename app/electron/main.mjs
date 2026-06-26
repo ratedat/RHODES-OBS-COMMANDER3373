@@ -124,12 +124,13 @@ function handleWindowOpen({ url }) {
   return { action: "deny" };
 }
 
-function createAppBrowserWindow({ targetUrl, width, height, minWidth, minHeight }) {
+function createAppBrowserWindow({ targetUrl, width, height, minWidth, minHeight, show = true }) {
   const browserWindow = new BrowserWindow({
     width,
     height,
     minWidth,
     minHeight,
+    show,
     title: "RHODES OBS COMMANDER3373",
     backgroundColor: "#10100f",
     autoHideMenuBar: false,
@@ -166,6 +167,62 @@ function createWindow(targetUrl) {
     mainWindow = null;
   });
   Menu.setApplicationMenu(buildMenu());
+}
+
+async function validateRendererSmoke(targetUrl) {
+  const smokeWindow = createAppBrowserWindow({
+    targetUrl,
+    width: 1024,
+    height: 768,
+    minWidth: 800,
+    minHeight: 600,
+    show: false,
+  });
+  const consoleMessages = [];
+  smokeWindow.webContents.on("console-message", (_event, _level, message, line, sourceId) => {
+    consoleMessages.push(`${sourceId || "renderer"}:${line || 0} ${message}`);
+  });
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("renderer smoke timed out before load finished")), 8000);
+      smokeWindow.webContents.once("did-fail-load", (_event, code, description) => {
+        clearTimeout(timer);
+        reject(new Error(`renderer load failed: ${code} ${description}`));
+      });
+      smokeWindow.webContents.once("render-process-gone", (_event, details) => {
+        clearTimeout(timer);
+        reject(new Error(`renderer process gone: ${details.reason}`));
+      });
+      smokeWindow.webContents.once("did-finish-load", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+
+    const result = await smokeWindow.webContents.executeJavaScript(`
+      new Promise((resolve) => {
+        const started = Date.now();
+        const probe = () => {
+          const app = document.querySelector('#app');
+          const text = (app?.textContent || '').trim();
+          const payload = {
+            loading: app?.dataset?.loading || '',
+            className: app?.className || '',
+            text: text.slice(0, 240),
+          };
+          if (payload.loading === 'false' || Date.now() - started > 5000) resolve(payload);
+          else setTimeout(probe, 100);
+        };
+        probe();
+      })
+    `);
+    if (result?.loading !== "false") {
+      const details = consoleMessages.length ? ` Console: ${consoleMessages.join(" | ")}` : "";
+      throw new Error(`renderer stayed on Loading. Text: ${result?.text || ""}.${details}`);
+    }
+  } finally {
+    if (!smokeWindow.isDestroyed()) smokeWindow.destroy();
+  }
 }
 
 function settingsPath() {
@@ -355,6 +412,7 @@ async function startDesktopApp() {
   await waitForReady(targetUrl);
   console.log(`Desktop: ${targetUrl}`);
   if (smokeTest) {
+    await validateRendererSmoke(targetUrl);
     app.quit();
     return;
   }

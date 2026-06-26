@@ -775,6 +775,14 @@ async function saveState() {
   renderControlHeaderStatus();
 }
 
+function mutate(fn, options = {}) {
+  const { render = true } = options;
+  fn(state);
+  ensureStateShape();
+  if (isInteractiveView() && render) renderInteractive();
+  scheduleSave();
+}
+
 function renderControlHeaderStatus() {
   const el = document.querySelector(".save-status");
   if (el) el.textContent = ui.saveStatus;
