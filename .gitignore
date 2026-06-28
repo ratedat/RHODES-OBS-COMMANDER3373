@@ -5,6 +5,7 @@ venv/
 
 # Build outputs
 dist/
+dist-debugger/
 build/
 out/
 coverage/

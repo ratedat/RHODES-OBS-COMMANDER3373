@@ -16,6 +16,11 @@ import {
   waitForReady,
 } from "../runtime/local-server.mjs";
 import {
+  attachRendererDebugLogging,
+  installDebugFileLogging,
+  resolveDebugLoggingConfig,
+} from "../runtime/debug-logging.mjs";
+import {
   parseDesktopSettings,
   resolveStartupPort,
   serializeDesktopSettings,
@@ -39,12 +44,22 @@ const smokeTest = hasFlag(process.argv, "--smoke-test");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(__dirname, "../..");
 const PORT_PICKER_PRELOAD = path.join(__dirname, "port-picker-preload.cjs");
+const packageMetadata = JSON.parse(readJsonFileSync(path.join(APP_ROOT, "package.json")) || "{}");
 const storageContext = {
   appRoot: APP_ROOT,
   execPath: process.execPath,
   documentsPath: path.join(os.homedir(), "Documents"),
   isPackaged: app.isPackaged,
 };
+const debugLogger = installDebugFileLogging({
+  config: resolveDebugLoggingConfig({
+    env: process.env,
+    packageMetadata,
+    appRoot: APP_ROOT,
+    execPath: process.execPath,
+    isPackaged: app.isPackaged,
+  }),
+});
 
 let storageSelectionSaved = false;
 let storageTargetCurrent = resolveInitialStorageTarget();
@@ -248,6 +263,7 @@ function createAppBrowserWindow({ targetUrl, width, height, minWidth, minHeight,
       sandbox: true,
     },
   });
+  attachRendererDebugLogging(browserWindow.webContents, debugLogger, targetUrl);
   browserWindow.webContents.setWindowOpenHandler(handleWindowOpen);
   browserWindow.loadURL(targetUrl);
   return browserWindow;
@@ -287,8 +303,8 @@ async function validateRendererSmoke(targetUrl) {
     show: false,
   });
   const consoleMessages = [];
-  smokeWindow.webContents.on("console-message", (_event, _level, message, line, sourceId) => {
-    consoleMessages.push(`${sourceId || "renderer"}:${line || 0} ${message}`);
+  smokeWindow.webContents.on("console-message", (details) => {
+    consoleMessages.push(`${details?.sourceId || "renderer"}:${details?.lineNumber || 0} ${details?.message || ""}`);
   });
   try {
     await new Promise((resolve, reject) => {
@@ -656,6 +672,7 @@ async function startDesktopApp() {
   const targetUrl = appUrl(serverController.port, initialView);
   await waitForReady(targetUrl);
   console.log(`Desktop: ${targetUrl}`);
+  if (debugLogger.enabled) console.log(`Debug log: ${debugLogger.logFile}`);
   if (smokeTest) {
     await validateRendererSmoke(targetUrl);
     app.quit();
