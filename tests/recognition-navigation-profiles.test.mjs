@@ -68,6 +68,15 @@ test("idea count ROI targets the bottom conception counter, not thought burden",
   assert.deepEqual(ideaRegion.roi, [848, 650, 58, 66]);
 });
 
+test("run status top-bar resource ROIs target narrow digit crops", async () => {
+  const tasks = await recognitionTasks();
+  const rois = new Map(tasks.ocrRegions.map((region) => [region.id, region.roi]));
+
+  assert.deepEqual(rois.get("run.top_ingot"), [916, 14, 31, 36]);
+  assert.deepEqual(rois.get("run.top_hope"), [960, 13, 38, 38]);
+  assert.deepEqual(rois.get("run.top_idea"), [1208, 13, 52, 38]);
+});
+
 
 test("ADB scan profiles keep annotated tap rectangles for randomized execution", async () => {
   const profiles = await profilesById();

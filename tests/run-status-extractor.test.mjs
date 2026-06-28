@@ -157,6 +157,27 @@ test("run status extractor reads Sarkaz idea count from the bottom conception co
   assert.equal(idea.value, 2);
 });
 
+test("run status extractor reads IS5 top-bar resources and prefers higher-confidence OCR", () => {
+  const candidates = extractRunStatusCandidates({
+    ocrResults: [
+      { text: "0", regionId: "run.top_ingot", confidence: 0.99 },
+      { text: "7", regionId: "run.top_hope", confidence: 0.99 },
+      { text: "22", regionId: "run.top_idea", confidence: 0.7 },
+      { text: "20", regionId: "run.top_idea", confidence: 0.99 },
+      { text: "9", regionId: "run.idea", confidence: 0.76 },
+      { text: "位 置 測 定 分 隊", regionId: "run.squad_card" },
+      { text: "魂 に 直 面", regionId: "run.difficulty_block" },
+      { text: "18", regionId: "run.difficulty_grade" },
+    ],
+  }, { campaignId: "is5_sarkaz", squads, difficultyGrades });
+
+  assert.deepEqual(candidates.filter((item) => ["hope", "ingot", "idea"].includes(item.field)).map((item) => [item.field, item.value]), [
+    ["hope", 7],
+    ["ingot", 0],
+    ["idea", 20],
+  ]);
+});
+
 test("run status extractor reads hope and originium ingots from dedicated resource regions", () => {
   const candidates = extractRunStatusCandidates({
     ocrResults: [

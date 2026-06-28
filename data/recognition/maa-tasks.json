@@ -328,6 +328,45 @@
       "scale": 8
     },
     {
+      "id": "run.top_ingot",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        916,
+        14,
+        31,
+        36
+      ],
+      "scale": 10
+    },
+    {
+      "id": "run.top_hope",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        960,
+        13,
+        38,
+        38
+      ],
+      "scale": 10
+    },
+    {
+      "id": "run.top_idea",
+      "profileIds": [
+        "runStatusFull"
+      ],
+      "roi": [
+        1208,
+        13,
+        52,
+        38
+      ],
+      "scale": 10
+    },
+    {
       "id": "run.idea",
       "profileIds": [
         "runStatusFull"

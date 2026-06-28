@@ -243,6 +243,30 @@ function findRegionNumberCandidate(frame, { field, label, regionIdPart, min = 0,
   };
 }
 
+function findBestRegionNumberCandidate(frame, { field, label, regionIdPart, min = 0, max = 999, confidence = 0.7, prefer = "last", allowRoman = false }) {
+  const candidates = asTextResults(frame)
+    .filter((item) => String(item.regionId || "").includes(regionIdPart))
+    .map((item) => {
+      const values = numericValuesFromText(item.text, { allowRoman }).filter((value) => value >= min && value <= max);
+      if (!values.length) return null;
+      const value = prefer === "first" ? values[0] : values.at(-1);
+      return { item, value, confidence: Number(item.confidence ?? confidence) };
+    })
+    .filter(Boolean)
+    .toSorted((a, b) => b.confidence - a.confidence);
+  const best = candidates[0];
+  if (!best) return null;
+  return {
+    kind: "runStatus",
+    field,
+    label,
+    value: best.value,
+    rawText: `${label} ${best.value}`,
+    confidence: Math.min(0.98, Math.max(confidence, best.confidence)),
+    needsReview: true,
+  };
+}
+
 function candidateFromNumber({ field, label, value, confidence = 0.75 }) {
   if (!Number.isFinite(value)) return null;
   return {
@@ -372,9 +396,14 @@ function hopePairFromTopRightStatus(frame) {
   return null;
 }
 
+function findTopHopeCandidate(frame) {
+  return findBestRegionNumberCandidate(frame, { field: "hope", label: "希望", regionIdPart: "top_hope", min: 0, max: 999, confidence: 0.86, prefer: "first" });
+}
+
 function findHopeCandidates(frame) {
   const entries = asTextResults(frame).filter((item) => String(item.regionId || "").includes("hope"));
   if (!entries.length) return [];
+  const topHope = findTopHopeCandidate(frame);
 
   const wholeEntries = entries.filter(isWholeHopeEntry);
   const currentEntry = entries.find((item) => /hope[._-]current/.test(String(item.regionId || "")));
@@ -382,6 +411,8 @@ function findHopeCandidates(frame) {
   const current = firstNumericValueInRange(currentEntry, { min: 0, max: 99 });
   const max = firstNumericValueInRange(maxEntry, { min: 0, max: 99 });
   if (isValidHopePair([current, max])) return hopeCandidatesFromPair([current, max]);
+
+  if (topHope) return [topHope];
 
   const topRightPair = hopePairFromTopRightStatus(frame);
   if (isValidHopePair(topRightPair)) return hopeCandidatesFromPair(topRightPair);
@@ -397,12 +428,24 @@ function findHopeCandidates(frame) {
   return [findRegionNumberCandidate(frame, { field: "hope", label: "希望", regionIdPart: "hope", min: 0, max: 999, prefer: "first" })].filter(Boolean);
 }
 
+function findTopIngotCandidate(frame) {
+  return findBestRegionNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPart: "top_ingot", min: 0, max: 9999, confidence: 0.86, prefer: "first" });
+}
+
 function findIngotCandidate(frame) {
+  const topIngot = findTopIngotCandidate(frame);
+  if (topIngot) return topIngot;
   return findRegionNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPart: "ingot", min: 0, max: 9999, prefer: "first" });
+}
+
+function findTopIdeaCandidate(frame) {
+  return findBestRegionNumberCandidate(frame, { field: "idea", label: "構想", regionIdPart: "top_idea", min: 0, max: 999, confidence: 0.86, prefer: "first" });
 }
 
 function findIdeaCandidate(frame, { campaignId } = {}) {
   if (campaignId !== "is5_sarkaz") return null;
+  const topIdea = findTopIdeaCandidate(frame);
+  if (topIdea) return topIdea;
   return findRegionNumberCandidate(frame, { field: "idea", label: "構想", regionIdPart: "idea", min: 0, max: 999, prefer: "first" });
 }
 
@@ -449,7 +492,8 @@ export function extractRunStatusCandidates(frame, { campaignId, squads = [], dif
   const commandLevel = findRegionNumberCandidate(frame, { field: "commandLevel", label: "指揮Lv", regionIdPart: "command_level", min: 1, max: 99, confidence: 0.75, prefer: "first", allowRoman: true })
     || findCommandLevelFromStatusRoi(frame)
     || findCommandLevelCandidate(compactText, frame);
-  const resourceCandidates = findResourceNumberCandidates(frame);
+  const hasTopResourceCandidate = Boolean(findTopHopeCandidate(frame) || findTopIngotCandidate(frame));
+  const resourceCandidates = hasTopResourceCandidate ? [] : findResourceNumberCandidates(frame);
   const runResourceCandidates = resourceCandidates.length === 3
     ? resourceCandidates
     : [...findHopeCandidates(frame), findIngotCandidate(frame)].filter(Boolean);
