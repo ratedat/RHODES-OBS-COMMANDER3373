@@ -208,13 +208,18 @@ function stripOperatorLineNoise(normalizedText) {
     .replace(/[^0-9A-Za-zぁ-んァ-ヶー一-龠]+$/g, "");
 }
 
+function maaRuleCanUseText(pattern, text) {
+  if (pattern?.pattern === "^ユー(?:$|[^ネ])") return text === "ユー";
+  return true;
+}
+
 function maaRuleHitsForRow(row, db, operatorOcrMap) {
   const compactText = hiraganaToKatakana(applyOperatorEquivalenceClasses(normalizeRecognitionText(row.text, ["remove_spaces"]), operatorOcrMap));
   const compactVariants = [...new Set([compactText, stripOperatorLineNoise(compactText)])].filter(Boolean);
   if (!compactVariants.length) return [];
   return db
     .flatMap((operator) => operator.ocrPatterns
-      .filter((pattern) => compactVariants.some((text) => pattern.regex.test(text)))
+      .filter((pattern) => compactVariants.some((text) => maaRuleCanUseText(pattern, text) && pattern.regex.test(text)))
       .map((pattern) => ({
         operator,
         rawText: row.text,

@@ -6964,14 +6964,6 @@
       "validRegex": true,
       "localMatches": [
         {
-          "id": "varkaris",
-          "name": "ヴァルカリス",
-          "rarity": 5,
-          "class": "前衛",
-          "branch": "強襲者",
-          "hiddenByDefault": false
-        },
-        {
           "id": "vulcan",
           "name": "ヴァルカン",
           "rarity": 5,
@@ -7252,27 +7244,11 @@
       "validRegex": true,
       "localMatches": [
         {
-          "id": "siege",
-          "name": "シージ",
-          "rarity": 6,
-          "class": "先鋒",
-          "branch": "先駆兵",
-          "hiddenByDefault": false
-        },
-        {
           "id": "dusk",
           "name": "シー",
           "rarity": 6,
           "class": "術師",
           "branch": "拡散術師",
-          "hiddenByDefault": false
-        },
-        {
-          "id": "scene",
-          "name": "シーン",
-          "rarity": 5,
-          "class": "補助",
-          "branch": "召喚師",
           "hiddenByDefault": false
         }
       ],
@@ -7480,22 +7456,6 @@
       "validRegex": true,
       "localMatches": [
         {
-          "id": "gladiia",
-          "name": "グレイディーア",
-          "rarity": 6,
-          "class": "特殊",
-          "branch": "鉤縄師",
-          "hiddenByDefault": false
-        },
-        {
-          "id": "grainbuds",
-          "name": "グレインバッズ",
-          "rarity": 5,
-          "class": "補助",
-          "branch": "緩速師",
-          "hiddenByDefault": false
-        },
-        {
           "id": "greyy",
           "name": "グレイ",
           "rarity": 4,
@@ -7699,14 +7659,6 @@
       "maaReplacement": "贝娜",
       "validRegex": true,
       "localMatches": [
-        {
-          "id": "penance",
-          "name": "ペナンス",
-          "rarity": 6,
-          "class": "重装",
-          "branch": "破壊者",
-          "hiddenByDefault": false
-        },
         {
           "id": "bena",
           "name": "ベナ",
@@ -8216,14 +8168,6 @@
           "rarity": 6,
           "class": "特殊",
           "branch": "行商人",
-          "hiddenByDefault": false
-        },
-        {
-          "id": "reed",
-          "name": "リード",
-          "rarity": 5,
-          "class": "先鋒",
-          "branch": "突撃兵",
           "hiddenByDefault": false
         }
       ],
@@ -14153,14 +14097,6 @@
           "rarity": 6,
           "class": "重装",
           "branch": "本源衛士",
-          "hiddenByDefault": false
-        },
-        {
-          "id": "eunectes",
-          "name": "ユーネクテス",
-          "rarity": 6,
-          "class": "重装",
-          "branch": "決闘者",
           "hiddenByDefault": false
         }
       ],

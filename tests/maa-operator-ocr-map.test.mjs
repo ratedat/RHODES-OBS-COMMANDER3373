@@ -25,6 +25,16 @@ test("MAA Japanese operator OCR map links representative rules to local operator
   assert.ok(hoederer.localMatches.some((operator) => operator.id === "hoederer"));
 });
 
+test("MAA Japanese operator OCR map keeps Yu and Eunectes rules separate", () => {
+  const yu = operatorOcrMap.rules.find((rule) => rule.pattern === "^ユー(?:$|[^ネ])");
+  assert.ok(yu);
+  assert.deepEqual(yu.localMatches.map((operator) => operator.id), ["yu"]);
+
+  const eunectes = operatorOcrMap.rules.find((rule) => rule.pattern === "(ユ)?ーネクテス");
+  assert.ok(eunectes);
+  assert.deepEqual(eunectes.localMatches.map((operator) => operator.id), ["eunectes"]);
+});
+
 test("MAA Japanese operator OCR map includes OCR equivalence classes and recruitment names", () => {
   assert.ok(operatorOcrMap.equivalenceClasses.some((group) => group.includes("夕") && group.includes("タ")));
   assert.ok(operatorOcrMap.publicRecruitmentOperators.some((operator) => operator.name === "ジャスティスナイト"));

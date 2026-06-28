@@ -27,10 +27,6 @@ function hiraganaToKatakana(value) {
   return String(value ?? "").replace(/[\u3041-\u3096]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0x60));
 }
 
-function katakanaToHiragana(value) {
-  return String(value ?? "").replace(/[\u30a1-\u30f6]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0x60));
-}
-
 function escapeRegExpLiteral(value) {
   return String(value).replace(/[\\^$.*+?()[\]{}|]/g, (char) => "\\" + char);
 }
@@ -104,7 +100,7 @@ function buildLocalMatches(pattern, localOperators, equivalenceClasses = []) {
   const matches = localOperators
     .filter((operator) => {
       const compact = compactName(operator.name);
-      const variants = new Set([compact, hiraganaToKatakana(compact), katakanaToHiragana(compact)]);
+      const variants = new Set([compact, hiraganaToKatakana(compact)]);
       return [...variants].some((name) => regex.test(name));
     })
     .map((operator) => ({

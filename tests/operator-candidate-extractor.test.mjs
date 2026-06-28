@@ -13,6 +13,9 @@ const operators = [
   { id: "myrtle", name: "テンニンカ", rarity: 4, class: "先鋒", branch: "旗手" },
   { id: "ray", name: "レイ", rarity: 6, class: "狙撃", branch: "狩人" },
   { id: "leizi2", name: "司霆レイズ", rarity: 6, class: "前衛", branch: "解放者" },
+  { id: "yu", name: "ユー", rarity: 6, class: "重装", branch: "本源衛士" },
+  { id: "eunectes", name: "ユーネクテス", rarity: 6, class: "重装", branch: "決闘者" },
+  { id: "humus", name: "ヒューマス", rarity: 4, class: "前衛", branch: "鎌撃士" },
 ];
 
 const operatorOcrMap = {
@@ -25,6 +28,8 @@ const operatorOcrMap = {
     { pattern: "イネ(ス|ズ).*", maaReplacement: "伊内丝", localMatches: [{ id: "ines", name: "イネス" }] },
     { pattern: "テンニンカ", maaReplacement: "桃金娘", localMatches: [{ id: "myrtle", name: "テンニンカ" }] },
     { pattern: "(司|霆).*レイズ", maaReplacement: "司霆惊蛰", localMatches: [{ id: "leizi2", name: "司霆レイズ" }] },
+    { pattern: "^ユー(?:$|[^ネ])", maaReplacement: "余", localMatches: [{ id: "yu", name: "ユー" }, { id: "eunectes", name: "ユーネクテス" }] },
+    { pattern: "ヒューマス", maaReplacement: "休谟斯", localMatches: [{ id: "humus", name: "ヒューマス" }] },
   ],
   equivalenceClasses: [["ン", "ソ"], ["-", "ー", "一"], ["フ", "ブ", "プ"], ["ス", "ズ"]],
 };
@@ -110,6 +115,18 @@ test("operator candidate extractor maps Leizi alter when Windows OCR drops the d
 
   assert.equal(candidates[0].operatorId, "leizi2");
   assert.equal(candidates[0].name, "司霆レイズ");
+});
+
+test("operator candidate extractor does not turn partial Humus OCR into Yu or Eunectes", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [
+      { text: "ユ ー マ ス", regionId: "operator.name.left.2", roi: { x: 768, y: 389.2, width: 79.8, height: 17.2 }, confidence: 0.7 },
+      { text: "、 。 - ー ・ ヒ ュ ー マ ス", regionId: "operator.name.left.2", roi: { x: 808.8, y: 390.5, width: 126, height: 20 }, confidence: 0.7 },
+    ],
+  }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 880, height: 555 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["humus"]);
 });
 
 test("operator candidate extractor ignores OCR outside operatorsFull", async () => {
