@@ -218,7 +218,9 @@ export function registerControlEvents(app, context) {
         const campaignId = context.getCampaign().id;
         const fieldConfig = context.getSpecialFieldConfig(campaignId, fieldId) || { id: fieldId };
         const count = clampCoinCount(container?.querySelector('[data-effect-stack-input="count"]')?.value);
-        const stateId = context.normalizeStackState(fieldConfig, container?.querySelector('[data-effect-stack-input="state"]')?.value, campaignId);
+        const stateId = fieldConfig.hideStateInput
+          ? context.getStackEmptyStateId(fieldConfig)
+          : context.normalizeStackState(fieldConfig, container?.querySelector('[data-effect-stack-input="state"]')?.value, campaignId);
         context.mutate((state) => controlActions.addEffectStackEntry(state, campaignId, fieldId, { effectId, count, stateId }, fieldConfig, context.mergeEffectStackEntries));
       }
       return;

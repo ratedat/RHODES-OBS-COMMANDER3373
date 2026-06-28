@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { applyRecognitionScanCompletionToState } from "../app/domain/recognition/auto-apply.js";
 
-test("thought full scan auto-apply preserves duplicate thought instances", () => {
+test("thought full scan auto-apply aggregates duplicate thought instances into counts", () => {
   const state = {
     run: {
       campaignId: "is5_sarkaz",
@@ -25,7 +25,7 @@ test("thought full scan auto-apply preserves duplicate thought instances", () =>
 
   const result = applyRecognitionScanCompletionToState(state, { profileId: "is5ThoughtFull", suggestions });
 
-  assert.deepEqual(result.state.run.special.is5_sarkaz.thought, ["t1", "t1"]);
+  assert.deepEqual(result.state.run.special.is5_sarkaz.thought, [{ effectId: "t1", count: 2, stateId: null }]);
   assert.equal(result.autoApplied.length, 2);
   assert.equal(result.remainingSuggestions.length, 0);
 });

@@ -773,11 +773,12 @@
       {
         "id": "thought",
         "label": "思案",
-        "type": "effectMultiSelect",
+        "type": "effectStackLoadout",
         "effectSlot": "thought",
+        "unitLabel": "個",
+        "hideStateInput": true,
         "overlayToggle": true,
-        "overlayToggleLabel": "OBS表示",
-        "compact": true
+        "overlayToggleLabel": "OBS表示"
       },
       {
         "id": "idea",

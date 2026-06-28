@@ -5,7 +5,7 @@ export function normalizeEffectStackEntry(field, entry, campaignId, selectableEf
   return {
     ...entry,
     count: clampCoinCount(entry.count),
-    stateId: selectableEffects.normalizeStackState(field, entry.stateId, campaignId, selectableEffectSource),
+    stateId: field?.hideStateInput ? null : selectableEffects.normalizeStackState(field, entry.stateId, campaignId, selectableEffectSource),
   };
 }
 

@@ -52,13 +52,15 @@ export function renderEffectStackEntryRow(field, entry, index, campaignId, conte
   const item = context.selectableEffectById.get(normalized.effectId);
   if (!item) return "";
   const imageSrc = specialEffectImageSrc(item);
+  const stateSelect = field.hideStateInput ? "" : `
+    <select data-effect-stack-entry-state="${html(field.id)}" data-index="${html(index)}" aria-label="${html(item.name)}の${html(field.stateLabel || "状態")}">
+      ${renderEffectStackStateOptions(field, normalized.stateId, campaignId, context)}
+    </select>`;
   return `<div class="coin-entry-row effect-stack-entry-row">
     ${imageSrc ? `<img src="${html(imageSrc)}" alt="" loading="lazy" />` : `<span class="coin-entry-fallback">${html(item.name.slice(0, 1))}</span>`}
     <div class="coin-entry-title"><strong>${html(item.name)}</strong><span>${html(item.groupLabel || item.slotLabel || field.label)}</span></div>
     <input type="number" min="1" max="99" value="${html(normalized.count)}" data-effect-stack-entry-count="${html(field.id)}" data-index="${html(index)}" aria-label="${html(item.name)}の個数" />
-    <select data-effect-stack-entry-state="${html(field.id)}" data-index="${html(index)}" aria-label="${html(item.name)}の${html(field.stateLabel || "状態")}">
-      ${renderEffectStackStateOptions(field, normalized.stateId, campaignId, context)}
-    </select>
+    ${stateSelect}
     <button type="button" data-action="remove-effect-stack-entry" data-effect-stack-field="${html(field.id)}" data-index="${html(index)}" aria-label="${html(item.name)}を削除">×</button>
   </div>`;
 }
@@ -67,12 +69,14 @@ export function renderEffectStackLoadoutField(field, campaignId, special, contex
   const options = context.getEffectStackOptions(field, campaignId);
   const defaultState = context.getStackStateOptions(field, campaignId)[0]?.id || context.getStackEmptyStateId(field);
   const entries = context.normalizeEffectStackEntries(field, campaignId, special[field.id]);
+  const stateInput = field.hideStateInput ? "" : `
+      <select data-effect-stack-input="state" aria-label="追加する${html(field.label)}の${html(field.stateLabel || "状態")}">${renderEffectStackStateOptions(field, defaultState, campaignId, context)}</select>`;
   return `<div class="field-wide special-effect-group effect-stack-loadout-field">
     ${context.renderSpecialEffectGroupHeader(field, special)}
     <div class="effect-stack-loadout-builder" data-effect-stack-builder="${html(field.id)}">
       <select data-effect-stack-input="effect">${context.renderSpecialEffectSelectOptions(options, "", `${field.label}を追加`)}</select>
       <input type="number" min="1" max="99" value="1" data-effect-stack-input="count" aria-label="追加する${html(field.label)}の個数" />
-      <select data-effect-stack-input="state" aria-label="追加する${html(field.label)}の${html(field.stateLabel || "状態")}">${renderEffectStackStateOptions(field, defaultState, campaignId, context)}</select>
+      ${stateInput}
       <button type="button" data-action="add-effect-stack-entry" data-effect-stack-field="${html(field.id)}">追加</button>
     </div>
     <div class="effect-stack-entry-summary">${html(context.formatEffectStackValue(field, entries) || "未選択")}</div>

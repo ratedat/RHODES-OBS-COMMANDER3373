@@ -162,7 +162,7 @@ function syncOperatorFullScanCandidates(state, suggestions = []) {
 
 function syncIs5ThoughtFullScanCandidates(state, suggestions = []) {
   const thoughtSuggestions = [];
-  const thoughtIds = [];
+  const thoughtCounts = new Map();
   for (const suggestion of suggestions || []) {
     const candidate = candidateFromSuggestion(suggestion);
     if (!canAutoApplySuggestion(state, suggestion, candidate)) continue;
@@ -170,12 +170,12 @@ function syncIs5ThoughtFullScanCandidates(state, suggestions = []) {
     const thoughtId = thoughtIdFromCandidate(candidate);
     if (!thoughtId) continue;
     thoughtSuggestions.push(suggestion);
-    thoughtIds.push(thoughtId);
+    thoughtCounts.set(thoughtId, (thoughtCounts.get(thoughtId) || 0) + 1);
   }
   if (!thoughtSuggestions.length) return { applied: [], keys: new Set() };
 
   const run = state.run ||= {};
-  ensureIs5Special(run).thought = thoughtIds;
+  ensureIs5Special(run).thought = [...thoughtCounts.entries()].map(([effectId, count]) => ({ effectId, count, stateId: null }));
   return {
     applied: thoughtSuggestions,
     keys: new Set(thoughtSuggestions.map(suggestionKey).filter(Boolean)),

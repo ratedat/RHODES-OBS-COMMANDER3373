@@ -1,11 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   addCoinEntry,
   addSpecialEffect,
   updateCoinEntryStatus,
 } from "../app/control-actions.js";
+import { mergeEffectStackEntries } from "../app/domain/special-loadouts.js";
 import { formatCoinLoadoutValue } from "../app/domain/special-display.js";
 import { mergeCoinEntries } from "../app/domain/special-values.js";
 import { renderSpecialEffectSelectOptions } from "../app/components/special-controls.js";
@@ -87,4 +89,20 @@ test("select labels include group context for same named future effects", () => 
 
   assert.match(rendered, />通常 \/ 同名<\/option>/);
   assert.match(rendered, />特殊 \/ 同名<\/option>/);
+});
+
+test("IS#5 thought field uses countable effect stack entries without state slots", () => {
+  const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
+  const campaign = campaigns.find((item) => item.id === "is5_sarkaz");
+  const field = campaign.specialFields.find((item) => item.id === "thought");
+
+  assert.equal(field.type, "effectStackLoadout");
+  assert.equal(field.effectSlot, "thought");
+  assert.equal(field.hideStateInput, true);
+  assert.equal(field.unitLabel, "個");
+
+  assert.deepEqual(mergeEffectStackEntries(field, ["thought-a", "thought-a", { effectId: "thought-b", count: 3 }], campaign.id), [
+    { effectId: "thought-a", count: 2, stateId: null },
+    { effectId: "thought-b", count: 3, stateId: null },
+  ]);
 });
