@@ -7,6 +7,7 @@ Do not place Codex/Stitch working notes, prompt handoff files, generated design 
 ## Key Documents
 
 - `startup-guide.md` - app startup, OBS URLs, port usage, and ADB setup notes
+- `adb-setup.md` - supported ADB presets, emulator setup, Hyper-V diagnostics, and troubleshooting
 - `licenses.md` - license, source availability, and third-party attribution policy
 - `architecture.md` - state and overlay architecture
 - `data-sources.md` - source extraction notes

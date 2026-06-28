@@ -15,6 +15,7 @@ Target campaigns:
 See:
 
 - `docs/startup-guide.md` for app startup, OBS URL, port, and ADB setup notes
+- `docs/adb-setup.md` for supported ADB presets, emulator setup, Google Play Games developer emulator notes, Hyper-V diagnostics, and troubleshooting
 - `docs/licenses.md` for license, source availability, and third-party notices
 - `docs/architecture.md` for state and overlay architecture
 - `docs/data-sources.md` for source extraction notes

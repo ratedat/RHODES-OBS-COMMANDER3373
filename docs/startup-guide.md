@@ -126,11 +126,16 @@ npm.cmd run app:debug
 
 ADB取得はブラウザのHTMLだけでは端末操作できません。Electronアプリ内のローカルNodeサーバーがADB実行を担当します。
 
-ADB実行ファイルが見つからない場合は、Android platform-toolsをPATHに入れるか、次の環境変数で明示します。
+対応エミュレーター、Google Play Games開発者エミュレーター、Hyper-V診断、標準serial、トラブルシュートは `docs/adb-setup.md` を参照してください。
+
+ADB実行ファイルが見つからない場合は、Android platform-toolsをPATHに入れるか、Control v2のADB設定でパスを選択します。環境変数で明示する場合は次を使えます。
 
 ```powershell
 $env:ARKNIGHTS_ADB_PATH = "C:\path\to\adb.exe"
+$env:ARKNIGHTS_ADB_SERIAL = "127.0.0.1:16384"
 ```
+
+現在のプリセットは `自動`、`MuMu Player`、`LDPlayer`、`BlueStacks`、`NoxPlayer`、`逍遥 / MEmu`、`テンセントアプリストア`、`Google Play Games 開発者`、`Android Studio AVD`、`WSA`、`手動` です。通常は `自動` から試し、Google Play Games開発者エミュレーターでは `Google Play Games 開発者` を選びます。
 
 現在のControl v2では、選択中の統合戦略に応じてADB取得ボタンを出し分けます。
 
