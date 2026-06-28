@@ -16,7 +16,7 @@ import { createRelicCandidateExtractor } from "./domain/recognition/relic-candid
 import { createOperatorCandidateExtractor } from "./domain/recognition/operator-candidate-extractor.js";
 import { createThoughtCandidateExtractor } from "./domain/recognition/thought-candidate-extractor.js";
 import { createAgeCandidateExtractor } from "./domain/recognition/age-candidate-extractor.js";
-import { findScanProfile, findScanProfileByTriggerPath, normalizeScanProfiles, profileIdFromScanBody } from "./domain/recognition/profiles.js";
+import { findScanProfile, findScanProfileByTriggerPath, normalizeScanProfiles, ocrEnginesFromScanProfiles, profileIdFromScanBody } from "./domain/recognition/profiles.js";
 import { runScanProfile } from "./domain/recognition/scan-runner.js";
 import { applyRecognitionScanCompletionToState } from "./domain/recognition/auto-apply.js";
 import { appendRecognitionSuggestionsToState } from "./domain/recognition/suggestions.js";
@@ -199,7 +199,8 @@ function httpError(status, message, details = {}) {
 
 async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog, onCaptureFrame = null } = {}) {
   if (source !== "adb") throw httpError(400, `unsupported recognition source: ${source}`);
-  const [tasks, state, master, operatorOcrMap] = await Promise.all([
+  const [profiles, tasks, state, master, operatorOcrMap] = await Promise.all([
+    recognitionProfiles(),
     recognitionTasks(),
     ensureState(),
     masterData(),
@@ -236,13 +237,7 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog
     recognizer: createMaaStyleRecognizer({
       tasks,
       textExtractor: createProfileAwareOcrTextExtractor({
-        profileEngines: {
-          runStatusFull: "windows-paddle",
-          relicsFull: "windows",
-          operatorsFull: "windows",
-          is5ThoughtFull: "windows",
-          is5AgeFull: "windows",
-        },
+        profileEngines: ocrEnginesFromScanProfiles(profiles),
       }),
       candidateExtractors: [runStatusExtractor, relicExtractor, operatorExtractor, thoughtExtractor, ageExtractor],
     }),

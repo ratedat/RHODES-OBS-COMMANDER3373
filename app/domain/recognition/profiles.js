@@ -25,6 +25,14 @@ export function normalizeScanProfiles(raw) {
   return profiles.map(normalizeProfile);
 }
 
+export function ocrEnginesFromScanProfiles(profiles = []) {
+  return Object.fromEntries(
+    normalizeScanProfiles({ profiles })
+      .filter((profile) => profile.ocrEngine)
+      .map((profile) => [profile.id, profile.ocrEngine]),
+  );
+}
+
 export function findScanProfile(profiles, id) {
   const profileId = requireProfileId(id);
   const profile = normalizeScanProfiles({ profiles }).find((item) => item.id === profileId);

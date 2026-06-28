@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-import { normalizeScanProfiles } from "../app/domain/recognition/profiles.js";
+import { normalizeScanProfiles, ocrEnginesFromScanProfiles } from "../app/domain/recognition/profiles.js";
 
 async function profilesById() {
   const raw = JSON.parse(await readFile(new URL("../data/recognition/scan-profiles.json", import.meta.url), "utf8"));
@@ -34,6 +34,25 @@ test("ADB scan profile taps stay inside the 1280x720 base screen", async () => {
     assert.ok(point, `${id} should have an opening tap`);
     assert.ok(point.x >= 0 && point.x <= 1280, `${id} x out of bounds`);
     assert.ok(point.y >= 0 && point.y <= 720, `${id} y out of bounds`);
+  }
+});
+
+test("scan profiles own the server-side OCR engine routing", async () => {
+  const profiles = await profilesById();
+  const profileList = [...profiles.values()];
+  const engines = ocrEnginesFromScanProfiles(profileList);
+
+  assert.deepEqual(engines, {
+    runStatusFull: "windows-paddle",
+    operatorsFull: "windows",
+    relicsFull: "windows",
+    is4RevelationFull: "windows",
+    is5ThoughtFull: "windows",
+    is5AgeFull: "windows",
+    is6CoinsFull: "windows",
+  });
+  for (const profile of profileList) {
+    assert.ok(profile.ocrEngine, `${profile.id} should declare ocrEngine for server routing`);
   }
 });
 
