@@ -319,6 +319,7 @@ function Classify-DigitComponent($Xs, $Ys) {
 
   if ($width -ge 9 -and $height -ge 12) {
     $middleFullRows = 0
+    $waistFullRows = 0
     $bottomRightRows = 0
     $bottomLeftRows = 0
     for ($gy = 0; $gy -lt 9; $gy++) {
@@ -326,6 +327,7 @@ function Classify-DigitComponent($Xs, $Ys) {
       for ($gx = 0; $gx -lt 7; $gx++) {
         if ($counts[$gy * 7 + $gx] -gt 0) { $rowCount += 1 }
       }
+      if ($gy -ge 3 -and $gy -le 4 -and $rowCount -ge 6) { $waistFullRows += 1 }
       if ($gy -ge 4 -and $gy -le 6 -and $rowCount -ge 6) { $middleFullRows += 1 }
       if ($gy -ge 7) {
         for ($gx = 0; $gx -le 2; $gx++) {
@@ -337,6 +339,26 @@ function Classify-DigitComponent($Xs, $Ys) {
       }
     }
     if ($middleFullRows -ge 1 -and $bottomRightRows -ge 2 -and $bottomLeftRows -eq 0) { return "4" }
+
+    $upperRightRows = 0
+    $lowerLeftRows = 0
+    $lowerRightRows = 0
+    for ($gy = 0; $gy -lt 9; $gy++) {
+      if ($gy -ge 1 -and $gy -le 2) {
+        for ($gx = 4; $gx -le 6; $gx++) {
+          if ($counts[$gy * 7 + $gx] -gt 0) { $upperRightRows += 1; break }
+        }
+      }
+      if ($gy -ge 4 -and $gy -le 8) {
+        for ($gx = 0; $gx -le 2; $gx++) {
+          if ($counts[$gy * 7 + $gx] -gt 0) { $lowerLeftRows += 1; break }
+        }
+        for ($gx = 4; $gx -le 6; $gx++) {
+          if ($counts[$gy * 7 + $gx] -gt 0) { $lowerRightRows += 1; break }
+        }
+      }
+    }
+    if (($middleFullRows + $waistFullRows) -ge 1 -and $upperRightRows -le 1 -and $lowerLeftRows -ge 3 -and $lowerRightRows -ge 3) { return "6" }
 
     $topLeft = 0; $topRight = 0; $bottomLeft = 0; $bottomRight = 0
     for ($gy = 0; $gy -lt 9; $gy++) {

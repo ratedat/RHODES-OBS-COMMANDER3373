@@ -54,72 +54,99 @@
         },
         {
           "idPrefix": "run.hope.current",
-          "templatePath": "assets/recognition/templates/run/HopeCurrentArrow.png",
+          "templatePath": "assets/recognition/templates/run/HopeIcon.png",
           "searchRoi": {
-            "x": 880,
-            "y": 8,
-            "width": 90,
-            "height": 48
+            "x": 820,
+            "y": 0,
+            "width": 190,
+            "height": 72
           },
           "ocrOffset": {
-            "x": 10,
-            "y": -2,
-            "width": 36,
-            "height": 30
+            "x": 70,
+            "y": -10,
+            "width": 26,
+            "height": 36
           },
-          "threshold": 0.82,
+          "threshold": 0.74,
           "maxMatches": 1,
-          "step": 1,
+          "step": 2,
           "sampleStride": 2,
           "numericFallback": true,
           "numericStartYRatio": 0,
-          "scale": 10
+          "scale": 10,
+          "suppressStaticRegionIdPattern": "^run\\.hope\\.current$"
         },
         {
-          "idPrefix": "run.hope.current",
-          "templatePath": "assets/recognition/templates/run/HopeCurrentFullArrow.png",
+          "idPrefix": "run.hope.current.full",
+          "templatePath": "assets/recognition/templates/run/HopeIcon.png",
           "searchRoi": {
-            "x": 880,
-            "y": 8,
-            "width": 90,
-            "height": 48
+            "x": 820,
+            "y": 0,
+            "width": 190,
+            "height": 72
           },
           "ocrOffset": {
-            "x": 120,
-            "y": 4,
-            "width": 25,
-            "height": 30
+            "x": 124,
+            "y": -10,
+            "width": 22,
+            "height": 36
           },
-          "threshold": 0.45,
+          "threshold": 0.74,
           "maxMatches": 1,
-          "step": 1,
+          "step": 2,
           "sampleStride": 2,
           "numericFallback": true,
           "numericStartYRatio": 0,
-          "scale": 10
+          "scale": 10,
+          "suppressStaticRegionIdPattern": "^run\\.hope\\.current$"
         },
         {
           "idPrefix": "run.hope.max",
-          "templatePath": "assets/recognition/templates/run/HopeMaxArrow.png",
+          "templatePath": "assets/recognition/templates/run/HopeIcon.png",
           "searchRoi": {
-            "x": 940,
-            "y": 8,
-            "width": 95,
-            "height": 48
+            "x": 820,
+            "y": 0,
+            "width": 190,
+            "height": 72
           },
           "ocrOffset": {
-            "x": 37,
-            "y": 3,
-            "width": 25,
-            "height": 30
+            "x": 126,
+            "y": -10,
+            "width": 26,
+            "height": 36
           },
-          "threshold": 0.82,
+          "threshold": 0.74,
           "maxMatches": 1,
-          "step": 1,
+          "step": 2,
           "sampleStride": 2,
           "numericFallback": true,
           "numericStartYRatio": 0,
-          "scale": 10
+          "scale": 10,
+          "suppressStaticRegionIdPattern": "^run\\.hope\\.max$"
+        },
+        {
+          "idPrefix": "run.hope.max.full",
+          "templatePath": "assets/recognition/templates/run/HopeIcon.png",
+          "searchRoi": {
+            "x": 820,
+            "y": 0,
+            "width": 190,
+            "height": 72
+          },
+          "ocrOffset": {
+            "x": 150,
+            "y": -10,
+            "width": 22,
+            "height": 36
+          },
+          "threshold": 0.74,
+          "maxMatches": 1,
+          "step": 2,
+          "sampleStride": 2,
+          "numericFallback": true,
+          "numericStartYRatio": 0,
+          "scale": 10,
+          "suppressStaticRegionIdPattern": "^run\\.hope\\.max$"
         },
         {
           "idPrefix": "run.ingot",

@@ -440,6 +440,48 @@ test("run status extractor combines separated hope current and max OCR regions",
   ]);
 });
 
+test("run status extractor pairs full hope template regions before noisy regular max", () => {
+  const candidates = extractRunStatusCandidates({
+    ocrResults: [
+      { text: "7", regionId: "run.hope.current.full.0" },
+      { text: "47", regionId: "run.hope.max.0" },
+      { text: "7", regionId: "run.hope.max.full.0" },
+      { text: "、 祚 7", regionId: "run.hope" },
+      { text: "20", regionId: "run.ingot" },
+      { text: "位 置 測 定 分 隊", regionId: "run.squad_card" },
+      { text: "魂 に 直 面", regionId: "run.difficulty_block" },
+      { text: "18", regionId: "run.difficulty_grade" },
+    ],
+  }, { campaignId: "is5_sarkaz", squads, difficultyGrades });
+
+  assert.deepEqual(candidates.filter((item) => ["hope", "maxHope", "ingot"].includes(item.field)).map((item) => [item.field, item.value]), [
+    ["hope", 7],
+    ["maxHope", 7],
+    ["ingot", 20],
+  ]);
+});
+
+test("run status extractor keeps regular current before full-template current on non-full hope", () => {
+  const candidates = extractRunStatusCandidates({
+    ocrResults: [
+      { text: "0", regionId: "run.hope.current.0" },
+      { text: "7", regionId: "run.hope.current.full.0" },
+      { text: "7", regionId: "run.hope.max.0" },
+      { text: "7", regionId: "run.hope.max.full.0" },
+      { text: "20", regionId: "run.ingot" },
+      { text: "位 置 測 定 分 隊", regionId: "run.squad_card" },
+      { text: "魂 に 直 面", regionId: "run.difficulty_block" },
+      { text: "18", regionId: "run.difficulty_grade" },
+    ],
+  }, { campaignId: "is5_sarkaz", squads, difficultyGrades });
+
+  assert.deepEqual(candidates.filter((item) => ["hope", "maxHope", "ingot"].includes(item.field)).map((item) => [item.field, item.value]), [
+    ["hope", 0],
+    ["maxHope", 7],
+    ["ingot", 20],
+  ]);
+});
+
 test("run status extractor reads hope current, hope max, and ingot from the resource-number crop", () => {
   const candidates = extractRunStatusCandidates({
     ocrResults: [

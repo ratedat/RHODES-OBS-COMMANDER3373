@@ -453,11 +453,24 @@ function findHopeCandidates(frame) {
   const topHope = findTopHopeCandidate(frame);
 
   const wholeEntries = entries.filter(isWholeHopeEntry);
-  const currentEntry = entries.find((item) => /hope[._-]current/.test(String(item.regionId || "")));
-  const maxEntry = entries.find((item) => /hope[._-]max/.test(String(item.regionId || "")));
-  const current = firstNumericValueInRange(currentEntry, { min: 0, max: 99 });
-  const max = firstNumericValueInRange(maxEntry, { min: 0, max: 50 });
-  if (isValidHopePair([current, max])) return hopeCandidatesFromPair([current, max]);
+  const isFullTemplateRegion = (item) => /[._-]full(?:[._-]|$)/.test(String(item.regionId || ""));
+  const currentEntries = entries.filter((item) => /hope[._-]current/.test(String(item.regionId || "")));
+  const maxEntries = entries.filter((item) => /hope[._-]max/.test(String(item.regionId || "")));
+  const currentEntry = currentEntries.find((item) => !isFullTemplateRegion(item));
+  const fullCurrentEntry = currentEntries.find(isFullTemplateRegion);
+  const maxEntry = maxEntries.find((item) => !isFullTemplateRegion(item));
+  const fullMaxEntry = maxEntries.find(isFullTemplateRegion);
+  const hopePairEntries = [
+    [currentEntry, maxEntry],
+    [fullCurrentEntry, fullMaxEntry],
+    [currentEntry, fullMaxEntry],
+    [fullCurrentEntry, maxEntry],
+  ];
+  for (const [currentCandidate, maxCandidate] of hopePairEntries) {
+    const current = firstNumericValueInRange(currentCandidate, { min: 0, max: 99 });
+    const max = firstNumericValueInRange(maxCandidate, { min: 0, max: 50 });
+    if (isValidHopePair([current, max])) return hopeCandidatesFromPair([current, max]);
+  }
 
   const topRightPair = hopePairFromTopRightStatus(frame);
   if (isValidHopePair(topRightPair)) return hopeCandidatesFromPair(topRightPair);

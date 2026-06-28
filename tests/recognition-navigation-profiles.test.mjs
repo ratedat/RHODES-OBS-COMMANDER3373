@@ -118,19 +118,30 @@ test("run status profile includes template anchors for map resources", async () 
   const profiles = await profilesById();
   const profile = profiles.get("runStatusFull");
   const byPrefix = new Map(profile.templateOcrRegions.map((region) => [region.idPrefix + ":" + region.templatePath, region]));
+  const hopeIconTemplates = profile.templateOcrRegions.filter((region) => region.templatePath === "assets/recognition/templates/run/HopeIcon.png");
 
   for (const key of [
-    "run.hope.current:assets/recognition/templates/run/HopeCurrentArrow.png",
-    "run.hope.current:assets/recognition/templates/run/HopeCurrentFullArrow.png",
-    "run.hope.max:assets/recognition/templates/run/HopeMaxArrow.png",
     "run.ingot:assets/recognition/templates/run/IngotIcon.png",
     "run.life_points:assets/recognition/templates/run/LifeIcon.png",
     "run.shield:assets/recognition/templates/run/ShieldIcon.png",
   ]) {
     assert.equal(byPrefix.get(key)?.numericFallback, true);
   }
-  assert.deepEqual(byPrefix.get("run.hope.current:assets/recognition/templates/run/HopeCurrentFullArrow.png")?.ocrOffset, { x: 120, y: 4, width: 25, height: 30 });
-  assert.deepEqual(byPrefix.get("run.hope.max:assets/recognition/templates/run/HopeMaxArrow.png")?.ocrOffset, { x: 37, y: 3, width: 25, height: 30 });
+  assert.equal(hopeIconTemplates.length, 4);
+  assert.deepEqual(hopeIconTemplates.map((region) => [region.idPrefix, region.ocrOffset]), [
+    ["run.hope.current", { x: 70, y: -10, width: 26, height: 36 }],
+    ["run.hope.current.full", { x: 124, y: -10, width: 22, height: 36 }],
+    ["run.hope.max", { x: 126, y: -10, width: 26, height: 36 }],
+    ["run.hope.max.full", { x: 150, y: -10, width: 22, height: 36 }],
+  ]);
+  assert.ok(hopeIconTemplates.every((region) => region.numericFallback));
+  assert.ok(hopeIconTemplates.every((region) => region.threshold === 0.74));
+  assert.deepEqual(hopeIconTemplates.map((region) => region.suppressStaticRegionIdPattern), [
+    "^run\\.hope\\.current$",
+    "^run\\.hope\\.current$",
+    "^run\\.hope\\.max$",
+    "^run\\.hope\\.max$",
+  ]);
   assert.deepEqual(byPrefix.get("run.life_points:assets/recognition/templates/run/LifeIcon.png")?.ocrOffset, { x: 31, y: 25, width: 18, height: 35 });
 });
 
@@ -252,9 +263,7 @@ test("local run template assets keep the expected 1280x720 crop sizes", async ()
   assert.deepEqual(await pngSize("assets/recognition/templates/run/OperatorCardCodeNameFlag.png"), { width: 25, height: 14 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/IdeaIcon.png"), { width: 39, height: 41 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/LifeIcon.png"), { width: 28, height: 51 });
-  assert.deepEqual(await pngSize("assets/recognition/templates/run/HopeCurrentArrow.png"), { width: 9, height: 27 });
-  assert.deepEqual(await pngSize("assets/recognition/templates/run/HopeCurrentFullArrow.png"), { width: 19, height: 27 });
-  assert.deepEqual(await pngSize("assets/recognition/templates/run/HopeMaxArrow.png"), { width: 9, height: 27 });
+  assert.deepEqual(await pngSize("assets/recognition/templates/run/HopeIcon.png"), { width: 54, height: 27 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/IngotIcon.png"), { width: 54, height: 27 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/ShieldIcon.png"), { width: 19, height: 28 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/RelicButton.png"), { width: 89, height: 25 });
