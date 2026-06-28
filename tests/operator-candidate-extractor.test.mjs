@@ -12,6 +12,11 @@ const operators = [
   { id: "ines", name: "イネス", rarity: 6, class: "先鋒", branch: "偵察兵" },
   { id: "myrtle", name: "テンニンカ", rarity: 4, class: "先鋒", branch: "旗手" },
   { id: "ray", name: "レイ", rarity: 6, class: "狙撃", branch: "狩人" },
+  { id: "w", name: "W", rarity: 6, class: "狙撃", branch: "榴弾射手" },
+  { id: "pozyomka", name: "パゼオンカ", rarity: 6, class: "狙撃", branch: "精密射手" },
+  { id: "rangers", name: "レンジャー", rarity: 2, class: "狙撃", branch: "速射手" },
+  { id: "brigid", name: "ブリギッド", rarity: 5, class: "狙撃", branch: "旋輪射手" },
+  { id: "jieyun", name: "ジエユン", rarity: 5, class: "狙撃", branch: "榴弾射手" },
   { id: "leizi", name: "レイズ", rarity: 5, class: "術師", branch: "連鎖術師" },
   { id: "leizi2", name: "司霆レイズ", rarity: 6, class: "前衛", branch: "解放者" },
   { id: "yu", name: "ユー", rarity: 6, class: "重装", branch: "本源衛士" },
@@ -28,6 +33,9 @@ const operatorOcrMap = {
     { pattern: "ルーメン", maaReplacement: "流明", localMatches: [{ id: "lumen", name: "ルーメン" }] },
     { pattern: "イネ(ス|ズ).*", maaReplacement: "伊内丝", localMatches: [{ id: "ines", name: "イネス" }] },
     { pattern: "テンニンカ", maaReplacement: "桃金娘", localMatches: [{ id: "myrtle", name: "テンニンカ" }] },
+    { pattern: "パゼオンカ", maaReplacement: "鸿雪", localMatches: [{ id: "pozyomka", name: "パゼオンカ" }] },
+    { pattern: "(レ|ノ)ンジャー", maaReplacement: "巡林者", localMatches: [{ id: "rangers", name: "レンジャー" }] },
+    { pattern: "ジエユン", maaReplacement: "截云", localMatches: [{ id: "jieyun", name: "ジエユン" }] },
     { pattern: "^レイズ", maaReplacement: "惊蛰", localMatches: [{ id: "leizi", name: "レイズ" }] },
     { pattern: "(司|霆).*レイズ", maaReplacement: "司霆惊蛰", localMatches: [{ id: "leizi2", name: "司霆レイズ" }] },
     { pattern: "^ユー(?:$|[^ネ])", maaReplacement: "余", localMatches: [{ id: "yu", name: "ユー" }, { id: "eunectes", name: "ユーネクテス" }] },
@@ -86,6 +94,33 @@ test("operator candidate extractor uses MAA regex when OCR has a known Japanese 
 
   assert.equal(candidates[0].operatorId, "blaze");
   assert.equal(candidates[0].source, "maa-ocr-rule");
+});
+
+test("operator candidate extractor keeps the one-letter W operator searchable", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [{ text: "W", regionId: "operator.name.mid.1", roi: { x: 1920, y: 320, width: 120, height: 60 }, confidence: 0.69 }],
+  }, { profile: { id: "operatorsFull" }, region: { x: 700, y: 140, width: 1720, height: 1110 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["w"]);
+  assert.equal(candidates[0].name, "W");
+  assert.equal(candidates[0].source, "local-name-fallback");
+});
+
+test("operator candidate extractor maps observed Japanese sniper recruitment OCR drift", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [
+      { text: "ゼオンカ", regionId: "operator.name.left.4", roi: { x: 1125, y: 1145, width: 390, height: 92 }, confidence: 0.7 },
+      { text: "Oーレイ", regionId: "operator.name.right.1", roi: { x: 2290, y: 320, width: 270, height: 92 }, confidence: 0.7 },
+      { text: "ーレンシャー", regionId: "operator.name.right.3", roi: { x: 2290, y: 870, width: 270, height: 92 }, confidence: 0.7 },
+      { text: "ープリキッド", regionId: "operator.name.mid.2", roi: { x: 1905, y: 595, width: 420, height: 92 }, confidence: 0.7 },
+      { text: "シェユン", regionId: "operator.name.left.4", roi: { x: 1125, y: 1145, width: 390, height: 92 }, confidence: 0.7 },
+    ],
+  }, { profile: { id: "operatorsFull" }, region: { x: 700, y: 140, width: 1720, height: 1110 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["ray", "brigid", "rangers", "pozyomka", "jieyun"]);
+  assert.ok(candidates.every((item) => item.source === "local-ocr-drift"));
 });
 
 

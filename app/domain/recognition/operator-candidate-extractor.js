@@ -183,7 +183,7 @@ export function buildOperatorRecognitionDb(operators = [], { operatorOcrMap = {}
       normalizedName: normalizeOperatorRecognitionText(operator.name, operatorOcrMap),
       ocrPatterns: maaPatternsForOperator(operator, operatorOcrMap),
     }))
-    .filter((entry) => entry.normalizedName.length >= 2);
+    .filter((entry) => entry.normalizedName.length >= 2 || entry.operatorId === "w");
 }
 
 function isOperatorRowOcrResult(row, scanRegion) {
@@ -250,6 +250,11 @@ function localNameFallbackHitsForRow(row, db, operatorOcrMap) {
 }
 
 const operatorOcrDriftAliases = [
+  { operatorId: "pozyomka", pattern: /^ゼオンカ$/i, matchedPattern: "ゼオンカ" },
+  { operatorId: "ray", pattern: /^(?:o|0)?ー?レイ$/i, matchedPattern: "Oーレイ" },
+  { operatorId: "rangers", pattern: /^レンシ[ヤャ]ー$/i, matchedPattern: "レンシャー" },
+  { operatorId: "brigid", pattern: /^[フブプ]リキ[ツッ]ド$/i, matchedPattern: "ブリキッド" },
+  { operatorId: "jieyun", pattern: /^(?:シエ|シェ|ジエ|ジェ|エ)ユン$/i, matchedPattern: "シェユン" },
   { operatorId: "leizi", pattern: /^レイス$/i, matchedPattern: "レイス" },
   { operatorId: "leizi2", pattern: /^司霆レイス$/i, matchedPattern: "司霆レイス" },
   { operatorId: "leizi2", pattern: /^pmey$/i, matchedPattern: "PMEY" },
