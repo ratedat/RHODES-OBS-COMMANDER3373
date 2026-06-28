@@ -302,10 +302,10 @@
           "idPrefix": "operator.card.name",
           "templatePath": "assets/recognition/templates/run/OperatorCardCodeNameFlag.png",
           "searchRoi": {
-            "x": 500,
-            "y": 120,
-            "width": 320,
-            "height": 500
+            "x": 460,
+            "y": 95,
+            "width": 650,
+            "height": 545
           },
           "ocrOffset": {
             "x": -7,
@@ -313,8 +313,8 @@
             "width": 188,
             "height": 29
           },
-          "threshold": 0.84,
-          "maxMatches": 8,
+          "threshold": 0.7,
+          "maxMatches": 12,
           "step": 2,
           "sampleStride": 2,
           "scale": 4,

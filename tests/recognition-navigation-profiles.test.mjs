@@ -227,7 +227,10 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
   assert.deepEqual(recruitTemplate.searchRoi, { x: 525, y: 110, width: 640, height: 500 });
   assert.deepEqual(recruitTemplate.ocrOffset, { x: 0, y: 22, width: 240, height: 30 });
   assert.equal(cardTemplate.templatePath, "assets/recognition/templates/run/OperatorCardCodeNameFlag.png");
+  assert.deepEqual(cardTemplate.searchRoi, { x: 460, y: 95, width: 650, height: 545 });
   assert.deepEqual(cardTemplate.ocrOffset, { x: -7, y: -9, width: 188, height: 29 });
+  assert.equal(cardTemplate.threshold, 0.7);
+  assert.equal(cardTemplate.maxMatches, 12);
   assert.equal(profile.scrollPasses.length, 2);
   assert.deepEqual(profile.scrollPasses.map((pass) => pass.direction), ["right", "left"]);
 
