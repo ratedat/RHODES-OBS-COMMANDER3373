@@ -47,6 +47,17 @@ function rectArea(rect) {
   return Math.max(0, rect.width) * Math.max(0, rect.height);
 }
 
+const SMALL_KANA_OCR_FOLD = new Map(Object.entries({
+  "ぁ": "あ", "ぃ": "い", "ぅ": "う", "ぇ": "え", "ぉ": "お",
+  "っ": "つ", "ゃ": "や", "ゅ": "ゆ", "ょ": "よ", "ゎ": "わ",
+  "ァ": "ア", "ィ": "イ", "ゥ": "ウ", "ェ": "エ", "ォ": "オ",
+  "ッ": "ツ", "ャ": "ヤ", "ュ": "ユ", "ョ": "ヨ", "ヮ": "ワ",
+}));
+
+function foldSmallKanaOcrDrift(value) {
+  return String(value ?? "").replace(/[ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ]/g, (char) => SMALL_KANA_OCR_FOLD.get(char) || char);
+}
+
 function isRelicRowOcrResult(row, scanRegion) {
   const rowRect = rectFrom(row.roi);
   if (!rowRect) return false;
@@ -60,7 +71,7 @@ function isRelicRowOcrResult(row, scanRegion) {
 }
 
 export function normalizeRelicRecognitionText(value) {
-  return normalizeRecognitionText(value, ["remove_spaces"])
+  return foldSmallKanaOcrDrift(normalizeRecognitionText(value, ["remove_spaces"]))
     .replace(/[「」『』【】\[\]（）()]/g, "")
     .replace(/[・･]/g, "")
     .replace(/[：:．.,，、。;；]/g, "")

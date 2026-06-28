@@ -37,6 +37,14 @@ const relics = [
     image: { localPath: "assets/relics/wikiru/img/mcao_128.png" },
   },
   {
+    id: "is5_sarkaz_relic_194",
+    campaignId: "is5_sarkaz",
+    number: 194,
+    name: "キャノットの印",
+    category: "No.187〜240 巧者の利器",
+    image: { localPath: "assets/relics/wikiru/img/scso_210.png" },
+  },
+  {
     id: "is5_sarkaz_relic_209",
     campaignId: "is5_sarkaz",
     number: 209,
@@ -199,4 +207,25 @@ test("relic candidate extractor tolerates separator OCR drift in relic names", a
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0].relicId, "is5_sarkaz_relic_276");
   assert.equal(candidates[0].name, "論断：前衛");
+});
+
+test("relic candidate extractor tolerates small-kana OCR drift in aggregate relic names", async () => {
+  const extractor = createRelicCandidateExtractor({ relics, campaignId: "is5_sarkaz" });
+  const candidates = await extractor({
+    text: "22 / 26 キ ヤ ノ ッ ト の 印 筆 【 怪 し い 旅 商 人 】 で アイテム購入するたびに希望+1",
+    confidence: 0.5,
+    ocrResults: [
+      { text: "独 奏 の オ ル ゴ ー ル", confidence: 0.7, roi: { x: 100, y: 100, width: 300, height: 40 } },
+      { text: "迷 夢 の 香 油", confidence: 0.7, roi: { x: 100, y: 180, width: 260, height: 40 } },
+      { text: "諸 王 の 冠", confidence: 0.7, roi: { x: 100, y: 260, width: 220, height: 40 } },
+    ],
+  }, {
+    profile: { id: "relicsFull" },
+    region: { x: 90, y: 84, width: 1100, height: 540 },
+  });
+
+  const canot = candidates.find((candidate) => candidate.relicId === "is5_sarkaz_relic_194");
+  assert.ok(canot);
+  assert.equal(canot.name, "キャノットの印");
+  assert.equal(canot.source, "ocr-aggregate");
 });
