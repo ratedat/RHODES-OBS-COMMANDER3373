@@ -88,6 +88,31 @@ function execAdbCommand(adbPath, args, { encoding = "utf8", execFileImpl = execF
   });
 }
 
+function isTcpAdbSerial(value = "") {
+  return /^(?:localhost|127(?:\.\d{1,3}){3}|\[?::1\]?|\d{1,3}(?:\.\d{1,3}){3}):\d+$/i.test(String(value).trim());
+}
+
+async function restartAdbServer(adbPath, runCommand) {
+  await runCommand(adbPath, ["kill-server"]).catch(() => null);
+  await runCommand(adbPath, ["start-server"]).catch(() => null);
+}
+
+async function ensureTcpAdbConnection(adbPath, runtime, runCommand) {
+  const address = String(runtime.serial || "").trim();
+  if (!isTcpAdbSerial(address)) return null;
+  try {
+    const output = await runCommand(adbPath, ["connect", address]);
+    return { address, output: String(output || "").trim(), recovered: false };
+  } catch (error) {
+    if (!runtime.restartProcessOnFailure && !runtime.restartServerOnFailure) {
+      return { address, output: null, error: error?.message || String(error), recovered: false };
+    }
+    await restartAdbServer(adbPath, runCommand);
+    const output = await runCommand(adbPath, ["connect", address]);
+    return { address, output: String(output || "").trim(), recovered: true };
+  }
+}
+
 async function defaultFileExists(file) {
   if (!file || file === "adb") return true;
   try {
@@ -169,6 +194,7 @@ export async function detectAdbConnections({ settings = {}, env = process.env, c
   let devices = [];
   if (selected) {
     try {
+      var connect = await ensureTcpAdbConnection(selected.path, runtime, runCommand);
       devices = parseAdbDevices(await runCommand(selected.path, ["devices", "-l"]));
     } catch {
       devices = [];
@@ -181,6 +207,7 @@ export async function detectAdbConnections({ settings = {}, env = process.env, c
     selectedAdbPath: selected?.path || runtime.adbPath,
     adbCandidates: orderedCandidates.map((item) => ({ ...item, selected: normalizeAdbPathKey(item.path) === selectedPathKey })),
     devices,
+    connect: connect || null,
   };
 }
 
@@ -189,7 +216,7 @@ export function createAdbAdapter({ adbPath = null, serial = null, settings = {},
   adbPath = runtime.adbPath;
   serial = runtime.serial;
   if (workDir) fsSync.mkdirSync(workDir, { recursive: true });
-  function run(args, { encoding = "utf8" } = {}) {
+  function rawRun(args, { encoding = "utf8" } = {}) {
     return new Promise((resolve, reject) => {
       execFileImpl(adbPath, adbArgs(serial, args), adbExecOptions({ encoding, workDir }), (error, stdout, stderr) => {
         if (error) {
@@ -200,6 +227,36 @@ export function createAdbAdapter({ adbPath = null, serial = null, settings = {},
         resolve(stdout);
       });
     });
+  }
+  function controlRun(args) {
+    return new Promise((resolve, reject) => {
+      execFileImpl(adbPath, args, adbExecOptions({ encoding: "utf8", workDir }), (error, stdout, stderr) => {
+        if (error) {
+          error.stderr = stderr;
+          reject(normalizeAdbError(error, { adbPath, args }));
+          return;
+        }
+        resolve(stdout);
+      });
+    });
+  }
+  async function recoverConnection() {
+    if (!runtime.restartProcessOnFailure && !runtime.restartServerOnFailure) return false;
+    await controlRun(["kill-server"]).catch(() => null);
+    await controlRun(["start-server"]).catch(() => null);
+    if (isTcpAdbSerial(serial)) await controlRun(["connect", serial]).catch(() => null);
+    return true;
+  }
+  async function run(args, { encoding = "utf8" } = {}) {
+    try {
+      return await rawRun(args, { encoding });
+    } catch (error) {
+      const code = error?.details?.code;
+      if (!["adb_no_device", "adb_device_offline", "adb_command_failed"].includes(code)) throw error;
+      const recovered = await recoverConnection();
+      if (!recovered) throw error;
+      return rawRun(args, { encoding });
+    }
   }
 
   return {

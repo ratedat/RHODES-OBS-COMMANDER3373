@@ -150,6 +150,30 @@ test("ADB test API reports resolution and optional screenshot size", async () =>
   }
 });
 
+test("system hypervisor API returns injected diagnostics", async () => {
+  const { server, port } = await startServer({
+    port: 0,
+    hypervisorDetector: async () => ({
+      platform: "win32",
+      supported: true,
+      available: false,
+      requiresBiosChange: true,
+      severity: "error",
+      message: "BIOS/UEFIでCPU仮想化支援を有効化してください。",
+    }),
+  });
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/system/hypervisor`);
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.requiresBiosChange, true);
+    assert.match(payload.message, /BIOS/);
+  } finally {
+    await closeServer(server);
+  }
+});
+
 
 test("ADB path picker API returns the desktop selected path", async () => {
   const selectedPath = "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe";

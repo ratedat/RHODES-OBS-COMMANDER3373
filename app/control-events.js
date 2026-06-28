@@ -1,6 +1,6 @@
 import * as controlActions from "./control-actions.js";
 import { clampCoinCount, normalizeCoinFace } from "./domain/special-values.js";
-import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, recognitionScanCancelUrl, recognitionScanStatusUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
+import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, hypervisorStatusUrl, recognitionScanCancelUrl, recognitionScanStatusUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
 import { normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 
 function parseImportDraft(ui) {
@@ -77,6 +77,10 @@ async function postAdbTest(settings, { capture = false } = {}) {
 
 async function postAdbPathPicker() {
   return apiJson(adbSelectPathUrl, { method: "POST" });
+}
+
+async function getHypervisorStatus() {
+  return apiJson(hypervisorStatusUrl);
 }
 
 function setChoicePressed(element, active) {
@@ -294,6 +298,22 @@ export function registerControlEvents(app, context) {
       } catch (error) {
         context.ui.adbDetection = null;
         context.setNotice(`ADB検出失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "hypervisor-check") {
+      button.disabled = true;
+      context.setNotice("Hyper-V / CPU仮想化状態を確認しています。");
+      try {
+        context.ui.hypervisorStatus = await getHypervisorStatus();
+        context.renderControl();
+        context.setNotice(context.ui.hypervisorStatus?.message || "Hyper-V確認が完了しました。");
+      } catch (error) {
+        context.ui.hypervisorStatus = { severity: "warning", message: error.message };
+        context.renderControl();
+        context.setNotice(`Hyper-V確認失敗: ${error.message}`);
       } finally {
         button.disabled = false;
       }

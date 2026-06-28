@@ -3,7 +3,7 @@ import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedD
 import { clampGridColumns } from "./lib/preferences.js";
 import { normalizeControlMode } from "./domain/ui-modes.js";
 import { RUN_STAT_FIELD_IDS, normalizeRunStatValue } from "./domain/run-stats.js";
-import { normalizeAdbSettings } from "./domain/adb-settings.js";
+import { applyAdbPresetDefaults, normalizeAdbSettings } from "./domain/adb-settings.js";
 
 function ensureCampaignSpecial(state, campaignId) {
   state.run.special[campaignId] ||= {};
@@ -112,7 +112,8 @@ export function updateAdbSetting(state, field, value, checked) {
   const current = normalizeAdbSettings(state.adb);
   const booleanFields = new Set(["autoDetect", "screenshotExtension", "restartServerOnFailure", "restartProcessOnFailure", "closeAdbOnExit", "lightweightAdb"]);
   const nextValue = booleanFields.has(field) ? Boolean(checked) : value;
-  state.adb = normalizeAdbSettings({ ...current, [field]: nextValue });
+  const next = normalizeAdbSettings({ ...current, [field]: nextValue });
+  state.adb = field === "connectionPreset" ? applyAdbPresetDefaults(next, next.connectionPreset) : next;
 }
 
 export function updateRunField(state, field, value, checked) {

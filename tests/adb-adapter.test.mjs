@@ -40,6 +40,7 @@ test("detectAdbConnections returns available adb candidates and parsed devices w
     runCommand: async (adbPath, args) => {
       calls.push([adbPath, args]);
       if (args[0] === "version") return "Android Debug Bridge version 1.0.41";
+      if (args[0] === "connect") return "connected to 127.0.0.1:16384";
       if (args[0] === "devices") return "List of devices attached\n127.0.0.1:16384 device product:MuMu model:MuMu_Player transport_id:1\n";
       throw new Error("unexpected command");
     },
@@ -48,7 +49,55 @@ test("detectAdbConnections returns available adb candidates and parsed devices w
   assert.equal(result.selectedAdbPath, "C:/Tools/adb.exe");
   assert.equal(result.devices[0].serial, "127.0.0.1:16384");
   assert.equal(result.runtime.serial, "127.0.0.1:16384");
-  assert.deepEqual(calls.map(([, args]) => args[0]), ["version", "devices"]);
+  assert.deepEqual(calls.map(([, args]) => args[0]), ["version", "connect", "devices"]);
+});
+
+test("detectAdbConnections connects configured TCP serials before listing devices", async () => {
+  const calls = [];
+  const result = await detectAdbConnections({
+    settings: { connectionPreset: "google-play-games-dev", serial: "127.0.0.1:6520" },
+    env: {},
+    candidatePaths: [{ path: "adb", source: "path", preset: "google-play-games-dev" }],
+    fileExists: async () => true,
+    runCommand: async (adbPath, args) => {
+      calls.push([adbPath, args]);
+      if (args[0] === "version") return "Android Debug Bridge version 1.0.41";
+      if (args[0] === "connect") return "connected to 127.0.0.1:6520";
+      if (args[0] === "devices") return "List of devices attached\n127.0.0.1:6520 device product:gpg model:Google_Play_Games\n";
+      throw new Error("unexpected command");
+    },
+  });
+
+  assert.equal(result.devices[0].serial, "127.0.0.1:6520");
+  assert.equal(result.connect?.address, "127.0.0.1:6520");
+  assert.deepEqual(calls.map(([, args]) => args[0]), ["version", "connect", "devices"]);
+});
+
+test("detectAdbConnections restarts adb and retries the first Google Play Games connection", async () => {
+  const calls = [];
+  let connectCount = 0;
+  const result = await detectAdbConnections({
+    settings: { connectionPreset: "google-play-games-dev", serial: "127.0.0.1:6520", restartProcessOnFailure: true },
+    env: {},
+    candidatePaths: [{ path: "adb", source: "path", preset: "google-play-games-dev" }],
+    fileExists: async () => true,
+    runCommand: async (_adbPath, args) => {
+      calls.push(args);
+      if (args[0] === "version") return "Android Debug Bridge version 1.0.41";
+      if (args[0] === "kill-server" || args[0] === "start-server") return "";
+      if (args[0] === "connect") {
+        connectCount += 1;
+        if (connectCount === 1) throw new Error("failed to connect to 127.0.0.1:6520");
+        return "connected to 127.0.0.1:6520";
+      }
+      if (args[0] === "devices") return "List of devices attached\n127.0.0.1:6520 device\n";
+      throw new Error("unexpected command");
+    },
+  });
+
+  assert.equal(result.connect?.recovered, true);
+  assert.equal(result.devices[0].serial, "127.0.0.1:6520");
+  assert.deepEqual(calls.map((args) => args[0]), ["version", "connect", "kill-server", "start-server", "connect", "devices"]);
 });
 
 test("detectAdbConnections reports unavailable candidates without failing the whole probe", async () => {
@@ -107,4 +156,32 @@ test("createAdbAdapter randomizes direct tap and swipe commands unless already r
   assert.deepEqual(calls[0], ["shell", "input", "tap", "92", "208"]);
   assert.deepEqual(calls[1], ["shell", "input", "swipe", "312", "388", "488", "612", "450"]);
   assert.deepEqual(calls[2], ["shell", "input", "tap", "100", "200"]);
+});
+
+test("createAdbAdapter retries commands after adb server restart for TCP serials", async () => {
+  const calls = [];
+  let wmSizeCount = 0;
+  const adapter = createAdbAdapter({
+    settings: { adbPath: "adb", serial: "127.0.0.1:6520", restartProcessOnFailure: true },
+    env: {},
+    execFileImpl: (_file, args, _options, callback) => {
+      calls.push(args);
+      if (args.includes("wm") && args.includes("size")) {
+        wmSizeCount += 1;
+        if (wmSizeCount === 1) {
+          const error = new Error("no devices/emulators found");
+          callback(error, "", "no devices/emulators found");
+          return;
+        }
+        callback(null, "Physical size: 2560x1440", "");
+        return;
+      }
+      if (args[0] === "kill-server" || args[0] === "start-server") callback(null, "", "");
+      else if (args[0] === "connect") callback(null, "connected to 127.0.0.1:6520", "");
+      else callback(null, "", "");
+    },
+  });
+
+  assert.deepEqual(await adapter.getActualResolution(), { width: 2560, height: 1440 });
+  assert.deepEqual(calls.map((args) => args[0] === "-s" ? args[2] : args[0]), ["shell", "kill-server", "start-server", "connect", "shell", "shell"]);
 });

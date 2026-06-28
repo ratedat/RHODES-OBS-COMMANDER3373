@@ -2050,6 +2050,9 @@ a:hover { text-decoration: underline; }
 .adb-settings-grid .adb-field-wide { grid-column: 1 / -1; }
 .adb-check-row { display: flex; align-items: center; gap: 8px; min-height: 38px; color: var(--text); }
 .adb-check-row input { width: auto; }
+.adb-preset-note { margin-top: 10px; display: grid; gap: 3px; padding: 8px 10px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 7px; background: rgba(255, 255, 255, 0.025); color: var(--muted); }
+.adb-preset-note strong { color: var(--text); }
+.adb-preset-note.requires-hypervisor { border-color: rgba(215, 168, 71, 0.34); background: rgba(215, 168, 71, 0.06); }
 .adb-action-row { margin-top: 10px; }
 .adb-probe-result { margin-top: 10px; display: grid; gap: 8px; }
 .adb-probe-block { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255, 255, 255, 0.035); }

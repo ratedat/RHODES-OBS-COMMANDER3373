@@ -55,12 +55,16 @@ test("resolveAdbRuntimeSettings falls back to environment and then adb", () => {
     serial: "env-serial",
     autoDetect: true,
     connectionPreset: "auto",
+    restartServerOnFailure: true,
+    restartProcessOnFailure: true,
   });
   assert.deepEqual(resolveAdbRuntimeSettings({}, {}), {
     adbPath: "adb",
     serial: "",
     autoDetect: true,
     connectionPreset: "auto",
+    restartServerOnFailure: true,
+    restartProcessOnFailure: true,
   });
 });
 
@@ -89,19 +93,32 @@ test("buildAdbCandidatePaths includes MAA-style MuMu paths and de-duplicates", (
 });
 
 test("adbConnectionPresetOptions exposes auto, MuMu, and manual choices", () => {
-  assert.deepEqual(adbConnectionPresetOptions.map((item) => item.id), ["auto", "mumu", "custom"]);
+  assert.deepEqual(adbConnectionPresetOptions.map((item) => item.id), [
+    "auto",
+    "mumu",
+    "ldplayer",
+    "bluestacks",
+    "tencent",
+    "google-play-games-dev",
+    "avd",
+    "wsa",
+    "custom",
+  ]);
 });
 
 
-test("updateAdbSetting normalizes GUI values into state.adb", () => {
+test("updateAdbSetting applies emulator preset defaults without clobbering paths", () => {
   const state = { adb: {} };
   updateAdbSetting(state, "autoDetect", "", false);
-  updateAdbSetting(state, "connectionPreset", "mumu");
-  updateAdbSetting(state, "serial", " 127.0.0.1:16384 ");
+  updateAdbSetting(state, "adbPath", " C:/Android/platform-tools/adb.exe ");
+  updateAdbSetting(state, "connectionPreset", "google-play-games-dev");
 
   assert.equal(state.adb.autoDetect, false);
-  assert.equal(state.adb.connectionPreset, "mumu");
-  assert.equal(state.adb.serial, "127.0.0.1:16384");
+  assert.equal(state.adb.connectionPreset, "google-play-games-dev");
+  assert.equal(state.adb.adbPath, "C:/Android/platform-tools/adb.exe");
+  assert.equal(state.adb.serial, "127.0.0.1:6520");
+  assert.equal(state.adb.screenshotExtension, false);
+  assert.equal(state.adb.restartProcessOnFailure, true);
 });
 
 
@@ -119,4 +136,19 @@ test("buildAdbCandidatePaths includes MuMu installs from non-C system drives", (
   });
 
   assert.equal(candidates.some((item) => item.path === "M:\\Program Files\\Netease\\MuMu Player 12\\shell\\adb.exe"), true);
+});
+
+test("buildAdbCandidatePaths includes Android SDK and Tencent ADB locations", () => {
+  const candidates = buildAdbCandidatePaths({
+    env: {
+      LOCALAPPDATA: "C:/Users/test/AppData/Local",
+      ANDROID_HOME: "D:/Android/Sdk",
+      ProgramFiles: "C:/Program Files",
+    },
+    driveLetters: [],
+  });
+
+  assert.equal(candidates.some((item) => item.path === "C:/Users/test/AppData/Local\\Android\\Sdk\\platform-tools\\adb.exe" && item.preset === "google-play-games-dev"), true);
+  assert.equal(candidates.some((item) => item.path === "D:/Android/Sdk\\platform-tools\\adb.exe" && item.preset === "avd"), true);
+  assert.equal(candidates.some((item) => item.path === "C:/Program Files\\Tencent\\Androws\\Application\\adb.exe" && item.preset === "tencent"), true);
 });

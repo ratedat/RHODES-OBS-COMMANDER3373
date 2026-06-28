@@ -32,7 +32,7 @@ import { resolveAppView } from "./lib/view-route.js";
 import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
 import { RUN_STAT_FIELDS, formatRunStatValue, normalizeRunStats, runStatDisplayItems } from "./domain/run-stats.js";
 import { getRecognitionScanActions } from "./domain/recognition/scan-actions.js";
-import { adbConnectionPresetOptions, normalizeAdbSettings } from "./domain/adb-settings.js";
+import { adbConnectionPresetDetails, adbConnectionPresetOptions, normalizeAdbSettings } from "./domain/adb-settings.js";
 
 const app = document.querySelector("#app");
 const routeParams = new URLSearchParams(location.search);
@@ -57,6 +57,7 @@ const ui = {
   saveStatus: "未保存",
   adbDetection: null,
   adbTestResult: null,
+  hypervisorStatus: null,
   recognitionScanStatus: null,
   recognitionScanStatusError: "",
   recognitionScanStatusTimer: null,
@@ -963,6 +964,8 @@ function renderAdbSettingPanel() {
   const adb = normalizeAdbSettings(state.adb);
   const detection = ui.adbDetection;
   const testResult = ui.adbTestResult;
+  const hypervisorStatus = ui.hypervisorStatus;
+  const preset = adbConnectionPresetDetails[adb.connectionPreset] || adbConnectionPresetDetails.custom;
   const availableCount = detection?.adbCandidates?.filter((item) => item.available).length || 0;
   const deviceCount = detection?.devices?.length || 0;
   return `
@@ -980,22 +983,30 @@ function renderAdbSettingPanel() {
         <label class="adb-check-row"><input type="checkbox" data-adb-setting="restartServerOnFailure" ${adb.restartServerOnFailure ? "checked" : ""} /> 失敗時にADBサーバー再起動を試す</label>
         <label class="adb-check-row"><input type="checkbox" data-adb-setting="restartProcessOnFailure" ${adb.restartProcessOnFailure ? "checked" : ""} /> 失敗時にADBプロセス再起動を試す</label>
       </div>
+      <div class="adb-preset-note ${preset.requiresHypervisor ? "requires-hypervisor" : ""}">
+        <strong>${html(adbConnectionPresetOptions.find((option) => option.id === adb.connectionPreset)?.label || "接続構成")}</strong>
+        <span>${html(preset.description || "")}</span>
+      </div>
       <div class="inline-row adb-action-row">
         <button type="button" data-action="adb-detect">自動検出</button>
         <button type="button" data-action="adb-test">接続テスト</button>
         <button type="button" data-action="adb-screenshot-test">スクリーンショットテスト</button>
+        <button type="button" data-action="hypervisor-check">Hyper-V確認</button>
       </div>
-      ${renderAdbProbeResult(detection, testResult)}
+      ${renderAdbProbeResult(detection, testResult, hypervisorStatus)}
     </div>
   `;
 }
 
-function renderAdbProbeResult(detection, testResult) {
+function renderAdbProbeResult(detection, testResult, hypervisorStatus = null) {
   const blocks = [];
   if (detection) {
     const candidates = detection.adbCandidates || [];
     const devices = detection.devices || [];
     blocks.push(`<div class="adb-probe-block"><strong>検出結果</strong><span>${html(detection.selectedAdbPath || "ADB未選択")}</span></div>`);
+    if (detection.connect?.address) {
+      blocks.push(`<div class="adb-probe-block ${detection.connect.error ? "error" : "success"}"><strong>ADB connect</strong><span>${html(detection.connect.address)}${detection.connect.recovered ? " / ADB再起動後に再接続" : ""}${detection.connect.error ? ` / ${html(detection.connect.error)}` : ""}</span></div>`);
+    }
     blocks.push(`<div class="adb-candidate-list">
       ${candidates.slice(0, 8).map((item) => `<div class="adb-candidate-row ${item.available ? "available" : "missing"} ${item.selected ? "selected" : ""}"><span>${item.selected ? "選択" : (item.available ? "OK" : "--")}</span><code>${html(item.path)}</code>${item.available ? `<button type="button" data-action="adb-use-candidate" data-adb-path="${html(item.path)}">使用</button>` : ""}</div>`).join("") || `<div class="empty-state">ADB候補は見つかりません。</div>`}
     </div>`);
@@ -1011,6 +1022,10 @@ function renderAdbProbeResult(detection, testResult) {
     } else {
       blocks.push(`<div class="adb-probe-block error"><strong>テスト失敗</strong><span>${html(testResult.error || "unknown error")}</span></div>`);
     }
+  }
+  if (hypervisorStatus) {
+    const cls = hypervisorStatus.severity === "ok" ? "success" : hypervisorStatus.severity === "error" ? "error" : "";
+    blocks.push(`<div class="adb-probe-block ${cls}"><strong>Hyper-V確認</strong><span>${html(hypervisorStatus.message || "状態不明")}</span></div>`);
   }
   return blocks.length ? `<div class="adb-probe-result">${blocks.join("")}</div>` : "";
 }
@@ -1796,7 +1811,6 @@ async function boot() {
 }
 
 boot();
-
 
 
 

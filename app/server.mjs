@@ -22,6 +22,7 @@ import { applyRecognitionScanCompletionToState } from "./domain/recognition/auto
 import { appendRecognitionSuggestionsToState } from "./domain/recognition/suggestions.js";
 import { createAdbAdapter, detectAdbConnections } from "./recognition/adapters/adb-adapter.js";
 import { createProfileAwareOcrTextExtractor } from "./recognition/adapters/ocr-text-extractor.js";
+import { detectWindowsHypervisor } from "./domain/system-diagnostics.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -470,7 +471,7 @@ function legacyControlRedirectLocation(url) {
   return `/control-v2${query ? `?${query}` : ""}`;
 }
 
-export function createAppServer({ recognitionRunner = defaultRecognitionRunner, adbDetector = detectAdbConnections, adbTester = defaultAdbTester, adbPathPicker = null, recognitionLogDir = RECOGNITION_LOG_DIR } = {}) {
+export function createAppServer({ recognitionRunner = defaultRecognitionRunner, adbDetector = detectAdbConnections, adbTester = defaultAdbTester, adbPathPicker = null, hypervisorDetector = detectWindowsHypervisor, recognitionLogDir = RECOGNITION_LOG_DIR } = {}) {
   let activeScanController = null;
   let activeScanStatus = null;
   let lastScanSummary = null;
@@ -594,6 +595,10 @@ export function createAppServer({ recognitionRunner = defaultRecognitionRunner, 
       return sendJson(res, 200, await adbTester({ settings, capture: Boolean(body.capture) }));
     }
 
+    if (req.method === "GET" && url.pathname === "/api/system/hypervisor") {
+      return sendJson(res, 200, await hypervisorDetector());
+    }
+
     if (req.method === "GET" && url.pathname === "/api/recognition/scan/status") {
       return sendJson(res, 200, { active: publicScanStatus(activeScanStatus), lastScan: lastScanSummary });
     }
@@ -650,8 +655,8 @@ export function createAppServer({ recognitionRunner = defaultRecognitionRunner, 
   });
 }
 
-export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester, adbPathPicker, recognitionLogDir } = {}) {
-  const server = createAppServer({ recognitionRunner, adbDetector, adbTester, adbPathPicker, recognitionLogDir });
+export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, recognitionLogDir } = {}) {
+  const server = createAppServer({ recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, recognitionLogDir });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {

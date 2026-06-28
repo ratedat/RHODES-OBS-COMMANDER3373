@@ -1,8 +1,55 @@
 export const adbConnectionPresetOptions = Object.freeze([
   { id: "auto", label: "自動" },
   { id: "mumu", label: "MuMu Player" },
+  { id: "ldplayer", label: "LDPlayer" },
+  { id: "bluestacks", label: "BlueStacks" },
+  { id: "tencent", label: "テンセントアプリストア" },
+  { id: "google-play-games-dev", label: "Google Play Games 開発者" },
+  { id: "avd", label: "Android Studio AVD" },
+  { id: "wsa", label: "WSA" },
   { id: "custom", label: "手動" },
 ]);
+
+export const adbConnectionPresetDetails = Object.freeze({
+  auto: {
+    description: "ADB候補と接続済み端末を自動検出します。",
+  },
+  mumu: {
+    description: "MuMu Player 12のshell\\adb.exeを優先検出します。多重起動時はMuMu側のADBボタンでポートを確認してください。",
+    defaults: { screenshotExtension: true },
+  },
+  ldplayer: {
+    description: "LDPlayer 9のadb.exeを優先検出します。",
+    defaults: { screenshotExtension: false },
+  },
+  bluestacks: {
+    description: "BlueStacks側でAndroid Debug BridgeをONにしてください。Hyper-V版はポートが変わる場合があります。",
+    defaults: { screenshotExtension: false },
+    hypervisorUseful: true,
+  },
+  tencent: {
+    description: "アプリストア側でADBデバッグを有効にしてください。接続先は通常127.0.0.1:5555です。",
+    defaults: { autoDetect: false, serial: "127.0.0.1:5555", screenshotExtension: false },
+  },
+  "google-play-games-dev": {
+    description: "Google Play Games開発者エミュレーター用。Hyper-VとGoogleログインが必要で、接続先は127.0.0.1:6520です。",
+    defaults: { autoDetect: false, serial: "127.0.0.1:6520", screenshotExtension: false, restartProcessOnFailure: true },
+    requiresHypervisor: true,
+  },
+  avd: {
+    description: "Android Studio AVD用。Android 10以降ではMinitouch系ではなくADB入力を使います。",
+    defaults: { screenshotExtension: false },
+    requiresHypervisor: true,
+  },
+  wsa: {
+    description: "WSAは現在非推奨です。使う場合はカスタム接続として扱います。",
+    defaults: { autoDetect: false, screenshotExtension: false },
+    requiresHypervisor: true,
+  },
+  custom: {
+    description: "ADBパスと接続先/serialを手動で指定します。",
+  },
+});
 
 export const defaultAdbSettings = Object.freeze({
   autoDetect: true,
@@ -50,6 +97,18 @@ export function normalizeAdbSettings(input = {}) {
   };
 }
 
+export function applyAdbPresetDefaults(settings = {}, presetId = settings.connectionPreset) {
+  const normalized = normalizeAdbSettings({ ...settings, connectionPreset: presetId });
+  const defaults = adbConnectionPresetDetails[normalized.connectionPreset]?.defaults || {};
+  return normalizeAdbSettings({
+    ...normalized,
+    ...defaults,
+    adbPath: normalized.adbPath,
+    emulatorPath: normalized.emulatorPath,
+    serial: defaults.serial && !normalized.serial ? defaults.serial : normalized.serial || defaults.serial || "",
+  });
+}
+
 export function resolveAdbRuntimeSettings(input = {}, env = process.env) {
   const settings = normalizeAdbSettings(input);
   return {
@@ -57,6 +116,8 @@ export function resolveAdbRuntimeSettings(input = {}, env = process.env) {
     serial: settings.serial || cleanText(env.ARKNIGHTS_ADB_SERIAL),
     autoDetect: settings.autoDetect,
     connectionPreset: settings.connectionPreset,
+    restartServerOnFailure: settings.restartServerOnFailure,
+    restartProcessOnFailure: settings.restartProcessOnFailure,
   };
 }
 
@@ -89,6 +150,9 @@ export function buildAdbCandidatePaths({ env = process.env, driveLetters = [] } 
   const candidates = [];
   const seen = new Set();
   pushCandidate(candidates, seen, env.ARKNIGHTS_ADB_PATH, "env", "custom");
+  pushCandidate(candidates, seen, env.ANDROID_HOME && `${env.ANDROID_HOME}\\platform-tools\\adb.exe`, "env", "avd");
+  pushCandidate(candidates, seen, env.ANDROID_SDK_ROOT && `${env.ANDROID_SDK_ROOT}\\platform-tools\\adb.exe`, "env", "avd");
+  pushCandidate(candidates, seen, env.LOCALAPPDATA && `${env.LOCALAPPDATA}\\Android\\Sdk\\platform-tools\\adb.exe`, "known-path", "google-play-games-dev");
 
   const roots = [
     ...programFilesRoots(env),
@@ -100,6 +164,7 @@ export function buildAdbCandidatePaths({ env = process.env, driveLetters = [] } 
     pushCandidate(candidates, seen, `${root}\\MuMu Player 12\\shell\\adb.exe`, "known-path", "mumu");
     pushCandidate(candidates, seen, `${root}\\BlueStacks_nxt\\HD-Adb.exe`, "known-path", "bluestacks");
     pushCandidate(candidates, seen, `${root}\\LDPlayer\\LDPlayer9\\adb.exe`, "known-path", "ldplayer");
+    pushCandidate(candidates, seen, `${root}\\Tencent\\Androws\\Application\\adb.exe`, "known-path", "tencent");
   }
   pushCandidate(candidates, seen, "adb", "path", "custom");
   return candidates;

@@ -7,6 +7,7 @@ export const recognitionScanStatusUrl = "/api/recognition/scan/status";
 export const adbDetectUrl = "/api/adb/detect";
 export const adbTestUrl = "/api/adb/test";
 export const adbSelectPathUrl = "/api/adb/select-path";
+export const hypervisorStatusUrl = "/api/system/hypervisor";
 
 export async function apiJson(url, options) {
   const response = await fetch(url, options);
