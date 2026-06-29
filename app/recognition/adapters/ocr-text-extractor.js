@@ -69,8 +69,9 @@ export function createFallbackTextExtractor(extractors = []) {
   };
 }
 
-export function createDefaultOcrTextExtractor({ engine = process.env.RHODES_OCR_ENGINE || "auto" } = {}) {
+export function createDefaultOcrTextExtractor({ engine = process.env.RHODES_OCR_ENGINE || "auto", glmOcrPythonPath, glmOcrEnv } = {}) {
   const normalized = String(engine || "auto").toLowerCase();
+  const glmOcrOptions = { pythonPath: glmOcrPythonPath, extraEnv: glmOcrEnv };
   if (normalized === "windows") return createWindowsOcrTextExtractor();
   if (["windows-paddle", "paddle-windows"].includes(normalized)) {
     return createMergedTextExtractor([
@@ -80,11 +81,11 @@ export function createDefaultOcrTextExtractor({ engine = process.env.RHODES_OCR_
   }
   if (normalized === "paddle") return createPaddleOcrTextExtractor({ required: true });
   if (["maa-onnx", "maa", "onnx"].includes(normalized)) return createMaaOnnxOcrTextExtractor({ required: true });
-  if (["glm-ocr", "glm"].includes(normalized)) return createGlmOcrTextExtractor({ required: true });
+  if (["glm-ocr", "glm"].includes(normalized)) return createGlmOcrTextExtractor({ required: true, ...glmOcrOptions });
   if (["windows-glm", "glm-windows", "glm-hybrid", "hybrid-glm"].includes(normalized)) {
     return createMergedTextExtractor([
       createWindowsOcrTextExtractor(),
-      createGlmOcrTextExtractor({ required: false }),
+      createGlmOcrTextExtractor({ required: false, ...glmOcrOptions }),
     ], { engine: "hybrid-windows-glm" });
   }
   if (["hybrid", "maa-hybrid", "onnx-hybrid"].includes(normalized)) {
@@ -113,11 +114,11 @@ export function createProfileAwareTextExtractor({ defaultExtractor, profileExtra
   };
 }
 
-export function createProfileAwareOcrTextExtractor({ defaultEngine = process.env.RHODES_OCR_ENGINE || "auto", profileEngines = {} } = {}) {
+export function createProfileAwareOcrTextExtractor({ defaultEngine = process.env.RHODES_OCR_ENGINE || "auto", profileEngines = {}, glmOcrPythonPath, glmOcrEnv } = {}) {
   const byEngine = new Map();
   const extractorFor = (engine) => {
     const key = String(engine || "auto").toLowerCase();
-    if (!byEngine.has(key)) byEngine.set(key, createDefaultOcrTextExtractor({ engine: key }));
+    if (!byEngine.has(key)) byEngine.set(key, createDefaultOcrTextExtractor({ engine: key, glmOcrPythonPath, glmOcrEnv }));
     return byEngine.get(key);
   };
   const profileExtractors = Object.fromEntries(

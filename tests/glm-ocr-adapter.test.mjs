@@ -42,8 +42,12 @@ test("GLM OCR extractor can use an injected runner and returns OCR text", async 
     ocrResults: [{ text: "グム", rawText: "グム", regionId: "operator.card.name.1", confidence: 0.6 }],
   }), "utf8").toString("base64");
   const extractor = createGlmOcrTextExtractor({
-    runOcr: async ({ regions }) => {
+    pythonPath: "X:/glm/python.exe",
+    extraEnv: { HF_HOME: "X:/glm/cache/hf" },
+    runOcr: async ({ regions, pythonPath, extraEnv }) => {
       assert.equal(regions[0].id, "operator.card.name.1");
+      assert.equal(pythonPath, "X:/glm/python.exe");
+      assert.equal(extraEnv.HF_HOME, "X:/glm/cache/hf");
       return encoded;
     },
   });

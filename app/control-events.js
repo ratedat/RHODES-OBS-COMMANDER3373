@@ -1,6 +1,6 @@
 import * as controlActions from "./control-actions.js";
 import { clampCoinCount, normalizeCoinFace } from "./domain/special-values.js";
-import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, hypervisorStatusUrl, recognitionScanCancelUrl, recognitionScanStatusUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
+import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, glmOcrInstallUrl, glmOcrStatusUrl, glmOcrUninstallUrl, hypervisorStatusUrl, recognitionScanCancelUrl, recognitionScanStatusUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
 import { normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 
 function parseImportDraft(ui) {
@@ -81,6 +81,37 @@ async function postAdbPathPicker() {
 
 async function getHypervisorStatus() {
   return apiJson(hypervisorStatusUrl);
+}
+
+async function getGlmOcrStatus() {
+  return apiJson(glmOcrStatusUrl);
+}
+
+async function postGlmOcrInstall() {
+  return apiJson(glmOcrInstallUrl, { method: "POST" });
+}
+
+async function postGlmOcrUninstall() {
+  return apiJson(glmOcrUninstallUrl, { method: "POST" });
+}
+
+function stopGlmOcrStatusPolling(context) {
+  if (context.ui.glmOcrStatusTimer) clearInterval(context.ui.glmOcrStatusTimer);
+  context.ui.glmOcrStatusTimer = null;
+}
+
+async function refreshGlmOcrStatus(context, { render = true } = {}) {
+  context.ui.glmOcrStatus = await getGlmOcrStatus();
+  if (!context.ui.glmOcrStatus?.installing) stopGlmOcrStatusPolling(context);
+  if (render) context.renderControl();
+  return context.ui.glmOcrStatus;
+}
+
+function startGlmOcrStatusPolling(context) {
+  stopGlmOcrStatusPolling(context);
+  context.ui.glmOcrStatusTimer = setInterval(() => {
+    refreshGlmOcrStatus(context).catch(() => {});
+  }, 2000);
 }
 
 function setChoicePressed(element, active) {
@@ -316,6 +347,50 @@ export function registerControlEvents(app, context) {
         context.ui.hypervisorStatus = { severity: "warning", message: error.message };
         context.renderControl();
         context.setNotice(`Hyper-V確認失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "glm-ocr-refresh") {
+      button.disabled = true;
+      context.setNotice("GLM-OCRランタイム状態を確認しています。");
+      try {
+        const status = await refreshGlmOcrStatus(context);
+        context.setNotice(status.message || "GLM-OCRランタイム状態を確認しました。");
+      } catch (error) {
+        context.setNotice(`GLM-OCR状態確認失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "glm-ocr-install") {
+      button.disabled = true;
+      context.setNotice("GLM-OCRランタイムのダウンロード/インストールを開始しています。");
+      try {
+        context.ui.glmOcrStatus = await postGlmOcrInstall();
+        context.renderControl();
+        startGlmOcrStatusPolling(context);
+        context.setNotice("GLM-OCRランタイムのインストールを開始しました。完了まで時間がかかる場合があります。");
+      } catch (error) {
+        context.setNotice(`GLM-OCRインストール開始失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "glm-ocr-uninstall") {
+      if (!confirm("GLM-OCRランタイムを削除しますか？モデル/キャッシュを含む実行フォルダを削除します。")) return;
+      button.disabled = true;
+      context.setNotice("GLM-OCRランタイムを削除しています。");
+      try {
+        stopGlmOcrStatusPolling(context);
+        context.ui.glmOcrStatus = await postGlmOcrUninstall();
+        context.renderControl();
+        context.setNotice("GLM-OCRランタイムを削除しました。");
+      } catch (error) {
+        context.setNotice(`GLM-OCR削除失敗: ${error.message}`);
       } finally {
         button.disabled = false;
       }

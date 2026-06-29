@@ -58,6 +58,8 @@ const ui = {
   adbDetection: null,
   adbTestResult: null,
   hypervisorStatus: null,
+  glmOcrStatus: null,
+  glmOcrStatusTimer: null,
   recognitionScanStatus: null,
   recognitionScanStatusError: "",
   recognitionScanStatusTimer: null,
@@ -992,6 +994,7 @@ function renderAdbSettingPanel() {
         <strong>${html(adbConnectionPresetOptions.find((option) => option.id === adb.connectionPreset)?.label || "接続構成")}</strong>
         <span>${html(preset.description || "")}</span>
       </div>
+      ${renderGlmOcrRuntimePanel(ui.glmOcrStatus)}
       <div class="inline-row adb-action-row">
         <button type="button" data-action="adb-detect">自動検出</button>
         <button type="button" data-action="adb-test">接続テスト</button>
@@ -999,6 +1002,37 @@ function renderAdbSettingPanel() {
         <button type="button" data-action="hypervisor-check">Hyper-V確認</button>
       </div>
       ${renderAdbProbeResult(detection, testResult, hypervisorStatus)}
+    </div>
+  `;
+}
+
+function renderGlmOcrRuntimePanel(status) {
+  const known = status && typeof status === "object";
+  const job = known ? status.installJob : null;
+  const installing = Boolean(status?.installing);
+  const statusText = installing ? "導入中" : known ? (status.installed ? "使用可能" : status.status === "partial" ? "未完了" : "未導入") : "未確認";
+  const statusClass = installing ? "installing" : status?.installed ? "ready" : status?.status === "partial" ? "partial" : "missing";
+  const message = status?.message || "GLM-OCRは任意の検証用OCRです。アプリからランタイムを導入できます。";
+  const installRoot = status?.installRoot || "-";
+  const pythonPath = status?.pythonPath || "-";
+  const lastJobLine = job?.log?.length ? job.log.at(-1)?.message : "";
+  const disabledWhileInstalling = installing ? "disabled" : "";
+  return `
+    <div class="glm-ocr-runtime ${statusClass}">
+      <div class="glm-ocr-runtime-head">
+        <div><strong>GLM-OCRランタイム</strong><span>${html(message)}</span></div>
+        <em>${html(statusText)}</em>
+      </div>
+      <div class="glm-ocr-runtime-grid">
+        <div><b>設置先</b><code title="${html(installRoot)}">${html(installRoot)}</code></div>
+        <div><b>Python</b><code title="${html(pythonPath)}">${html(pythonPath)}</code></div>
+      </div>
+      ${lastJobLine ? `<div class="glm-ocr-runtime-log">${html(lastJobLine)}</div>` : ""}
+      <div class="inline-row adb-action-row">
+        <button type="button" data-action="glm-ocr-refresh">状態確認</button>
+        <button type="button" data-action="glm-ocr-install" ${installing ? "disabled" : ""}>ダウンロード/インストール</button>
+        <button type="button" data-action="glm-ocr-uninstall" ${disabledWhileInstalling}>アンインストール</button>
+      </div>
     </div>
   `;
 }
@@ -1816,4 +1850,3 @@ async function boot() {
 }
 
 boot();
-

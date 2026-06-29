@@ -37,7 +37,9 @@ temp/
 # Runtime local state
 data/current-state.json
 data/electron/
+data/glm-ocr-runtime/
 user-data/
+user-data/state/glm-ocr-runtime/
 data/adb-screenshots/
 # Local ADB/OCR experiments
 experiments/adb/

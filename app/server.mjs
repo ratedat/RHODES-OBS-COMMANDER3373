@@ -24,6 +24,7 @@ import { appendRecognitionSuggestionsToState } from "./domain/recognition/sugges
 import { createAdbAdapter, detectAdbConnections } from "./recognition/adapters/adb-adapter.js";
 import { createProfileAwareOcrTextExtractor } from "./recognition/adapters/ocr-text-extractor.js";
 import { detectWindowsHypervisor } from "./domain/system-diagnostics.js";
+import { createGlmOcrRuntimeManager, resolveInstalledGlmOcrRuntimeOptions } from "./domain/glm-ocr-runtime.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -262,6 +263,13 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog
     profileOverride: state.preferences?.ocrEngine || "profile",
     profileEngineCount: Object.keys(ocrRouting.profileEngines || {}).length,
   });
+  const glmOcrRuntimeOptions = await resolveInstalledGlmOcrRuntimeOptions({ stateDir: STATE_DIR });
+  if (glmOcrRuntimeOptions.glmOcrPythonPath) {
+    onLog?.({
+      event: "glm-ocr-runtime",
+      pythonPath: glmOcrRuntimeOptions.glmOcrPythonPath,
+    });
+  }
   return runScanProfile({
     profile,
     adapter: createAdbAdapter({ settings: adbSettings, workDir: ADB_WORK_DIR }),
@@ -270,6 +278,7 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog
       textExtractor: createProfileAwareOcrTextExtractor({
         defaultEngine: ocrRouting.defaultEngine,
         profileEngines: ocrRouting.profileEngines,
+        ...glmOcrRuntimeOptions,
       }),
       candidateExtractors: [runStatusExtractor, relicExtractor, operatorExtractor, thoughtExtractor, ageExtractor],
     }),
@@ -529,7 +538,16 @@ function legacyControlRedirectLocation(url) {
   return `/control-v2${query ? `?${query}` : ""}`;
 }
 
-export function createAppServer({ recognitionRunner = defaultRecognitionRunner, adbDetector = detectAdbConnections, adbTester = defaultAdbTester, adbPathPicker = null, hypervisorDetector = detectWindowsHypervisor, recognitionLogDir = RECOGNITION_LOG_DIR, adbCaptureDir = null } = {}) {
+export function createAppServer({
+  recognitionRunner = defaultRecognitionRunner,
+  adbDetector = detectAdbConnections,
+  adbTester = defaultAdbTester,
+  adbPathPicker = null,
+  hypervisorDetector = detectWindowsHypervisor,
+  glmOcrRuntimeManager = createGlmOcrRuntimeManager({ stateDir: STATE_DIR }),
+  recognitionLogDir = RECOGNITION_LOG_DIR,
+  adbCaptureDir = null,
+} = {}) {
   let activeScanController = null;
   let activeScanStatus = null;
   let lastScanSummary = null;
@@ -662,6 +680,18 @@ export function createAppServer({ recognitionRunner = defaultRecognitionRunner, 
       return sendJson(res, 200, await adbTester({ settings, capture: Boolean(body.capture) }));
     }
 
+    if (req.method === "GET" && url.pathname === "/api/ocr/glm/status") {
+      return sendJson(res, 200, await glmOcrRuntimeManager.status());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/ocr/glm/install") {
+      return sendJson(res, 202, await glmOcrRuntimeManager.install());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/ocr/glm/uninstall") {
+      return sendJson(res, 200, await glmOcrRuntimeManager.uninstall());
+    }
+
     if (req.method === "GET" && url.pathname === "/api/system/hypervisor") {
       return sendJson(res, 200, await hypervisorDetector());
     }
@@ -722,8 +752,8 @@ export function createAppServer({ recognitionRunner = defaultRecognitionRunner, 
   });
 }
 
-export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, recognitionLogDir, adbCaptureDir } = {}) {
-  const server = createAppServer({ recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, recognitionLogDir, adbCaptureDir });
+export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, recognitionLogDir, adbCaptureDir } = {}) {
+  const server = createAppServer({ recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, recognitionLogDir, adbCaptureDir });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {

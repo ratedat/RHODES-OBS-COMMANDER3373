@@ -1,6 +1,6 @@
 # GLM-OCR optional verification setup
 
-GLM-OCR support is experimental and opt-in. RHODES OBS COMMANDER3373 does not bundle GLM-OCR, Python packages, or model files. Use it only for local verification when Windows OCR / MAA ONNX / PaddleOCR misses short operator names.
+GLM-OCR support is experimental and opt-in. RHODES OBS COMMANDER3373 does not bundle GLM-OCR, Python packages, or model files in the EXE. Use it only for local verification when Windows OCR / MAA ONNX / PaddleOCR misses short operator names.
 
 ## OCR engine values
 
@@ -16,9 +16,27 @@ The same values can be forced by environment variable:
 $env:RHODES_OCR_ENGINE = 'windows-glm'
 ```
 
-## Local SDK mode
+## App-managed install
 
-Create a separate optional environment. Do not add these packages to the app runtime environment for general users.
+For normal testers, use the app UI instead of installing Python manually:
+
+1. Open `OBS設定`.
+2. In `GLM-OCRランタイム`, press `状態確認`.
+3. Press `ダウンロード/インストール`.
+4. Select `Windows + GLM-OCR 検証` as the OCR engine after the status becomes `使用可能`.
+
+The app downloads `uv`, installs a managed Python 3.12 runtime, creates a dedicated venv, and installs `glmocr[selfhosted,server]`.
+
+The runtime is stored under the app state directory:
+
+- Portable EXE default: `RHODES OBS COMMANDER3373 Data/state/glm-ocr-runtime`
+- Development default: `data/glm-ocr-runtime`
+
+`アンインストール` deletes that runtime directory, including the uv cache, Python runtime, venv, and model caches that RHODES directs into that folder.
+
+## Manual SDK mode
+
+Manual setup is still available for developers who want to compare a custom environment. Do not add these packages to the app runtime environment for general users.
 
 ```powershell
 py -3.12 -m venv .venv-glm-ocr
@@ -63,3 +81,4 @@ The output includes `glmOcr.present`. `ocr:probe:strict` still checks the curren
 - GLM-OCR README: https://github.com/zai-org/GLM-OCR
 - GLM-OCR SDK install and usage: https://github.com/zai-org/GLM-OCR#glm-ocr-sdk
 - GLM-OCR Flask service: https://github.com/zai-org/GLM-OCR#flask-service
+- uv documentation: https://docs.astral.sh/uv/

@@ -179,6 +179,43 @@ test("system hypervisor API returns injected diagnostics", async () => {
   }
 });
 
+test("GLM OCR runtime APIs expose status, async install, and uninstall", async () => {
+  const calls = [];
+  const glmOcrRuntimeManager = {
+    status: async () => {
+      calls.push("status");
+      return { status: "missing", installed: false, installing: false, installRoot: "D:/state/glm-ocr-runtime" };
+    },
+    install: async () => {
+      calls.push("install");
+      return { status: "missing", installed: false, installing: true, installJob: { status: "installing", log: [] } };
+    },
+    uninstall: async () => {
+      calls.push("uninstall");
+      return { status: "missing", installed: false, installing: false };
+    },
+  };
+  const { server, port } = await startServer({ port: 0, glmOcrRuntimeManager });
+  try {
+    const statusResponse = await fetch(`http://127.0.0.1:${port}/api/ocr/glm/status`);
+    const statusPayload = await statusResponse.json();
+    const installResponse = await fetch(`http://127.0.0.1:${port}/api/ocr/glm/install`, { method: "POST" });
+    const installPayload = await installResponse.json();
+    const uninstallResponse = await fetch(`http://127.0.0.1:${port}/api/ocr/glm/uninstall`, { method: "POST" });
+    const uninstallPayload = await uninstallResponse.json();
+
+    assert.equal(statusResponse.status, 200);
+    assert.equal(statusPayload.status, "missing");
+    assert.equal(installResponse.status, 202);
+    assert.equal(installPayload.installing, true);
+    assert.equal(uninstallResponse.status, 200);
+    assert.equal(uninstallPayload.installed, false);
+    assert.deepEqual(calls, ["status", "install", "uninstall"]);
+  } finally {
+    await closeServer(server);
+  }
+});
+
 
 test("ADB path picker API returns the desktop selected path", async () => {
   const selectedPath = "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe";

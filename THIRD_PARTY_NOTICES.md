@@ -24,3 +24,10 @@ This project can optionally call a user-installed local GLM-OCR SDK or local GLM
 - Project: https://github.com/zai-org/GLM-OCR
 - Code license: Apache-2.0
 - Model license: MIT
+
+## uv
+
+The app can optionally download uv into the local GLM-OCR runtime directory to install a managed Python runtime and isolated GLM-OCR venv. uv is not bundled with the EXE.
+
+- Project: https://github.com/astral-sh/uv
+- License: MIT OR Apache-2.0

@@ -22,6 +22,7 @@ export function runPythonGlmOcr({
   regions = [],
   timeoutMs = 180000,
   pythonPath = pythonExecutable(),
+  extraEnv = {},
 } = {}) {
   return new Promise(async (resolve, reject) => {
     let script;
@@ -38,6 +39,7 @@ export function runPythonGlmOcr({
       maxBuffer: 32 * 1024 * 1024,
       env: {
         ...process.env,
+        ...extraEnv,
         ARK_OCR_IMAGE: imagePath,
         ARK_OCR_REGIONS_JSON: JSON.stringify(regions),
       },
@@ -87,6 +89,7 @@ export function createGlmOcrTextExtractor({
   required = false,
   timeoutMs = 180000,
   pythonPath = pythonExecutable(),
+  extraEnv = {},
   runOcr = runPythonGlmOcr,
 } = {}) {
   let unavailableError = null;
@@ -98,7 +101,7 @@ export function createGlmOcrTextExtractor({
       const imagePath = path.join(dir, `${randomUUID()}.png`);
       try {
         await fs.writeFile(imagePath, frame.bytes);
-        const stdout = await runOcr({ imagePath, regions, timeoutMs, pythonPath });
+        const stdout = await runOcr({ imagePath, regions, timeoutMs, pythonPath, extraEnv });
         const payload = normalizeGlmOcrPayload(parseGlmOcrStdout(stdout));
         return {
           ...frame,
