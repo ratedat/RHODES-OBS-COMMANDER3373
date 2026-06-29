@@ -258,6 +258,8 @@ export function buildAdbCandidatePaths({ env = process.env, driveLetters = [] } 
     pushCandidate(candidates, seen, `${root}\\Nox\\bin\\adb.exe`, "known-path", "nox");
     pushCandidate(candidates, seen, `${root}\\Microvirt\\MEmu\\adb.exe`, "known-path", "xyaz");
     pushCandidate(candidates, seen, `${root}\\Tencent\\Androws\\Application\\adb.exe`, "known-path", "tencent");
+    pushCandidate(candidates, seen, `${root}\\Google\\Play Games Developer Emulator\\current\\emulator\\adb.exe`, "known-path", "google-play-games-dev");
+    pushCandidate(candidates, seen, `${root}\\Google\\Play Games\\current\\emulator\\adb.exe`, "known-path", "google-play-games-dev");
   }
   pushCandidate(candidates, seen, "adb", "path", "custom");
   return candidates;

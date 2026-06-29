@@ -290,6 +290,29 @@ test("createAdbAdapter retries adb commands up to the MAA-style reconnect limit"
   assert.equal(calls.filter((args) => args.includes("wm") && args.includes("size")).length, 3);
 });
 
+test("createAdbAdapter preserves adb command exit details for diagnostics", async () => {
+  const adapter = createAdbAdapter({
+    settings: { adbPath: "C:/bad/adb.exe", serial: "127.0.0.1:6520", restartProcessOnFailure: false, restartServerOnFailure: false },
+    env: {},
+    execFileImpl: (_file, _args, _options, callback) => {
+      const error = new Error("Command failed");
+      error.code = 1;
+      callback(error, "", "");
+    },
+  });
+
+  await assert.rejects(
+    () => adapter.getActualResolution(),
+    (error) => {
+      assert.equal(error.details.code, "adb_command_failed");
+      assert.equal(error.details.adbPath, "C:/bad/adb.exe");
+      assert.equal(error.details.errorCode, 1);
+      assert.equal(error.details.stderr, null);
+      return true;
+    },
+  );
+});
+
 test("normalizeAdbScreenshotBytes repairs adb shell CRLF-expanded PNG bytes", () => {
   const expanded = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0d, 0x0a, 0x1a, 0x0d, 0x0a, 0x00]);
   const repaired = normalizeAdbScreenshotBytes(expanded);

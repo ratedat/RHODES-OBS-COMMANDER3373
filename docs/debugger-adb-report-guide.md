@@ -36,8 +36,16 @@ Google Play Games開発者エミュレーターは、通常 `127.0.0.1:6520` へ
 
 - Google Play Games開発者エミュレーターにGoogleアカウントでログインしている。
 - WindowsのHyper-V系機能が有効。
-- Android SDK platform-toolsの `adb.exe` が使える。
+- Google Play Games同梱ADB、Android SDK platform-toolsの `adb.exe`、またはPATH上の `adb` が使える。
 - アプリのHyper-V診断でBIOS/UEFI仮想化やWindows機能の不足が出ていない。
+
+自動検出では主に次を探します。
+
+```text
+C:\Program Files\Google\Play Games Developer Emulator\current\emulator\adb.exe
+C:\Program Files\Google\Play Games\current\emulator\adb.exe
+%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe
+```
 
 手動確認例:
 

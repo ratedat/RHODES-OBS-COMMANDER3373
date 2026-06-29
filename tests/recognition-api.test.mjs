@@ -14,6 +14,21 @@ async function tempRecognitionLogDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "rhodes-recognition-log-"));
 }
 
+async function captureConsoleDuring(callback) {
+  const entries = [];
+  const originalLog = console.log;
+  const originalError = console.error;
+  console.log = (...args) => entries.push({ level: "log", message: args.map(String).join(" ") });
+  console.error = (...args) => entries.push({ level: "error", message: args.map(String).join(" ") });
+  try {
+    const value = await callback(entries);
+    return { entries, value };
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+  }
+}
+
 test("recognition scan API accepts POST profile requests without using the default ADB runner", async () => {
   const recognitionLogDir = await tempRecognitionLogDir();
   const { server, port } = await startServer({
@@ -102,30 +117,35 @@ test("default recognition runner reports missing adb as service unavailable", as
 });
 
 test("ADB detect API uses saved settings and returns candidates", async () => {
-  const { server, port } = await startServer({
-    port: 0,
-    adbDetector: async ({ settings }) => ({
-      settings,
-      runtime: { adbPath: settings.adbPath || "adb", serial: settings.serial || "", autoDetect: settings.autoDetect, connectionPreset: settings.connectionPreset },
-      selectedAdbPath: settings.adbPath || "adb",
-      adbCandidates: [{ path: settings.adbPath || "adb", source: "settings", preset: settings.connectionPreset, exists: true, available: true, error: null }],
-      devices: [{ serial: settings.serial || "127.0.0.1:16384", state: "device", detail: "product:MuMu" }],
-    }),
-  });
-  try {
-    const response = await fetch(`http://127.0.0.1:${port}/api/adb/detect`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ settings: { autoDetect: false, connectionPreset: "mumu", adbPath: "C:/adb.exe", serial: "127.0.0.1:16384" } }),
+  const { entries } = await captureConsoleDuring(async () => {
+    const { server, port } = await startServer({
+      port: 0,
+      adbDetector: async ({ settings }) => ({
+        settings,
+        runtime: { adbPath: settings.adbPath || "adb", serial: settings.serial || "", autoDetect: settings.autoDetect, connectionPreset: settings.connectionPreset },
+        selectedAdbPath: settings.adbPath || "adb",
+        adbCandidates: [{ path: settings.adbPath || "adb", source: "settings", preset: settings.connectionPreset, exists: true, available: true, error: null }],
+        devices: [{ serial: settings.serial || "127.0.0.1:16384", state: "device", detail: "product:MuMu" }],
+      }),
     });
-    const payload = await response.json();
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/adb/detect`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ settings: { autoDetect: false, connectionPreset: "mumu", adbPath: "C:/adb.exe", serial: "127.0.0.1:16384" } }),
+      });
+      const payload = await response.json();
 
-    assert.equal(response.status, 200);
-    assert.equal(payload.settings.connectionPreset, "mumu");
-    assert.equal(payload.devices[0].serial, "127.0.0.1:16384");
-  } finally {
-    await closeServer(server);
-  }
+      assert.equal(response.status, 200);
+      assert.equal(payload.settings.connectionPreset, "mumu");
+      assert.equal(payload.devices[0].serial, "127.0.0.1:16384");
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  assert.ok(entries.some((entry) => entry.message.includes("[adb-diagnostic]") && entry.message.includes("\"event\":\"adb_detect_start\"")));
+  assert.ok(entries.some((entry) => entry.message.includes("[adb-diagnostic]") && entry.message.includes("\"event\":\"adb_detect_success\"") && entry.message.includes("127.0.0.1:16384")));
 });
 
 test("ADB test API reports resolution and optional screenshot size", async () => {
@@ -153,6 +173,37 @@ test("ADB test API reports resolution and optional screenshot size", async () =>
   } finally {
     await closeServer(server);
   }
+});
+
+test("ADB test API logs diagnostic details when connection fails", async () => {
+  const { entries } = await captureConsoleDuring(async () => {
+    const { server, port } = await startServer({
+      port: 0,
+      adbTester: async () => {
+        const error = new Error("ADB device was not found. Start the emulator and confirm adb devices can see it.");
+        error.status = 503;
+        error.details = { code: "adb_device_not_found" };
+        throw error;
+      },
+    });
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/adb/test`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ capture: true, settings: { connectionPreset: "googlePlayGames", adbPath: "adb", serial: "127.0.0.1:6520" } }),
+      });
+      const payload = await response.json();
+
+      assert.equal(response.status, 503);
+      assert.match(payload.error, /ADB device was not found/);
+      assert.equal(payload.details.code, "adb_device_not_found");
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  assert.ok(entries.some((entry) => entry.message.includes("[adb-diagnostic]") && entry.message.includes("\"event\":\"adb_test_start\"") && entry.message.includes("127.0.0.1:6520")));
+  assert.ok(entries.some((entry) => entry.level === "error" && entry.message.includes("\"event\":\"adb_test_error\"") && entry.message.includes("adb_device_not_found")));
 });
 
 test("system hypervisor API returns injected diagnostics", async () => {

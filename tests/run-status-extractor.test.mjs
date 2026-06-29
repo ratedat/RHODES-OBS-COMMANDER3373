@@ -667,3 +667,29 @@ test("run status extractor uses dedicated difficulty grade ROI even when difficu
 
   assert.equal(candidates.find((item) => item.field === "difficulty").value, 18);
 });
+
+test("run status extractor prefers template resource digits over noisy static OCR", () => {
+  const candidates = extractRunStatusCandidates({
+    ocrResults: [
+      { regionId: "run.hope.current.0", text: "42", confidence: 0.76 },
+      { regionId: "run.hope.current.full.0", text: "9", confidence: 0.76 },
+      { regionId: "run.hope.max.0", text: "9", confidence: 0.76 },
+      { regionId: "run.ingot.0", text: "02", confidence: 0.76 },
+      { regionId: "run.ingot", text: "22", confidence: 0.7 },
+      { regionId: "run.idea.current.0", text: "2", confidence: 0.76 },
+      { regionId: "run.command_level", text: "1", confidence: 0.76 },
+      { regionId: "run.life_points.0", text: "4", confidence: 0.76 },
+      { regionId: "run.shield.0", text: "2", confidence: 0.76 },
+    ],
+  }, { campaignId: "is5_sarkaz", squads, difficultyGrades });
+
+  assert.deepEqual(candidates.filter((item) => ["commandLevel", "hope", "maxHope", "ingot", "idea", "lifePoints", "shield"].includes(item.field)).map((item) => [item.field, item.value]), [
+    ["commandLevel", 1],
+    ["hope", 2],
+    ["maxHope", 9],
+    ["ingot", 20],
+    ["idea", 2],
+    ["lifePoints", 4],
+    ["shield", 2],
+  ]);
+});

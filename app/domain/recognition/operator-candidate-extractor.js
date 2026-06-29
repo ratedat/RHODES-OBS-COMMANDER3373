@@ -32,6 +32,16 @@ function rectArea(rect) {
   return Math.max(0, rect.width) * Math.max(0, rect.height);
 }
 
+function overlapRatio(left, right, axis) {
+  if (!left || !right) return 0;
+  const start = Math.max(left[axis], right[axis]);
+  const size = axis === "x" ? "width" : "height";
+  const end = Math.min(left[axis] + left[size], right[axis] + right[size]);
+  const overlap = Math.max(0, end - start);
+  const base = Math.max(1, Math.min(left[size], right[size]));
+  return overlap / base;
+}
+
 function frameTextResults(frame = {}, { includeFrameText = true } = {}) {
   const results = [];
   if (includeFrameText && typeof frame.text === "string") results.push({ text: frame.text, confidence: frame.confidence ?? 0.5, roi: frame.roi || null, regionId: frame.regionId || null });
@@ -204,6 +214,7 @@ function stripOperatorLineNoise(normalizedText) {
   return String(normalizedText || "")
     .replace(/^[ー\-]+/g, "")
     .replace(/^[^0-9A-Za-zぁ-んァ-ヶー一-龠]+/g, "")
+    .replace(/^(?:(?:code|coce|c0de)[-_ー一]?(?:name|n[a-z]*me|nurme)|edge[-_ー一]?name|orig[-_ー一]?(?:code[-_ー一]?name|name))[:：_\-ー一]*/i, "")
     .replace(/^[ー\-]+/g, "")
     .replace(/[^0-9A-Za-zぁ-んァ-ヶー一-龠]+$/g, "");
 }
@@ -257,14 +268,17 @@ const operatorOcrDriftAliases = [
   { operatorId: "rangers", pattern: /^レンシ[ヤャ]ー$/i, matchedPattern: "レンシャー" },
   { operatorId: "brigid", pattern: /^[フブプ]リキ[ツッ]ド$/i, matchedPattern: "ブリキッド" },
   { operatorId: "jieyun", pattern: /^(?:シエ|シェ|ジエ|ジェ|エ)ユン$/i, matchedPattern: "シェユン" },
-  { operatorId: "shirayuki", pattern: /^シ[ヨョ]ラキ$/i, matchedPattern: "ショラキ" },
+  { operatorId: "shirayuki", pattern: /^シ[ヨョ]ラ(?:キ|ユキ)$/i, matchedPattern: "ショラキ" },
   { operatorId: "rosesalt", pattern: /^ロース[ソン]ルト$/i, matchedPattern: "ロースソルト" },
-  { operatorId: "reserve_sniper", pattern: /^予備隊員[-ー]?狙[撃擊]$/i, matchedPattern: "予備隊員-狙擊" },
+  { operatorId: "reserve_sniper", pattern: /^(?:予)?備隊員[-ー]?狙[撃擊]$/i, matchedPattern: "予備隊員-狙擊" },
   { operatorId: "terraresearchcommission", pattern: /^テラ大[陸陆]調査団$/i, matchedPattern: "テラ大陆調査団" },
   { operatorId: "leizi", pattern: /^レイス$/i, matchedPattern: "レイス" },
   { operatorId: "leizi2", pattern: /^司霆レイス$/i, matchedPattern: "司霆レイス" },
   { operatorId: "leizi2", pattern: /^pmey$/i, matchedPattern: "PMEY" },
   { operatorId: "gummy", pattern: /^ク(?:ム|で|ン)$/i, matchedPattern: "クム" },
+  { operatorId: "sussurro", pattern: /^スス[ー一]?ヨロ$/i, matchedPattern: "ススーヨロ" },
+  { operatorId: "whisperain", pattern: /^ウ[ィイ]ス[パハバ][ー一]?レイン$/i, matchedPattern: "ウィスパレイン" },
+  { operatorId: "whisperain", pattern: /^ス[パハバ][ー一]?レイン$/i, matchedPattern: "スパレイン" },
 ];
 
 function localOcrDriftHitsForRow(row, db, operatorOcrMap) {
@@ -309,6 +323,25 @@ function candidateFromHit(hit, row) {
   };
 }
 
+function suppressOverlappedSuffixCandidates(candidates, db) {
+  const normalizedNames = new Map(db.map((operator) => [operator.operatorId, operator.normalizedName]));
+  return candidates.filter((candidate) => {
+    const candidateName = normalizedNames.get(candidate.operatorId) || "";
+    if (candidateName.length < 3) return true;
+    const candidateRect = rectFrom(candidate.roi);
+    if (!candidateRect) return true;
+    return !candidates.some((other) => {
+      if (other === candidate) return false;
+      const otherName = normalizedNames.get(other.operatorId) || "";
+      if (otherName.length <= candidateName.length || !otherName.endsWith(candidateName)) return false;
+      const otherRect = rectFrom(other.roi);
+      if (!otherRect) return false;
+      return overlapRatio(candidateRect, otherRect, "y") >= 0.55
+        && overlapRatio(candidateRect, otherRect, "x") >= 0.15;
+    });
+  });
+}
+
 export function createOperatorCandidateExtractor({ operators = [], operatorOcrMap = {} } = {}) {
   const db = buildOperatorRecognitionDb(operators, { operatorOcrMap });
   return async function extractOperatorCandidates(frame, context = {}) {
@@ -330,7 +363,7 @@ export function createOperatorCandidateExtractor({ operators = [], operatorOcrMa
         if (!previous || Number(candidate.confidence || 0) > Number(previous.confidence || 0)) byOperator.set(candidate.operatorId, candidate);
       }
     }
-    return [...byOperator.values()].sort((a, b) => {
+    return suppressOverlappedSuffixCandidates([...byOperator.values()], db).sort((a, b) => {
       const ar = rectFrom(a.roi);
       const br = rectFrom(b.roi);
       if (ar && br) return (ar.y - br.y) || (ar.x - br.x);

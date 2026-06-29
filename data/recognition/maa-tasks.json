@@ -216,12 +216,14 @@
         "runStatusFull"
       ],
       "roi": [
-        310,
-        15,
-        55,
-        50
+        325,
+        26,
+        24,
+        34
       ],
-      "scale": 8
+      "scale": 12,
+      "numericFallback": true,
+      "numericStartYRatio": 0
     },
     {
       "id": "run.life_points",
@@ -498,6 +500,19 @@
       "scale": 4
     },
     {
+      "id": "operator.name.center.1",
+      "profileIds": [
+        "operatorsFull"
+      ],
+      "roi": [
+        640,
+        165,
+        285,
+        43
+      ],
+      "scale": 4
+    },
+    {
       "id": "operator.name.right.1",
       "profileIds": [
         "operatorsFull"
@@ -519,6 +534,19 @@
         700,
         305,
         205,
+        43
+      ],
+      "scale": 4
+    },
+    {
+      "id": "operator.name.center.2",
+      "profileIds": [
+        "operatorsFull"
+      ],
+      "roi": [
+        640,
+        305,
+        285,
         43
       ],
       "scale": 4
@@ -550,6 +578,19 @@
       "scale": 4
     },
     {
+      "id": "operator.name.center.3",
+      "profileIds": [
+        "operatorsFull"
+      ],
+      "roi": [
+        640,
+        442,
+        285,
+        43
+      ],
+      "scale": 4
+    },
+    {
       "id": "operator.name.right.3",
       "profileIds": [
         "operatorsFull"
@@ -571,6 +612,19 @@
         700,
         580,
         205,
+        43
+      ],
+      "scale": 4
+    },
+    {
+      "id": "operator.name.center.4",
+      "profileIds": [
+        "operatorsFull"
+      ],
+      "roi": [
+        640,
+        580,
+        285,
         43
       ],
       "scale": 4

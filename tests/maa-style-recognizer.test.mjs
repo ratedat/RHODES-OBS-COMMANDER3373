@@ -155,7 +155,7 @@ test("MAA-style recognizer can restrict OCR regions per scan profile", async () 
   const recognizer = createMaaStyleRecognizer({
     tasks: {
       ocrRegions: [
-        { id: "operator.list_text", profileIds: ["operatorsFull"], roi: [350, 70, 880, 555], scale: 3 },
+        { id: "operator.list_text", profileIds: ["operatorsFull"], roi: [350, 70, 880, 555], scale: 3, numericFallback: true },
         { id: "operator.name.left.1", profileIds: ["operatorsFull"], roi: [600, 145, 230, 62], scale: 4 },
       ],
     },
@@ -173,6 +173,44 @@ test("MAA-style recognizer can restrict OCR regions per scan profile", async () 
   );
 
   assert.deepEqual(regions.map((region) => region.id), ["operator.name.left.1"]);
+});
+
+test("MAA-style recognizer forwards OCR region numeric fallback options", async () => {
+  let regions = [];
+  const recognizer = createMaaStyleRecognizer({
+    tasks: {
+      ocrRegions: [
+        { id: "run.command_level", profileIds: ["runStatusFull"], roi: [310, 15, 55, 50], scale: 8, numericFallback: true, numericStartYRatio: 0 },
+      ],
+    },
+    textExtractor: {
+      async extract(frame, context = {}) {
+        regions = context.regions || [];
+        return { ...frame, ocrResults: [] };
+      },
+    },
+  });
+
+  await recognizer.classify(
+    { bytes: Buffer.from("fake screenshot") },
+    { profile: { id: "runStatusFull", ocrRegionIds: ["run.command_level"] }, scale: { scaleX: 2, scaleY: 2 } },
+  );
+
+  assert.equal(regions[0].id, "run.command_level");
+  assert.equal(regions[0].numericFallback, true);
+  assert.equal(regions[0].numericStartYRatio, 0);
+});
+
+test("recognition task data exposes single-column operator name OCR regions", async () => {
+  const rawTasks = JSON.parse(await fs.readFile(new URL("../data/recognition/maa-tasks.json", import.meta.url), "utf8"));
+  const rawProfiles = JSON.parse(await fs.readFile(new URL("../data/recognition/scan-profiles.json", import.meta.url), "utf8"));
+  const operatorRegions = rawTasks.ocrRegions.filter((region) => region.profileIds?.includes("operatorsFull"));
+  const operatorsProfile = rawProfiles.profiles.find((profile) => profile.id === "operatorsFull");
+
+  for (const id of ["operator.name.center.1", "operator.name.center.2", "operator.name.center.3", "operator.name.center.4"]) {
+    assert.ok(operatorRegions.some((region) => region.id === id));
+    assert.ok(operatorsProfile.ocrRegionIds.includes(id));
+  }
 });
 
 

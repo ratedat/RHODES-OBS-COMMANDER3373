@@ -27,6 +27,12 @@ const operators = [
   { id: "executor2", name: "聖約イグゼキュター", rarity: 6, class: "前衛", branch: "鎌撃士" },
   { id: "gummy", name: "グム", rarity: 4, class: "重装", branch: "庇護衛士" },
   { id: "rosesalt", name: "ローズソルト", rarity: 5, class: "医療", branch: "群癒師" },
+  { id: "sussurro", name: "ススーロ", rarity: 4, class: "医療", branch: "医師" },
+  { id: "whisperain", name: "ウィスパーレイン", rarity: 5, class: "医療", branch: "療養師" },
+  { id: "heavyrain", name: "ヘビーレイン", rarity: 5, class: "重装", branch: "庇護衛士" },
+  { id: "grainbuds", name: "グレインバッズ", rarity: 5, class: "補助", branch: "祈祷師" },
+  { id: "lappland", name: "ラップランド", rarity: 5, class: "前衛", branch: "領主" },
+  { id: "lappland2", name: "荒蕪ラップランド", rarity: 6, class: "術師", branch: "操機術師" },
   { id: "reserve_sniper", name: "予備隊員-狙撃", rarity: 3, class: "狙撃", branch: "速射手" },
   { id: "terraresearchcommission", name: "テラ大陸調査団", rarity: 1, class: "狙撃", branch: "投擲手" },
 ];
@@ -49,6 +55,8 @@ const operatorOcrMap = {
     { pattern: "ヒューマス", maaReplacement: "休谟斯", localMatches: [{ id: "humus", name: "ヒューマス" }] },
     { pattern: "(聖|約|抱).*イクゼキュタ", maaReplacement: "圣约送葬人", localMatches: [{ id: "executor2", name: "聖約イグゼキュター" }] },
     { pattern: "^グ(ム|で|ン)", maaReplacement: "古米", localMatches: [{ id: "gummy", name: "グム" }] },
+    { pattern: "^(ラ)?ップランド", maaReplacement: "拉普兰德", localMatches: [{ id: "lappland", name: "ラップランド" }] },
+    { pattern: "(荒|蕪|蕉|葉|悪|慈|無|轟).*ラップラン[ドト]?", maaReplacement: "荒芜拉普兰德", localMatches: [{ id: "lappland2", name: "荒蕪ラップランド" }] },
   ],
   equivalenceClasses: [["ン", "ソ"], ["-", "ー", "一"], ["フ", "ブ", "プ"]],
 };
@@ -113,6 +121,16 @@ test("operator candidate extractor keeps the one-letter W operator searchable", 
 
   assert.deepEqual(candidates.map((item) => item.operatorId), ["w"]);
   assert.equal(candidates[0].name, "W");
+  assert.equal(candidates[0].source, "local-name-fallback");
+});
+
+test("operator candidate extractor strips card CODE-NAME labels before matching", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [{ text: "CODE-NAME W", regionId: "operator.card.name.0", roi: { x: 891, y: 291, width: 188, height: 29 }, confidence: 0.7 }],
+  }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["w"]);
   assert.equal(candidates[0].source, "local-name-fallback");
 });
 
@@ -200,7 +218,7 @@ test("operator candidate extractor maps Gummy when Windows OCR drops the dakuten
 test("operator candidate extractor maps observed GLM OCR drift for Shirayuki", async () => {
   const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
   const candidates = await extractor({
-    ocrResults: [{ text: "ショラキ", regionId: "operator.card.name.0", roi: { x: 891, y: 291, width: 188, height: 29 }, confidence: 0.7 }],
+    ocrResults: [{ text: "ショラユキ", regionId: "operator.card.name.0", roi: { x: 891, y: 291, width: 188, height: 29 }, confidence: 0.7 }],
   }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
 
   assert.equal(candidates[0].operatorId, "shirayuki");
@@ -213,13 +231,75 @@ test("operator candidate extractor maps observed GLM OCR drift from medic and sn
   const candidates = await extractor({
     ocrResults: [
       { text: "ロースソルト", regionId: "operator.card.name.0", roi: { x: 890, y: 291, width: 188, height: 29 }, confidence: 0.7 },
-      { text: "予備隊員-狙擊", regionId: "operator.card.name.1", roi: { x: 1720, y: 565, width: 188, height: 29 }, confidence: 0.7 },
+      { text: "備隊員-狙擊", regionId: "operator.card.name.1", roi: { x: 1720, y: 565, width: 188, height: 29 }, confidence: 0.7 },
       { text: "テラ大陆調査団", regionId: "operator.card.name.2", roi: { x: 1720, y: 291, width: 188, height: 29 }, confidence: 0.7 },
     ],
   }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
 
   assert.deepEqual(candidates.map((item) => item.operatorId), ["rosesalt", "terraresearchcommission", "reserve_sniper"]);
   assert.ok(candidates.every((item) => item.source === "local-ocr-drift"));
+});
+
+test("operator candidate extractor maps observed GLM OCR drift for Sussurro", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [{ text: "ススーヨロ", regionId: "operator.card.name.0", roi: { x: 890, y: 565, width: 188, height: 29 }, confidence: 0.7 }],
+  }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["sussurro"]);
+  assert.equal(candidates[0].source, "local-ocr-drift");
+});
+
+test("operator candidate extractor maps observed GLM OCR drift for Whisperain", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [
+      { text: "ウィスパレイン", regionId: "operator.card.name.0", roi: { x: 1272, y: 882, width: 376, height: 58 }, confidence: 0.7 },
+      { text: "ウイスパレイン", regionId: "operator.card.name.1", roi: { x: 964, y: 882, width: 376, height: 58 }, confidence: 0.7 },
+    ],
+  }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["whisperain"]);
+  assert.equal(candidates[0].source, "local-ocr-drift");
+});
+
+test("operator candidate extractor suppresses overlapping base-name fragments when alter name is visible", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [
+      { text: "荒 蕪 ラ ッ プ ラ ン ド", regionId: "operator.card.name.0", roi: { x: 999, y: 264, width: 181, height: 23 }, confidence: 0.7 },
+      { text: "ラ ッ プ ラ ン ド", regionId: "operator.name.left.1", roi: { x: 1050, y: 264, width: 130, height: 23 }, confidence: 0.7 },
+      { text: "グ ム", regionId: "operator.name.center.2", roi: { x: 1000, y: 469, width: 46, height: 24 }, confidence: 0.7 },
+    ],
+  }, { profile: { id: "operatorsFull" }, region: { x: 525, y: 105, width: 1320, height: 833 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["lappland2", "gummy"]);
+});
+
+test("operator candidate extractor maps partial Whisperain OCR when the suffix remains anchored", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  for (const text of ["スパレイン", "スハレイン", "スバレイン"]) {
+    const candidates = await extractor({
+      ocrResults: [{ text, regionId: "operator.card.name.0", roi: { x: 1272, y: 882, width: 376, height: 58 }, confidence: 0.7 }],
+    }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
+
+    assert.deepEqual(candidates.map((item) => item.operatorId), ["whisperain"]);
+    assert.equal(candidates[0].source, "local-ocr-drift");
+  }
+});
+
+test("operator candidate extractor does not map bare Rain suffix to Whisperain", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [
+      { text: "レイン", regionId: "operator.card.name.0", roi: { x: 1272, y: 882, width: 376, height: 58 }, confidence: 0.7 },
+      { text: "ヘビーレイン", regionId: "operator.card.name.1", roi: { x: 1272, y: 982, width: 376, height: 58 }, confidence: 0.7 },
+      { text: "グレインバッズ", regionId: "operator.card.name.2", roi: { x: 1272, y: 1082, width: 376, height: 58 }, confidence: 0.7 },
+    ],
+  }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["heavyrain", "grainbuds"]);
+  assert.ok(candidates.every((item) => item.source === "local-name-fallback"));
 });
 
 test("operator candidate extractor does not turn partial Humus OCR into Yu or Eunectes", async () => {

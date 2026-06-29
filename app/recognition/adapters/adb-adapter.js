@@ -53,6 +53,8 @@ function normalizeAdbError(error, { adbPath, args } = {}) {
     code: "adb_command_failed",
     adbPath,
     args,
+    errorCode: error?.code ?? null,
+    signal: error?.signal ?? null,
     stderr: stderr.trim() || null,
   });
 }

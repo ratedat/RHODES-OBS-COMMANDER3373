@@ -294,12 +294,16 @@
       "ocrFullFrame": false,
       "ocrRegionIds": [
         "operator.name.left.1",
+        "operator.name.center.1",
         "operator.name.right.1",
         "operator.name.left.2",
+        "operator.name.center.2",
         "operator.name.right.2",
         "operator.name.left.3",
+        "operator.name.center.3",
         "operator.name.right.3",
         "operator.name.left.4",
+        "operator.name.center.4",
         "operator.name.right.4"
       ],
       "templateOcrRegions": [
@@ -328,9 +332,9 @@
           "idPrefix": "operator.card.name",
           "templatePath": "assets/recognition/templates/run/OperatorCardCodeNameFlag.png",
           "searchRoi": {
-            "x": 460,
+            "x": 380,
             "y": 95,
-            "width": 650,
+            "width": 850,
             "height": 545
           },
           "ocrOffset": {
@@ -340,7 +344,7 @@
             "height": 29
           },
           "threshold": 0.7,
-          "maxMatches": 12,
+          "maxMatches": 16,
           "step": 2,
           "sampleStride": 2,
           "scale": 4
@@ -405,10 +409,10 @@
           "label": "閉じる待ち"
         }
       ],
-      "maxScrolls": 6,
-      "endFingerprintStableCount": 1,
+      "maxScrolls": 30,
+      "endFingerprintStableCount": 2,
       "captureDelayMs": 120,
-      "navigationNote": "隊員表示をクリックして招集済みオペレーター一覧を開く。一覧はオペレーターカード枠の内側を使って右端方向、続けて左端方向へ読み切る。左方向の戻しはカード中央付近から右へ引き、左ペインではなく横リスト本体を掴む。右方向で実際に動かした回数を最低限ミラーし、候補安定だけで早期停止しない。",
+      "navigationNote": "隊員表示をクリックして招集済みオペレーター一覧を開く。一覧はオペレーターカード枠の内側を使い、短めの水平スワイプで右端方向、続けて左端方向へ独立して読み切る。左右端の半端なカードを飛ばさないように、候補安定は複数回一致後のみ終端扱いにする。",
       "scrollPasses": [
         {
           "axis": "horizontal",
@@ -420,7 +424,7 @@
               "y": 360
             },
             "end": {
-              "x": 630,
+              "x": 800,
               "y": 360
             },
             "startArea": {
@@ -430,17 +434,18 @@
               "height": 360
             },
             "endArea": {
-              "x": 600,
+              "x": 760,
               "y": 170,
-              "width": 140,
+              "width": 160,
               "height": 360
             },
-            "durationMs": 520
+            "durationMs": 500
           },
-          "maxScrolls": 6,
-          "endFingerprintStableCount": 1,
+          "maxScrolls": 30,
+          "minScrolls": 10,
+          "endFingerprintStableCount": 2,
           "captureDelayMs": 120,
-          "candidateStableEndCount": 1
+          "candidateStableEndCount": 3
         },
         {
           "axis": "horizontal",
@@ -448,39 +453,40 @@
           "label": "オペレーター枠 左端方向スキャン",
           "scroll": {
             "start": {
-              "x": 670,
+              "x": 730,
               "y": 360
             },
             "end": {
-              "x": 1150,
+              "x": 1040,
               "y": 360
             },
             "startArea": {
-              "x": 650,
+              "x": 680,
               "y": 170,
-              "width": 120,
+              "width": 160,
               "height": 360
             },
             "endArea": {
-              "x": 1110,
+              "x": 980,
               "y": 170,
-              "width": 120,
+              "width": 150,
               "height": 360
             },
-            "durationMs": 560
+            "durationMs": 500
           },
-          "maxScrolls": 6,
-          "endFingerprintStableCount": 1,
+          "maxScrolls": 30,
+          "minScrolls": 10,
+          "endFingerprintStableCount": 2,
           "captureDelayMs": 120,
-          "candidateStableEndCount": 1,
-          "mirrorPreviousPassScrolls": true
+          "candidateStableEndCount": 3,
+          "mirrorPreviousPassScrolls": false
         }
       ],
       "inferredScreenId": "operator-list",
       "targetScreenIds": [
         "operator-list"
       ],
-      "candidateStableEndCount": 1
+      "candidateStableEndCount": 3
     },
     {
       "id": "relicsFull",

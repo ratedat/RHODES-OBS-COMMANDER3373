@@ -228,8 +228,9 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
   assert.equal(profile.scrollAxis, "horizontal");
   assert.equal(profile.scrollDirection, "two-way");
   assert.equal(profile.ocrFullFrame, false);
-  assert.equal(profile.ocrRegionIds.length, 8);
+  assert.equal(profile.ocrRegionIds.length, 12);
   assert.ok(profile.ocrRegionIds.every((id) => id.startsWith("operator.name.")));
+  assert.ok(profile.ocrRegionIds.includes("operator.name.center.2"));
   assert.equal(profile.ocrRegionIds.includes("operator.list_text"), false);
   assert.equal(profile.templateOcrRegions.length, 2);
   const recruitTemplate = profile.templateOcrRegions.find((region) => region.idPrefix === "operator.recruit.name");
@@ -238,10 +239,10 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
   assert.deepEqual(recruitTemplate.searchRoi, { x: 525, y: 110, width: 640, height: 500 });
   assert.deepEqual(recruitTemplate.ocrOffset, { x: 0, y: 22, width: 240, height: 30 });
   assert.equal(cardTemplate.templatePath, "assets/recognition/templates/run/OperatorCardCodeNameFlag.png");
-  assert.deepEqual(cardTemplate.searchRoi, { x: 460, y: 95, width: 650, height: 545 });
+  assert.deepEqual(cardTemplate.searchRoi, { x: 380, y: 95, width: 850, height: 545 });
   assert.deepEqual(cardTemplate.ocrOffset, { x: -7, y: -9, width: 188, height: 29 });
   assert.equal(cardTemplate.threshold, 0.7);
-  assert.equal(cardTemplate.maxMatches, 12);
+  assert.equal(cardTemplate.maxMatches, 16);
   assert.equal(recruitTemplate.suppressStaticRegionIdPattern, undefined);
   assert.equal(cardTemplate.suppressStaticRegionIdPattern, undefined);
   assert.equal(profile.scrollPasses.length, 2);
@@ -251,6 +252,8 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
   assert.ok(right.scroll.start.x > right.scroll.end.x, "right pass should drag left to reveal operators to the right");
   assert.ok(left.scroll.start.x < left.scroll.end.x, "left pass should drag right to return toward the first operators");
   assert.ok(left.scroll.start.x >= 650, "left return should start inside the operator card body, not the left detail pane");
+  assert.ok(right.scroll.start.x - right.scroll.end.x <= 330, "right pass should use short swipes so edge cards are not skipped");
+  assert.ok(left.scroll.end.x - left.scroll.start.x <= 330, "left pass should use short swipes so edge cards are not skipped");
   for (const pass of profile.scrollPasses) {
     assert.equal(pass.axis, "horizontal");
     assert.ok(pass.scroll.startArea.x >= 360, "operator swipe should stay inside the operator card frame");
@@ -285,8 +288,9 @@ test("operator list OCR screen and text ROI target the opened operator frame", a
   assert.deepEqual(textRegion.roi, [350, 70, 880, 555]);
 
   const nameRegions = tasks.ocrRegions.filter((region) => String(region.id).startsWith("operator.name."));
-  assert.equal(nameRegions.length, 8);
+  assert.equal(nameRegions.length, 12);
   assert.ok(nameRegions.every((region) => region.profileIds.includes("operatorsFull")));
+  assert.deepEqual(nameRegions.find((region) => region.id === "operator.name.center.2").roi, [640, 305, 285, 43]);
   assert.deepEqual(nameRegions.find((region) => region.id === "operator.name.right.4").roi, [1070, 580, 205, 43]);
 });
 
@@ -333,16 +337,17 @@ test("age scan taps the top-center era marker and does not scroll", async () => 
   assert.equal(age.scrollAxis, "none");
 });
 
-test("operator and thought scans use bounded passes with mirrored return sweeps", async () => {
+test("operator and thought scans use bounded passes tuned for their scroll surfaces", async () => {
   const profiles = await profilesById();
   const operator = profiles.get("operatorsFull");
   const thought = profiles.get("is5ThoughtFull");
 
-  assert.ok(operator.scrollPasses.every((pass) => pass.maxScrolls <= 6));
-  assert.ok(operator.scrollPasses.every((pass) => pass.endFingerprintStableCount === 1));
-  assert.ok(operator.scrollPasses.every((pass) => pass.candidateStableEndCount === 1));
+  assert.ok(operator.scrollPasses.every((pass) => pass.maxScrolls >= 30));
+  assert.ok(operator.scrollPasses.every((pass) => pass.minScrolls >= 10));
+  assert.ok(operator.scrollPasses.every((pass) => pass.endFingerprintStableCount === 2));
+  assert.ok(operator.scrollPasses.every((pass) => pass.candidateStableEndCount === 3));
   assert.ok(operator.scrollPasses.every((pass) => pass.captureDelayMs <= 120));
-  assert.equal(operator.scrollPasses[1].mirrorPreviousPassScrolls, true);
+  assert.equal(operator.scrollPasses[1].mirrorPreviousPassScrolls, false);
 
   assert.ok(thought.scrollPasses.every((pass) => pass.maxScrolls <= 8));
   assert.ok(thought.scrollPasses.every((pass) => pass.endFingerprintStableCount === 1));

@@ -451,6 +451,81 @@ async function defaultAdbTester({ settings = {}, capture = false } = {}) {
   return { ok: true, settings: normalized, resolution, screenshot };
 }
 
+function summarizeAdbSettingsForLog(settings = {}) {
+  return {
+    autoDetect: Boolean(settings.autoDetect),
+    connectionPreset: settings.connectionPreset || "auto",
+    adbPath: settings.adbPath || "",
+    serial: settings.serial || "",
+    restartServerOnFailure: Boolean(settings.restartServerOnFailure),
+    restartProcessOnFailure: Boolean(settings.restartProcessOnFailure),
+    retryCount: Number.isFinite(Number(settings.retryCount)) ? Number(settings.retryCount) : null,
+  };
+}
+
+function summarizeAdbDetectionForLog(result = {}) {
+  return {
+    selectedAdbPath: result.selectedAdbPath || "",
+    runtime: result.runtime ? summarizeAdbSettingsForLog(result.runtime) : null,
+    connect: result.connect
+      ? {
+          address: result.connect.address || "",
+          recovered: Boolean(result.connect.recovered),
+          error: result.connect.error || null,
+        }
+      : null,
+    adbCandidates: Array.isArray(result.adbCandidates)
+      ? result.adbCandidates.map((item) => ({
+          path: item.path || "",
+          source: item.source || "",
+          preset: item.preset || "",
+          exists: Boolean(item.exists),
+          available: Boolean(item.available),
+          error: item.error || null,
+        }))
+      : [],
+    devices: Array.isArray(result.devices)
+      ? result.devices.map((item) => ({
+          serial: item.serial || "",
+          state: item.state || "",
+          detail: item.detail || "",
+        }))
+      : [],
+  };
+}
+
+function summarizeAdbTestForLog(result = {}) {
+  return {
+    ok: Boolean(result.ok),
+    settings: result.settings ? summarizeAdbSettingsForLog(result.settings) : null,
+    runtime: result.runtime ? summarizeAdbSettingsForLog(result.runtime) : null,
+    resolution: result.resolution || null,
+    screenshot: result.screenshot
+      ? {
+          bytes: Number(result.screenshot.bytes || 0),
+          capturedAt: result.screenshot.capturedAt || "",
+          path: result.screenshot.path || "",
+        }
+      : null,
+  };
+}
+
+function summarizeErrorForLog(error) {
+  return {
+    name: error?.name || "Error",
+    message: error instanceof Error ? error.message : String(error),
+    status: Number(error?.status) || null,
+    code: error?.details?.code || error?.code || null,
+    details: error?.details || null,
+  };
+}
+
+function logAdbDiagnostic(event, payload = {}, level = "log") {
+  const line = JSON.stringify({ event, at: new Date().toISOString(), ...payload });
+  if (level === "error") console.error(`[adb-diagnostic] ${line}`);
+  else console.log(`[adb-diagnostic] ${line}`);
+}
+
 
 async function masterData() {
   const [campaigns, squadsRaw, relicsRaw, operatorsRaw, performancesRaw, selectableEffectsRaw, tiersRaw, gradesRaw, variantsRaw, effectRulesRaw, startTemplatesRaw, operatorHistoryRaw] = await Promise.all([
@@ -680,7 +755,16 @@ export function createAppServer({
       const body = bodyText ? JSON.parse(bodyText) : {};
       const state = await ensureState();
       const settings = adbSettingsFromRequest(body, state);
-      return sendJson(res, 200, await adbDetector({ settings }));
+      const requestId = randomUUID();
+      logAdbDiagnostic("adb_detect_start", { requestId, settings: summarizeAdbSettingsForLog(settings) });
+      try {
+        const result = await adbDetector({ settings });
+        logAdbDiagnostic("adb_detect_success", { requestId, ...summarizeAdbDetectionForLog(result) });
+        return sendJson(res, 200, result);
+      } catch (error) {
+        logAdbDiagnostic("adb_detect_error", { requestId, settings: summarizeAdbSettingsForLog(settings), error: summarizeErrorForLog(error) }, "error");
+        throw error;
+      }
     }
 
     if (req.method === "POST" && url.pathname === "/api/adb/test") {
@@ -688,7 +772,17 @@ export function createAppServer({
       const body = bodyText ? JSON.parse(bodyText) : {};
       const state = await ensureState();
       const settings = adbSettingsFromRequest(body, state);
-      return sendJson(res, 200, await adbTester({ settings, capture: Boolean(body.capture) }));
+      const capture = Boolean(body.capture);
+      const requestId = randomUUID();
+      logAdbDiagnostic("adb_test_start", { requestId, capture, settings: summarizeAdbSettingsForLog(settings) });
+      try {
+        const result = await adbTester({ settings, capture });
+        logAdbDiagnostic("adb_test_success", { requestId, capture, ...summarizeAdbTestForLog(result) });
+        return sendJson(res, 200, result);
+      } catch (error) {
+        logAdbDiagnostic("adb_test_error", { requestId, capture, settings: summarizeAdbSettingsForLog(settings), error: summarizeErrorForLog(error) }, "error");
+        throw error;
+      }
     }
 
     if (req.method === "GET" && url.pathname === "/api/ocr/glm/status") {

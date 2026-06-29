@@ -30,12 +30,12 @@ $env:ARKNIGHTS_ADB_SERIAL = "127.0.0.1:16384"
 | NoxPlayer | `Nox\bin\nox_adb.exe`, `Nox\bin\adb.exe` | `127.0.0.1:62001`, `127.0.0.1:59865` | 新旧ポートを候補にします。 |
 | 逍遥 / MEmu | `Microvirt\MEmu\adb.exe` | `127.0.0.1:21503` | MEmu系向けです。 |
 | テンセントアプリストア | `Tencent\Androws\Application\adb.exe` | `127.0.0.1:5555` | アプリストア側でADBデバッグを有効化してください。 |
-| Google Play Games 開発者 | Android SDK platform-tools、PATH上のadb | `127.0.0.1:6520` | Hyper-VとGoogleログインが必要です。日本ユーザー向けの重要対応です。 |
+| Google Play Games 開発者 | `Google\Play Games Developer Emulator\current\emulator\adb.exe`、`Google\Play Games\current\emulator\adb.exe`、Android SDK platform-tools、PATH上のadb | `127.0.0.1:6520` | Hyper-VとGoogleログインが必要です。日本ユーザー向けの重要対応です。 |
 | Android Studio AVD | `ANDROID_HOME` / `ANDROID_SDK_ROOT` / Android SDK platform-tools | AVDのadb devicesに出るserial | Android 10以降はADB inputを使います。 |
 | WSA | 手動/カスタム扱い | `127.0.0.1:58526` | 現在は非推奨です。 |
 | 手動 | 入力したADBパス | 入力したserial | 既知候補でうまくいかない場合に使います。 |
 
-既知パスの探索は `Program Files`、`Program Files (x86)`、`LOCALAPPDATA`、検出可能なドライブの `Program Files` 系を見ます。Android SDKは `ANDROID_HOME`、`ANDROID_SDK_ROOT`、`%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` を候補にします。
+既知パスの探索は `Program Files`、`Program Files (x86)`、`LOCALAPPDATA`、検出可能なドライブの `Program Files` 系を見ます。Google Play Gamesは同梱ADBの `Google\Play Games Developer Emulator\current\emulator\adb.exe` と `Google\Play Games\current\emulator\adb.exe` を候補にします。Android SDKは `ANDROID_HOME`、`ANDROID_SDK_ROOT`、`%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` を候補にします。
 
 ## ADB設定項目
 
@@ -63,7 +63,7 @@ Google Play Games開発者エミュレーターはADB接続先が通常 `127.0.0
 
 - Google Play Games開発者エミュレーターにGoogleアカウントでログインしている。
 - WindowsでHyper-V系機能が利用できる。
-- Android SDK platform-toolsの `adb.exe` がインストールされている、またはPATHから `adb` を実行できる。
+- Google Play Games同梱の `adb.exe`、Android SDK platform-toolsの `adb.exe`、またはPATH上の `adb` を実行できる。
 - アプリのADB検出で `127.0.0.1:6520` が `device` として表示される。
 
 手動確認例:

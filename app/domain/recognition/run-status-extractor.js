@@ -384,6 +384,27 @@ function firstNumericValueInRange(entry, { min = 0, max = 999 } = {}) {
   return numericValuesFromText(entry?.text).find((value) => Number.isFinite(value) && value >= min && value <= max);
 }
 
+function suffixNumericValueInRange(entry, { min = 0, max = 999, maxLength = 2 } = {}) {
+  const digits = digitText(entry?.text);
+  if (!digits || digits.length < 2) return null;
+  const longest = Math.min(maxLength, digits.length);
+  for (let length = longest; length >= 1; length -= 1) {
+    const value = Number(digits.slice(-length));
+    if (Number.isFinite(value) && value >= min && value <= max) return value;
+  }
+  return null;
+}
+
+function hopeCurrentValueInRange(entry, { max } = {}) {
+  const first = firstNumericValueInRange(entry, { min: 0, max: 99 });
+  if (Number.isFinite(first) && (!Number.isFinite(max) || first <= max)) return first;
+  if (Number.isFinite(max)) {
+    const suffix = suffixNumericValueInRange(entry, { min: 0, max: Math.min(99, max), maxLength: 2 });
+    if (Number.isFinite(suffix)) return suffix;
+  }
+  return first;
+}
+
 function hopePairFromTopRightStatus(frame) {
   for (const entry of asTextResults(frame).filter((item) => String(item.regionId || "").includes("top_right_status"))) {
     const values = looseNumericValuesFromText(entry.text).filter((value) => value >= 0 && value <= 9999);
@@ -467,8 +488,8 @@ function findHopeCandidates(frame) {
     [fullCurrentEntry, maxEntry],
   ];
   for (const [currentCandidate, maxCandidate] of hopePairEntries) {
-    const current = firstNumericValueInRange(currentCandidate, { min: 0, max: 99 });
     const max = firstNumericValueInRange(maxCandidate, { min: 0, max: 50 });
+    const current = hopeCurrentValueInRange(currentCandidate, { max });
     if (isValidHopePair([current, max])) return hopeCandidatesFromPair([current, max]);
   }
 
@@ -509,10 +530,10 @@ function findTemplateIngotCandidate(frame) {
 }
 
 function findIngotCandidate(frame) {
-  const direct = findBestRegionNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPattern: /^run\.ingot$/, min: 0, max: 9999, confidence: 0.86, prefer: "first" });
-  if (direct) return direct;
   const templateIngot = findTemplateIngotCandidate(frame);
   if (templateIngot) return templateIngot;
+  const direct = findBestRegionNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPattern: /^run\.ingot$/, min: 0, max: 9999, confidence: 0.86, prefer: "first" });
+  if (direct) return direct;
   const topIngot = findTopIngotCandidate(frame);
   if (topIngot) return topIngot;
   return findRegionNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPart: "ingot", min: 0, max: 9999, prefer: "first" });

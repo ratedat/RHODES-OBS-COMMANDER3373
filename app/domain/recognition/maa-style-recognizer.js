@@ -138,23 +138,30 @@ export function normalizeMaaStyleTasks(raw = {}) {
 function recognitionRegions(tasks, context = {}) {
   const regions = [];
   const allowedProfileRegionIds = profileOcrRegionIds(context.profile);
-  const addRegion = (id, roi, scale = 3) => {
+  const addRegion = (region) => {
+    const id = region?.id;
+    const roi = region?.roi;
+    const scale = region?.scale || 3;
     const rect = rectFrom(roi);
     if (!rect) return;
     const scaled = context.scale ? scaleRect(rect, context.scale) : rect;
     const key = `${id}:${scaled.x}:${scaled.y}:${scaled.width}:${scaled.height}`;
     if (regions.some((region) => region.key === key)) return;
-    regions.push({ key, id, ...scaled, scale });
+    const options = {};
+    for (const name of ["numericFallback", "numericStartYRatio"]) {
+      if (Object.hasOwn(region, name)) options[name] = region[name];
+    }
+    regions.push({ key, id, ...scaled, scale, ...options });
   };
   for (const region of tasks.ocrRegions || []) {
     if (!taskAppliesToProfile(region, context.profile)) continue;
     if (allowedProfileRegionIds && !allowedProfileRegionIds.has(region.id)) continue;
-    addRegion(region.id, region.roi, region.scale || 3);
+    addRegion(region);
   }
   for (const task of [...(tasks.screens || []), ...(tasks.candidates || [])]) {
     if (!taskAppliesToProfile(task, context.profile)) continue;
     const recognition = task.recognition || {};
-    if (recognition.roi) addRegion(task.id, recognition.roi, recognition.scale || 3);
+    if (recognition.roi) addRegion({ id: task.id, roi: recognition.roi, scale: recognition.scale || 3 });
   }
   return regions.map(({ key, ...region }) => region);
 }

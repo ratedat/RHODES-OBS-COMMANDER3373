@@ -178,6 +178,22 @@ test("buildAdbCandidatePaths includes Android SDK and Tencent ADB locations", ()
   assert.equal(candidates.some((item) => item.path === "C:/Program Files\\Tencent\\Androws\\Application\\adb.exe" && item.preset === "tencent"), true);
 });
 
+test("buildAdbCandidatePaths includes Google Play Games bundled adb locations", () => {
+  const candidates = buildAdbCandidatePaths({
+    env: { ProgramFiles: "C:/Program Files" },
+    driveLetters: [],
+  });
+
+  assert.equal(
+    candidates.some((item) => item.path === "C:/Program Files\\Google\\Play Games Developer Emulator\\current\\emulator\\adb.exe" && item.preset === "google-play-games-dev"),
+    true,
+  );
+  assert.equal(
+    candidates.some((item) => item.path === "C:/Program Files\\Google\\Play Games\\current\\emulator\\adb.exe" && item.preset === "google-play-games-dev"),
+    true,
+  );
+});
+
 test("MAA-style default serials cover supported emulator presets", () => {
   assert.deepEqual(adbDefaultSerialsByPreset.mumu.slice(0, 3), ["127.0.0.1:16384", "127.0.0.1:16416", "127.0.0.1:16448"]);
   assert.equal(adbDefaultSerialsByPreset.bluestacks.includes("127.0.0.1:5555"), true);
