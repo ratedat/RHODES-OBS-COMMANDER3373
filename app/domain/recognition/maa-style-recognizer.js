@@ -194,12 +194,12 @@ async function enrichFrameWithText(frame, context = {}, textExtractor, tasks) {
   }
 }
 
-export function createMaaStyleRecognizer({ tasks = {}, fallback = createMetadataRecognizer(), textExtractor = null, candidateExtractors = [] } = {}) {
+export function createMaaStyleRecognizer({ tasks = {}, fallback = createMetadataRecognizer(), textExtractor = null, classificationTextExtractor = null, candidateExtractors = [] } = {}) {
   const normalizedTasks = normalizeMaaStyleTasks(tasks);
 
   return {
     async classify(frame, context = {}) {
-      const enrichedFrame = await enrichFrameWithText(frame, context, textExtractor, normalizedTasks);
+      const enrichedFrame = await enrichFrameWithText(frame, context, classificationTextExtractor || textExtractor, normalizedTasks);
       const fallbackResult = await fallback.classify(enrichedFrame, context);
       if (fallbackResult?.known) return { ...fallbackResult, engine: "metadata" };
 

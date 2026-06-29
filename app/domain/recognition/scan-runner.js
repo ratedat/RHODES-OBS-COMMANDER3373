@@ -143,11 +143,52 @@ function scanPassesForProfile(profile, scale) {
       maxScrolls: Math.max(0, Number(pass.maxScrolls ?? profile.maxScrolls ?? 16)),
       minScrolls: Math.max(0, Number(pass.minScrolls ?? pass.minimumScrolls ?? 0)),
       mirrorPreviousPassScrolls: Boolean(pass.mirrorPreviousPassScrolls),
+      collectCandidates: pass.collectCandidates !== false,
+      collectWindow: pass.collectWindow && typeof pass.collectWindow === "object" ? pass.collectWindow : null,
       stableCount,
       candidateStableCount,
       captureDelayMs: Number(pass.captureDelayMs ?? profile.captureDelayMs ?? 0),
     };
   });
+}
+
+function candidateRect(candidate = {}) {
+  const roi = candidate.roi;
+  if (!roi) return null;
+  if (Array.isArray(roi)) {
+    const [x, y, width, height] = roi.map(Number);
+    return [x, y, width, height].every(Number.isFinite) ? { x, y, width, height } : null;
+  }
+  const x = Number(roi.x);
+  const y = Number(roi.y);
+  const width = Number(roi.width);
+  const height = Number(roi.height);
+  return [x, y, width, height].every(Number.isFinite) ? { x, y, width, height } : null;
+}
+
+function candidateWithinCollectWindow(candidate, { pass, iteration, scanRegion } = {}) {
+  const window = pass?.collectWindow;
+  if (!window || iteration === 0 || !scanRegion) return true;
+  const rect = candidateRect(candidate);
+  if (!rect) return true;
+  const centerX = rect.x + rect.width / 2;
+  const centerY = rect.y + rect.height / 2;
+  const minXRatio = Number(window.minXRatio);
+  const maxXRatio = Number(window.maxXRatio);
+  const minYRatio = Number(window.minYRatio);
+  const maxYRatio = Number(window.maxYRatio);
+  if (Number.isFinite(minXRatio) && centerX < scanRegion.x + scanRegion.width * minXRatio) return false;
+  if (Number.isFinite(maxXRatio) && centerX > scanRegion.x + scanRegion.width * maxXRatio) return false;
+  if (Number.isFinite(minYRatio) && centerY < scanRegion.y + scanRegion.height * minYRatio) return false;
+  if (Number.isFinite(maxYRatio) && centerY > scanRegion.y + scanRegion.height * maxYRatio) return false;
+  return true;
+}
+
+function collectCandidatesForPass(candidates, { pass, iteration, scanRegion } = {}) {
+  if (pass?.collectCandidates === false) return [];
+  const list = Array.isArray(candidates) ? candidates : [];
+  if (!pass?.collectWindow || iteration === 0) return list;
+  return list.filter((candidate) => candidateWithinCollectWindow(candidate, { pass, iteration, scanRegion }));
 }
 
 export async function runScanProfile({ profile, adapter, recognizer = createMetadataRecognizer(), source = "adb", now = () => new Date(), scanId = randomUUID(), signal, random = Math.random, onLog = null, onCaptureFrame = null } = {}) {
@@ -228,11 +269,23 @@ export async function runScanProfile({ profile, adapter, recognizer = createMeta
         passFingerprints.push(fingerprint);
         fingerprints.push(fingerprint);
 
-        const candidates = await recognizer.recognize(frame, { profile, region: scanRegion, iteration, passIndex: pass.passIndex, actualResolution, scale });
-        logEvent(log, "recognize", { iteration, passIndex: pass.passIndex, count: Array.isArray(candidates) ? candidates.length : 0 }, onLog);
-        if (Array.isArray(candidates)) rawCandidates.push(...candidates);
+        let candidates = [];
+        let collectedCandidates = [];
+        if (pass.collectCandidates) {
+          candidates = await recognizer.recognize(frame, { profile, region: scanRegion, iteration, passIndex: pass.passIndex, actualResolution, scale });
+          collectedCandidates = collectCandidatesForPass(candidates, { pass, iteration, scanRegion });
+          logEvent(log, "recognize", {
+            iteration,
+            passIndex: pass.passIndex,
+            count: Array.isArray(candidates) ? candidates.length : 0,
+            ...(collectedCandidates.length !== (Array.isArray(candidates) ? candidates.length : 0) ? { collectedCount: collectedCandidates.length } : {}),
+          }, onLog);
+          rawCandidates.push(...collectedCandidates);
+        } else {
+          logEvent(log, "recognize", { iteration, passIndex: pass.passIndex, count: 0, status: "skipped", reason: "collection_disabled" }, onLog);
+        }
 
-        const guardResult = initialCandidateScrollGuardResult({ profile, pass, iteration, candidates });
+        const guardResult = initialCandidateScrollGuardResult({ profile, pass, iteration, candidates: collectedCandidates });
         if (guardResult) {
           logEvent(log, "scroll", {
             axis: pass.axis,
@@ -248,7 +301,7 @@ export async function runScanProfile({ profile, adapter, recognizer = createMeta
           break;
         }
 
-        const currentCandidateSignature = candidateSetSignature(candidates);
+        const currentCandidateSignature = candidateSetSignature(collectedCandidates);
         if (currentCandidateSignature && currentCandidateSignature === previousCandidateSignature) candidateStableMatches += 1;
         else candidateStableMatches = 0;
         previousCandidateSignature = currentCandidateSignature;

@@ -116,6 +116,19 @@ function rowMatchesThought(thought, row) {
   };
 }
 
+function thoughtInstanceIdFromRoi(roi, scanRegion) {
+  const rect = rectFrom(roi);
+  if (!rect) return null;
+  const region = rectFrom(scanRegion);
+  const originX = region?.x || 0;
+  const originY = region?.y || 0;
+  const centerX = rect.x + rect.width / 2;
+  const centerY = rect.y + rect.height / 2;
+  const column = Math.max(0, Math.floor((centerX - originX) / 320));
+  const row = Math.max(0, Math.floor((centerY - originY) / 160));
+  return `slot:${column},${row}`;
+}
+
 export function createThoughtCandidateExtractor({ selectableEffects = [], campaignId = "is5_sarkaz" } = {}) {
   const db = buildThoughtRecognitionDb(selectableEffects, { campaignId });
   return async function extractThoughtCandidates(frame, context = {}) {
@@ -147,7 +160,7 @@ export function createThoughtCandidateExtractor({ selectableEffects = [], campai
           confidence: hit.confidence,
           needsReview: true,
           roi: hit.roi,
-          instanceId: hit.roi ? `roi:${Math.round(hit.roi.x || 0)},${Math.round(hit.roi.y || 0)}` : null,
+          instanceId: thoughtInstanceIdFromRoi(hit.roi, scanRegion),
           source: hit.source,
         };
         candidates.push(candidate);

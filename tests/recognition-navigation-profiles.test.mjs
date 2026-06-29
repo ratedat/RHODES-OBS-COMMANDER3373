@@ -213,6 +213,8 @@ test("thought full scan uses the central thought list lane for vertical scrollin
   const [down, up] = profile.scrollPasses;
   assert.ok(down.scroll.start.y > down.scroll.end.y, "thought down pass should drag upward");
   assert.ok(up.scroll.start.y < up.scroll.end.y, "thought up pass should drag downward");
+  assert.deepEqual(down.collectWindow, { minYRatio: 0.26 });
+  assert.equal(up.collectCandidates, false);
   for (const pass of profile.scrollPasses) {
     assert.ok(pass.scroll.startArea.x >= 480, "thought start area should avoid the inactive left edge");
     assert.ok(pass.scroll.endArea.x >= 480, "thought end area should avoid the inactive left edge");

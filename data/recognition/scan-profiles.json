@@ -821,6 +821,9 @@
           "maxScrolls": 8,
           "endFingerprintStableCount": 1,
           "captureDelayMs": 120,
+          "collectWindow": {
+            "minYRatio": 0.26
+          },
           "candidateStableEndCount": 1
         },
         {
@@ -854,6 +857,7 @@
           "endFingerprintStableCount": 1,
           "captureDelayMs": 120,
           "candidateStableEndCount": 1,
+          "collectCandidates": false,
           "mirrorPreviousPassScrolls": true
         }
       ],

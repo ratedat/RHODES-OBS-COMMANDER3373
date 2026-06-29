@@ -137,6 +137,89 @@ test("scan runner can sweep a scrollable overlay down and then back up", async (
   assert.equal(result.log.some((entry) => entry.event === "scroll" && entry.direction === "up" && entry.passIndex === 1), true);
 });
 
+test("scan runner can use a return scroll pass without collecting duplicate candidates", async () => {
+  const adapterLog = [];
+  const result = await runScanProfile({
+    profile: baseProfile({
+      id: "is5ThoughtFull",
+      candidateKind: "thought",
+      scrollPasses: [
+        {
+          axis: "vertical",
+          direction: "down",
+          scroll: { start: { x: 640, y: 610 }, end: { x: 640, y: 150 }, durationMs: 560 },
+          maxScrolls: 1,
+        },
+        {
+          axis: "vertical",
+          direction: "up",
+          scroll: { start: { x: 640, y: 150 }, end: { x: 640, y: 610 }, durationMs: 560 },
+          maxScrolls: 1,
+          mirrorPreviousPassScrolls: true,
+          collectCandidates: false,
+        },
+      ],
+    }),
+    adapter: createAdapter([
+      { knownScreenId: "run-home" },
+      { fingerprint: "thought-top", candidates: [{ kind: "thought", campaignId: "is5_sarkaz", thoughtId: "t1", instanceId: "top", name: "走る都市", confidence: 0.8 }] },
+      { fingerprint: "thought-bottom", candidates: [{ kind: "thought", campaignId: "is5_sarkaz", thoughtId: "t2", instanceId: "bottom", name: "枯れ木と若枝", confidence: 0.8 }] },
+      { fingerprint: "thought-return", candidates: [{ kind: "thought", campaignId: "is5_sarkaz", thoughtId: "t1", instanceId: "return", name: "走る都市", confidence: 0.8 }] },
+    ], adapterLog),
+    recognizer: createMetadataRecognizer(),
+    scanId: "scan-return-no-collect",
+    random: () => 0.5,
+  });
+
+  assert.equal(result.status, "completed");
+  assert.deepEqual(result.suggestions.map((item) => item.candidate.thoughtId).sort(), ["t1", "t2"]);
+  assert.equal(result.log.some((entry) => entry.event === "recognize" && entry.passIndex === 1 && entry.status === "skipped" && entry.reason === "collection_disabled"), true);
+  assert.equal(adapterLog.filter((entry) => entry[0] === "swipe").length, 2);
+});
+
+test("scan runner can collect only the newly exposed lower part after a downward scroll", async () => {
+  const result = await runScanProfile({
+    profile: baseProfile({
+      id: "is5ThoughtFull",
+      candidateKind: "thought",
+      scanRegion: { x: 90, y: 84, width: 1100, height: 540 },
+      scrollPasses: [
+        {
+          axis: "vertical",
+          direction: "down",
+          scroll: { start: { x: 640, y: 610 }, end: { x: 640, y: 150 }, durationMs: 560 },
+          maxScrolls: 1,
+          collectWindow: { minYRatio: 0.26 },
+        },
+      ],
+    }),
+    adapter: createAdapter([
+      { knownScreenId: "run-home" },
+      {
+        fingerprint: "thought-top",
+        candidates: [
+          { kind: "thought", campaignId: "is5_sarkaz", thoughtId: "old", instanceId: "visible-left", name: "走る都市", roi: { x: 1240, y: 420, width: 320, height: 80 }, confidence: 0.8 },
+          { kind: "thought", campaignId: "is5_sarkaz", thoughtId: "dup", instanceId: "visible-right", name: "枯れ木と若枝", roi: { x: 2100, y: 1000, width: 400, height: 80 }, confidence: 0.8 },
+        ],
+      },
+      {
+        fingerprint: "thought-after-scroll",
+        candidates: [
+          { kind: "thought", campaignId: "is5_sarkaz", thoughtId: "old", instanceId: "carried-over", name: "走る都市", roi: { x: 1240, y: 380, width: 320, height: 80 }, confidence: 0.9 },
+          { kind: "thought", campaignId: "is5_sarkaz", thoughtId: "new", instanceId: "new-lower", name: "構想", roi: { x: 1240, y: 1040, width: 240, height: 80 }, confidence: 0.8 },
+        ],
+      },
+    ]),
+    recognizer: createMetadataRecognizer(),
+    scanId: "scan-lower-window",
+    random: () => 0.5,
+  });
+
+  assert.equal(result.status, "completed");
+  assert.deepEqual(result.suggestions.map((item) => item.candidate.thoughtId).sort(), ["dup", "new", "old"]);
+  assert.equal(result.log.some((entry) => entry.event === "recognize" && entry.iteration === 1 && entry.count === 2 && entry.collectedCount === 1), true);
+});
+
 test("relic scan skips scroll when the opened panel fits within three rows", async () => {
   const adapterLog = [];
   const result = await runScanProfile({

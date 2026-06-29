@@ -22,7 +22,7 @@ import { runScanProfile } from "./domain/recognition/scan-runner.js";
 import { applyRecognitionScanCompletionToState } from "./domain/recognition/auto-apply.js";
 import { appendRecognitionSuggestionsToState } from "./domain/recognition/suggestions.js";
 import { createAdbAdapter, detectAdbConnections } from "./recognition/adapters/adb-adapter.js";
-import { createProfileAwareOcrTextExtractor } from "./recognition/adapters/ocr-text-extractor.js";
+import { createDefaultOcrTextExtractor, createProfileAwareOcrTextExtractor } from "./recognition/adapters/ocr-text-extractor.js";
 import { detectWindowsHypervisor } from "./domain/system-diagnostics.js";
 import { createGlmOcrRuntimeManager, resolveInstalledGlmOcrRuntimeOptions } from "./domain/glm-ocr-runtime.js";
 import { createOllamaRuntimeManager, resolveInstalledOllamaRuntimeOptions } from "./domain/ollama-runtime.js";
@@ -258,11 +258,13 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog
     connectionPreset: adbSettings.connectionPreset,
   });
   const ocrRouting = recognitionOcrRoutingFromState(state, profiles);
+  const classificationOcrEngine = recognitionClassificationOcrEngine(ocrRouting.defaultEngine);
   onLog?.({
     event: "ocr-engine",
     engine: ocrRouting.defaultEngine,
     profileOverride: state.preferences?.ocrEngine || "profile",
     profileEngineCount: Object.keys(ocrRouting.profileEngines || {}).length,
+    classificationEngine: classificationOcrEngine,
   });
   const glmOcrRuntimeOptions = await resolveInstalledGlmOcrRuntimeOptions({ stateDir: STATE_DIR });
   const ollamaRuntimeOptions = await resolveInstalledOllamaRuntimeOptions({ stateDir: STATE_DIR });
@@ -290,6 +292,10 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog
         profileEngines: ocrRouting.profileEngines,
         ...mergedGlmOcrRuntimeOptions,
       }),
+      classificationTextExtractor: classificationOcrEngine ? createDefaultOcrTextExtractor({
+        engine: classificationOcrEngine,
+        ...mergedGlmOcrRuntimeOptions,
+      }) : null,
       candidateExtractors: [runStatusExtractor, relicExtractor, operatorExtractor, thoughtExtractor, ageExtractor],
     }),
     source,
@@ -321,6 +327,10 @@ function recognitionOcrRoutingFromState(state, profiles) {
     return { defaultEngine: overrideEngine, profileEngines: {} };
   }
   return { defaultEngine: process.env.RHODES_OCR_ENGINE || "auto", profileEngines: ocrEnginesFromScanProfiles(profiles) };
+}
+
+function recognitionClassificationOcrEngine(defaultEngine) {
+  return normalizeOcrEngine(defaultEngine) === "glm-ocr" ? "windows-glm" : null;
 }
 
 function publicScanStatus(status) {

@@ -69,6 +69,32 @@ test("MAA-style recognizer classifies a profile screen from OCR text", async () 
   assert.equal(result.engine, "maa-style");
 });
 
+test("MAA-style recognizer can use a separate OCR extractor for screen classification", async () => {
+  const recognizer = createMaaStyleRecognizer({
+    tasks,
+    textExtractor: {
+      async extract(frame) {
+        return { ...frame, ocrResults: [] };
+      },
+    },
+    classificationTextExtractor: {
+      async extract(frame) {
+        return {
+          ...frame,
+          ocrResults: [{ text: "サ ル カ ズ の 炉 辺 奇 談 / 魂 に 直 面", confidence: 0.91 }],
+        };
+      },
+    },
+  });
+
+  const classification = await recognizer.classify({ bytes: Buffer.from("png") }, { profile: { id: "runStatusFull" } });
+  const candidates = await recognizer.recognize({ bytes: Buffer.from("png") }, { profile: { id: "runStatusFull" } });
+
+  assert.equal(classification.known, true);
+  assert.equal(classification.screenId, "is5-sarkaz-map-select");
+  assert.deepEqual(candidates, []);
+});
+
 test("MAA-style screen tasks can require all expected OCR terms across split results", async () => {
   const recognizer = createMaaStyleRecognizer({ tasks });
   const partial = await recognizer.classify({
