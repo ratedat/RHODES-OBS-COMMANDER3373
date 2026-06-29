@@ -1078,7 +1078,8 @@ function renderGlmOcrOllamaRuntimePanel(status) {
   const job = known ? status.installJob : null;
   const installing = Boolean(status?.installing);
   const ready = status?.status === "ready";
-  const statusText = installing ? "導入中" : known ? (ready ? "使用可能" : status.status === "partial" ? "未完了" : "未導入") : "未確認";
+  const offlineInstalled = status?.executablePresent && status?.configPresent && status?.modelsDirPresent;
+  const statusText = installing ? "導入中" : known ? (ready ? "使用可能" : offlineInstalled ? "導入済み/未起動" : status.status === "partial" ? "未完了" : "未導入") : "未確認";
   const message = status?.message || "GLM-OCRをローカルOllamaで動かすための任意ランタイムです。";
   const installRoot = status?.installRoot || "-";
   const executablePath = status?.executablePath || "-";

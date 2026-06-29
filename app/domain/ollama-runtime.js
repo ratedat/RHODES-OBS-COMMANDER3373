@@ -291,6 +291,7 @@ export async function probeOllamaRuntime({ stateDir, requestJsonImpl = requestJs
     : executablePresent || configPresent || modelsDirPresent
       ? "partial"
       : "missing";
+  const offlineInstalled = executablePresent && configPresent && modelsDirPresent && !serverReachable;
   return {
     status,
     installed,
@@ -308,7 +309,9 @@ export async function probeOllamaRuntime({ stateDir, requestJsonImpl = requestJs
     message: status === "ready"
       ? "Ollama + GLM-OCRモデルを使用できます。"
       : status === "partial"
-        ? serverReachable
+        ? offlineInstalled
+          ? "Ollamaは導入済みですが未起動です。起動を実行してください。"
+          : serverReachable
           ? "Ollamaは起動していますが、GLM-OCRモデルまたは設定が未完了です。"
           : "Ollamaは未完了または未起動です。導入/起動を実行してください。"
         : "Ollamaローカル実行は未導入です。",

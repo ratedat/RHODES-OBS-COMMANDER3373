@@ -63,6 +63,30 @@ test("Ollama runtime probe reports missing without calling the server", async ()
   assert.equal(status.modelPresent, false);
 });
 
+test("Ollama runtime probe reports installed but stopped when bundled files exist", async () => {
+  const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "rhodes-ollama-runtime-stopped-"));
+  const paths = resolveOllamaRuntimePaths({ stateDir, platform: "win32" });
+  await fs.mkdir(paths.installDir, { recursive: true });
+  await fs.mkdir(paths.configDir, { recursive: true });
+  await fs.mkdir(paths.modelsDir, { recursive: true });
+  await fs.writeFile(paths.ollamaExe, "exe", "utf8");
+  await fs.writeFile(paths.glmOcrConfig, "pipeline: {}\n", "utf8");
+
+  const status = await probeOllamaRuntime({
+    stateDir,
+    requestJsonImpl: async () => {
+      throw new Error("offline");
+    },
+  });
+
+  assert.equal(status.status, "partial");
+  assert.equal(status.installed, true);
+  assert.equal(status.executablePresent, true);
+  assert.equal(status.configPresent, true);
+  assert.equal(status.modelsDirPresent, true);
+  assert.match(status.message, /導入済み/);
+});
+
 test("Ollama runtime install extracts Ollama, writes GLM config, and pulls the model", async () => {
   const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "rhodes-ollama-runtime-install-"));
   const pulledModels = [];
