@@ -18,6 +18,7 @@ const operators = [
   { id: "rangers", name: "レンジャー", rarity: 2, class: "狙撃", branch: "速射手" },
   { id: "brigid", name: "ブリギッド", rarity: 5, class: "狙撃", branch: "旋輪射手" },
   { id: "jieyun", name: "ジエユン", rarity: 5, class: "狙撃", branch: "榴弾射手" },
+  { id: "shirayuki", name: "シラユキ", rarity: 4, class: "狙撃", branch: "榴弾射手" },
   { id: "leizi", name: "レイズ", rarity: 5, class: "術師", branch: "連鎖術師" },
   { id: "leizi2", name: "司霆レイズ", rarity: 6, class: "前衛", branch: "解放者" },
   { id: "yu", name: "ユー", rarity: 6, class: "重装", branch: "本源衛士" },
@@ -25,6 +26,9 @@ const operators = [
   { id: "humus", name: "ヒューマス", rarity: 4, class: "前衛", branch: "鎌撃士" },
   { id: "executor2", name: "聖約イグゼキュター", rarity: 6, class: "前衛", branch: "鎌撃士" },
   { id: "gummy", name: "グム", rarity: 4, class: "重装", branch: "庇護衛士" },
+  { id: "rosesalt", name: "ローズソルト", rarity: 5, class: "医療", branch: "群癒師" },
+  { id: "reserve_sniper", name: "予備隊員-狙撃", rarity: 3, class: "狙撃", branch: "速射手" },
+  { id: "terraresearchcommission", name: "テラ大陸調査団", rarity: 1, class: "狙撃", branch: "投擲手" },
 ];
 
 const operatorOcrMap = {
@@ -191,6 +195,31 @@ test("operator candidate extractor maps Gummy when Windows OCR drops the dakuten
   assert.equal(candidates[0].operatorId, "gummy");
   assert.equal(candidates[0].name, "グム");
   assert.equal(candidates[0].source, "local-ocr-drift");
+});
+
+test("operator candidate extractor maps observed GLM OCR drift for Shirayuki", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [{ text: "ショラキ", regionId: "operator.card.name.0", roi: { x: 891, y: 291, width: 188, height: 29 }, confidence: 0.7 }],
+  }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
+
+  assert.equal(candidates[0].operatorId, "shirayuki");
+  assert.equal(candidates[0].name, "シラユキ");
+  assert.equal(candidates[0].source, "local-ocr-drift");
+});
+
+test("operator candidate extractor maps observed GLM OCR drift from medic and sniper recruitment", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [
+      { text: "ロースソルト", regionId: "operator.card.name.0", roi: { x: 890, y: 291, width: 188, height: 29 }, confidence: 0.7 },
+      { text: "予備隊員-狙擊", regionId: "operator.card.name.1", roi: { x: 1720, y: 565, width: 188, height: 29 }, confidence: 0.7 },
+      { text: "テラ大陆調査団", regionId: "operator.card.name.2", roi: { x: 1720, y: 291, width: 188, height: 29 }, confidence: 0.7 },
+    ],
+  }, { profile: { id: "operatorsFull" }, region: { x: 350, y: 70, width: 1800, height: 1200 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["rosesalt", "terraresearchcommission", "reserve_sniper"]);
+  assert.ok(candidates.every((item) => item.source === "local-ocr-drift"));
 });
 
 test("operator candidate extractor does not turn partial Humus OCR into Yu or Eunectes", async () => {

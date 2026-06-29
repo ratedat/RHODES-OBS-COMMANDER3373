@@ -242,6 +242,8 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
   assert.deepEqual(cardTemplate.ocrOffset, { x: -7, y: -9, width: 188, height: 29 });
   assert.equal(cardTemplate.threshold, 0.7);
   assert.equal(cardTemplate.maxMatches, 12);
+  assert.equal(recruitTemplate.suppressStaticRegionIdPattern, undefined);
+  assert.equal(cardTemplate.suppressStaticRegionIdPattern, undefined);
   assert.equal(profile.scrollPasses.length, 2);
   assert.deepEqual(profile.scrollPasses.map((pass) => pass.direction), ["right", "left"]);
 
@@ -260,7 +262,7 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
 });
 
 test("local run template assets keep the expected 1280x720 crop sizes", async () => {
-  assert.deepEqual(await pngSize("assets/recognition/templates/run/OperatorCardCodeNameFlag.png"), { width: 25, height: 14 });
+  assert.deepEqual(await pngSize("assets/recognition/templates/run/OperatorCardCodeNameFlag.png"), { width: 29, height: 22 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/IdeaIcon.png"), { width: 39, height: 41 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/LifeIcon.png"), { width: 28, height: 51 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/HopeIcon.png"), { width: 54, height: 27 });
@@ -285,7 +287,7 @@ test("operator list OCR screen and text ROI target the opened operator frame", a
   const nameRegions = tasks.ocrRegions.filter((region) => String(region.id).startsWith("operator.name."));
   assert.equal(nameRegions.length, 8);
   assert.ok(nameRegions.every((region) => region.profileIds.includes("operatorsFull")));
-  assert.deepEqual(nameRegions.find((region) => region.id === "operator.name.right.4").roi, [1035, 560, 230, 78]);
+  assert.deepEqual(nameRegions.find((region) => region.id === "operator.name.right.4").roi, [1070, 580, 205, 43]);
 });
 
 

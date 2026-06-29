@@ -322,8 +322,7 @@
           "maxMatches": 8,
           "step": 4,
           "sampleStride": 8,
-          "scale": 4,
-          "suppressStaticRegionIdPattern": "^operator\\.name\\."
+          "scale": 4
         },
         {
           "idPrefix": "operator.card.name",
@@ -344,8 +343,7 @@
           "maxMatches": 12,
           "step": 2,
           "sampleStride": 2,
-          "scale": 4,
-          "suppressStaticRegionIdPattern": "^operator\\.name\\."
+          "scale": 4
         }
       ],
       "baseResolution": {
