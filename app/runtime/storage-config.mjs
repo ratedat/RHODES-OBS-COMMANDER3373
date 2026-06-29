@@ -18,8 +18,16 @@ export function defaultDocumentsPath({ homeDir = "" } = {}) {
   return path.join(homeDir || process.cwd(), "Documents");
 }
 
-export function portableStorageDir({ appRoot = process.cwd(), execPath = process.execPath, isPackaged = false } = {}) {
-  const base = isPackaged && execPath ? path.dirname(execPath) : appRoot;
+function portableExecutableDir({ env = {}, execPath = process.execPath } = {}) {
+  const envDir = cleanPath(env.PORTABLE_EXECUTABLE_DIR);
+  if (envDir) return envDir;
+  const envFile = cleanPath(env.PORTABLE_EXECUTABLE_FILE);
+  if (envFile) return path.dirname(envFile);
+  return cleanPath(execPath) ? path.dirname(execPath) : "";
+}
+
+export function portableStorageDir({ appRoot = process.cwd(), execPath = process.execPath, isPackaged = false, env = {} } = {}) {
+  const base = isPackaged ? (portableExecutableDir({ env, execPath }) || appRoot) : appRoot;
   return path.join(base, isPackaged ? PORTABLE_STORAGE_DIRNAME : DEV_STORAGE_DIRNAME);
 }
 
@@ -27,10 +35,10 @@ export function documentsStorageDir({ documentsPath = defaultDocumentsPath() } =
   return path.join(documentsPath, DOCUMENTS_STORAGE_DIRNAME);
 }
 
-export function storageTarget({ mode = "portable", storageDir = "", appRoot, execPath, documentsPath, isPackaged } = {}) {
+export function storageTarget({ mode = "portable", storageDir = "", appRoot, execPath, documentsPath, isPackaged, env } = {}) {
   const normalizedMode = normalizeStorageMode(mode);
   const baseDir = cleanPath(storageDir)
-    || (normalizedMode === "documents" ? documentsStorageDir({ documentsPath }) : portableStorageDir({ appRoot, execPath, isPackaged }));
+    || (normalizedMode === "documents" ? documentsStorageDir({ documentsPath }) : portableStorageDir({ appRoot, execPath, isPackaged, env }));
   return {
     mode: normalizedMode,
     storageDir: baseDir,

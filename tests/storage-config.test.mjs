@@ -15,6 +15,16 @@ test("portable storage sits beside the executable in packaged builds", () => {
   assert.equal(dir, path.join("D:/Apps/RHODES", "RHODES OBS COMMANDER3373 Data"));
 });
 
+test("portable storage follows the original portable executable path", () => {
+  const dir = portableStorageDir({
+    isPackaged: true,
+    execPath: "C:/Users/owner/AppData/Local/Temp/.mount/RHODES OBS COMMANDER3373.exe",
+    appRoot: "O:/dev",
+    env: { PORTABLE_EXECUTABLE_FILE: "E:/Tools/RHODES OBS COMMANDER3373-0.1.0-x64.exe" },
+  });
+  assert.equal(dir, path.join("E:/Tools", "RHODES OBS COMMANDER3373 Data"));
+});
+
 test("development portable storage stays inside the project root", () => {
   const dir = portableStorageDir({ isPackaged: false, execPath: "C:/Electron/electron.exe", appRoot: "O:/Arknights_Rogue_OBSTool" });
   assert.equal(dir, path.join("O:/Arknights_Rogue_OBSTool", "user-data"));
@@ -29,6 +39,17 @@ test("storage target derives settings, state, and electron profile paths", () =>
   assert.equal(target.settingsFile, path.join("D:/Tool/RHODES OBS COMMANDER3373 Data", "desktop-settings.json"));
   assert.equal(target.stateDir, path.join("D:/Tool/RHODES OBS COMMANDER3373 Data", "state"));
   assert.equal(target.userDataDir, path.join("D:/Tool/RHODES OBS COMMANDER3373 Data", "electron"));
+});
+
+test("storage target exposes bundled portable runtime state beside the original executable", () => {
+  const target = storageTarget({
+    mode: "portable",
+    appRoot: "O:/dev",
+    execPath: "C:/Users/owner/AppData/Local/Temp/.mount/RHODES OBS COMMANDER3373.exe",
+    isPackaged: true,
+    env: { PORTABLE_EXECUTABLE_FILE: "E:/Tools/RHODES OBS COMMANDER3373-0.1.0-x64.exe" },
+  });
+  assert.equal(target.stateDir, path.join("E:/Tools", "RHODES OBS COMMANDER3373 Data", "state"));
 });
 
 test("storage pointer round-trips the selected location", () => {

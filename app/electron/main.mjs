@@ -48,6 +48,7 @@ const packageMetadata = JSON.parse(readJsonFileSync(path.join(APP_ROOT, "package
 const storageContext = {
   appRoot: APP_ROOT,
   execPath: process.execPath,
+  env: process.env,
   documentsPath: path.join(os.homedir(), "Documents"),
   isPackaged: app.isPackaged,
 };
