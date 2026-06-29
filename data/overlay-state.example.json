@@ -83,5 +83,8 @@
     "restartProcessOnFailure": true,
     "closeAdbOnExit": false,
     "lightweightAdb": false
+  },
+  "preferences": {
+    "ocrEngine": "profile"
   }
 }

@@ -1,0 +1,3 @@
+# Optional verification-only OCR backend.
+# Keep this separate from requirements-ocr.txt so normal users do not install GLM-OCR.
+glmocr[selfhosted,server]

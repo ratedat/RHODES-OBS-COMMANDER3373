@@ -1,6 +1,6 @@
 import { asCoinEntries, asEffectStackEntries, asRevelationBoardValue, asSpecialArray, asSpecialObject, clampCoinCount, clampSpecialNumber, mergeCoinEntries, normalizeCoinFace } from "./domain/special-values.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults } from "./lib/overlay-config.js";
-import { clampGridColumns } from "./lib/preferences.js";
+import { clampGridColumns, normalizeOcrEngine } from "./lib/preferences.js";
 import { normalizeControlMode } from "./domain/ui-modes.js";
 import { RUN_STAT_FIELD_IDS, normalizeRunStatValue } from "./domain/run-stats.js";
 import { applyAdbPresetDefaults, normalizeAdbSettings } from "./domain/adb-settings.js";
@@ -145,6 +145,8 @@ export function updateRunField(state, field, value, checked) {
     state.run.performanceId = value || null;
   } else if (field === "operatorSort") {
     state.preferences.operatorSort = value;
+  } else if (field === "ocrEngine") {
+    state.preferences.ocrEngine = normalizeOcrEngine(value);
   } else if (field === "operatorGridColumns") {
     state.preferences.operatorGridColumns = clampGridColumns(value);
   } else if (field === "relicGridColumns") {

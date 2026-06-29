@@ -15,10 +15,10 @@ import json
 import sys
 
 modules = {}
-for name in ["onnxruntime", "numpy", "PIL", "cv2", "paddleocr", "fastdeploy"]:
+for name in ["onnxruntime", "numpy", "PIL", "cv2", "paddleocr", "fastdeploy", "glmocr"]:
     modules[name] = importlib.util.find_spec(name) is not None
 versions = {}
-for name in ["onnxruntime", "numpy", "PIL", "cv2", "paddleocr", "fastdeploy"]:
+for name in ["onnxruntime", "numpy", "PIL", "cv2", "paddleocr", "fastdeploy", "glmocr"]:
     if not modules[name]:
         continue
     try:
@@ -53,6 +53,11 @@ const maaAssets = buildMaaOcrAssetManifest({
 const summary = {
   ok: Boolean(python.ok && python.modules?.onnxruntime && python.modules?.numpy && python.modules?.PIL),
   python,
+  glmOcr: {
+    present: Boolean(python.modules?.glmocr),
+    version: python.versions?.glmocr || null,
+    engineValues: ["glm-ocr", "windows-glm"],
+  },
   maaAssets: maaAssets.assets.map(({ id, role, locale, localPath, present, model }) => ({ id, role, locale, localPath, present, model: Boolean(model) })),
 };
 

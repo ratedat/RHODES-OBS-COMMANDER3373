@@ -37,6 +37,8 @@ $env:RHODES_PYTHON = 'O:\Arknights_Rogue_OBSTool\.venv-ocr\Scripts\python.exe'
 - `windows`: use Windows.Media.Ocr only.
 - `maa-onnx`: use the MAA YoStarJP ONNX recognizer through ONNXRuntime. This is an explicit experimental engine for fixed ROI recognition.
 - `hybrid`: merge MAA ONNX and PaddleOCR fixed-ROI results into one candidate frame. Prefer this for local experiments.
+- `windows-glm`: merge Windows OCR and optional GLM-OCR fixed-ROI results. This is verification-only and requires the setup in [GLM-OCR optional verification setup](glm-ocr-setup.md).
+- `glm-ocr`: require GLM-OCR directly. This is verification-only and should not be used as the general default.
 
 Optional Paddle settings:
 

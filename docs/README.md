@@ -20,5 +20,6 @@ Do not place Codex/Stitch working notes, prompt handoff files, generated design 
 
 - [PaddleOCR optional setup](paddle-ocr-setup.md)
 - [ONNXRuntime / FastDeploy OCR setup](onnxruntime-fastdeploy-setup.md)
+- [GLM-OCR optional verification setup](glm-ocr-setup.md)
 
 - [MAA OCR adoption](maa-ocr-adoption.md)

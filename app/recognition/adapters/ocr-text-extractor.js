@@ -1,6 +1,7 @@
 import { createMaaOnnxOcrTextExtractor } from "./maa-onnx-ocr-adapter.js";
 import { createPaddleOcrTextExtractor } from "./paddle-ocr-adapter.js";
 import { createWindowsOcrTextExtractor } from "./windows-ocr-adapter.js";
+import { createGlmOcrTextExtractor } from "./glm-ocr-adapter.js";
 
 function hasText(frame) {
   if (typeof frame?.text === "string" && frame.text.trim()) return true;
@@ -79,6 +80,13 @@ export function createDefaultOcrTextExtractor({ engine = process.env.RHODES_OCR_
   }
   if (normalized === "paddle") return createPaddleOcrTextExtractor({ required: true });
   if (["maa-onnx", "maa", "onnx"].includes(normalized)) return createMaaOnnxOcrTextExtractor({ required: true });
+  if (["glm-ocr", "glm"].includes(normalized)) return createGlmOcrTextExtractor({ required: true });
+  if (["windows-glm", "glm-windows", "glm-hybrid", "hybrid-glm"].includes(normalized)) {
+    return createMergedTextExtractor([
+      createWindowsOcrTextExtractor(),
+      createGlmOcrTextExtractor({ required: false }),
+    ], { engine: "hybrid-windows-glm" });
+  }
   if (["hybrid", "maa-hybrid", "onnx-hybrid"].includes(normalized)) {
     return createMergedTextExtractor([
       createMaaOnnxOcrTextExtractor({ required: false }),

@@ -12,7 +12,7 @@ test("preserveLocalConfigOnReset keeps adb and UI/OBS preferences", () => {
   const previousState = {
     run: { campaignId: "is3_mizuki", difficulty: 18 },
     adb: { adbPath: "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe", serial: "127.0.0.1:16384", autoDetect: false },
-    preferences: { operatorSort: "implementation_desc", operatorGridColumns: 4, compactRelicScrollSpeed: 21, horizontalOperatorScrollSpeed: 6 },
+    preferences: { operatorSort: "implementation_desc", operatorGridColumns: 4, compactRelicScrollSpeed: 21, horizontalOperatorScrollSpeed: 6, ocrEngine: "windows-glm" },
     relics: ["is3_001"],
   };
 
@@ -27,4 +27,5 @@ test("preserveLocalConfigOnReset keeps adb and UI/OBS preferences", () => {
   assert.equal(next.preferences.operatorGridColumns, 4);
   assert.equal(next.preferences.compactRelicScrollSpeed, 21);
   assert.equal(next.preferences.horizontalOperatorScrollSpeed, 6);
+  assert.equal(next.preferences.ocrEngine, "windows-glm");
 });

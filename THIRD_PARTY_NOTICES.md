@@ -16,3 +16,11 @@ MaaAssistantArknights logos, trademarks, and brand assets are not imported into 
 Vendored reference files are kept under `third_party/maa`; generated OCR rule data is stored under `data/recognition/maa-ocr-rules.json`.
 
 MAA OCR configs, dictionaries, and optional ONNX model files may be synchronized into `third_party/maa/resource` by `npm run ocr:sync-maa` or `npm run ocr:sync-maa:models`. Keep these files under the same AGPL-3.0-only attribution.
+
+## GLM-OCR
+
+This project can optionally call a user-installed local GLM-OCR SDK or local GLM-OCR server for verification-only OCR experiments. GLM-OCR packages and model files are not bundled with RHODES OBS COMMANDER3373.
+
+- Project: https://github.com/zai-org/GLM-OCR
+- Code license: Apache-2.0
+- Model license: MIT

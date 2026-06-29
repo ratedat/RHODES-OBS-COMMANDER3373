@@ -27,7 +27,7 @@ import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
-import { clampGridColumns, gridColumnOptions, normalizePreferences } from "./lib/preferences.js";
+import { clampGridColumns, gridColumnOptions, normalizePreferences, ocrEngineOptions } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
 import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
 import { RUN_STAT_FIELDS, formatRunStatValue, normalizeRunStats, runStatDisplayItems } from "./domain/run-stats.js";
@@ -962,6 +962,7 @@ function renderControlV2SpecialScreen() {
 
 function renderAdbSettingPanel() {
   const adb = normalizeAdbSettings(state.adb);
+  const ocrEngine = state.preferences?.ocrEngine || "profile";
   const detection = ui.adbDetection;
   const testResult = ui.adbTestResult;
   const hypervisorStatus = ui.hypervisorStatus;
@@ -979,6 +980,9 @@ function renderAdbSettingPanel() {
         </select></label>
         <div class="adb-field-wide adb-path-row"><label>ADBパス<input data-adb-setting="adbPath" value="${html(adb.adbPath)}" placeholder="adb または MuMu の shell\\adb.exe" /></label><button type="button" data-action="adb-browse-path">選択</button></div>
         <label>接続先 / serial<input data-adb-setting="serial" value="${html(adb.serial)}" placeholder="127.0.0.1:16384" /></label>
+        <label class="adb-field-wide">OCRエンジン<select data-field="ocrEngine">
+          ${ocrEngineOptions.map((option) => `<option value="${option.id}" ${option.id === ocrEngine ? "selected" : ""}>${html(option.label)}</option>`).join("")}
+        </select></label>
         <label class="adb-field-wide">エミュレータパス<input data-adb-setting="emulatorPath" value="${html(adb.emulatorPath)}" placeholder="任意 / 後続の起動補助用" /></label>
         <label class="adb-check-row"><input type="checkbox" data-adb-setting="screenshotExtension" ${adb.screenshotExtension ? "checked" : ""} /> MuMuスクリーンショット拡張を使う</label>
         <label class="adb-check-row"><input type="checkbox" data-adb-setting="restartServerOnFailure" ${adb.restartServerOnFailure ? "checked" : ""} /> 失敗時にADBサーバー再起動を試す</label>
@@ -1812,5 +1816,4 @@ async function boot() {
 }
 
 boot();
-
 

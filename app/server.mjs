@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { normalizeControlMode } from "./domain/ui-modes.js";
 import { mergeImplementationHistory } from "./domain/operator-implementation-history.js";
 import { isAppShellPath } from "./lib/view-route.js";
+import { normalizeOcrEngine } from "./lib/preferences.js";
 import { normalizeRunStats } from "./domain/run-stats.js";
 import { normalizeAdbSettings } from "./domain/adb-settings.js";
 import { preserveLocalConfigOnReset } from "./domain/local-config.js";
@@ -108,6 +109,7 @@ function initialStateFromExample(example) {
   state.adb = normalizeAdbSettings(state.adb);
   state.preferences = {
     showUnreleasedOperators: false,
+    ocrEngine: "profile",
     operatorSort: "rarity_desc",
     operatorGridColumns: 2,
     relicGridColumns: 2,
@@ -116,6 +118,7 @@ function initialStateFromExample(example) {
   };
   state.preferences.operatorGridColumns = clampOperatorGridColumns(state.preferences.operatorGridColumns);
   state.preferences.relicGridColumns = clampOperatorGridColumns(state.preferences.relicGridColumns);
+  state.preferences.ocrEngine = normalizeOcrEngine(state.preferences.ocrEngine);
   normalizeOverlayScrollSpeeds(state.preferences);
   return state;
 }
@@ -162,6 +165,7 @@ function normalizeState(state) {
   next.adb = normalizeAdbSettings(next.adb);
   next.preferences = {
     showUnreleasedOperators: false,
+    ocrEngine: "profile",
     operatorSort: "rarity_desc",
     operatorGridColumns: 2,
     relicGridColumns: 2,
@@ -170,6 +174,7 @@ function normalizeState(state) {
   };
   next.preferences.operatorGridColumns = clampOperatorGridColumns(next.preferences.operatorGridColumns);
   next.preferences.relicGridColumns = clampOperatorGridColumns(next.preferences.relicGridColumns);
+  next.preferences.ocrEngine = normalizeOcrEngine(next.preferences.ocrEngine);
   normalizeOverlayScrollSpeeds(next.preferences);
   return next;
 }
@@ -250,13 +255,21 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog
     autoDetect: adbSettings.autoDetect,
     connectionPreset: adbSettings.connectionPreset,
   });
+  const ocrRouting = recognitionOcrRoutingFromState(state, profiles);
+  onLog?.({
+    event: "ocr-engine",
+    engine: ocrRouting.defaultEngine,
+    profileOverride: state.preferences?.ocrEngine || "profile",
+    profileEngineCount: Object.keys(ocrRouting.profileEngines || {}).length,
+  });
   return runScanProfile({
     profile,
     adapter: createAdbAdapter({ settings: adbSettings, workDir: ADB_WORK_DIR }),
     recognizer: createMaaStyleRecognizer({
       tasks,
       textExtractor: createProfileAwareOcrTextExtractor({
-        profileEngines: ocrEnginesFromScanProfiles(profiles),
+        defaultEngine: ocrRouting.defaultEngine,
+        profileEngines: ocrRouting.profileEngines,
       }),
       candidateExtractors: [runStatusExtractor, relicExtractor, operatorExtractor, thoughtExtractor, ageExtractor],
     }),
@@ -281,6 +294,14 @@ function scanLogTail(log = [], limit = SCAN_STATUS_LOG_LIMIT) {
 function sanitizeFilePart(value, fallback = "scan") {
   const cleaned = String(value || fallback).replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
   return cleaned || fallback;
+}
+
+function recognitionOcrRoutingFromState(state, profiles) {
+  const overrideEngine = normalizeOcrEngine(state?.preferences?.ocrEngine);
+  if (overrideEngine !== "profile") {
+    return { defaultEngine: overrideEngine, profileEngines: {} };
+  }
+  return { defaultEngine: process.env.RHODES_OCR_ENGINE || "auto", profileEngines: ocrEnginesFromScanProfiles(profiles) };
 }
 
 function publicScanStatus(status) {
