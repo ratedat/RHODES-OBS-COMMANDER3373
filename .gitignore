@@ -38,8 +38,10 @@ temp/
 data/current-state.json
 data/electron/
 data/glm-ocr-runtime/
+data/ollama-runtime/
 user-data/
 user-data/state/glm-ocr-runtime/
+user-data/state/ollama-runtime/
 data/adb-screenshots/
 # Local ADB/OCR experiments
 experiments/adb/

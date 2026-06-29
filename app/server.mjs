@@ -25,6 +25,7 @@ import { createAdbAdapter, detectAdbConnections } from "./recognition/adapters/a
 import { createProfileAwareOcrTextExtractor } from "./recognition/adapters/ocr-text-extractor.js";
 import { detectWindowsHypervisor } from "./domain/system-diagnostics.js";
 import { createGlmOcrRuntimeManager, resolveInstalledGlmOcrRuntimeOptions } from "./domain/glm-ocr-runtime.js";
+import { createOllamaRuntimeManager, resolveInstalledOllamaRuntimeOptions } from "./domain/ollama-runtime.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -264,10 +265,19 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog
     profileEngineCount: Object.keys(ocrRouting.profileEngines || {}).length,
   });
   const glmOcrRuntimeOptions = await resolveInstalledGlmOcrRuntimeOptions({ stateDir: STATE_DIR });
+  const ollamaRuntimeOptions = await resolveInstalledOllamaRuntimeOptions({ stateDir: STATE_DIR });
+  const mergedGlmOcrRuntimeOptions = {
+    ...glmOcrRuntimeOptions,
+    glmOcrEnv: {
+      ...(glmOcrRuntimeOptions.glmOcrEnv || {}),
+      ...(ollamaRuntimeOptions.glmOcrEnv || {}),
+    },
+  };
   if (glmOcrRuntimeOptions.glmOcrPythonPath) {
     onLog?.({
       event: "glm-ocr-runtime",
       pythonPath: glmOcrRuntimeOptions.glmOcrPythonPath,
+      ollamaConfig: ollamaRuntimeOptions.glmOcrEnv?.RHODES_GLM_OCR_CONFIG || null,
     });
   }
   return runScanProfile({
@@ -278,7 +288,7 @@ async function defaultRecognitionRunner({ profile, source = "adb", signal, onLog
       textExtractor: createProfileAwareOcrTextExtractor({
         defaultEngine: ocrRouting.defaultEngine,
         profileEngines: ocrRouting.profileEngines,
-        ...glmOcrRuntimeOptions,
+        ...mergedGlmOcrRuntimeOptions,
       }),
       candidateExtractors: [runStatusExtractor, relicExtractor, operatorExtractor, thoughtExtractor, ageExtractor],
     }),
@@ -545,6 +555,7 @@ export function createAppServer({
   adbPathPicker = null,
   hypervisorDetector = detectWindowsHypervisor,
   glmOcrRuntimeManager = createGlmOcrRuntimeManager({ stateDir: STATE_DIR }),
+  ollamaRuntimeManager = createOllamaRuntimeManager({ stateDir: STATE_DIR }),
   recognitionLogDir = RECOGNITION_LOG_DIR,
   adbCaptureDir = null,
 } = {}) {
@@ -692,6 +703,22 @@ export function createAppServer({
       return sendJson(res, 200, await glmOcrRuntimeManager.uninstall());
     }
 
+    if (req.method === "GET" && url.pathname === "/api/ocr/glm/ollama/status") {
+      return sendJson(res, 200, await ollamaRuntimeManager.status());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/ocr/glm/ollama/install") {
+      return sendJson(res, 202, await ollamaRuntimeManager.install());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/ocr/glm/ollama/start") {
+      return sendJson(res, 200, await ollamaRuntimeManager.start());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/ocr/glm/ollama/uninstall") {
+      return sendJson(res, 200, await ollamaRuntimeManager.uninstall());
+    }
+
     if (req.method === "GET" && url.pathname === "/api/system/hypervisor") {
       return sendJson(res, 200, await hypervisorDetector());
     }
@@ -752,8 +779,8 @@ export function createAppServer({
   });
 }
 
-export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, recognitionLogDir, adbCaptureDir } = {}) {
-  const server = createAppServer({ recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, recognitionLogDir, adbCaptureDir });
+export function startServer({ port = PORT, host = "127.0.0.1", recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, ollamaRuntimeManager, recognitionLogDir, adbCaptureDir } = {}) {
+  const server = createAppServer({ recognitionRunner, adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, ollamaRuntimeManager, recognitionLogDir, adbCaptureDir });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {

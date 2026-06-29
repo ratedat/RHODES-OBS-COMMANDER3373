@@ -216,6 +216,51 @@ test("GLM OCR runtime APIs expose status, async install, and uninstall", async (
   }
 });
 
+test("GLM OCR Ollama runtime APIs expose status, async install, start, and uninstall", async () => {
+  const calls = [];
+  const ollamaRuntimeManager = {
+    status: async () => {
+      calls.push("status");
+      return { status: "missing", installed: false, installing: false, installRoot: "D:/state/ollama-runtime" };
+    },
+    install: async () => {
+      calls.push("install");
+      return { status: "partial", installed: true, installing: true, installJob: { status: "installing", log: [] } };
+    },
+    start: async () => {
+      calls.push("start");
+      return { status: "ready", installed: true, installing: false, serverReachable: true, modelPresent: true };
+    },
+    uninstall: async () => {
+      calls.push("uninstall");
+      return { status: "missing", installed: false, installing: false };
+    },
+  };
+  const { server, port } = await startServer({ port: 0, ollamaRuntimeManager });
+  try {
+    const statusResponse = await fetch(`http://127.0.0.1:${port}/api/ocr/glm/ollama/status`);
+    const statusPayload = await statusResponse.json();
+    const installResponse = await fetch(`http://127.0.0.1:${port}/api/ocr/glm/ollama/install`, { method: "POST" });
+    const installPayload = await installResponse.json();
+    const startResponse = await fetch(`http://127.0.0.1:${port}/api/ocr/glm/ollama/start`, { method: "POST" });
+    const startPayload = await startResponse.json();
+    const uninstallResponse = await fetch(`http://127.0.0.1:${port}/api/ocr/glm/ollama/uninstall`, { method: "POST" });
+    const uninstallPayload = await uninstallResponse.json();
+
+    assert.equal(statusResponse.status, 200);
+    assert.equal(statusPayload.status, "missing");
+    assert.equal(installResponse.status, 202);
+    assert.equal(installPayload.installing, true);
+    assert.equal(startResponse.status, 200);
+    assert.equal(startPayload.status, "ready");
+    assert.equal(uninstallResponse.status, 200);
+    assert.equal(uninstallPayload.installed, false);
+    assert.deepEqual(calls, ["status", "install", "start", "uninstall"]);
+  } finally {
+    await closeServer(server);
+  }
+});
+
 
 test("ADB path picker API returns the desktop selected path", async () => {
   const selectedPath = "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe";

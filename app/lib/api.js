@@ -11,6 +11,10 @@ export const hypervisorStatusUrl = "/api/system/hypervisor";
 export const glmOcrStatusUrl = "/api/ocr/glm/status";
 export const glmOcrInstallUrl = "/api/ocr/glm/install";
 export const glmOcrUninstallUrl = "/api/ocr/glm/uninstall";
+export const glmOcrOllamaStatusUrl = "/api/ocr/glm/ollama/status";
+export const glmOcrOllamaInstallUrl = "/api/ocr/glm/ollama/install";
+export const glmOcrOllamaStartUrl = "/api/ocr/glm/ollama/start";
+export const glmOcrOllamaUninstallUrl = "/api/ocr/glm/ollama/uninstall";
 
 export async function apiJson(url, options) {
   const response = await fetch(url, options);

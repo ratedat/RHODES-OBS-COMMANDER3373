@@ -60,6 +60,8 @@ const ui = {
   hypervisorStatus: null,
   glmOcrStatus: null,
   glmOcrStatusTimer: null,
+  ollamaStatus: null,
+  ollamaStatusTimer: null,
   recognitionScanStatus: null,
   recognitionScanStatusError: "",
   recognitionScanStatusTimer: null,
@@ -995,6 +997,7 @@ function renderAdbSettingPanel() {
         <span>${html(preset.description || "")}</span>
       </div>
       ${renderGlmOcrRuntimePanel(ui.glmOcrStatus)}
+      ${renderGlmOcrOllamaRuntimePanel(ui.ollamaStatus)}
       <div class="inline-row adb-action-row">
         <button type="button" data-action="adb-detect">自動検出</button>
         <button type="button" data-action="adb-test">接続テスト</button>
@@ -1032,6 +1035,42 @@ function renderGlmOcrRuntimePanel(status) {
         <button type="button" data-action="glm-ocr-refresh">状態確認</button>
         <button type="button" data-action="glm-ocr-install" ${installing ? "disabled" : ""}>ダウンロード/インストール</button>
         <button type="button" data-action="glm-ocr-uninstall" ${disabledWhileInstalling}>アンインストール</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderGlmOcrOllamaRuntimePanel(status) {
+  const known = status && typeof status === "object";
+  const job = known ? status.installJob : null;
+  const installing = Boolean(status?.installing);
+  const ready = status?.status === "ready";
+  const statusText = installing ? "導入中" : known ? (ready ? "使用可能" : status.status === "partial" ? "未完了" : "未導入") : "未確認";
+  const message = status?.message || "GLM-OCRをローカルOllamaで動かすための任意ランタイムです。";
+  const installRoot = status?.installRoot || "-";
+  const executablePath = status?.executablePath || "-";
+  const modelsDir = status?.modelsDir || "-";
+  const model = status?.model || "glm-ocr:latest";
+  const lastJobLine = job?.log?.length ? job.log.at(-1)?.message : "";
+  const disabledWhileInstalling = installing ? "disabled" : "";
+  return `
+    <div class="glm-ocr-runtime ollama ${installing ? "installing" : ready ? "ready" : status?.status === "partial" ? "partial" : "missing"}">
+      <div class="glm-ocr-runtime-head">
+        <div><strong>Ollamaローカル実行</strong><span>${html(message)}</span></div>
+        <em>${html(statusText)}</em>
+      </div>
+      <div class="glm-ocr-runtime-grid">
+        <div><b>設置先</b><code title="${html(installRoot)}">${html(installRoot)}</code></div>
+        <div><b>Ollama</b><code title="${html(executablePath)}">${html(executablePath)}</code></div>
+        <div><b>モデル</b><code title="${html(model)}">${html(model)}</code></div>
+        <div><b>保存先</b><code title="${html(modelsDir)}">${html(modelsDir)}</code></div>
+      </div>
+      ${lastJobLine ? `<div class="glm-ocr-runtime-log">${html(lastJobLine)}</div>` : ""}
+      <div class="inline-row adb-action-row">
+        <button type="button" data-action="glm-ocr-ollama-refresh">状態確認</button>
+        <button type="button" data-action="glm-ocr-ollama-install" ${installing ? "disabled" : ""}>Ollama導入/モデル取得</button>
+        <button type="button" data-action="glm-ocr-ollama-start" ${disabledWhileInstalling}>起動</button>
+        <button type="button" data-action="glm-ocr-ollama-uninstall" ${disabledWhileInstalling}>アンインストール</button>
       </div>
     </div>
   `;

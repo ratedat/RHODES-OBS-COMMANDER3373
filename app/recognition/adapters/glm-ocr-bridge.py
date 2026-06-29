@@ -112,6 +112,14 @@ def coerce_python_result(result):
 
 
 def parse_with_python_sdk(image_path):
+    config_path = os.environ.get("RHODES_GLM_OCR_CONFIG", "").strip()
+    if config_path:
+        try:
+            from glmocr import GlmOcr
+        except Exception as exc:
+            raise RuntimeError(f"GLM-OCR is not available: {exc}") from exc
+        with GlmOcr(config_path=config_path) as parser:
+            return coerce_python_result(parser.parse(image_path))
     try:
         from glmocr import parse
     except Exception as exc:

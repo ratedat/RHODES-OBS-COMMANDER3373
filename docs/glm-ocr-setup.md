@@ -23,16 +23,24 @@ For normal testers, use the app UI instead of installing Python manually:
 1. Open `OBS設定`.
 2. In `GLM-OCRランタイム`, press `状態確認`.
 3. Press `ダウンロード/インストール`.
-4. Select `Windows + GLM-OCR 検証` as the OCR engine after the status becomes `使用可能`.
+4. In `Ollamaローカル実行`, press `Ollama導入/モデル取得`.
+5. Select `Windows + GLM-OCR 検証` as the OCR engine after both statuses become `使用可能`.
 
 The app downloads `uv`, installs a managed Python 3.12 runtime, creates a dedicated venv, and installs `glmocr[selfhosted,server]`.
+The Ollama installer downloads the official Windows ZIP release, extracts it into the app-managed runtime folder, writes a GLM-OCR Ollama config, starts `ollama serve`, and pulls `glm-ocr:latest`.
 
 The runtime is stored under the app state directory:
 
 - Portable EXE default: `RHODES OBS COMMANDER3373 Data/state/glm-ocr-runtime`
+- Portable EXE Ollama default: `RHODES OBS COMMANDER3373 Data/state/ollama-runtime`
 - Development default: `data/glm-ocr-runtime`
+- Development Ollama default: `data/ollama-runtime`
 
 `アンインストール` deletes that runtime directory, including the uv cache, Python runtime, venv, and model caches that RHODES directs into that folder.
+For Ollama, `アンインストール` deletes the managed Ollama executable, GLM-OCR Ollama config, and the managed model directory.
+
+After restarting the app, use `Ollamaローカル実行` -> `起動` before running GLM-OCR verification if the status says Ollama is not running.
+The managed Ollama server uses `127.0.0.1:11435` instead of Ollama's usual `11434` so it does not accidentally reuse a user-installed Ollama server or model directory.
 
 ## Manual SDK mode
 
@@ -61,6 +69,24 @@ $env:RHODES_OCR_ENGINE = 'windows-glm'
 
 Server mode is useful when the GLM-OCR runtime takes time to initialize because the app can reuse the already-running service.
 
+## Ollama local mode
+
+The app-managed Ollama setup writes this GLM-OCR config automatically:
+
+```yaml
+pipeline:
+  maas:
+    enabled: false
+  ocr_api:
+    api_host: 127.0.0.1
+    api_port: 11435
+    api_path: /api/generate
+    model: glm-ocr:latest
+    api_mode: ollama_generate
+```
+
+The bridge passes `RHODES_GLM_OCR_CONFIG` to the GLM-OCR SDK when the managed config exists, so API-key based MaaS mode is bypassed for local verification.
+
 ## Runtime probe
 
 ```powershell
@@ -81,4 +107,6 @@ The output includes `glmOcr.present`. `ocr:probe:strict` still checks the curren
 - GLM-OCR README: https://github.com/zai-org/GLM-OCR
 - GLM-OCR SDK install and usage: https://github.com/zai-org/GLM-OCR#glm-ocr-sdk
 - GLM-OCR Flask service: https://github.com/zai-org/GLM-OCR#flask-service
+- GLM-OCR Ollama deployment: https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md
+- Ollama releases: https://github.com/ollama/ollama/releases
 - uv documentation: https://docs.astral.sh/uv/

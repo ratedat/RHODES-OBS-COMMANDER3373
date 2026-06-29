@@ -1,6 +1,6 @@
 import * as controlActions from "./control-actions.js";
 import { clampCoinCount, normalizeCoinFace } from "./domain/special-values.js";
-import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, glmOcrInstallUrl, glmOcrStatusUrl, glmOcrUninstallUrl, hypervisorStatusUrl, recognitionScanCancelUrl, recognitionScanStatusUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
+import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, glmOcrInstallUrl, glmOcrOllamaInstallUrl, glmOcrOllamaStartUrl, glmOcrOllamaStatusUrl, glmOcrOllamaUninstallUrl, glmOcrStatusUrl, glmOcrUninstallUrl, hypervisorStatusUrl, recognitionScanCancelUrl, recognitionScanStatusUrl, recognitionScanUrl, resetStateUrl } from "./lib/api.js";
 import { normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 
 function parseImportDraft(ui) {
@@ -95,6 +95,22 @@ async function postGlmOcrUninstall() {
   return apiJson(glmOcrUninstallUrl, { method: "POST" });
 }
 
+async function getGlmOcrOllamaStatus() {
+  return apiJson(glmOcrOllamaStatusUrl);
+}
+
+async function postGlmOcrOllamaInstall() {
+  return apiJson(glmOcrOllamaInstallUrl, { method: "POST" });
+}
+
+async function postGlmOcrOllamaStart() {
+  return apiJson(glmOcrOllamaStartUrl, { method: "POST" });
+}
+
+async function postGlmOcrOllamaUninstall() {
+  return apiJson(glmOcrOllamaUninstallUrl, { method: "POST" });
+}
+
 function stopGlmOcrStatusPolling(context) {
   if (context.ui.glmOcrStatusTimer) clearInterval(context.ui.glmOcrStatusTimer);
   context.ui.glmOcrStatusTimer = null;
@@ -112,6 +128,25 @@ function startGlmOcrStatusPolling(context) {
   context.ui.glmOcrStatusTimer = setInterval(() => {
     refreshGlmOcrStatus(context).catch(() => {});
   }, 2000);
+}
+
+function stopGlmOcrOllamaStatusPolling(context) {
+  if (context.ui.ollamaStatusTimer) clearInterval(context.ui.ollamaStatusTimer);
+  context.ui.ollamaStatusTimer = null;
+}
+
+async function refreshGlmOcrOllamaStatus(context, { render = true } = {}) {
+  context.ui.ollamaStatus = await getGlmOcrOllamaStatus();
+  if (!context.ui.ollamaStatus?.installing) stopGlmOcrOllamaStatusPolling(context);
+  if (render) context.renderControl();
+  return context.ui.ollamaStatus;
+}
+
+function startGlmOcrOllamaStatusPolling(context) {
+  stopGlmOcrOllamaStatusPolling(context);
+  context.ui.ollamaStatusTimer = setInterval(() => {
+    refreshGlmOcrOllamaStatus(context).catch(() => {});
+  }, 2500);
 }
 
 function setChoicePressed(element, active) {
@@ -357,6 +392,7 @@ export function registerControlEvents(app, context) {
       context.setNotice("GLM-OCRランタイム状態を確認しています。");
       try {
         const status = await refreshGlmOcrStatus(context);
+        await refreshGlmOcrOllamaStatus(context);
         context.setNotice(status.message || "GLM-OCRランタイム状態を確認しました。");
       } catch (error) {
         context.setNotice(`GLM-OCR状態確認失敗: ${error.message}`);
@@ -391,6 +427,64 @@ export function registerControlEvents(app, context) {
         context.setNotice("GLM-OCRランタイムを削除しました。");
       } catch (error) {
         context.setNotice(`GLM-OCR削除失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "glm-ocr-ollama-refresh") {
+      button.disabled = true;
+      context.setNotice("Ollamaローカル実行状態を確認しています。");
+      try {
+        const status = await refreshGlmOcrOllamaStatus(context);
+        context.setNotice(status.message || "Ollama状態を確認しました。");
+      } catch (error) {
+        context.setNotice(`Ollama状態確認失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "glm-ocr-ollama-install") {
+      button.disabled = true;
+      context.setNotice("OllamaとGLM-OCRモデルのダウンロード/インストールを開始しています。");
+      try {
+        context.ui.ollamaStatus = await postGlmOcrOllamaInstall();
+        context.renderControl();
+        startGlmOcrOllamaStatusPolling(context);
+        context.setNotice("OllamaとGLM-OCRモデルの導入を開始しました。初回は大容量ダウンロードになります。");
+      } catch (error) {
+        context.setNotice(`Ollama導入開始失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "glm-ocr-ollama-start") {
+      button.disabled = true;
+      context.setNotice("Ollamaサーバーを起動しています。");
+      try {
+        context.ui.ollamaStatus = await postGlmOcrOllamaStart();
+        context.renderControl();
+        context.setNotice(context.ui.ollamaStatus?.message || "Ollamaサーバーを起動しました。");
+      } catch (error) {
+        context.setNotice(`Ollama起動失敗: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (action === "glm-ocr-ollama-uninstall") {
+      if (!confirm("OllamaランタイムとGLM-OCRモデルを削除しますか？モデル保存フォルダを含む実行フォルダを削除します。")) return;
+      button.disabled = true;
+      context.setNotice("Ollamaランタイムを削除しています。");
+      try {
+        stopGlmOcrOllamaStatusPolling(context);
+        context.ui.ollamaStatus = await postGlmOcrOllamaUninstall();
+        context.renderControl();
+        context.setNotice("Ollamaランタイムを削除しました。");
+      } catch (error) {
+        context.setNotice(`Ollama削除失敗: ${error.message}`);
       } finally {
         button.disabled = false;
       }
