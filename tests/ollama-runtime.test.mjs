@@ -108,6 +108,8 @@ test("Installed Ollama runtime exposes GLM OCR environment overrides", async () 
   const options = await resolveInstalledOllamaRuntimeOptions({ stateDir });
 
   assert.equal(options.glmOcrEnv.RHODES_GLM_OCR_CONFIG, paths.glmOcrConfig);
+  assert.equal(options.glmOcrEnv.RHODES_GLM_OCR_OLLAMA_ENDPOINT, `http://${paths.host}/api/generate`);
+  assert.equal(options.glmOcrEnv.RHODES_GLM_OCR_OLLAMA_MODEL, paths.model);
   assert.equal(options.glmOcrEnv.OLLAMA_MODELS, paths.modelsDir);
   assert.equal(options.glmOcrEnv.OLLAMA_HOST, paths.host);
 });

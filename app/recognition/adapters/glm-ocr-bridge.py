@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import tempfile
+import io
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -111,6 +112,42 @@ def coerce_python_result(result):
     return {"text": text or str(result or "")}
 
 
+def parse_with_ollama(image_path, endpoint, timeout):
+    prompt = os.environ.get(
+        "RHODES_GLM_OCR_OLLAMA_PROMPT",
+        "Text Recognition: Return only the visible Japanese operator name.",
+    )
+    model = os.environ.get("RHODES_GLM_OCR_OLLAMA_MODEL", "glm-ocr:latest")
+    num_predict = int(os.environ.get("RHODES_GLM_OCR_OLLAMA_NUM_PREDICT", "24"))
+    with Image.open(image_path) as image:
+        buffer = io.BytesIO()
+        image.convert("RGB").save(buffer, format="PNG")
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "images": [base64.b64encode(buffer.getvalue()).decode("ascii")],
+        "stream": False,
+        "options": {
+            "temperature": 0,
+            "num_predict": num_predict,
+            "stop": ["\n", "---"],
+        },
+    }
+    request = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"GLM-OCR Ollama request failed: {exc}") from exc
+    text = str(result.get("response") or "").strip()
+    return {"text": text, "raw_api_response": result}
+
+
 def parse_with_python_sdk(image_path):
     config_path = os.environ.get("RHODES_GLM_OCR_CONFIG", "").strip()
     if config_path:
@@ -145,7 +182,10 @@ def parse_with_server(image_path, endpoint, timeout):
 def parse_image(image_path):
     mode = os.environ.get("RHODES_GLM_OCR_MODE", "auto").strip().lower()
     endpoint = os.environ.get("RHODES_GLM_OCR_ENDPOINT", "").strip()
+    ollama_endpoint = os.environ.get("RHODES_GLM_OCR_OLLAMA_ENDPOINT", "").strip()
     timeout = float(os.environ.get("RHODES_GLM_OCR_REQUEST_TIMEOUT", "120"))
+    if ollama_endpoint:
+        return parse_with_ollama(image_path, ollama_endpoint, timeout)
     if mode in {"server", "http"} or endpoint:
         return parse_with_server(image_path, endpoint or "http://127.0.0.1:5002/glmocr/parse", timeout)
     return parse_with_python_sdk(image_path)

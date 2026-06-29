@@ -354,6 +354,8 @@ export async function resolveInstalledOllamaRuntimeOptions({ stateDir } = {}) {
   return {
     glmOcrEnv: {
       RHODES_GLM_OCR_CONFIG: paths.glmOcrConfig,
+      RHODES_GLM_OCR_OLLAMA_ENDPOINT: `http://${paths.host}/api/generate`,
+      RHODES_GLM_OCR_OLLAMA_MODEL: paths.model,
       OLLAMA_HOST: paths.host,
       OLLAMA_MODELS: paths.modelsDir,
     },

@@ -85,7 +85,9 @@ pipeline:
     api_mode: ollama_generate
 ```
 
-The bridge passes `RHODES_GLM_OCR_CONFIG` to the GLM-OCR SDK when the managed config exists, so API-key based MaaS mode is bypassed for local verification.
+For fixed ROI verification, the bridge passes each crop directly to Ollama through `RHODES_GLM_OCR_OLLAMA_ENDPOINT`.
+This avoids the GLM-OCR SDK document-layout detector, which is unnecessary for small game UI crops.
+The generated SDK config is still written for reference and future whole-document comparisons.
 
 ## Runtime probe
 
