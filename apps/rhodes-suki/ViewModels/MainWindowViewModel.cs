@@ -266,28 +266,61 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            using var client = new HttpClient();
-            var response = await client.PostAsJsonAsync(
-                $"{RhodesApiUrl}/api/recognition/maa-resource",
-                new
-                {
-                    profile = SelectedResourceProfile?.Id == "all" ? "runStatusFull" : SelectedResourceProfile?.Id,
-                    source = "maa-framework",
-                    taskResults = ResourceTaskResults.ToArray(),
-                });
-            var json = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode)
+            CandidateResults.Clear();
+            var apiError = "";
+            IReadOnlyList<MaaCandidatePreview> apiCandidates = [];
+            try
             {
-                StatusMessage = $"候補化API失敗: {(int)response.StatusCode} {json}";
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                var response = await client.PostAsJsonAsync(
+                    $"{RhodesApiUrl}/api/recognition/maa-resource",
+                    new
+                    {
+                        profile = SelectedResourceProfile?.Id == "all" ? "runStatusFull" : SelectedResourceProfile?.Id,
+                        source = "maa-framework",
+                        taskResults = ResourceTaskResults.ToArray(),
+                    });
+                var json = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    apiCandidates = ExtractCandidatePreviews(json);
+                }
+                else
+                {
+                    apiError = $"{(int)response.StatusCode} {Shorten(json, 160)}";
+                }
+            }
+            catch (Exception ex)
+            {
+                apiError = Shorten(ex.Message, 160);
+            }
+
+            if (apiCandidates.Count > 0)
+            {
+                foreach (var candidate in apiCandidates)
+                {
+                    CandidateResults.Add(candidate);
+                }
+                StatusMessage = $"候補化しました: {CandidateResults.Count}件";
                 return;
             }
 
-            CandidateResults.Clear();
-            foreach (var candidate in ExtractCandidatePreviews(json))
+            foreach (var candidate in RhodesMaaResultPreview.FromTaskResults(ResourceTaskResults))
             {
                 CandidateResults.Add(candidate);
             }
-            StatusMessage = $"候補化しました: {CandidateResults.Count}件";
+
+            if (CandidateResults.Count > 0)
+            {
+                StatusMessage = string.IsNullOrWhiteSpace(apiError)
+                    ? $"候補化APIは0件だったためローカルMAAプレビューを表示しました: {CandidateResults.Count}件"
+                    : $"候補化APIに接続できないためローカルMAAプレビューを表示しました: {CandidateResults.Count}件";
+                return;
+            }
+
+            StatusMessage = string.IsNullOrWhiteSpace(apiError)
+                ? "候補は0件です。"
+                : $"候補化API失敗: {apiError}";
         });
     }
 
@@ -464,6 +497,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             && property.TryGetDouble(out var value)
             ? value
             : null;
+    }
+
+    private static string Shorten(string value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        var text = value.Trim().ReplaceLineEndings(" ");
+        return text.Length <= maxLength ? text : $"{text[..maxLength]}...";
     }
 
     private async Task RunBusyAsync(Func<Task> action)

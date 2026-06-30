@@ -20,6 +20,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const session = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaSession.cs", "utf8");
   const probe = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionProbe.cs", "utf8");
   const catalog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResourceCatalog.cs", "utf8");
+  const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
   const resource = await fs.readFile("apps/rhodes-suki/resource/base/pipeline/rhodes.json", "utf8");
@@ -40,6 +41,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(catalog, /GeneratedTasks/);
   assert.match(catalog, /ProfileGroups/);
   assert.match(catalog, /profileIds/);
+  assert.match(resultPreview, /FromTaskResults/);
+  assert.match(resultPreview, /best_result/);
+  assert.match(resultPreview, /filtered_results/);
+  assert.match(resultPreview, /MaaCandidatePreview/);
   assert.match(models, /MaaTaskDetailSnapshot/);
   assert.match(models, /MaaResourceProfilePreview/);
   assert.match(models, /MaaCandidatePreview/);
@@ -54,6 +59,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RefreshResourceTasks/);
   assert.match(viewModel, /ConvertResourceTaskResultsCommand/);
   assert.match(viewModel, /api\/recognition\/maa-resource/);
+  assert.match(viewModel, /RhodesMaaResultPreview\.FromTaskResults/);
   assert.match(viewModel, /CandidateResults/);
   assert.match(viewModel, /RunResourceTaskCommand/);
   assert.match(viewModel, /maa-resource-results/);
