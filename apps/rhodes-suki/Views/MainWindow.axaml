@@ -102,6 +102,9 @@
                   <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Opacity="0.82" />
                 </StackPanel>
               </Border>
+              <Border CornerRadius="6" Padding="8" Height="156" Background="#0D1112" BorderBrush="#2B3638" BorderThickness="1">
+                <Image Source="{Binding LastCaptureImage}" Stretch="Uniform" />
+              </Border>
             </StackPanel>
           </Border>
         </StackPanel>

@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows.Input;
+using Avalonia.Media.Imaging;
 using RhodesSuki.Models;
 using RhodesSuki.Services;
 
@@ -23,6 +24,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastCapturePath = "";
     private string _rhodesApiUrl = "http://127.0.0.1:5173";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
+    private Bitmap? _lastCaptureImage;
     private MaaAdbPresetPreview? _selectedAdbPreset;
     private MaaResourceProfilePreview? _selectedResourceProfile;
     private MaaTaskDiagnosticsSnapshot _resourceTaskDiagnostics = MaaTaskDiagnosticsSnapshot.Empty;
@@ -165,6 +167,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref _lastCapturePath, value);
     }
 
+    public Bitmap? LastCaptureImage
+    {
+        get => _lastCaptureImage;
+        private set => SetCaptureImage(value);
+    }
+
     public string RhodesApiUrl
     {
         get => _rhodesApiUrl;
@@ -228,6 +236,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
+        _lastCaptureImage?.Dispose();
         _session.Dispose();
     }
 
@@ -539,9 +548,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _lastCapture = capture.EncodedImage;
+        LastCaptureImage = CreateCaptureBitmap(capture.EncodedImage);
         LastCapturePath = await SaveCaptureAsync(capture.EncodedImage);
         CaptureState = $"{capture.Detail} / {LastCapturePath}";
         return capture;
+    }
+
+    private static Bitmap CreateCaptureBitmap(byte[] encodedImage)
+    {
+        using var stream = new MemoryStream(encodedImage);
+        return new Bitmap(stream);
     }
 
     private MaaSessionOptions BuildSessionOptions()
@@ -678,6 +694,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         field = value;
         OnPropertyChanged(propertyName);
         return true;
+    }
+
+    private void SetCaptureImage(Bitmap? value)
+    {
+        if (ReferenceEquals(_lastCaptureImage, value))
+            return;
+
+        var previous = _lastCaptureImage;
+        _lastCaptureImage = value;
+        OnPropertyChanged(nameof(LastCaptureImage));
+        previous?.Dispose();
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

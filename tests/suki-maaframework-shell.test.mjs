@@ -82,6 +82,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(models, /RecognitionDetailJson/);
   assert.match(viewModel, /ConnectCommand/);
   assert.match(viewModel, /CaptureCommand/);
+  assert.match(viewModel, /Bitmap/);
+  assert.match(viewModel, /LastCaptureImage/);
   assert.match(viewModel, /AdbPresets/);
   assert.match(viewModel, /AdbDevices/);
   assert.match(viewModel, /ApplyAdbPresetCommand/);
@@ -142,6 +144,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SaveSettingsCommand/);
   assert.match(xaml, /ConnectCommand/);
   assert.match(xaml, /CaptureCommand/);
+  assert.match(xaml, /Image Source="\{Binding LastCaptureImage\}"/);
   assert.match(xaml, /RunResourceTaskCommand/);
   assert.match(xaml, /RunSelectedProfileRecognitionCommand/);
   assert.match(xaml, /RunAllResourceTasksCommand/);
