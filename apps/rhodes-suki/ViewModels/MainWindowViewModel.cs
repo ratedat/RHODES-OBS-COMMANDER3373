@@ -68,6 +68,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         AgentBinaryRoot = sessionSnapshot.AgentBinaryRoot;
 
         ConnectCommand = new AsyncRelayCommand(ConnectAsync);
+        SaveSettingsCommand = new AsyncRelayCommand(SaveSettingsAsync);
         ApplyAdbPresetCommand = new AsyncRelayCommand(parameter => ApplyAdbPresetAsync(parameter as MaaAdbPresetPreview));
         RefreshAdbDevicesCommand = new AsyncRelayCommand(RefreshAdbDevicesAsync);
         ApplyAdbDeviceCommand = new AsyncRelayCommand(parameter => ApplyAdbDeviceAsync(parameter as MaaAdbDevicePreview));
@@ -80,6 +81,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunProbeCommand = new AsyncRelayCommand(parameter => RunProbeAsync(parameter as MaaProbePayloadPreview));
         RunResourceTaskCommand = new AsyncRelayCommand(parameter => RunResourceTaskAsync(parameter as MaaResourceTaskPreview));
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull") ?? ResourceProfiles.FirstOrDefault();
+        LoadSettings();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -193,6 +195,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand ConnectCommand { get; }
 
+    public ICommand SaveSettingsCommand { get; }
+
     public ICommand ApplyAdbPresetCommand { get; }
 
     public ICommand RefreshAdbDevicesCommand { get; }
@@ -229,6 +233,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SessionState = snapshot.State;
             SessionDetail = snapshot.Detail;
             StatusMessage = snapshot.IsReady ? "接続しました。" : "接続できませんでした。設定を確認してください。";
+        });
+    }
+
+    private void LoadSettings()
+    {
+        var settings = RhodesSukiSettingsStore.Load();
+        AdbPath = string.IsNullOrWhiteSpace(settings.AdbPath) ? "adb" : settings.AdbPath;
+        AdbSerial = settings.AdbSerial;
+        AdbConfigJson = string.IsNullOrWhiteSpace(settings.AdbConfigJson) ? "{}" : settings.AdbConfigJson;
+        RhodesApiUrl = string.IsNullOrWhiteSpace(settings.RhodesApiUrl) ? "http://127.0.0.1:5173" : settings.RhodesApiUrl;
+        SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == settings.SelectedAdbPresetId) ?? SelectedAdbPreset;
+        SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == settings.SelectedResourceProfileId) ?? SelectedResourceProfile;
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            await RhodesSukiSettingsStore.SaveAsync(new RhodesSukiSettings(
+                AdbPath,
+                AdbSerial,
+                AdbConfigJson,
+                RhodesApiUrl,
+                SelectedAdbPreset?.Id ?? "auto",
+                SelectedResourceProfile?.Id ?? "runStatusFull"));
+            StatusMessage = $"Suki設定を保存しました: {RhodesSukiSettingsStore.DefaultPath}";
         });
     }
 

@@ -72,6 +72,7 @@
 
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button Content="接続" Command="{Binding ConnectCommand}" />
+                <Button Content="設定保存" Command="{Binding SaveSettingsCommand}" />
                 <Button Content="端末一覧" Command="{Binding RefreshAdbDevicesCommand}" />
                 <Button Content="スクリーンショット" Command="{Binding CaptureCommand}" />
                 <Button Content="全プローブ実行" Command="{Binding RunAllProbesCommand}" />

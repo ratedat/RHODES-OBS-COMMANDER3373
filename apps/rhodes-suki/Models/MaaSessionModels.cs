@@ -40,6 +40,14 @@ public sealed record MaaAdbDevicePreview(
         : $"{State} {Serial} {Detail}";
 }
 
+public sealed record RhodesSukiSettings(
+    string AdbPath = "adb",
+    string AdbSerial = "",
+    string AdbConfigJson = "{}",
+    string RhodesApiUrl = "http://127.0.0.1:5173",
+    string SelectedAdbPresetId = "auto",
+    string SelectedResourceProfileId = "runStatusFull");
+
 public sealed record MaaSessionSnapshot(
     string State,
     string Detail,

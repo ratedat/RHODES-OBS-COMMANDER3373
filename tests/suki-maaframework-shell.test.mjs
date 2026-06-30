@@ -29,6 +29,7 @@ test("Suki service tests cover MAA Resource detail conversion behavior", async (
   assert.match(program, /HitFallback/);
   assert.match(program, /RhodesAdbPresetCatalog\.DefaultPresets/);
   assert.match(program, /RhodesAdbDeviceProbe\.ParseDevices/);
+  assert.match(program, /RhodesSukiSettingsStore\.Save/);
   assert.match(program, /google-play-games-dev/);
 });
 
@@ -38,6 +39,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const catalog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResourceCatalog.cs", "utf8");
   const adbPresets = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbPresetCatalog.cs", "utf8");
   const adbDeviceProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbDeviceProbe.cs", "utf8");
+  const settingsStore = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiSettingsStore.cs", "utf8");
   const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
@@ -64,6 +66,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(adbPresets, /127\.0\.0\.1:16384/);
   assert.match(adbDeviceProbe, /devices/);
   assert.match(adbDeviceProbe, /ParseDevices/);
+  assert.match(settingsStore, /suki-settings\.json/);
+  assert.match(settingsStore, /RhodesSukiSettings/);
   assert.match(resultPreview, /FromTaskResults/);
   assert.match(resultPreview, /best_result/);
   assert.match(resultPreview, /filtered_results/);
@@ -80,6 +84,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /ApplyAdbPresetCommand/);
   assert.match(viewModel, /RefreshAdbDevicesCommand/);
   assert.match(viewModel, /ApplyAdbDeviceCommand/);
+  assert.match(viewModel, /SaveSettingsCommand/);
+  assert.match(viewModel, /LoadSettings/);
   assert.match(viewModel, /RunAllProbesCommand/);
   assert.match(viewModel, /RunSelectedProfileRecognitionCommand/);
   assert.match(viewModel, /RunAllResourceTasksCommand/);
@@ -129,6 +135,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ApplyAdbPresetCommand/);
   assert.match(xaml, /RefreshAdbDevicesCommand/);
   assert.match(xaml, /ApplyAdbDeviceCommand/);
+  assert.match(xaml, /SaveSettingsCommand/);
   assert.match(xaml, /ConnectCommand/);
   assert.match(xaml, /CaptureCommand/);
   assert.match(xaml, /RunResourceTaskCommand/);

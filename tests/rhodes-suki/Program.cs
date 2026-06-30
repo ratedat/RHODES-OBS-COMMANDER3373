@@ -9,6 +9,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA hit without detail falls back to a simple candidate", HitFallback),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
+    ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
 };
 
 var failures = new List<string>();
@@ -137,6 +138,35 @@ static void AdbDeviceParsing()
     Equal(true, devices[0].IsUsable, "first usable");
     Equal("offline", devices[1].State, "second state");
     Equal(false, devices[1].IsUsable, "second usable");
+}
+
+static void SukiSettingsStore()
+{
+    var directory = Path.Combine(Path.GetTempPath(), "rhodes-suki-tests", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    var path = Path.Combine(directory, "settings.json");
+    try
+    {
+        RhodesSukiSettingsStore.Save(
+            new RhodesSukiSettings(
+                "C:/Tools/adb.exe",
+                "127.0.0.1:16384",
+                """{"touch":"adb"}""",
+                "http://127.0.0.1:5173",
+                "mumu",
+                "operatorsFull"),
+            path);
+
+        var loaded = RhodesSukiSettingsStore.Load(path);
+        Equal("C:/Tools/adb.exe", loaded.AdbPath, "adb path");
+        Equal("127.0.0.1:16384", loaded.AdbSerial, "adb serial");
+        Equal("mumu", loaded.SelectedAdbPresetId, "preset");
+        Equal("operatorsFull", loaded.SelectedResourceProfileId, "profile");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
 }
 
 static void Equal<T>(T expected, T actual, string label)
