@@ -18,6 +18,8 @@
     "dist:debugger": "electron-builder --win portable --x64 --publish never --config.directories.output=dist-debugger --config.extraMetadata.rhodesDebuggerBuild=true --config.win.artifactName=${productName}-${version}-${arch}-debugger.${ext}",
     "pack:win": "electron-builder --win portable --x64 --dir --publish never",
     "pack:debugger": "electron-builder --win portable --x64 --dir --publish never --config.directories.output=dist-debugger --config.extraMetadata.rhodesDebuggerBuild=true",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "data:update": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1",
     "data:update:plan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1 -PlanOnly",
     "data:diff": "node tools/compare-data-update.mjs --before data --after data --out review/update-runs/manual-compare",
@@ -31,6 +33,7 @@
     "ocr:sync-maa-operator": "node tools/sync-maa-operator-ocr-map.mjs"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "electron": "^42.5.0",
     "electron-builder": "^26.15.3"
   },
