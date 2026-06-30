@@ -9,6 +9,7 @@ test("package exposes Tauri development and build scripts", async () => {
   assert.equal(pkg.scripts["tauri:build"], "npm run tauri:prepare && tauri build");
   assert.equal(pkg.scripts["tauri:test"], "cargo test --manifest-path src-tauri/Cargo.toml");
   assert.equal(pkg.scripts["tauri:smoke:installer"], "node tools/smoke-tauri-installer.mjs");
+  assert.equal(pkg.scripts["tauri:package:portable"], "node tools/package-tauri-portable.mjs");
   assert.match(pkg.devDependencies["@tauri-apps/cli"], /^\^2\./);
 });
 
@@ -79,4 +80,15 @@ test("Tauri installer smoke script installs only under agent work", async () => 
   assert.match(source, /RHODES_TAURI_SMOKE_HOST/);
   assert.match(source, /\/api\/master/);
   assert.match(source, /uninstall\.exe/);
+});
+
+test("Tauri portable package script creates an installer-free zip folder", async () => {
+  const source = await readFile(new URL("../tools/package-tauri-portable.mjs", import.meta.url), "utf8");
+  assert.match(source, /RHODES OBS COMMANDER3373\.exe/);
+  assert.match(source, /outputs", "release"/);
+  assert.match(source, /src-tauri", "target", "release", "resources"/);
+  assert.match(source, /README-PORTABLE\.txt/);
+  assert.match(source, /tar\.exe/);
+  assert.match(source, /Compress-Archive/);
+  assert.match(source, /assertChildPath\(releaseDir, packageDir\)/);
 });

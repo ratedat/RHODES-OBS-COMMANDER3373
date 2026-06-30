@@ -31,6 +31,14 @@ Rust prerequisites are required before the command can run. The Node server can 
 
 The first successful Windows Tauri package with bundled Node resources was about 56 MB as an NSIS installer. This is still far smaller than the Electron portable build and keeps GLM-OCR/Ollama as optional runtime downloads.
 
+Installer-free portable ZIP packaging is available after a successful Tauri build:
+
+```bash
+npm run tauri:package:portable
+```
+
+The portable ZIP is written under `outputs/release/`. It contains `RHODES OBS COMMANDER3373.exe`, the required `resources/` folder, license files, and a short portable README. Users can extract the ZIP and run the EXE without starting an installer. GLM-OCR and Ollama remain optional runtime downloads under the portable data folder.
+
 Rust-side storage tests can be run with:
 
 ```bash
@@ -43,8 +51,7 @@ The first desktop IPC command is `rhodes_storage_target`. It returns the resolve
 
 ## Next slices
 
-1. Verify installed NSIS output, not just the raw release EXE. The raw EXE needs resources beside it or `RHODES_APP_ROOT` / `RHODES_NODE_BIN` overrides.
-2. Move portable storage selection UI actions away from Electron-specific code.
-3. Move desktop browse/open-dialog actions from Electron IPC to Tauri commands.
-4. Move small desktop-only actions from Electron menus to Tauri commands.
-5. Keep GLM-OCR and Ollama as optional runtime downloads under `RHODES OBS COMMANDER3373 Data/state`.
+1. Move portable storage selection UI actions away from Electron-specific code.
+2. Move desktop browse/open-dialog actions from Electron IPC to Tauri commands.
+3. Move small desktop-only actions from Electron menus to Tauri commands.
+4. Keep GLM-OCR and Ollama as optional runtime downloads under `RHODES OBS COMMANDER3373 Data/state`.
