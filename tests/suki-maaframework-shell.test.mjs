@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 
 test("Suki shell references SukiUI and Maa.Framework as the replacement desktop stack", async () => {
@@ -13,6 +14,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(csproj, /interface\.json/);
   assert.match(csproj, /assets\\recognition\\templates\\run\\\*\.png/);
   assert.match(packageJson, /"maa:resource:generate": "node tools\/generate-maa-resource\.mjs"/);
+  assert.match(packageJson, /"maa:resource:check": "node tools\/generate-maa-resource\.mjs --check"/);
   assert.match(packageJson, /"suki:test": "dotnet run --project tests\/rhodes-suki\/RhodesSuki\.ServiceTests\.csproj"/);
   assert.match(packageJson, /suki:publish:portable.*--self-contained true/);
 });
@@ -128,6 +130,13 @@ test("MAA resource generator converts RHODES recognition definitions into pipeli
   assert.deepEqual(generated.RhodesOcrRegion_run_hope_current.roi, [941, 17, 32, 35]);
   assert.equal(generated.RhodesTemplate_runStatusFull_run_ingot.recognition, "TemplateMatch");
   assert.equal(generated.RhodesTemplate_runStatusFull_run_ingot.template, "run/IngotIcon.png");
+});
+
+test("MAA resource generator output is checked into the Suki shell", () => {
+  execFileSync(process.execPath, ["tools/generate-maa-resource.mjs", "--check"], {
+    cwd: process.cwd(),
+    stdio: "pipe",
+  });
 });
 
 test("Suki shell exposes manual MAA ADB and probe controls", async () => {

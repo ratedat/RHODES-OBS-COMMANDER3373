@@ -126,9 +126,34 @@ function generate() {
     }
   }
 
+  return pipeline;
+}
+
+function serializedPipeline(pipeline) {
+  return `${JSON.stringify(pipeline, null, 2)}\n`;
+}
+
+function writeGenerated(pipeline) {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, `${JSON.stringify(pipeline, null, 2)}\n`);
+  fs.writeFileSync(outputPath, serializedPipeline(pipeline));
   console.log(`Generated ${Object.keys(pipeline).length} MAA pipeline nodes: ${outputPath}`);
 }
 
-generate();
+function checkGenerated(pipeline) {
+  const expected = serializedPipeline(pipeline);
+  const actual = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : "";
+  if (actual === expected) {
+    console.log(`MAA pipeline is up to date: ${outputPath}`);
+    return;
+  }
+
+  console.error(`MAA pipeline is stale. Run npm run maa:resource:generate`);
+  process.exitCode = 1;
+}
+
+const pipeline = generate();
+if (process.argv.includes("--check")) {
+  checkGenerated(pipeline);
+} else {
+  writeGenerated(pipeline);
+}
