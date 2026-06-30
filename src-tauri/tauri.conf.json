@@ -16,6 +16,10 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "resources": [
+      "resources/rhodes-app",
+      "resources/bin"
+    ],
     "windows": {
       "nsis": {
         "installMode": "currentUser"

@@ -52,17 +52,24 @@ fn executable_dir() -> PathBuf {
         .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
 }
 
-fn app_root() -> PathBuf {
+fn development_app_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(executable_dir)
+}
+
+fn app_root(app: &tauri::App) -> PathBuf {
     if let Ok(root) = env::var("RHODES_APP_ROOT") {
         return PathBuf::from(root);
     }
     if cfg!(debug_assertions) {
-        return PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .map(Path::to_path_buf)
-            .unwrap_or_else(executable_dir);
+        return development_app_root();
     }
-    executable_dir()
+    app.path()
+        .resource_dir()
+        .map(|dir| dir.join("rhodes-app"))
+        .unwrap_or_else(|_| executable_dir())
 }
 
 fn state_dir(app_root: &Path) -> PathBuf {
@@ -77,8 +84,30 @@ fn state_dir(app_root: &Path) -> PathBuf {
         .join("state")
 }
 
-fn start_node_server(app_root: &Path, port: u16, state_dir: &Path) -> Result<Child, DynError> {
-    let node_bin = env::var("RHODES_NODE_BIN").unwrap_or_else(|_| "node".to_string());
+fn bundled_node_path(app: &tauri::App) -> Option<PathBuf> {
+    let triple = option_env!("TAURI_ENV_TARGET_TRIPLE").unwrap_or("x86_64-pc-windows-msvc");
+    let name = if cfg!(windows) {
+        format!("node-{triple}.exe")
+    } else {
+        format!("node-{triple}")
+    };
+    let path = app.path().resource_dir().ok()?.join("bin").join(name);
+    path.exists().then_some(path)
+}
+
+fn node_bin(app: &tauri::App) -> PathBuf {
+    if let Ok(path) = env::var("RHODES_NODE_BIN") {
+        return PathBuf::from(path);
+    }
+    if !cfg!(debug_assertions) {
+        if let Some(path) = bundled_node_path(app) {
+            return path;
+        }
+    }
+    PathBuf::from("node")
+}
+
+fn start_node_server(app_root: &Path, node_bin: &Path, port: u16, state_dir: &Path) -> Result<Child, DynError> {
     let server_script = app_root.join("app").join("server.mjs");
     if !server_script.exists() {
         return Err(boxed_error(format!(
@@ -145,9 +174,10 @@ fn main() {
         })
         .setup(|app| {
             let port = startup_port();
-            let app_root = app_root();
+            let app_root = app_root(app);
             let state_dir = state_dir(&app_root);
-            let child = start_node_server(&app_root, port, &state_dir)?;
+            let node_bin = node_bin(app);
+            let child = start_node_server(&app_root, &node_bin, port, &state_dir)?;
             *app.state::<LocalServer>()
                 .child
                 .lock()

@@ -19,11 +19,22 @@ Development command:
 npm run tauri:dev
 ```
 
+Build command:
+
+```bash
+npm run tauri:build
+```
+
+`tauri:build` first runs `tauri:prepare`, which creates `src-tauri/resources/` from the committed app, assets, clean data files, docs, and the current Node executable. The generated resource directory is ignored by git. It deliberately excludes local runtime state such as `data/current-state.json`, Electron cache files, ADB work folders, GLM-OCR runtime files, and Ollama runtime files.
+
 Rust prerequisites are required before the command can run. The Node server can be pointed at another repository root with `RHODES_APP_ROOT`, another Node binary with `RHODES_NODE_BIN`, and another port with `-- --port 5174`.
+
+The first successful Windows Tauri package with bundled Node resources was about 56 MB as an NSIS installer. This is still far smaller than the Electron portable build and keeps GLM-OCR/Ollama as optional runtime downloads.
 
 ## Next slices
 
 1. Move portable storage selection into a shared contract used by both Electron and Tauri.
-2. Replace Node-server spawning with a bundled sidecar so packaged Tauri builds do not require system Node.
-3. Move small desktop-only actions from Electron menus to Tauri commands.
-4. Keep GLM-OCR and Ollama as optional runtime downloads under `RHODES OBS COMMANDER3373 Data/state`.
+2. Verify installed NSIS output, not just the raw release EXE. The raw EXE needs resources beside it or `RHODES_APP_ROOT` / `RHODES_NODE_BIN` overrides.
+3. Move portable storage selection into Tauri commands and UI.
+4. Move small desktop-only actions from Electron menus to Tauri commands.
+5. Keep GLM-OCR and Ollama as optional runtime downloads under `RHODES OBS COMMANDER3373 Data/state`.
