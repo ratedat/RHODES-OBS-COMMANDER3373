@@ -39,12 +39,12 @@ npm run tauri:test
 
 The Tauri shell now mirrors the Electron portable storage contract in `src-tauri/src/storage.rs`: development state stays under `user-data/state`, packaged portable state goes beside the executable under `RHODES OBS COMMANDER3373 Data/state`, and `PORTABLE_EXECUTABLE_FILE` / `ARKNIGHTS_STATE_DIR` overrides are honored.
 
-The first desktop IPC command is `rhodes_storage_target`. It returns the resolved app root, portable storage directory, state directory, and packaged/development mode from Rust. The command is intentionally not wired into the web UI yet; it is the bridge for moving Electron-specific storage UI actions into Tauri.
+The first desktop IPC command is `rhodes_storage_target`. It returns the resolved app root, portable storage directory, state directory, and packaged/development mode from Rust. Control v2 reads it through `app/lib/tauri-bridge.js` when `window.__TAURI__` is available and shows the result on the OBS settings screen. Electron and normal browser sessions do not render this panel.
 
 ## Next slices
 
 1. Verify installed NSIS output, not just the raw release EXE. The raw EXE needs resources beside it or `RHODES_APP_ROOT` / `RHODES_NODE_BIN` overrides.
-2. Connect the storage UI to `rhodes_storage_target` when running inside Tauri.
-3. Move portable storage selection UI actions away from Electron-specific code.
+2. Move portable storage selection UI actions away from Electron-specific code.
+3. Move desktop browse/open-dialog actions from Electron IPC to Tauri commands.
 4. Move small desktop-only actions from Electron menus to Tauri commands.
 5. Keep GLM-OCR and Ollama as optional runtime downloads under `RHODES OBS COMMANDER3373 Data/state`.

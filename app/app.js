@@ -20,6 +20,7 @@ import { controlModeOptions, getControlMode, normalizeControlMode } from "./doma
 import { controlV2ScreenOptions, getControlV2ScreenMeta, normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 import { apiJson, masterUrl, recognitionScanStatusUrl, resetStateUrl, stateUrl } from "./lib/api.js";
 import { createSaveRequestTracker } from "./lib/save-request-tracker.js";
+import { readTauriStorageTarget } from "./lib/tauri-bridge.js";
 import { asCoinEntries, asSpecialArray, asSpecialObject, clampSpecialNumber } from "./domain/special-values.js";
 import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
@@ -63,6 +64,8 @@ const ui = {
   glmOcrStatusTimer: null,
   ollamaStatus: null,
   ollamaStatusTimer: null,
+  tauriStorageTarget: null,
+  tauriStorageError: "",
   recognitionScanStatus: null,
   recognitionScanStatusError: "",
   recognitionScanStatusTimer: null,
@@ -632,6 +635,23 @@ function renderLocalConfigPanel() {
         <div><strong>ADB</strong><span>接続構成 / パス / serial</span></div>
         <div><strong>OBS</strong><span>スクロール速度 / 表示設定</span></div>
         <div><strong>Reset</strong><span>ラン状態のみ初期化</span></div>
+      </div>
+    </section>
+  `;
+}
+
+function renderTauriStoragePanel() {
+  const target = ui.tauriStorageTarget;
+  if (!target && !ui.tauriStorageError) return "";
+  const mode = target?.isPackaged ? "packaged" : "development";
+  return `
+    <section class="control-v2-panel control-v2-obs-panel control-v2-local-config-panel">
+      <div class="control-v2-panel-head"><h2>Tauri実行情報</h2><span>${html(target ? mode : "error")}</span></div>
+      <div class="control-v2-panel-body local-config-summary">
+        ${ui.tauriStorageError ? `<div><strong>取得失敗</strong><span>${html(ui.tauriStorageError)}</span></div>` : ""}
+        ${target ? `<div><strong>App</strong><span>${html(target.appRoot || "-")}</span></div>` : ""}
+        ${target ? `<div><strong>Storage</strong><span>${html(target.storageDir || "-")}</span></div>` : ""}
+        ${target ? `<div><strong>State</strong><span>${html(target.stateDir || "-")}</span></div>` : ""}
       </div>
     </section>
   `;
@@ -1478,6 +1498,7 @@ function renderControlV2ObsScreen() {
         </div>
       </section>
       ${renderLocalConfigPanel()}
+      ${renderTauriStoragePanel()}
       <section class="control-v2-panel control-v2-obs-panel control-v2-obs-sidecar-note">
         <div class="control-v2-panel-head"><h2>サイドカー / 大会運用</h2><span>operator review workflow</span></div>
         <div class="control-v2-panel-body obs-part-list">
@@ -1880,6 +1901,23 @@ function shouldRenderRecognitionScanStatusUpdate() {
   return screen === "common" || screen === "sidecar";
 }
 
+function shouldRenderTauriStorageUpdate() {
+  return view === "control-v2" && getControlV2Screen() === "obs";
+}
+
+async function refreshTauriStorageTarget({ render = true } = {}) {
+  try {
+    const target = await readTauriStorageTarget();
+    if (!target) return;
+    ui.tauriStorageTarget = target;
+    ui.tauriStorageError = "";
+  } catch (error) {
+    ui.tauriStorageTarget = null;
+    ui.tauriStorageError = error.message;
+  }
+  if (render && shouldRenderTauriStorageUpdate()) renderInteractive();
+}
+
 async function pollRecognitionScanStatus() {
   try {
     const next = await apiJson(recognitionScanStatusUrl);
@@ -1927,6 +1965,7 @@ async function boot() {
     } else {
       ui.saveStatus = "保存済み";
       renderInteractive();
+      refreshTauriStorageTarget().catch(() => {});
       if (view === "control-v2" || view === "sidecar") pollRecognitionScanStatus();
     }
   } catch (error) {

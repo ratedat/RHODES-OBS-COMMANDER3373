@@ -17,6 +17,7 @@ test("Tauri config keeps the existing localhost control surface", async () => {
   assert.equal(config.build.devUrl, "http://127.0.0.1:5173/control-v2");
   assert.equal(config.build.frontendDist, "../app");
   assert.deepEqual(config.app.windows, []);
+  assert.equal(config.app.withGlobalTauri, true);
   assert.deepEqual(config.bundle.resources, ["resources/rhodes-app", "resources/bin"]);
 });
 
