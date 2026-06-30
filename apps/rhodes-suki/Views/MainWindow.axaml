@@ -107,10 +107,18 @@
               <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel Spacing="10">
                   <StackPanel Spacing="8">
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-                      <TextBlock Text="Resource task" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-                      <Button Grid.Column="1" Content="全Resource task実行" Command="{Binding RunAllResourceTasksCommand}" />
-                      <Button Grid.Column="2" Content="結果JSON保存" Command="{Binding ExportResourceTaskResultsCommand}" />
+                    <Grid ColumnDefinitions="Auto,220,*,Auto,Auto" ColumnSpacing="10">
+                      <TextBlock Text="プロファイル" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <ComboBox Grid.Column="1" ItemsSource="{Binding ResourceProfiles}" SelectedItem="{Binding SelectedResourceProfile, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                      <TextBlock Grid.Column="2" Text="Resource task" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <Button Grid.Column="3" Content="全Resource task実行" Command="{Binding RunAllResourceTasksCommand}" />
+                      <Button Grid.Column="4" Content="結果JSON保存" Command="{Binding ExportResourceTaskResultsCommand}" />
                     </Grid>
                     <ItemsControl ItemsSource="{Binding ResourceTasks}">
                       <ItemsControl.ItemTemplate>

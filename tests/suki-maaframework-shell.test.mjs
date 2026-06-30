@@ -38,13 +38,19 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(catalog, /rhodes-generated\.json/);
   assert.match(catalog, /JsonDocument\.Parse/);
   assert.match(catalog, /GeneratedTasks/);
+  assert.match(catalog, /ProfileGroups/);
+  assert.match(catalog, /profileIds/);
   assert.match(models, /MaaTaskDetailSnapshot/);
+  assert.match(models, /MaaResourceProfilePreview/);
+  assert.match(models, /ProfileIds/);
   assert.match(models, /RecognitionDetailJson/);
   assert.match(viewModel, /ConnectCommand/);
   assert.match(viewModel, /CaptureCommand/);
   assert.match(viewModel, /RunAllProbesCommand/);
   assert.match(viewModel, /RunAllResourceTasksCommand/);
   assert.match(viewModel, /ExportResourceTaskResultsCommand/);
+  assert.match(viewModel, /SelectedResourceProfile/);
+  assert.match(viewModel, /RefreshResourceTasks/);
   assert.match(viewModel, /RunResourceTaskCommand/);
   assert.match(viewModel, /maa-resource-results/);
   assert.match(viewModel, /JsonSerializer\.Serialize/);
@@ -84,6 +90,8 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RunResourceTaskCommand/);
   assert.match(xaml, /RunAllResourceTasksCommand/);
   assert.match(xaml, /ExportResourceTaskResultsCommand/);
+  assert.match(xaml, /SelectedResourceProfile/);
+  assert.match(xaml, /ResourceProfiles/);
   assert.match(xaml, /RunProbeCommand/);
   assert.match(xaml, /ResourceTaskResults/);
   assert.match(xaml, /ProbeResults/);

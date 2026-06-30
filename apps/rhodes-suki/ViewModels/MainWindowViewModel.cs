@@ -11,6 +11,7 @@ namespace RhodesSuki.ViewModels;
 public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly RhodesMaaSession _session;
+    private readonly IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private byte[] _lastCapture = [];
     private string _adbPath = "adb";
     private string _adbSerial = "";
@@ -20,6 +21,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _captureState = "未取得";
     private string _lastCapturePath = "";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
+    private MaaResourceProfilePreview? _selectedResourceProfile;
     private bool _isBusy;
 
     public MainWindowViewModel(
@@ -50,7 +52,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         ProbePayloads = new ObservableCollection<MaaProbePayloadPreview>(Services.RhodesRecognitionProbe.DefaultPayloads());
         ProbeResults = [];
-        ResourceTasks = new ObservableCollection<MaaResourceTaskPreview>(RhodesMaaResourceCatalog.DefaultTasks());
+        _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
+        ResourceProfiles = new ObservableCollection<MaaResourceProfilePreview>(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks));
+        ResourceTasks = [];
         ResourceTaskResults = [];
         BaseResolution = Services.RhodesMaaPaths.BaseResolution;
         ResourceRoot = sessionSnapshot.ResourceRoot;
@@ -63,6 +67,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
         RunProbeCommand = new AsyncRelayCommand(parameter => RunProbeAsync(parameter as MaaProbePayloadPreview));
         RunResourceTaskCommand = new AsyncRelayCommand(parameter => RunResourceTaskAsync(parameter as MaaResourceTaskPreview));
+        SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull") ?? ResourceProfiles.FirstOrDefault();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -78,6 +83,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaProbePayloadPreview> ProbePayloads { get; }
 
     public ObservableCollection<MaaProbeResult> ProbeResults { get; }
+
+    public ObservableCollection<MaaResourceProfilePreview> ResourceProfiles { get; }
 
     public ObservableCollection<MaaResourceTaskPreview> ResourceTasks { get; }
 
@@ -135,6 +142,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _statusMessage;
         private set => SetProperty(ref _statusMessage, value);
+    }
+
+    public MaaResourceProfilePreview? SelectedResourceProfile
+    {
+        get => _selectedResourceProfile;
+        set
+        {
+            if (!SetProperty(ref _selectedResourceProfile, value))
+                return;
+            RefreshResourceTasks();
+        }
     }
 
     public bool IsBusy
@@ -219,7 +237,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunBusyAsync(async () =>
         {
-            var path = await SaveResourceTaskResultsAsync(ResourceTaskResults);
+            var path = await SaveResourceTaskResultsAsync(ResourceTaskResults, SelectedResourceProfile?.Id);
             StatusMessage = $"MAA task結果を保存しました: {path}";
         });
     }
@@ -249,6 +267,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ResourceTaskResults.Add(result);
             StatusMessage = $"{task.Entry}: {result.Status}";
         });
+    }
+
+    private void RefreshResourceTasks()
+    {
+        ResourceTasks.Clear();
+        foreach (var task in _allResourceTasks.Where(task => RhodesMaaResourceCatalog.TaskAppliesToProfile(task, SelectedResourceProfile?.Id)))
+        {
+            ResourceTasks.Add(task);
+        }
     }
 
     private async Task RunProbeCoreAsync(MaaProbePayloadPreview payload)
@@ -310,7 +337,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return path;
     }
 
-    private static async Task<string> SaveResourceTaskResultsAsync(IEnumerable<MaaTaskRunResult> taskResults)
+    private static async Task<string> SaveResourceTaskResultsAsync(IEnumerable<MaaTaskRunResult> taskResults, string? profileId)
     {
         var directory = Path.Combine(AppContext.BaseDirectory, "RHODES OBS COMMANDER3373 Debug Logs", "maa-resource-results");
         Directory.CreateDirectory(directory);
@@ -319,6 +346,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             schemaVersion = 1,
             createdAt = DateTimeOffset.Now,
+            profile = string.IsNullOrWhiteSpace(profileId) || profileId == "all" ? null : profileId,
             taskResults = taskResults.ToArray(),
         };
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });

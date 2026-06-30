@@ -53,7 +53,20 @@ public sealed record MaaCaptureResult(
 public sealed record MaaResourceTaskPreview(
     string Entry,
     string Label,
-    string Purpose);
+    string Purpose,
+    IReadOnlyList<string>? ProfileIds = null,
+    string Source = "")
+{
+    public string ProfileSummary => ProfileIds is { Count: > 0 } ? string.Join(", ", ProfileIds) : "manual";
+}
+
+public sealed record MaaResourceProfilePreview(
+    string Id,
+    string Label,
+    int TaskCount)
+{
+    public string DisplayName => $"{Label} ({TaskCount})";
+}
 
 public sealed record MaaTaskRunResult(
     string Entry,
