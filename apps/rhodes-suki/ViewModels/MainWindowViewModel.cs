@@ -415,30 +415,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         CandidateResults.Clear();
         var apiError = "";
         IReadOnlyList<MaaCandidatePreview> apiCandidates = [];
-        try
+        var apiProfileId = CandidateApiProfileId();
+        if (!string.IsNullOrWhiteSpace(apiProfileId))
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-            var response = await client.PostAsJsonAsync(
-                $"{RhodesApiUrl}/api/recognition/maa-resource",
-                new
+            try
+            {
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                var response = await client.PostAsJsonAsync(
+                    $"{RhodesApiUrl}/api/recognition/maa-resource",
+                    new
+                    {
+                        profile = apiProfileId,
+                        source = "maa-framework",
+                        taskResults = ResourceTaskResults.ToArray(),
+                    });
+                var json = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
                 {
-                    profile = SelectedResourceProfile?.Id == "all" ? "runStatusFull" : SelectedResourceProfile?.Id,
-                    source = "maa-framework",
-                    taskResults = ResourceTaskResults.ToArray(),
-                });
-            var json = await response.Content.ReadAsStringAsync();
-            if (response.IsSuccessStatusCode)
-            {
-                apiCandidates = ExtractCandidatePreviews(json);
+                    apiCandidates = ExtractCandidatePreviews(json);
+                }
+                else
+                {
+                    apiError = $"{(int)response.StatusCode} {Shorten(json, 160)}";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                apiError = $"{(int)response.StatusCode} {Shorten(json, 160)}";
+                apiError = Shorten(ex.Message, 160);
             }
         }
-        catch (Exception ex)
+        else
         {
-            apiError = Shorten(ex.Message, 160);
+            apiError = "allプロファイルでは候補化APIをスキップしました。";
         }
 
         if (apiCandidates.Count > 0)
@@ -467,6 +475,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StatusMessage = string.IsNullOrWhiteSpace(apiError)
             ? "候補は0件です。"
             : $"候補化API失敗: {apiError}";
+    }
+
+    private string? CandidateApiProfileId()
+    {
+        var profileId = SelectedResourceProfile?.Id;
+        return string.IsNullOrWhiteSpace(profileId) || profileId == "all" ? null : profileId;
     }
 
     private async Task RunProbeAsync(MaaProbePayloadPreview? payload)
