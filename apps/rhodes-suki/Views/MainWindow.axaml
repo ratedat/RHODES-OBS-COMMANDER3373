@@ -120,6 +120,11 @@
                       <Button Grid.Column="3" Content="全Resource task実行" Command="{Binding RunAllResourceTasksCommand}" />
                       <Button Grid.Column="4" Content="結果JSON保存" Command="{Binding ExportResourceTaskResultsCommand}" />
                     </Grid>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                      <TextBlock Text="候補化API" FontSize="13" VerticalAlignment="Center" Opacity="0.72" />
+                      <TextBox Grid.Column="1" Text="{Binding RhodesApiUrl, Mode=TwoWay}" />
+                      <Button Grid.Column="2" Content="候補化" Command="{Binding ConvertResourceTaskResultsCommand}" />
+                    </Grid>
                     <ItemsControl ItemsSource="{Binding ResourceTasks}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -129,6 +134,22 @@
                               <Button Grid.Column="1" Grid.RowSpan="3" Content="実行" Command="{Binding DataContext.RunResourceTaskCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
                               <TextBlock Grid.Row="1" Text="{Binding Purpose}" FontSize="12" TextWrapping="Wrap" Opacity="0.72" />
                               <TextBlock Grid.Row="2" Text="{Binding Entry}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding CandidateResults}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="6" Padding="10" Margin="0,0,0,8" Background="#132021" BorderBrush="#2B4547" BorderThickness="1">
+                            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="120,*,80" ColumnSpacing="10">
+                              <TextBlock Text="{Binding Kind}" FontSize="12" Opacity="0.72" />
+                              <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                              <TextBlock Grid.Column="2" Text="{Binding Confidence}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" Opacity="0.65" />
+                              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Value}" FontFamily="Consolas" FontSize="12" />
+                              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding RawText}" FontSize="11" HorizontalAlignment="Right" Opacity="0.55" />
                             </Grid>
                           </Border>
                         </DataTemplate>

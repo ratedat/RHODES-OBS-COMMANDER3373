@@ -82,3 +82,10 @@ public sealed record MaaTaskDetailSnapshot(
     string RecognitionDetailJson,
     string Algorithm,
     bool Hit);
+
+public sealed record MaaCandidatePreview(
+    string Kind,
+    string Label,
+    string Value,
+    string RawText,
+    double? Confidence);

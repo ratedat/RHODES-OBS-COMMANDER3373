@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows.Input;
@@ -20,6 +21,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _sessionDetail;
     private string _captureState = "未取得";
     private string _lastCapturePath = "";
+    private string _rhodesApiUrl = "http://127.0.0.1:5173";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
     private MaaResourceProfilePreview? _selectedResourceProfile;
     private bool _isBusy;
@@ -56,6 +58,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ResourceProfiles = new ObservableCollection<MaaResourceProfilePreview>(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks));
         ResourceTasks = [];
         ResourceTaskResults = [];
+        CandidateResults = [];
         BaseResolution = Services.RhodesMaaPaths.BaseResolution;
         ResourceRoot = sessionSnapshot.ResourceRoot;
         AgentBinaryRoot = sessionSnapshot.AgentBinaryRoot;
@@ -65,6 +68,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunAllProbesCommand = new AsyncRelayCommand(RunAllProbesAsync);
         RunAllResourceTasksCommand = new AsyncRelayCommand(RunAllResourceTasksAsync);
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
+        ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
         RunProbeCommand = new AsyncRelayCommand(parameter => RunProbeAsync(parameter as MaaProbePayloadPreview));
         RunResourceTaskCommand = new AsyncRelayCommand(parameter => RunResourceTaskAsync(parameter as MaaResourceTaskPreview));
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull") ?? ResourceProfiles.FirstOrDefault();
@@ -89,6 +93,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaResourceTaskPreview> ResourceTasks { get; }
 
     public ObservableCollection<MaaTaskRunResult> ResourceTaskResults { get; }
+
+    public ObservableCollection<MaaCandidatePreview> CandidateResults { get; }
 
     public MaaBaseResolution BaseResolution { get; }
 
@@ -138,6 +144,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref _lastCapturePath, value);
     }
 
+    public string RhodesApiUrl
+    {
+        get => _rhodesApiUrl;
+        set => SetProperty(ref _rhodesApiUrl, string.IsNullOrWhiteSpace(value) ? "http://127.0.0.1:5173" : value.TrimEnd('/'));
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -170,6 +182,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RunAllResourceTasksCommand { get; }
 
     public ICommand ExportResourceTaskResultsCommand { get; }
+
+    public ICommand ConvertResourceTaskResultsCommand { get; }
 
     public ICommand RunProbeCommand { get; }
 
@@ -239,6 +253,41 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             var path = await SaveResourceTaskResultsAsync(ResourceTaskResults, SelectedResourceProfile?.Id);
             StatusMessage = $"MAA task結果を保存しました: {path}";
+        });
+    }
+
+    private async Task ConvertResourceTaskResultsAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (!ResourceTaskResults.Any())
+            {
+                StatusMessage = "先にResource taskを実行してください。";
+                return;
+            }
+
+            using var client = new HttpClient();
+            var response = await client.PostAsJsonAsync(
+                $"{RhodesApiUrl}/api/recognition/maa-resource",
+                new
+                {
+                    profile = SelectedResourceProfile?.Id == "all" ? "runStatusFull" : SelectedResourceProfile?.Id,
+                    source = "maa-framework",
+                    taskResults = ResourceTaskResults.ToArray(),
+                });
+            var json = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusMessage = $"候補化API失敗: {(int)response.StatusCode} {json}";
+                return;
+            }
+
+            CandidateResults.Clear();
+            foreach (var candidate in ExtractCandidatePreviews(json))
+            {
+                CandidateResults.Add(candidate);
+            }
+            StatusMessage = $"候補化しました: {CandidateResults.Count}件";
         });
     }
 
@@ -352,6 +401,69 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(path, $"{json}{Environment.NewLine}");
         return path;
+    }
+
+    private static IReadOnlyList<MaaCandidatePreview> ExtractCandidatePreviews(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("result", out var result)
+            || !result.TryGetProperty("candidates", out var candidates)
+            || candidates.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var previews = new List<MaaCandidatePreview>();
+        foreach (var candidate in candidates.EnumerateArray())
+        {
+            var kind = JsonString(candidate, "kind");
+            var label = JsonString(candidate, "label");
+            var rawText = JsonString(candidate, "rawText");
+            var field = JsonString(candidate, "field");
+            var name = JsonString(candidate, "name");
+            var value = JsonValueText(candidate, "value");
+            var confidence = JsonNumber(candidate, "confidence");
+            previews.Add(new MaaCandidatePreview(
+                kind,
+                string.IsNullOrWhiteSpace(label) ? field : label,
+                string.IsNullOrWhiteSpace(value) ? name : value,
+                rawText,
+                confidence));
+        }
+        return previews;
+    }
+
+    private static string JsonString(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.String
+            ? property.GetString() ?? ""
+            : "";
+    }
+
+    private static string JsonValueText(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out var property))
+            return "";
+        return property.ValueKind switch
+        {
+            JsonValueKind.String => property.GetString() ?? "",
+            JsonValueKind.Number => property.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => property.GetRawText(),
+        };
+    }
+
+    private static double? JsonNumber(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.Number
+            && property.TryGetDouble(out var value)
+            ? value
+            : null;
     }
 
     private async Task RunBusyAsync(Func<Task> action)
