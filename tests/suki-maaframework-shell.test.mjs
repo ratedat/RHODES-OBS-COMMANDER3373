@@ -13,7 +13,20 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(csproj, /interface\.json/);
   assert.match(csproj, /assets\\recognition\\templates\\run\\\*\.png/);
   assert.match(packageJson, /"maa:resource:generate": "node tools\/generate-maa-resource\.mjs"/);
+  assert.match(packageJson, /"suki:test": "dotnet run --project tests\/rhodes-suki\/RhodesSuki\.ServiceTests\.csproj"/);
   assert.match(packageJson, /suki:publish:portable.*--self-contained true/);
+});
+
+test("Suki service tests cover MAA Resource detail conversion behavior", async () => {
+  const testProject = await fs.readFile("tests/rhodes-suki/RhodesSuki.ServiceTests.csproj", "utf8");
+  const program = await fs.readFile("tests/rhodes-suki/Program.cs", "utf8");
+
+  assert.match(testProject, /ProjectReference Include="..\\..\\apps\\rhodes-suki\\RhodesSuki\.csproj"/);
+  assert.match(program, /RhodesMaaResultPreview\.FromTaskResults/);
+  assert.match(program, /best_result/);
+  assert.match(program, /filtered_results/);
+  assert.match(program, /TemplateMatch/);
+  assert.match(program, /HitFallback/);
 });
 
 test("Suki shell keeps MAA session and probe code in thin RHODES-owned services", async () => {
