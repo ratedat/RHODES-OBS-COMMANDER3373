@@ -36,6 +36,8 @@ The main risk is not visual polish. The main risk is mixing unrelated jobs into 
 
 If these jobs share one undifferentiated list, the user cannot tell whether they are editing state, reviewing a candidate, changing a runtime setting, or changing what OBS displays.
 
+Future feature growth makes this risk larger. More campaigns, special values, OCR engines, recognition profiles, operator metadata, relic effects, tournament fields, sidecar modes, and debugger tools are expected. The UI must therefore treat new elements as schema-driven entries inside stable workspaces, not as reasons to add another top-level tab every time.
+
 ## Required App Structure
 
 Use a stable desktop workbench with four persistent zones.
@@ -65,6 +67,8 @@ Group screens by job, not data type only.
 
 The current top tab set should expand in this direction. Operators and relics should not be the only first-class workspaces.
 
+Top-level navigation should be added only when the user job is genuinely new. A new field, catalog, recognition profile, or display variant should normally land inside an existing workspace.
+
 ### 3. Work Area
 
 The center area should be a task-specific workspace.
@@ -87,6 +91,56 @@ The right side should explain the selected thing.
 
 This pane prevents large rows from becoming unreadable and keeps advanced evidence available without bloating every list item.
 
+## Extensibility Model
+
+New UI elements should enter through an explicit extension model. The app should classify an element by what job it supports, what state it owns, and what evidence it can display.
+
+### Extension Categories
+
+- Run field: a value stored on the active run, such as difficulty, hope, shield, command level, or a future campaign stat.
+- Campaign special field: a campaign-scoped value described by catalog schema, such as number, single effect, multi effect, ranked effect, board loadout, stack loadout, or coin loadout.
+- Choice catalog: selectable run inventory such as operators, relics, future recruitable groups, temporary units, or campaign-specific collectibles.
+- Recognition profile: a scan task that produces raw observations, normalized values, candidates, or auto-applied state.
+- Candidate review type: an OCR/template result that needs apply/reject, confidence display, source screenshot/crop, and detail JSON.
+- Output part: something rendered to OBS or sidecar, including overlay sections, tournament fields, scroll behavior, and future detached views.
+- Runtime capability: external tool state such as ADB, MAA resources, OCR engines, optional downloads, model status, and platform diagnostics.
+- Debug artifact: logs, screenshots, trace files, resource probe payloads, and bug-report bundles.
+
+### Required Metadata
+
+Every new element should define:
+
+- Stable id.
+- Human label.
+- Owning workspace: Run, Choices, Recognition, Output, Runtime, or Debug.
+- State path, if it edits persistent state.
+- Source provenance: catalog, manual, OCR/template, GLM, imported state, runtime probe, or generated diagnostic.
+- Display priority.
+- Inspector renderer.
+- Empty/error state text.
+- Whether it can be shown on OBS/sidecar.
+- Whether it can be auto-applied or must enter review.
+
+### Navigation Rules
+
+- Do not add a top-level tab for a single field or a small group of related fields.
+- Add a new top-level workspace only when the user goal, state ownership, and evidence needs do not fit an existing workspace.
+- Prefer adding a section or subtab inside Run, Choices, Recognition, Output, or Runtime.
+- If a new element needs a different editor shape, add a renderer to the field/editor registry instead of hardcoding a screen.
+- If a new element needs new evidence, extend the inspector and review queue instead of enlarging list rows.
+
+### Implementation Seams
+
+The UI should converge on these modules:
+
+- Run field registry: maps run and campaign schema fields to editor models.
+- Choice catalog registry: maps selectable catalog entries to filter models, list rows, and inspector summaries.
+- Recognition result registry: maps MAA/GLM/template results to candidate types and review actions.
+- Output part registry: maps state slices to OBS/sidecar display blocks.
+- Runtime capability registry: maps external tools to install/status/test/uninstall controls.
+
+These modules should be deep: callers ask for "render this workspace from the active state" or "convert this recognition result to review items" instead of knowing every campaign and field type.
+
 ## Data Editing Principles
 
 - State editing and OCR review must be separate. OCR candidates should not silently become state without a visible review path unless confidence and profile policy explicitly allow it.
@@ -104,6 +158,8 @@ This pane prevents large rows from becoming unreadable and keeps advanced eviden
 4. Move GLM-OCR/Ollama/ADB/Hyper-V into a Runtime workspace instead of burying them under OBS settings.
 5. Keep OBS and sidecar output separate from data editing.
 6. Preserve the current operator/relic filters, but prepare them for virtualization and details inspection.
+7. Introduce schema/registry seams before adding more one-off UI sections.
+8. Require every new field or catalog item to declare its workspace, state path, provenance, inspector view, and review policy.
 
 ## Figma Alignment
 

@@ -4,6 +4,8 @@ This brief is the shared source for redesigning the Suki/Avalonia verification s
 
 Before expanding this prompt, use `docs/suki-product-ui-information-architecture.md` as the scope reference. The screen below is the current operational foundation; the final app must also cover run base values, campaign-specific special values, recognition review, OBS/sidecar output, and runtime settings without mixing those jobs into one list.
 
+Future elements are expected. Do not solve that by adding a new top-level tab for every new field, catalog, recognition profile, output block, or runtime capability. The visual direction should support stable workspaces (`Run`, `Choices`, `Recognition`, `Output`, `Runtime`, `Debug`) where new elements appear as schema-driven sections, subtabs, or inspector panels.
+
 ## Stitch Prompt
 
 Design a desktop application screen for RHODES OBS COMMANDER3373, an Arknights Integrated Strategies OCR and ADB verification workbench.
@@ -16,7 +18,7 @@ Layout:
 - Top bar: app title, subtitle, current IS campaign selector such as `IS#5 サルカズの炉辺奇談`, current base coordinate system badge such as `1280x720 / 16:9`, and a truncated resource path.
 - Main area: three columns.
 - Left column, width about 330 px: run setup and MAA ADB connection. Include runtime status, run setup controls or summary for squad/difficulty when available, ADB preset selector, ADB path input, serial/connection target input, config JSON input, buttons for connect, device list refresh, capture, probe all, device list rows, and compact migration notes.
-- Center column: operational run-state workbench with tabs for `オペレーター`, `秘宝`, and `認識タスク`.
+- Center column: operational run-state workbench. In the current foundation this shows tabs for `オペレーター`, `秘宝`, and `認識タスク`; the longer-term shell should support stable workspace groups such as `Run`, `Choices`, `Recognition`, `Output`, `Runtime`, and `Debug`.
   - Operator tab: search input, rarity/class/branch filters, selected-first toggle, hide-excluded toggle, selected-only toggle, selected count, and scrollable operator rows. Each row must show name, rarity, class, branch, selected state, selection toggle, and display-exclusion toggle.
   - Relic tab: search input, category filter, selected-first toggle, hide-excluded toggle, selected-only toggle, owned count, and scrollable relic rows. Each row must show relic name, number/category, effect, selected state, selection toggle, and display-exclusion toggle.
   - Recognition task tab: profile selector, recognition run button, run all button, export JSON button, candidate API URL input, convert button, current profile/source summary, and a scrollable list of recognition task rows. Each row has label, purpose, entry id, source/profile summaries, and a run button.
