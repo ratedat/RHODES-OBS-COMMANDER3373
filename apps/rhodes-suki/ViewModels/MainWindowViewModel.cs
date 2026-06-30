@@ -56,6 +56,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ProbePayloads = new ObservableCollection<MaaProbePayloadPreview>(Services.RhodesRecognitionProbe.DefaultPayloads());
         ProbeResults = [];
         AdbPresets = new ObservableCollection<MaaAdbPresetPreview>(RhodesAdbPresetCatalog.DefaultPresets());
+        AdbDevices = [];
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "auto") ?? AdbPresets.FirstOrDefault();
         _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
         ResourceProfiles = new ObservableCollection<MaaResourceProfilePreview>(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks));
@@ -68,6 +69,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         ConnectCommand = new AsyncRelayCommand(ConnectAsync);
         ApplyAdbPresetCommand = new AsyncRelayCommand(parameter => ApplyAdbPresetAsync(parameter as MaaAdbPresetPreview));
+        RefreshAdbDevicesCommand = new AsyncRelayCommand(RefreshAdbDevicesAsync);
+        ApplyAdbDeviceCommand = new AsyncRelayCommand(parameter => ApplyAdbDeviceAsync(parameter as MaaAdbDevicePreview));
         CaptureCommand = new AsyncRelayCommand(CaptureAsync);
         RunAllProbesCommand = new AsyncRelayCommand(RunAllProbesAsync);
         RunSelectedProfileRecognitionCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAsync);
@@ -94,6 +97,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaProbeResult> ProbeResults { get; }
 
     public ObservableCollection<MaaAdbPresetPreview> AdbPresets { get; }
+
+    public ObservableCollection<MaaAdbDevicePreview> AdbDevices { get; }
 
     public ObservableCollection<MaaResourceProfilePreview> ResourceProfiles { get; }
 
@@ -190,6 +195,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand ApplyAdbPresetCommand { get; }
 
+    public ICommand RefreshAdbDevicesCommand { get; }
+
+    public ICommand ApplyAdbDeviceCommand { get; }
+
     public ICommand CaptureCommand { get; }
 
     public ICommand RunAllProbesCommand { get; }
@@ -236,6 +245,36 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         AdbSerial = preset.Serial;
         StatusMessage = $"ADBプリセットを適用しました: {preset.DisplayName}";
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshAdbDevicesAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            AdbDevices.Clear();
+            var devices = await RhodesAdbDeviceProbe.ListDevicesAsync(AdbPath);
+            foreach (var device in devices)
+            {
+                AdbDevices.Add(device);
+            }
+
+            StatusMessage = devices.Count == 0
+                ? "ADB端末は見つかりませんでした。エミュレーター側のADB設定を確認してください。"
+                : $"ADB端末を取得しました: {devices.Count}件";
+        });
+    }
+
+    private Task ApplyAdbDeviceAsync(MaaAdbDevicePreview? device)
+    {
+        if (device is null)
+        {
+            StatusMessage = "ADB端末が選択されていません。";
+            return Task.CompletedTask;
+        }
+
+        AdbSerial = device.Serial;
+        StatusMessage = $"ADB serialを適用しました: {device.Serial}";
         return Task.CompletedTask;
     }
 

@@ -28,6 +28,18 @@ public sealed record MaaAdbPresetPreview(
     public string PathSummary => string.IsNullOrWhiteSpace(AdbPath) ? "adb" : AdbPath;
 }
 
+public sealed record MaaAdbDevicePreview(
+    string Serial,
+    string State,
+    string Detail)
+{
+    public bool IsUsable => State.Equals("device", StringComparison.OrdinalIgnoreCase);
+
+    public string DisplayName => string.IsNullOrWhiteSpace(Detail)
+        ? $"{State} {Serial}"
+        : $"{State} {Serial} {Detail}";
+}
+
 public sealed record MaaSessionSnapshot(
     string State,
     string Detail,

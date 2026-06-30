@@ -8,6 +8,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA TemplateMatch count becomes a template candidate", TemplateCount),
     ("MAA hit without detail falls back to a simple candidate", HitFallback),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
+    ("ADB device output parses serials and usable state", AdbDeviceParsing),
 };
 
 var failures = new List<string>();
@@ -120,6 +121,22 @@ static void AdbPresets()
 
     Equal("127.0.0.1:16384", mumu.Serial, "MuMu serial");
     Equal("127.0.0.1:6520", googlePlay.Serial, "Google Play Games developer serial");
+}
+
+static void AdbDeviceParsing()
+{
+    var devices = RhodesAdbDeviceProbe.ParseDevices(
+        """
+        List of devices attached
+        127.0.0.1:16384 device product:MuMu model:MuMu_Player transport_id:1
+        emulator-5554 offline transport_id:2
+        """);
+
+    Equal(2, devices.Count, "device count");
+    Equal("127.0.0.1:16384", devices[0].Serial, "first serial");
+    Equal(true, devices[0].IsUsable, "first usable");
+    Equal("offline", devices[1].State, "second state");
+    Equal(false, devices[1].IsUsable, "second usable");
 }
 
 static void Equal<T>(T expected, T actual, string label)
