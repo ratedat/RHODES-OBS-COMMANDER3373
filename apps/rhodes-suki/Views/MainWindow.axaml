@@ -7,96 +7,403 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
     mc:Ignorable="d"
-    Width="1360"
-    Height="820"
-    MinWidth="1120"
-    MinHeight="700"
+    Width="1500"
+    Height="900"
+    MinWidth="1180"
+    MinHeight="720"
     Title="{Binding Title}">
-  <Grid RowDefinitions="Auto,*,Auto" Margin="22" RowSpacing="14">
-    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
-      <StackPanel Spacing="3">
-        <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding Subtitle}" FontSize="13" Opacity="0.68" />
-      </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <ComboBox Width="280" ItemsSource="{Binding Campaigns}" SelectedItem="{Binding SelectedCampaign, Mode=TwoWay}">
-          <ComboBox.ItemTemplate>
-            <DataTemplate>
-              <TextBlock Text="{Binding DisplayName}" />
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-        <Border CornerRadius="5" Padding="10,6" Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1">
-          <TextBlock Text="{Binding BaseResolution.AspectRatioLabel}" FontSize="12" />
-        </Border>
-        <Border CornerRadius="5" Padding="10,6" Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1" MaxWidth="420">
-          <TextBlock Text="{Binding ResourceRoot}" FontSize="12" TextTrimming="CharacterEllipsis" Opacity="0.72" />
-        </Border>
-      </StackPanel>
-    </Grid>
+  <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="12">
+    <Border CornerRadius="10" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+        <StackPanel Spacing="2" MinWidth="245">
+          <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="SemiBold" />
+          <TextBlock Text="Suki / MAA 検証ワークベンチ" FontSize="12" Opacity="0.68" />
+        </StackPanel>
 
-    <Grid Grid.Row="1" ColumnDefinitions="330,*,380" ColumnSpacing="14">
-      <Border CornerRadius="8" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="12">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <StackPanel Grid.Column="1" Spacing="8">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
             <StackPanel Spacing="2">
-              <TextBlock Text="MAA ADB接続" FontSize="18" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding SessionState}" FontSize="12" Opacity="0.72" />
+              <TextBlock Text="{Binding CampaignHeaderTitle}" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding CampaignHeaderDetail}" FontSize="12" Opacity="0.66" />
             </StackPanel>
-            <Button Grid.Column="1" Content="保存" Command="{Binding SaveSettingsCommand}" VerticalAlignment="Top" />
-          </Grid>
-
-          <ItemsControl Grid.Row="1" ItemsSource="{Binding RuntimeStatuses}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Grid Margin="0,0,0,7" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10">
-                  <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
-                  <TextBlock Grid.Column="1" Text="{Binding State}" FontSize="12" Opacity="0.85" />
-                  <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
-                </Grid>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
-          <Grid Grid.Row="2" RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="76,*,Auto" RowSpacing="8" ColumnSpacing="8">
-            <TextBlock Text="プリセット" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}">
+            <ComboBox Grid.Column="2" Width="280" ItemsSource="{Binding Campaigns}" SelectedItem="{Binding SelectedCampaign, Mode=TwoWay}">
               <ComboBox.ItemTemplate>
                 <DataTemplate>
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding DisplayName}" />
-                    <TextBlock Text="{Binding PathSummary}" FontSize="11" Opacity="0.58" />
-                  </StackPanel>
+                  <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <Button Grid.Column="2" Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
-
-            <TextBlock Grid.Row="1" Text="ADB" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-            <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbPath, Mode=TwoWay}" />
-
-            <TextBlock Grid.Row="2" Text="接続先" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-            <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbSerial, Mode=TwoWay}" PlaceholderText="127.0.0.1:16384 / emulator-5554" />
-
-            <TextBlock Grid.Row="3" Text="Config" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-            <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbConfigJson, Mode=TwoWay}" />
           </Grid>
 
-          <Grid Grid.Row="3" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding HeaderStatusChips}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="8" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border CornerRadius="6" Padding="9,6" Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1" MinWidth="86">
+                    <StackPanel Spacing="1">
+                      <TextBlock Text="{Binding Label}" FontSize="10" Opacity="0.62" />
+                      <TextBlock Text="{Binding Value}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Detail}" FontSize="9" Opacity="0.48" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Spacing="8" MinWidth="260">
+          <Border CornerRadius="7" Padding="10,7" Background="#132021" BorderBrush="#2B4547" BorderThickness="1">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding AdbHeaderTitle}" FontSize="13" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding AdbHeaderDetail}" FontSize="10" Opacity="0.66" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="保存" Command="{Binding SaveSettingsCommand}" />
             <Button Content="接続" Command="{Binding ConnectCommand}" />
-            <Button Grid.Column="1" Content="端末一覧" Command="{Binding RefreshAdbDevicesCommand}" />
-            <Button Grid.Column="2" Content="撮影" Command="{Binding CaptureCommand}" />
-            <Button Grid.Row="1" Grid.ColumnSpan="3" Content="全プローブ実行" Command="{Binding RunAllProbesCommand}" />
+            <Button Content="撮影" Command="{Binding CaptureCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="212,*,360" ColumnSpacing="12">
+      <Border CornerRadius="10" Padding="10" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+          <StackPanel Spacing="2">
+            <TextBlock Text="WORKSPACE" FontSize="10" FontWeight="Bold" Opacity="0.45" />
+            <TextBlock Text="{Binding WorkspaceTitle}" FontSize="16" FontWeight="SemiBold" />
+          </StackPanel>
+
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding WorkspaceNav}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Command="{Binding DataContext.SetWorkspaceCommand, ElementName=Root}" CommandParameter="{Binding Id}" Padding="10" Margin="0,0,0,7" HorizontalContentAlignment="Stretch">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8">
+                      <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                      <TextBlock Grid.Column="1" Text="{Binding Subtitle}" FontSize="9" FontWeight="Bold" Opacity="0.52" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Description}" FontSize="10" Opacity="0.58" TextWrapping="Wrap" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <Border Grid.Row="2" CornerRadius="8" Padding="10" Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1">
+            <TextBlock Text="新要素はレジストリとワークスペースへ追加し、トップレベルの操作を増やし過ぎない。" FontSize="10" TextWrapping="Wrap" Opacity="0.62" />
+          </Border>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1" CornerRadius="10" Padding="14" Background="#111718" BorderBrush="#2B3638" BorderThickness="1">
+        <Grid>
+          <Grid RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding IsRunWorkspaceVisible}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock Text="ラン基本値" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="runStatusFull と IS固有値をここでレビューします。" FontSize="12" Opacity="0.62" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="基本値を認識" Command="{Binding SetChoiceTabCommand}" CommandParameter="recognition" VerticalAlignment="Center" />
+            </Grid>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="14">
+                <ItemsControl ItemsSource="{Binding RunFieldPreviews}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Width="224" MinHeight="112" CornerRadius="8" Padding="12" Margin="0,0,10,10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                        <StackPanel Spacing="5">
+                          <TextBlock Text="{Binding Label}" FontSize="12" Opacity="0.64" />
+                          <TextBlock Text="{Binding Value}" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Source}" FontSize="10" Opacity="0.58" />
+                          <TextBlock Text="{Binding RecognitionTaskId}" FontFamily="Consolas" FontSize="10" Opacity="0.48" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Detail}" FontSize="10" Opacity="0.5" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                  <Border CornerRadius="8" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+                    <StackPanel Spacing="8">
+                      <TextBlock Text="IS固有値" FontSize="16" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding CampaignHeaderTitle}" FontSize="12" Opacity="0.66" />
+                      <TextBlock Text="IS#5は想念・時代・思案を独立した認識プロファイルとして扱います。今後のIS追加もここへ差し込みます。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="思案認識" Command="{Binding RunSelectedProfileRecognitionCommand}" />
+                        <Button Content="認識へ移動" Command="{Binding SetWorkspaceCommand}" CommandParameter="recognition" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Border>
+
+                  <Border Grid.Column="1" CornerRadius="8" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+                    <StackPanel Spacing="8">
+                      <TextBlock Text="現在のラン構成" FontSize="16" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding RunContextSummary}" FontSize="12" TextWrapping="Wrap" Opacity="0.72" />
+                      <TextBlock Text="オペレーターと秘宝の編集は選択ワークスペースで行います。OBSに出す項目は出力ワークスペースへ分離します。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="選択へ移動" Command="{Binding SetWorkspaceCommand}" CommandParameter="choices" />
+                        <Button Content="出力へ移動" Command="{Binding SetWorkspaceCommand}" CommandParameter="output" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Border>
+                </Grid>
+              </StackPanel>
+            </ScrollViewer>
           </Grid>
 
-          <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="10">
-              <StackPanel Spacing="5">
-                <TextBlock Text="検出端末" FontSize="13" FontWeight="SemiBold" />
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12" IsVisible="{Binding IsChoicesWorkspaceVisible}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock Text="選択カタログ" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding RunContextSummary}" FontSize="12" Opacity="0.62" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Content="オペレーター" Command="{Binding SetChoiceTabCommand}" CommandParameter="operators" />
+                <Button Content="秘宝" Command="{Binding SetChoiceTabCommand}" CommandParameter="relics" />
+                <Button Content="表示中の選択解除" Command="{Binding ClearVisibleChoicesCommand}" />
+              </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1" CornerRadius="7" Padding="10,8" Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1">
+              <TextBlock Text="{Binding ChoicePanelTitle}" FontSize="13" FontWeight="SemiBold" />
+            </Border>
+
+            <Grid Grid.Row="2">
+              <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsOperatorsPanelVisible}">
+                <Grid ColumnDefinitions="*,110,145,145" ColumnSpacing="8">
+                  <TextBox Text="{Binding OperatorSearch, Mode=TwoWay}" PlaceholderText="名前、職業、職分、タグで検索" />
+                  <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="14">
+                  <TextBlock Text="{Binding OperatorListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
+                  <CheckBox Grid.Column="1" Content="優先表示" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="2" Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="3" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
+                </Grid>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                  <ItemsControl ItemsSource="{Binding FilteredOperators}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,82,88" ColumnSpacing="8">
+                            <StackPanel Spacing="2">
+                              <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding Heading}" FontSize="12" Opacity="0.66" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                            <Button Grid.Column="2" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                            <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding StateLabel}" FontSize="11" HorizontalAlignment="Right" Opacity="0.7" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Grid>
+
+              <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsRelicsPanelVisible}">
+                <Grid ColumnDefinitions="*,260" ColumnSpacing="8">
+                  <TextBox Text="{Binding RelicSearch, Mode=TwoWay}" PlaceholderText="秘宝名、番号、効果で検索" />
+                  <ComboBox Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="14">
+                  <TextBlock Text="{Binding RelicListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
+                  <CheckBox Grid.Column="1" Content="優先表示" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="2" Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="3" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
+                </Grid>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                  <ItemsControl ItemsSource="{Binding FilteredRelics}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,82,88" ColumnSpacing="8">
+                            <StackPanel Spacing="2">
+                              <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding Heading}" FontSize="12" Opacity="0.66" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                            <Button Grid.Column="2" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                            <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding StateLabel}" FontSize="11" HorizontalAlignment="Right" Opacity="0.7" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Grid>
+            </Grid>
+          </Grid>
+
+          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsRecognitionWorkspaceVisible}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock Text="認識ワークフロー" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="MAA Resource task、候補化API、ローカルプレビューをここに集約します。" FontSize="12" Opacity="0.62" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Content="認識" Command="{Binding RunSelectedProfileRecognitionCommand}" />
+                <Button Content="全実行" Command="{Binding RunAllResourceTasksCommand}" />
+                <Button Content="JSON保存" Command="{Binding ExportResourceTaskResultsCommand}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1" ColumnDefinitions="Auto,260,*,Auto" ColumnSpacing="10">
+              <TextBlock Text="プロファイル" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
+              <ComboBox Grid.Column="1" ItemsSource="{Binding ResourceProfiles}" SelectedItem="{Binding SelectedResourceProfile, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBox Grid.Column="2" Text="{Binding RhodesApiUrl, Mode=TwoWay}" />
+              <Button Grid.Column="3" Content="候補化" Command="{Binding ConvertResourceTaskResultsCommand}" />
+            </Grid>
+
+            <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="プロファイル" FontSize="11" Opacity="0.58" />
+                <TextBlock Text="{Binding SelectedResourceProfile.ProfileSummary}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Opacity="0.74" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="定義元" FontSize="11" Opacity="0.58" />
+                <TextBlock Text="{Binding SelectedResourceProfile.SourceSummary}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Opacity="0.74" />
+              </StackPanel>
+            </Grid>
+
+            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding ResourceTasks}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                      <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="5">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Purpose}" FontSize="12" TextWrapping="Wrap" Opacity="0.66" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Grid.RowSpan="3" Content="実行" Command="{Binding DataContext.RunResourceTaskCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Entry}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
+                        <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="8">
+                          <TextBlock Text="{Binding SourceSummary}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.56" />
+                          <TextBlock Grid.Column="1" Text="{Binding ProfileSummary}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.56" />
+                        </Grid>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+
+          <Grid RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding IsOutputWorkspaceVisible}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="出力 / OBS" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="サイドカーや大会向け表示で使う表示部品をここへ集約します。" FontSize="12" Opacity="0.62" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding OutputParts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="8" Padding="12" Margin="0,0,0,10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+                        <TextBlock Text="{Binding Label}" FontSize="15" FontWeight="SemiBold" />
+                        <CheckBox Grid.Column="1" IsChecked="{Binding Enabled, Mode=OneWay}" IsEnabled="False" />
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+
+          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12" IsVisible="{Binding IsRuntimeWorkspaceVisible}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock Text="ランタイム" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="MAA ADB接続 · ADB · MAA · GLM-OCR · Ollama · Hyper-V" FontSize="12" Opacity="0.62" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Content="端末一覧" Command="{Binding RefreshAdbDevicesCommand}" />
+                <Button Content="接続" Command="{Binding ConnectCommand}" />
+                <Button Content="撮影" Command="{Binding CaptureCommand}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="92,*,Auto" RowSpacing="8" ColumnSpacing="8">
+              <TextBlock Text="プリセット" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
+              <ComboBox Grid.Column="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding DisplayName}" />
+                      <TextBlock Text="{Binding PathSummary}" FontSize="11" Opacity="0.58" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button Grid.Column="2" Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
+
+              <TextBlock Grid.Row="1" Text="ADB" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
+              <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbPath, Mode=TwoWay}" />
+
+              <TextBlock Grid.Row="2" Text="接続先" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
+              <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbSerial, Mode=TwoWay}" PlaceholderText="127.0.0.1:6520 / 127.0.0.1:16384 / emulator-5554" />
+
+              <TextBlock Grid.Row="3" Text="Config" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
+              <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbConfigJson, Mode=TwoWay}" />
+            </Grid>
+
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding RuntimeStatuses}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Width="220" CornerRadius="8" Padding="10" Margin="0,0,10,10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding State}" FontSize="12" Opacity="0.78" />
+                      <TextBlock Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.58" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="10">
+                <TextBlock Text="検出端末" FontSize="14" FontWeight="SemiBold" />
                 <ItemsControl ItemsSource="{Binding AdbDevices}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border CornerRadius="6" Padding="9" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                      <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                           <StackPanel Spacing="2">
                             <TextBlock Text="{Binding Serial}" FontFamily="Consolas" FontSize="12" />
@@ -109,9 +416,25 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </StackPanel>
+            </ScrollViewer>
+          </Grid>
 
-              <StackPanel Spacing="5">
-                <TextBlock Text="移行メモ" FontSize="13" FontWeight="SemiBold" />
+          <Grid RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding IsDebugWorkspaceVisible}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="デバッグ" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="検証用ログ、スクリーンショット、Resource task結果を確認します。" FontSize="12" Opacity="0.62" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="12">
+                <ItemsControl ItemsSource="{Binding DebugLogLines}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.68" Margin="0,0,0,4" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="移行メモ" FontSize="14" FontWeight="SemiBold" />
                 <ItemsControl ItemsSource="{Binding MigrationSteps}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -120,171 +443,13 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </StackPanel>
-            </StackPanel>
-          </ScrollViewer>
-
-          <StackPanel Grid.Row="5" Spacing="4">
-            <TextBlock Text="{Binding SessionDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.66" />
-            <TextBlock Text="{Binding CaptureState}" FontSize="11" TextWrapping="Wrap" Opacity="0.66" />
-          </StackPanel>
-        </Grid>
-      </Border>
-
-      <Border Grid.Column="1" CornerRadius="8" Padding="14" Background="#111718" BorderBrush="#2B3638" BorderThickness="1">
-        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <StackPanel Spacing="2">
-              <TextBlock Text="ラン作業" FontSize="18" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding RunContextSummary}" FontSize="12" Opacity="0.68" />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <Button Content="オペレーター" Command="{Binding SetChoiceTabCommand}" CommandParameter="operators" />
-              <Button Content="秘宝" Command="{Binding SetChoiceTabCommand}" CommandParameter="relics" />
-              <Button Content="認識タスク" Command="{Binding SetChoiceTabCommand}" CommandParameter="recognition" />
-              <Button Content="表示中の選択解除" Command="{Binding ClearVisibleChoicesCommand}" />
-            </StackPanel>
-          </Grid>
-
-          <Border Grid.Row="1" CornerRadius="6" Padding="10,8" Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1">
-            <TextBlock Text="{Binding ChoicePanelTitle}" FontSize="13" FontWeight="SemiBold" />
-          </Border>
-
-          <Grid Grid.Row="2">
-            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsOperatorsPanelVisible}">
-              <Grid ColumnDefinitions="*,110,145,145" ColumnSpacing="8">
-                <TextBox Text="{Binding OperatorSearch, Mode=TwoWay}" PlaceholderText="名前、職業、職分、タグで検索" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" />
-                <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" />
-                <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" />
-              </Grid>
-
-              <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="14">
-                <TextBlock Text="{Binding OperatorListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
-                <CheckBox Grid.Column="1" Content="優先表示" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" />
-                <CheckBox Grid.Column="2" Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" />
-                <CheckBox Grid.Column="3" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
-              </Grid>
-
-              <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding FilteredOperators}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Border CornerRadius="6" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,82,88" ColumnSpacing="8">
-                          <StackPanel Spacing="2">
-                            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding Heading}" FontSize="12" Opacity="0.66" />
-                          </StackPanel>
-                          <Button Grid.Column="1" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                          <Button Grid.Column="2" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                          <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
-                          <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding StateLabel}" FontSize="11" HorizontalAlignment="Right" Opacity="0.7" />
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-            </Grid>
-
-            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsRelicsPanelVisible}">
-              <Grid ColumnDefinitions="*,260" ColumnSpacing="8">
-                <TextBox Text="{Binding RelicSearch, Mode=TwoWay}" PlaceholderText="秘宝名、番号、効果で検索" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" />
-              </Grid>
-
-              <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="14">
-                <TextBlock Text="{Binding RelicListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
-                <CheckBox Grid.Column="1" Content="優先表示" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" />
-                <CheckBox Grid.Column="2" Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" />
-                <CheckBox Grid.Column="3" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
-              </Grid>
-
-              <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding FilteredRelics}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Border CornerRadius="6" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,82,88" ColumnSpacing="8">
-                          <StackPanel Spacing="2">
-                            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding Heading}" FontSize="12" Opacity="0.66" />
-                          </StackPanel>
-                          <Button Grid.Column="1" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                          <Button Grid.Column="2" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                          <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
-                          <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding StateLabel}" FontSize="11" HorizontalAlignment="Right" Opacity="0.7" />
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-            </Grid>
-
-            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsRecognitionPanelVisible}">
-              <Grid ColumnDefinitions="Auto,230,*,Auto" ColumnSpacing="10">
-                <TextBlock Text="認識タスク" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding ResourceProfiles}" SelectedItem="{Binding SelectedResourceProfile, Mode=TwoWay}">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding DisplayName}" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8">
-                  <Button Content="認識" Command="{Binding RunSelectedProfileRecognitionCommand}" />
-                  <Button Content="全実行" Command="{Binding RunAllResourceTasksCommand}" />
-                  <Button Content="JSON保存" Command="{Binding ExportResourceTaskResultsCommand}" />
-                </StackPanel>
-              </Grid>
-
-              <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                <TextBlock Text="候補化API" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-                <TextBox Grid.Column="1" Text="{Binding RhodesApiUrl, Mode=TwoWay}" />
-                <Button Grid.Column="2" Content="候補化" Command="{Binding ConvertResourceTaskResultsCommand}" />
-              </Grid>
-
-              <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="10">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="プロファイル" FontSize="11" Opacity="0.58" />
-                  <TextBlock Text="{Binding SelectedResourceProfile.ProfileSummary}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Opacity="0.74" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="2">
-                  <TextBlock Text="定義元" FontSize="11" Opacity="0.58" />
-                  <TextBlock Text="{Binding SelectedResourceProfile.SourceSummary}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Opacity="0.74" />
-                </StackPanel>
-              </Grid>
-
-              <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding ResourceTasks}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Border CornerRadius="6" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="5">
-                          <StackPanel Spacing="2">
-                            <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding Purpose}" FontSize="12" TextWrapping="Wrap" Opacity="0.66" />
-                          </StackPanel>
-                          <Button Grid.Column="1" Grid.RowSpan="3" Content="実行" Command="{Binding DataContext.RunResourceTaskCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
-                          <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Entry}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
-                          <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="8">
-                            <TextBlock Text="{Binding SourceSummary}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.56" />
-                            <TextBlock Grid.Column="1" Text="{Binding ProfileSummary}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.56" />
-                          </Grid>
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-            </Grid>
+            </ScrollViewer>
           </Grid>
         </Grid>
       </Border>
 
-      <Grid Grid.Column="2" RowDefinitions="260,*" RowSpacing="14">
-        <Border CornerRadius="8" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+      <Grid Grid.Column="2" RowDefinitions="250,*" RowSpacing="12">
+        <Border CornerRadius="10" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
           <Grid RowDefinitions="Auto,*" RowSpacing="10">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <TextBlock Text="診断" FontSize="18" FontWeight="SemiBold" />
@@ -302,14 +467,14 @@
           </Grid>
         </Border>
 
-        <Border Grid.Row="1" CornerRadius="8" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+        <Border Grid.Row="1" CornerRadius="10" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
           <Grid RowDefinitions="Auto,155,Auto,*,Auto,*" RowSpacing="10">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <TextBlock Text="プレビュー / 結果" FontSize="18" FontWeight="SemiBold" />
               <TextBlock Grid.Column="1" Text="ADB撮影" FontSize="12" VerticalAlignment="Center" Opacity="0.58" />
             </Grid>
 
-            <Border Grid.Row="1" CornerRadius="6" Padding="8" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1">
+            <Border Grid.Row="1" CornerRadius="7" Padding="8" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1">
               <Image Source="{Binding LastCaptureImage}" Stretch="Uniform" />
             </Border>
 
@@ -318,7 +483,7 @@
               <ItemsControl ItemsSource="{Binding CandidateResults}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border CornerRadius="6" Padding="9" Margin="0,0,0,8" Background="#132021" BorderBrush="#2B4547" BorderThickness="1">
+                    <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#132021" BorderBrush="#2B4547" BorderThickness="1">
                       <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="90,*,70" ColumnSpacing="8">
                         <TextBlock Text="{Binding Kind}" FontSize="11" Opacity="0.72" />
                         <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" />
@@ -338,7 +503,7 @@
                 <ItemsControl ItemsSource="{Binding ResourceTaskResults}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border CornerRadius="6" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                      <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
                         <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                           <TextBlock Text="{Binding Entry}" FontSize="13" FontWeight="SemiBold" />
                           <TextBlock Grid.Column="1" Text="{Binding Status}" FontFamily="Consolas" FontSize="12" />
@@ -353,7 +518,7 @@
                 <ItemsControl ItemsSource="{Binding ProbePayloads}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border CornerRadius="6" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                      <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
                         <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="4">
                           <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
                           <Button Grid.Column="1" Grid.RowSpan="3" Content="実行" Command="{Binding DataContext.RunProbeCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
@@ -368,7 +533,7 @@
                 <ItemsControl ItemsSource="{Binding ProbeResults}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border CornerRadius="6" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                      <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
                         <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                           <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
                           <TextBlock Grid.Column="1" Text="{Binding Status}" FontFamily="Consolas" FontSize="12" />
@@ -386,8 +551,11 @@
       </Grid>
     </Grid>
 
-    <Border Grid.Row="2" CornerRadius="6" Padding="10,8" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
-      <TextBlock Text="{Binding StatusMessage}" FontSize="12" TextWrapping="Wrap" Opacity="0.8" />
+    <Border Grid.Row="2" CornerRadius="7" Padding="10,8" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBlock Text="{Binding StatusMessage}" FontSize="12" TextWrapping="Wrap" Opacity="0.8" />
+        <TextBlock Grid.Column="1" Text="{Binding CaptureState}" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
+      </Grid>
     </Border>
   </Grid>
 </suki:SukiWindow>

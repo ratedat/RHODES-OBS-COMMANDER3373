@@ -12,6 +12,30 @@ public sealed record SukiCampaignPreview(
     public string DisplayName => $"IS#{Number} {Title}";
 }
 
+public sealed record SukiWorkspaceNavItem(
+    string Id,
+    string Label,
+    string Subtitle,
+    string Description);
+
+public sealed record SukiStatusChip(
+    string Label,
+    string Value,
+    string Detail);
+
+public sealed record SukiRunFieldPreview(
+    string Label,
+    string Value,
+    string Source,
+    string RecognitionTaskId,
+    string Detail);
+
+public sealed record SukiOutputPartPreview(
+    string Id,
+    string Label,
+    string Detail,
+    bool Enabled);
+
 public sealed record SukiRunStateSnapshot(
     string CampaignId,
     IReadOnlySet<string> SelectedOperatorIds,
@@ -23,7 +47,16 @@ public sealed record SukiRunStateSnapshot(
     bool OperatorSelectedOnly,
     bool RelicShowSelectedFirst,
     bool RelicHideExcluded,
-    bool RelicSelectedOnly);
+    bool RelicSelectedOnly,
+    string Squad = "",
+    string Difficulty = "",
+    int Hope = 0,
+    int? MaxHope = null,
+    int Ingot = 0,
+    int LifePoints = 0,
+    int Shield = 0,
+    int CommandLevel = 1,
+    int Idea = 0);
 
 public sealed record RhodesRunCatalogSnapshot(
     IReadOnlyList<SukiCampaignPreview> Campaigns,

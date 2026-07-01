@@ -143,7 +143,16 @@ public static class RhodesRunCatalog
             JsonBool(preferences, "operatorSelectedOnly"),
             JsonBool(preferences, "relicShowSelectedFirst"),
             JsonBool(preferences, "relicHideExcluded"),
-            JsonBool(preferences, "relicSelectedOnly"));
+            JsonBool(preferences, "relicSelectedOnly"),
+            JsonString(run, "squad"),
+            JsonString(run, "difficulty"),
+            JsonInt(run, "hope"),
+            JsonNullableInt(run, "maxHope"),
+            JsonInt(run, "ingot"),
+            JsonInt(run, "lifePoints"),
+            JsonInt(run, "shield"),
+            JsonInt(run, "commandLevel"),
+            ReadIs5Idea(run));
     }
 
     private static string ResolveDataRoot()
@@ -207,6 +216,20 @@ public static class RhodesRunCatalog
     private static int JsonInt(JsonElement element, string propertyName)
     {
         return JsonNullableInt(element, propertyName) ?? 0;
+    }
+
+    private static int ReadIs5Idea(JsonElement run)
+    {
+        if (run.ValueKind != JsonValueKind.Object
+            || !run.TryGetProperty("special", out var special)
+            || special.ValueKind != JsonValueKind.Object
+            || !special.TryGetProperty("is5_sarkaz", out var is5)
+            || is5.ValueKind != JsonValueKind.Object)
+        {
+            return 0;
+        }
+
+        return JsonInt(is5, "idea");
     }
 
     private static int? JsonNullableInt(JsonElement element, string propertyName)

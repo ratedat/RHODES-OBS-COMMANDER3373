@@ -100,6 +100,10 @@ public sealed record MaaResourceProfilePreview(
     int TaskCount)
 {
     public string DisplayName => $"{Label} ({TaskCount})";
+
+    public string ProfileSummary => Id == "all" ? "profiles: all" : $"profile: {Id}";
+
+    public string SourceSummary => "source: data/recognition/maa-tasks.json";
 }
 
 public sealed record MaaTaskRunResult(

@@ -16,10 +16,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private readonly IReadOnlyList<SukiChoiceItem> _allOperators;
     private readonly IReadOnlyList<SukiChoiceItem> _allRelics;
+    private readonly SukiRunStateSnapshot _runState;
     private byte[] _lastCapture = [];
     private string _adbPath = "adb";
     private string _adbSerial = "";
     private string _adbConfigJson = "{}";
+    private string _workspaceTab = "run";
     private string _choiceTab = "operators";
     private string _operatorSearch = "";
     private string _operatorRarityFilter = "すべて";
@@ -73,6 +75,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ];
 
         var runCatalog = RhodesRunCatalog.LoadDefault();
+        _runState = runCatalog.Current;
+        WorkspaceNav =
+        [
+            new SukiWorkspaceNavItem("run", "ラン", "RUN", "基本値とIS固有値"),
+            new SukiWorkspaceNavItem("choices", "選択", "CHOICES", "オペレーターと秘宝"),
+            new SukiWorkspaceNavItem("recognition", "認識", "RECOGNITION", "OCR/テンプレート候補"),
+            new SukiWorkspaceNavItem("output", "出力", "OUTPUT", "OBS表示構成"),
+            new SukiWorkspaceNavItem("runtime", "ランタイム", "RUNTIME", "ADB/MAA/GLM/Ollama"),
+            new SukiWorkspaceNavItem("debug", "デバッグ", "DEBUG", "ログと検証情報"),
+        ];
+        HeaderStatusChips = new ObservableCollection<SukiStatusChip>(BuildHeaderStatusChips());
+        RunFieldPreviews = new ObservableCollection<SukiRunFieldPreview>(BuildRunFieldPreviews(runCatalog.Current));
+        OutputParts =
+        [
+            new SukiOutputPartPreview("operators", "招集オペレーター", "選択中オペレーターをOBSへ表示", true),
+            new SukiOutputPartPreview("relics", "秘宝一覧", "所持秘宝と表示除外を反映", true),
+            new SukiOutputPartPreview("run", "ラン基本値", "希望、源石錐、シールド、指揮Lvなど", true),
+            new SukiOutputPartPreview("special", "IS固有値", "思案、啓示、灯火などキャンペーン別の値", true),
+            new SukiOutputPartPreview("recognition", "認識ステータス", "デバッグ配布時のみ候補/信頼度を表示", false),
+        ];
+        DebugLogLines =
+        [
+            "Suki shell ready.",
+            "Debug logs: RHODES OBS COMMANDER3373 Debug Logs",
+            "ADB capture and MAA task results are saved beside the packaged executable.",
+        ];
         ProbePayloads = new ObservableCollection<MaaProbePayloadPreview>(Services.RhodesRecognitionProbe.DefaultPayloads());
         ProbeResults = [];
         AdbPresets = new ObservableCollection<MaaAdbPresetPreview>(RhodesAdbPresetCatalog.DefaultPresets());
@@ -116,6 +144,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
         RunProbeCommand = new AsyncRelayCommand(parameter => RunProbeAsync(parameter as MaaProbePayloadPreview));
         RunResourceTaskCommand = new AsyncRelayCommand(parameter => RunResourceTaskAsync(parameter as MaaResourceTaskPreview));
+        SetWorkspaceCommand = new AsyncRelayCommand(SetWorkspaceAsync);
         SetChoiceTabCommand = new AsyncRelayCommand(SetChoiceTabAsync);
         ToggleChoiceSelectedCommand = new AsyncRelayCommand(ToggleChoiceSelectedAsync);
         ToggleChoiceExcludedCommand = new AsyncRelayCommand(ToggleChoiceExcludedAsync);
@@ -132,6 +161,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string Title { get; } = "RHODES OBS COMMANDER3373";
 
     public string Subtitle { get; } = "MAAFramework family desktop shell";
+
+    public ObservableCollection<SukiWorkspaceNavItem> WorkspaceNav { get; }
+
+    public ObservableCollection<SukiStatusChip> HeaderStatusChips { get; }
+
+    public ObservableCollection<SukiRunFieldPreview> RunFieldPreviews { get; }
+
+    public ObservableCollection<SukiOutputPartPreview> OutputParts { get; }
+
+    public ObservableCollection<string> DebugLogLines { get; }
 
     public ObservableCollection<IntegrationStatus> RuntimeStatuses { get; }
 
@@ -182,19 +221,47 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string AdbPath
     {
         get => _adbPath;
-        set => SetProperty(ref _adbPath, value);
+        set
+        {
+            if (!SetProperty(ref _adbPath, value))
+                return;
+            OnPropertyChanged(nameof(AdbHeaderDetail));
+        }
     }
 
     public string AdbSerial
     {
         get => _adbSerial;
-        set => SetProperty(ref _adbSerial, value);
+        set
+        {
+            if (!SetProperty(ref _adbSerial, value))
+                return;
+            OnPropertyChanged(nameof(AdbHeaderTitle));
+            OnPropertyChanged(nameof(AdbHeaderDetail));
+        }
     }
 
     public string AdbConfigJson
     {
         get => _adbConfigJson;
         set => SetProperty(ref _adbConfigJson, string.IsNullOrWhiteSpace(value) ? "{}" : value);
+    }
+
+    public string WorkspaceTab
+    {
+        get => _workspaceTab;
+        private set
+        {
+            if (!SetProperty(ref _workspaceTab, value))
+                return;
+            OnPropertyChanged(nameof(IsRunWorkspaceVisible));
+            OnPropertyChanged(nameof(IsChoicesWorkspaceVisible));
+            OnPropertyChanged(nameof(IsRecognitionWorkspaceVisible));
+            OnPropertyChanged(nameof(IsOutputWorkspaceVisible));
+            OnPropertyChanged(nameof(IsRuntimeWorkspaceVisible));
+            OnPropertyChanged(nameof(IsDebugWorkspaceVisible));
+            OnPropertyChanged(nameof(WorkspaceTitle));
+        }
     }
 
     public SukiCampaignPreview? SelectedCampaign
@@ -207,8 +274,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RefreshRelicFilterOptions();
             RefreshChoiceLists();
             OnPropertyChanged(nameof(RunContextSummary));
+            OnPropertyChanged(nameof(CampaignHeaderTitle));
+            OnPropertyChanged(nameof(CampaignHeaderDetail));
         }
     }
+
+    public bool IsRunWorkspaceVisible => WorkspaceTab == "run";
+
+    public bool IsChoicesWorkspaceVisible => WorkspaceTab == "choices";
+
+    public bool IsRecognitionWorkspaceVisible => WorkspaceTab == "recognition";
+
+    public bool IsOutputWorkspaceVisible => WorkspaceTab == "output";
+
+    public bool IsRuntimeWorkspaceVisible => WorkspaceTab == "runtime";
+
+    public bool IsDebugWorkspaceVisible => WorkspaceTab == "debug";
+
+    public string WorkspaceTitle => WorkspaceTab switch
+    {
+        "choices" => "選択カタログ",
+        "recognition" => "認識ワークフロー",
+        "output" => "出力 / OBS",
+        "runtime" => "ランタイム",
+        "debug" => "デバッグ",
+        _ => "ラン基本値",
+    };
 
     public string ChoiceTab
     {
@@ -236,6 +327,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         "recognition" => "認識タスク",
         _ => "オペレーター",
     };
+
+    public string CampaignHeaderTitle => SelectedCampaign?.DisplayName ?? "IS未選択";
+
+    public string CampaignHeaderDetail
+    {
+        get
+        {
+            var selectedOperators = _allOperators.Count(item => item.IsSelected);
+            var selectedRelics = _allRelics.Count(item => item.CampaignId == SelectedCampaign?.Id && item.IsSelected);
+            var isCurrentRunCampaign = string.Equals(SelectedCampaign?.Id, _runState.CampaignId, StringComparison.Ordinal);
+            var squad = isCurrentRunCampaign && !string.IsNullOrWhiteSpace(_runState.Squad) ? _runState.Squad : "分隊未選択";
+            var difficulty = isCurrentRunCampaign && !string.IsNullOrWhiteSpace(_runState.Difficulty) ? _runState.Difficulty : "等級未選択";
+            return $"{squad} · 招集{selectedOperators}名 · 秘宝{selectedRelics}件 · {difficulty}";
+        }
+    }
+
+    public string AdbHeaderTitle => string.IsNullOrWhiteSpace(AdbSerial) ? "ADB未選択" : AdbSerial;
+
+    public string AdbHeaderDetail
+    {
+        get
+        {
+            var preset = SelectedAdbPreset?.Label ?? "手動";
+            return $"{preset} · MAAFramework · {BaseResolution.AspectRatioLabel}";
+        }
+    }
 
     public string RunContextSummary
     {
@@ -438,7 +555,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public MaaAdbPresetPreview? SelectedAdbPreset
     {
         get => _selectedAdbPreset;
-        set => SetProperty(ref _selectedAdbPreset, value);
+        set
+        {
+            if (!SetProperty(ref _selectedAdbPreset, value))
+                return;
+            OnPropertyChanged(nameof(AdbHeaderDetail));
+        }
     }
 
     public MaaResourceProfilePreview? SelectedResourceProfile
@@ -484,6 +606,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand RunResourceTaskCommand { get; }
 
+    public ICommand SetWorkspaceCommand { get; }
+
     public ICommand SetChoiceTabCommand { get; }
 
     public ICommand ToggleChoiceSelectedCommand { get; }
@@ -496,6 +620,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         _lastCaptureImage?.Dispose();
         _session.Dispose();
+    }
+
+    private IEnumerable<SukiStatusChip> BuildHeaderStatusChips()
+    {
+        var maxHope = _runState.MaxHope is null ? "-" : _runState.MaxHope.Value.ToString();
+        yield return new SukiStatusChip("希望", $"{_runState.Hope}/{maxHope}", "run.hope");
+        yield return new SukiStatusChip("源石錐", _runState.Ingot.ToString(), "run.ingot");
+        yield return new SukiStatusChip("想念", _runState.Idea.ToString(), "is5.idea");
+        yield return new SukiStatusChip("シールド", _runState.Shield.ToString(), "run.shield");
+        yield return new SukiStatusChip("耐久", _runState.LifePoints.ToString(), "run.hp");
+        yield return new SukiStatusChip("指揮", $"Lv{_runState.CommandLevel}", "run.commandLevel");
+        yield return new SukiStatusChip("等級", string.IsNullOrWhiteSpace(_runState.Difficulty) ? "-" : _runState.Difficulty, "run.difficulty");
+        yield return new SukiStatusChip("分隊", string.IsNullOrWhiteSpace(_runState.Squad) ? "-" : _runState.Squad, "run.squad");
+    }
+
+    private static IEnumerable<SukiRunFieldPreview> BuildRunFieldPreviews(SukiRunStateSnapshot state)
+    {
+        var maxHope = state.MaxHope is null ? "-" : state.MaxHope.Value.ToString();
+        yield return new SukiRunFieldPreview("希望", $"{state.Hope}/{maxHope}", "OCR / MAAFramework", "run.hope.current + run.hope.max", "現在値と上限値を分離して読む");
+        yield return new SukiRunFieldPreview("源石錐", state.Ingot.ToString(), "OCR / Template anchor", "run.ingot", "右上の源石錐アイコンを基準に取得");
+        yield return new SukiRunFieldPreview("想念", state.Idea.ToString(), "Template / OCR", "run.idea.current", "IS#5では想念アイコン直下の数値");
+        yield return new SukiRunFieldPreview("シールド", state.Shield.ToString(), "Template / OCR", "run.shield", "耐久値右側の盾アイコン基準");
+        yield return new SukiRunFieldPreview("耐久", state.LifePoints.ToString(), "OCR / Manual review", "run.life", "左上の耐久値");
+        yield return new SukiRunFieldPreview("指揮Lv", $"Lv{state.CommandLevel}", "OCR", "run.command_level", "指揮Lvパネル");
+        yield return new SukiRunFieldPreview("等級", string.IsNullOrWhiteSpace(state.Difficulty) ? "-" : state.Difficulty, "Manual / squad panel", "run.difficulty_grade", "閉じたマップ上のバッジではなく分隊情報から確定");
+        yield return new SukiRunFieldPreview("分隊", string.IsNullOrWhiteSpace(state.Squad) ? "-" : state.Squad, "Manual / OCR", "run.squad_name", "分隊カードまたは情報パネル");
     }
 
     private async Task ConnectAsync()
@@ -536,10 +686,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private Task SetWorkspaceAsync(object? parameter)
+    {
+        var tab = parameter as string;
+        WorkspaceTab = tab is "run" or "choices" or "recognition" or "output" or "runtime" or "debug"
+            ? tab
+            : "run";
+        StatusMessage = $"{WorkspaceTitle}を表示しています。";
+        return Task.CompletedTask;
+    }
+
     private Task SetChoiceTabAsync(object? parameter)
     {
         var tab = parameter as string;
         ChoiceTab = tab is "operators" or "relics" or "recognition" ? tab : "operators";
+        WorkspaceTab = ChoiceTab == "recognition" ? "recognition" : "choices";
         StatusMessage = $"{ChoicePanelTitle}を表示しています。";
         return Task.CompletedTask;
     }
@@ -841,6 +1002,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshOperatorChoices();
         RefreshRelicChoices();
         OnPropertyChanged(nameof(RunContextSummary));
+        OnPropertyChanged(nameof(CampaignHeaderDetail));
     }
 
     private void RefreshOperatorChoices()
@@ -859,6 +1021,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     SelectedOnly: OperatorSelectedOnly)));
         OnPropertyChanged(nameof(OperatorListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
+        OnPropertyChanged(nameof(CampaignHeaderDetail));
     }
 
     private void RefreshRelicChoices()
@@ -876,6 +1039,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     SelectedOnly: RelicSelectedOnly)));
         OnPropertyChanged(nameof(RelicListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
+        OnPropertyChanged(nameof(CampaignHeaderDetail));
     }
 
     private void RefreshOperatorFilterOptions()
