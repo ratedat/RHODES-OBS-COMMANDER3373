@@ -42,6 +42,7 @@ var tests = new (string Name, Action Run)[]
     ("Run state store can replace state from API JSON", StateApiReplacement),
     ("State API client can apply Suki ADB settings into current state JSON", StateApiAdbSettingsApply),
     ("State API client can apply Suki display preferences into current state JSON", StateApiSukiPreferencesApply),
+    ("State API client can apply selected choices into current state JSON", StateApiChoicesApply),
     ("State API client can apply current campaign into current state JSON", StateApiRunContextApply),
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
@@ -1396,6 +1397,48 @@ static void StateApiSukiPreferencesApply()
     Equal(false, preferences["sukiOutputTransparentBackground"]!.GetValue<bool>(), "transparent background");
     Equal(2, preferences["sukiOutputParts"]!.AsArray().Count, "output parts count");
     Equal("operators", preferences["sukiOutputParts"]!.AsArray()[0]!.AsObject()["id"]!.GetValue<string>(), "first output part");
+}
+
+static void StateApiChoicesApply()
+{
+    var operators = new[]
+    {
+        new SukiChoiceItem("operator", "gummy", "グム", "★4 重装 / 庇護衛士", "重装", "庇護衛士", "", "", 4, 1, false),
+        new SukiChoiceItem("operator", "rain", "レイン", "★5 狙撃 / 速射手", "狙撃", "速射手", "", "", 5, 2, false),
+    };
+    operators[0].IsSelected = true;
+    operators[1].IsExcluded = true;
+    var relics = new[]
+    {
+        new SukiChoiceItem("relic", "is5_sarkaz_relic_001", "秘宝A", "No.001", "", "", "is5_sarkaz", "食品", 0, 1, false),
+        new SukiChoiceItem("relic", "is5_sarkaz_relic_002", "秘宝B", "No.002", "", "", "is5_sarkaz", "食品", 0, 2, false),
+    };
+    relics[0].IsSelected = true;
+    relics[1].IsExcluded = true;
+
+    var updated = JsonNode.Parse(RhodesStateApiClient.ApplyChoicesToStateJson(
+        """
+        {
+          "version": 1,
+          "run": { "campaignId": "is5_sarkaz", "hope": 3 },
+          "operators": [],
+          "relics": [],
+          "preferences": { "ocrEngine": "glm-ocr" }
+        }
+        """,
+        operators,
+        relics,
+        new SukiChoicePersistenceOptions(true, true, false, false, true, true, 4, 3),
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z")))!.AsObject();
+
+    Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "api selected operator");
+    Equal("is5_sarkaz_relic_001", updated["relics"]!.AsArray()[0]!.GetValue<string>(), "api selected relic");
+    var preferences = updated["preferences"]!.AsObject();
+    Equal("rain", preferences["operatorExcludedIds"]!.AsArray()[0]!.GetValue<string>(), "api operator exclusion");
+    Equal("is5_sarkaz_relic_002", preferences["relicExcludedIds"]!.AsArray()[0]!.GetValue<string>(), "api relic exclusion");
+    Equal("glm-ocr", preferences["ocrEngine"]!.GetValue<string>(), "api ocr preserved");
+    Equal(3, updated["run"]!.AsObject()["hope"]!.GetValue<int>(), "api run preserved");
+    Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "api choices updatedAt");
 }
 
 static void RunContextPersistence()

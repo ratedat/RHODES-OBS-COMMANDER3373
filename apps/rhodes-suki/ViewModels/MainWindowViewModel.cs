@@ -1168,8 +1168,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return fetched.Error;
         }
 
-        var updated = RhodesStateApiClient.ApplyAdbSettingsToStateJson(
+        var choiceOptions = BuildChoicePersistenceOptions();
+        var updated = RhodesStateApiClient.ApplyChoicesToStateJson(
             fetched.StateJson,
+            _allOperators,
+            _allRelics,
+            choiceOptions);
+        updated = RhodesStateApiClient.ApplyAdbSettingsToStateJson(
+            updated,
             new RhodesAdbApiSettings(
                 true,
                 SelectedAdbPreset?.Id ?? "auto",
@@ -1177,15 +1183,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 AdbSerial));
         updated = RhodesStateApiClient.ApplySukiPreferencesToStateJson(
             updated,
-            new SukiChoicePersistenceOptions(
-                OperatorShowSelectedFirst,
-                OperatorHideExcluded,
-                OperatorSelectedOnly,
-                RelicShowSelectedFirst,
-                RelicHideExcluded,
-                RelicSelectedOnly,
-                OperatorPaneColumns,
-                RelicPaneColumns),
+            choiceOptions,
             new SukiOutputPreferences(
                 OutputSeparateWindow,
                 OutputTournamentMode,
@@ -1208,6 +1206,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _rhodesApiStatus = RhodesApiStatusProbe.ParseStateJson(saved.StateJson);
+        await RhodesRunStateStore.ReplaceStateJsonAsync(saved.StateJson);
+        ReloadRunStateFromStore();
         RefreshRuntimeCapabilities();
         return "";
     }

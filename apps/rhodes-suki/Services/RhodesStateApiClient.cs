@@ -103,6 +103,18 @@ public static class RhodesStateApiClient
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }
 
+    public static string ApplyChoicesToStateJson(
+        string stateJson,
+        IEnumerable<SukiChoiceItem> operators,
+        IEnumerable<SukiChoiceItem> relics,
+        SukiChoicePersistenceOptions choiceOptions,
+        DateTimeOffset? now = null)
+    {
+        var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson)?.AsObject() ?? [];
+        RhodesRunStateStore.ApplyChoices(root, operators, relics, choiceOptions, now ?? DateTimeOffset.UtcNow);
+        return root.ToJsonString();
+    }
+
     public static string ApplySukiPreferencesToStateJson(
         string stateJson,
         SukiChoicePersistenceOptions choiceOptions,
