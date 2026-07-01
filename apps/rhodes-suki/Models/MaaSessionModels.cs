@@ -40,6 +40,20 @@ public sealed record MaaAdbDevicePreview(
         : $"{State} {Serial} {Detail}";
 }
 
+public sealed record MaaAdbPathCandidatePreview(
+    string Path,
+    string Source,
+    string Preset,
+    bool Exists,
+    bool Available,
+    string Error);
+
+public sealed record RhodesAdbApiSettings(
+    bool AutoDetect,
+    string ConnectionPreset,
+    string AdbPath,
+    string Serial);
+
 public sealed record RhodesSukiSettings(
     string AdbPath = "adb",
     string AdbSerial = "",

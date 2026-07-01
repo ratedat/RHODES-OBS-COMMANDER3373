@@ -24,6 +24,7 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
+    ("ADB detect API client parses runtime, candidates, and devices", AdbApiDetectionParsing),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
@@ -677,6 +678,45 @@ static void AdbDeviceParsing()
     Equal(true, devices[0].IsUsable, "first usable");
     Equal("offline", devices[1].State, "second state");
     Equal(false, devices[1].IsUsable, "second usable");
+}
+
+static void AdbApiDetectionParsing()
+{
+    var result = RhodesAdbApiClient.ExtractDetectionResult(
+        """
+        {
+          "runtime": {
+            "adbPath": "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe",
+            "serial": "127.0.0.1:16384"
+          },
+          "selectedAdbPath": "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe",
+          "adbCandidates": [
+            {
+              "path": "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe",
+              "source": "mumu",
+              "preset": "mumu",
+              "exists": true,
+              "available": true,
+              "error": null
+            }
+          ],
+          "devices": [
+            {
+              "serial": "127.0.0.1:16384",
+              "state": "device",
+              "detail": "product:Hapburn model:HBN_AL00"
+            }
+          ]
+        }
+        """);
+
+    Equal(true, result.Succeeded, "detect succeeded");
+    Equal("M:/Program Files/Netease/MuMu Player 12/shell/adb.exe", result.RuntimeAdbPath, "runtime adb path");
+    Equal("127.0.0.1:16384", result.RuntimeSerial, "runtime serial");
+    Equal(1, result.AdbCandidates.Count, "candidate count");
+    Equal(true, result.AdbCandidates[0].Available, "candidate available");
+    Equal(1, result.Devices.Count, "device count");
+    Equal(true, result.Devices[0].IsUsable, "device usable");
 }
 
 static void SukiSettingsStore()

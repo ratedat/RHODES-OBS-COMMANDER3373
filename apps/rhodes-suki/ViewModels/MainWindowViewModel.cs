@@ -1244,6 +1244,41 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             AdbDevices.Clear();
+            var apiDetection = await RhodesAdbApiClient.DetectAsync(
+                RhodesApiUrl,
+                new RhodesAdbApiSettings(
+                    true,
+                    SelectedAdbPreset?.Id ?? "auto",
+                    AdbPath,
+                    AdbSerial));
+            if (apiDetection.Succeeded)
+            {
+                foreach (var device in apiDetection.Devices)
+                {
+                    AdbDevices.Add(device);
+                }
+
+                var nextAdbPath = new[] { apiDetection.RuntimeAdbPath, apiDetection.SelectedAdbPath }
+                    .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+                if (!string.IsNullOrWhiteSpace(nextAdbPath))
+                    AdbPath = nextAdbPath;
+                if (!string.IsNullOrWhiteSpace(apiDetection.RuntimeSerial))
+                    AdbSerial = apiDetection.RuntimeSerial;
+
+                _rhodesApiStatus = new SukiOptionalRuntimeStatus(
+                    "RHODES API",
+                    "接続済み",
+                    $"ADB検出API成功 / candidates={apiDetection.AdbCandidates.Count} / devices={apiDetection.Devices.Count}",
+                    true,
+                    false);
+                StatusMessage = apiDetection.Devices.Count == 0
+                    ? $"ADB検出APIは端末0件でした。候補: {apiDetection.AdbCandidates.Count}件"
+                    : $"ADB検出APIで端末を取得しました: {apiDetection.Devices.Count}件";
+                RefreshRuntimeCapabilities();
+                RefreshInspectorRows();
+                return;
+            }
+
             var devices = await RhodesAdbDeviceProbe.ListDevicesAsync(AdbPath);
             foreach (var device in devices)
             {
@@ -1251,8 +1286,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             StatusMessage = devices.Count == 0
-                ? "ADB端末は見つかりませんでした。エミュレーター側のADB設定を確認してください。"
-                : $"ADB端末を取得しました: {devices.Count}件";
+                ? $"ADB端末は見つかりませんでした。API検出失敗: {apiDetection.Error}"
+                : $"ローカルADBで端末を取得しました: {devices.Count}件 (API検出失敗: {apiDetection.Error})";
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         });
