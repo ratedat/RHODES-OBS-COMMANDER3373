@@ -56,6 +56,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private int _capturePixelWidth;
     private int _capturePixelHeight;
     private string _selectedRoiPreviewKey = "";
+    private int[] _roiDragOrigin = [];
+    private double _roiDragStartX;
+    private double _roiDragStartY;
     private MaaRoiPreviewRow? _selectedRoiPreviewRow;
     private MaaRoiEditDraft _selectedRoiEditDraft = MaaRoiEditDraft.Empty;
     private MaaOcrDetailRow? _selectedOcrDetailRow;
@@ -1976,6 +1979,44 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = $"ROIを選択しました: {row.DisplayTitle} / {row.ProjectedRoiJson}";
             return Task.CompletedTask;
         });
+    }
+
+    public void BeginRoiDrag(MaaRoiPreviewRow? row, double pointerX, double pointerY)
+    {
+        if (row is null)
+            return;
+
+        SelectedRoiPreviewRow = row;
+        if (!TryParseDraftRoi(SelectedRoiEditDraft.RoiJson, out var roi))
+            return;
+
+        _roiDragOrigin = roi;
+        _roiDragStartX = pointerX;
+        _roiDragStartY = pointerY;
+        StatusMessage = $"ROIドラッグ開始: {row.DisplayTitle}";
+    }
+
+    public void UpdateRoiDrag(double pointerX, double pointerY)
+    {
+        if (_roiDragOrigin.Length != 4 || !SelectedRoiEditDraft.HasSelection)
+            return;
+
+        var adjusted = _roiDragOrigin.ToArray();
+        adjusted[0] = Math.Max(0, adjusted[0] + (int)Math.Round(pointerX - _roiDragStartX, MidpointRounding.AwayFromZero));
+        adjusted[1] = Math.Max(0, adjusted[1] + (int)Math.Round(pointerY - _roiDragStartY, MidpointRounding.AwayFromZero));
+        SelectedRoiEditDraft = SelectedRoiEditDraft with { RoiJson = RoiJson(adjusted) };
+        UpdateSelectedRoiOverlay(adjusted);
+        UpdateRoiBatchDraftForSelected();
+        RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
+    }
+
+    public void EndRoiDrag()
+    {
+        if (_roiDragOrigin.Length == 0)
+            return;
+
+        _roiDragOrigin = [];
+        StatusMessage = $"ROIドラッグ終了: {SelectedRoiEditDraft.RoiJson}";
     }
 
     private async Task AdjustSelectedRoiDraftAsync(string? operation)

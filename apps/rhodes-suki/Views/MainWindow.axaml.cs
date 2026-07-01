@@ -2,12 +2,16 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using RhodesSuki.Models;
+using RhodesSuki.ViewModels;
 using SukiUI.Controls;
 
 namespace RhodesSuki.Views;
 
 public partial class MainWindow : SukiWindow
 {
+    private Control? _roiDragSource;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -27,5 +31,59 @@ public partial class MainWindow : SukiWindow
 
             comboBox.IsDropDownOpen = false;
         }
+    }
+
+    private void RoiOverlayPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control control
+            || control.DataContext is not MaaRoiPreviewRow row
+            || DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.BeginRoiDrag(row, RoiPointerX(e), RoiPointerY(e));
+        _roiDragSource = control;
+        e.Pointer.Capture(control);
+        e.Handled = true;
+    }
+
+    private void RoiOverlayPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(sender, _roiDragSource) || DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        viewModel.UpdateRoiDrag(RoiPointerX(e), RoiPointerY(e));
+        e.Handled = true;
+    }
+
+    private void RoiOverlayPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!ReferenceEquals(sender, _roiDragSource) || DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        viewModel.EndRoiDrag();
+        e.Pointer.Capture(null);
+        _roiDragSource = null;
+        e.Handled = true;
+    }
+
+    private void RoiOverlayPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (!ReferenceEquals(sender, _roiDragSource) || DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        viewModel.EndRoiDrag();
+        _roiDragSource = null;
+    }
+
+    private double RoiPointerX(PointerEventArgs e)
+    {
+        return e.GetPosition(RoiCanvas).X;
+    }
+
+    private double RoiPointerY(PointerEventArgs e)
+    {
+        return e.GetPosition(RoiCanvas).Y;
     }
 }

@@ -743,7 +743,7 @@
 
             <Border Grid.Row="1" CornerRadius="7" Padding="8" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1">
               <Viewbox Stretch="Uniform">
-                <Canvas Width="1280" Height="720">
+                <Canvas x:Name="RoiCanvas" Width="1280" Height="720">
                   <Image Source="{Binding LastCaptureImage}" Width="1280" Height="720" Stretch="Fill" />
                   <ItemsControl ItemsSource="{Binding RoiPreviewRows}" IsVisible="{Binding ShowRoiOverlay}" Width="1280" Height="720">
                     <ItemsControl.ItemsPanel>
@@ -753,20 +753,19 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Button Canvas.Left="{Binding X}"
+                        <Border Canvas.Left="{Binding X}"
                                 Canvas.Top="{Binding Y}"
                                 Width="{Binding Width}"
                                 Height="{Binding Height}"
                                 BorderBrush="#36E2B6"
                                 BorderThickness="3"
                                 Background="#2236E2B6"
-                                Padding="0"
-                                HorizontalContentAlignment="Left"
-                                VerticalContentAlignment="Top"
-                                Command="{Binding DataContext.SelectRoiPreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                CommandParameter="{Binding}">
+                                PointerPressed="RoiOverlayPointerPressed"
+                                PointerMoved="RoiOverlayPointerMoved"
+                                PointerReleased="RoiOverlayPointerReleased"
+                                PointerCaptureLost="RoiOverlayPointerCaptureLost">
                           <TextBlock Text="{Binding Source}" FontSize="16" Foreground="#F3FFFB" Background="#CC081011" Padding="4,1" />
-                        </Button>
+                        </Border>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

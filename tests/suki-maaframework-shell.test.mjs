@@ -294,6 +294,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /ClearRecognitionPayload/);
   assert.match(viewModel, /SelectRoiPreviewCommand/);
   assert.match(viewModel, /SelectRoiPreviewAsync/);
+  assert.match(viewModel, /BeginRoiDrag/);
+  assert.match(viewModel, /UpdateRoiDrag/);
+  assert.match(viewModel, /EndRoiDrag/);
   assert.match(viewModel, /AdjustSelectedRoiDraftCommand/);
   assert.match(viewModel, /AdjustSelectedRoiDraftAsync/);
   assert.match(viewModel, /UpdateSelectedRoiOverlay/);
@@ -321,6 +324,12 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /_session\.InitializeAdbAsync\(BuildSessionOptions\(\)\)/);
   assert.match(viewModel, /Resource再読込済み/);
   assert.match(viewModel, /未接続のため次回接続時に反映/);
+  assert.match(mainWindowCodeBehind, /RoiOverlayPointerPressed/);
+  assert.match(mainWindowCodeBehind, /RoiOverlayPointerMoved/);
+  assert.match(mainWindowCodeBehind, /RoiOverlayPointerReleased/);
+  assert.match(mainWindowCodeBehind, /viewModel\.BeginRoiDrag/);
+  assert.match(mainWindowCodeBehind, /viewModel\.UpdateRoiDrag/);
+  assert.match(mainWindowCodeBehind, /viewModel\.EndRoiDrag/);
   assert.match(roiDraftSourceUpdater, /ApplyToScanProfilesJson/);
   assert.match(roiDraftSourceUpdater, /ApplyToSourceJson/);
   assert.match(roiDraftSourceUpdater, /templateOcrRegions/);
@@ -481,8 +490,10 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectedRoiEditDraft\.StatusLabel/);
   assert.match(xaml, /SelectedRoiEditDraft\.RoiJson/);
   assert.match(xaml, /SelectedRoiEditDraft\.Detail/);
-  assert.match(xaml, /SelectRoiPreviewCommand/);
-  assert.match(xaml, /CommandParameter="\{Binding\}"/);
+  assert.match(xaml, /x:Name="RoiCanvas"/);
+  assert.match(xaml, /PointerPressed="RoiOverlayPointerPressed"/);
+  assert.match(xaml, /PointerMoved="RoiOverlayPointerMoved"/);
+  assert.match(xaml, /PointerReleased="RoiOverlayPointerReleased"/);
   assert.match(xaml, /ExportSelectedRoiDraftCommand/);
   assert.match(xaml, /AdjustSelectedRoiDraftCommand/);
   assert.match(xaml, /CommandParameter="left"/);
