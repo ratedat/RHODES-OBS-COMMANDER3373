@@ -35,6 +35,7 @@ var tests = new (string Name, Action Run)[]
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
     ("MAA task diagnostics summarize counts and OCR previews", TaskDiagnostics),
     ("MAA OCR detail rows expose raw OCR result groups", OcrDetailRowsExposeRawGroups),
+    ("MAA ROI detail rows expose rect, roi, and point boxes", RoiDetailRowsExposeRectVariants),
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
@@ -1078,6 +1079,31 @@ static void OcrDetailRowsExposeRawGroups()
     Equal(0.88, rows[1].Score, "best score");
     Equal("all", rows[2].Source, "all source");
     Equal("RhodesOcrRegion_test", rows[2].Entry, "row entry");
+}
+
+static void RoiDetailRowsExposeRectVariants()
+{
+    var rows = RhodesMaaRoiDetailRows.FromTaskResults(
+        [
+            new MaaTaskRunResult(
+                "RhodesOcrRegion_roi",
+                "Succeeded",
+                true,
+                "",
+                """
+                {"result":{"rect":[1,2,30,40],"filtered_results":[{"text":"A","roi":{"x":5,"y":6,"width":70,"height":80}}],"best_result":{"text":"B","box":[[10,20],[30,20],[30,50],[10,50]]}}}
+                """,
+                "OCR",
+                true),
+        ]);
+
+    Equal(3, rows.Count, "roi row count");
+    Equal("detail.rect", rows[0].Source, "detail rect source");
+    Equal("1,2 30x40", rows[0].BoundsLabel, "detail bounds");
+    Equal("filtered.roi", rows[1].Source, "filtered roi source");
+    Equal("5,6 70x80", rows[1].BoundsLabel, "filtered bounds");
+    Equal("best.box", rows[2].Source, "best box source");
+    Equal("10,20 20x30", rows[2].BoundsLabel, "box bounds");
 }
 
 static void MaaNativeEvidenceLog()

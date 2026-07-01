@@ -200,6 +200,18 @@ public sealed record MaaOcrDetailRow(
     public string Detail => $"{Source} / {Algorithm}";
 }
 
+public sealed record MaaRoiDetailRow(
+    string Entry,
+    string Source,
+    int X,
+    int Y,
+    int Width,
+    int Height,
+    string Raw)
+{
+    public string BoundsLabel => $"{X},{Y} {Width}x{Height}";
+}
+
 public sealed record MaaTaskDetailSnapshot(
     string Summary,
     string RecognitionDetailJson,

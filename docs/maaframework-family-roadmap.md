@@ -68,7 +68,8 @@ flowchart LR
 - 接続済み: スキャン履歴の `log[]` イベントを詳細パネルへ復元し、capture/recognize/tap等のイベント、スクリーンショットパス、OCR詳細を追える。
 - 接続済み: スキャン履歴の `log[].path` がPNG/JPGの場合、読込時に右側プレビューへスクリーンショットを復元する。
 - 接続済み: MAA `RecognitionDetailJson` の `filtered_results` / `best_result` / `all_results` をOCR detail行として整形表示する。
-- 残作業: スキャン履歴のROIオーバーレイを追加する。
+- 接続済み: MAA `RecognitionDetailJson` の `roi` / `rect` / `box` をROI detail行として抽出表示する。
+- 残作業: スキャン履歴のROIオーバーレイを画像プレビュー上へ重ね描きする。
 
 ## First Milestone
 - SukiUI shell が起動する

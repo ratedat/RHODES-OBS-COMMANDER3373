@@ -54,6 +54,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const settingsStore = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiSettingsStore.cs", "utf8");
   const diagnostics = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaTaskDiagnostics.cs", "utf8");
   const ocrDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaOcrDetailRows.cs", "utf8");
+  const roiDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDetailRows.cs", "utf8");
   const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
   const runCatalog = await fs.readFile("apps/rhodes-suki/Services/RhodesRunCatalog.cs", "utf8");
   const bitmapPathConverter = await fs.readFile("apps/rhodes-suki/Services/RhodesBitmapPathConverter.cs", "utf8");
@@ -231,6 +232,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(ocrDetailRows, /best_result/);
   assert.match(ocrDetailRows, /all_results/);
   assert.match(viewModel, /OcrDetailRows/);
+  assert.match(roiDetailRows, /TryPointBoxRect/);
+  assert.match(roiDetailRows, /roi/);
+  assert.match(roiDetailRows, /rect/);
+  assert.match(viewModel, /RoiDetailRows/);
   assert.match(debugPaths, /Recognition Scans/);
   assert.match(viewModel, /Campaigns/);
   assert.match(viewModel, /SelectedCampaign/);
@@ -340,6 +345,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RecognitionScanHistory/);
   assert.match(xaml, /RecognitionScanLogRows/);
   assert.match(xaml, /OcrDetailRows/);
+  assert.match(xaml, /RoiDetailRows/);
   assert.match(xaml, /スキャン履歴/);
   assert.match(xaml, /SelectedResourceProfile/);
   assert.match(xaml, /ResourceProfiles/);

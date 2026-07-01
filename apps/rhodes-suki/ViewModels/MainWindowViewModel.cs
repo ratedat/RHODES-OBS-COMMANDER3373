@@ -164,6 +164,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ResourceTaskResults = [];
         CandidateResults = [];
         OcrDetailRows = [];
+        RoiDetailRows = [];
         RecognitionScanHistory = [];
         RecognitionScanLogRows = [];
         BaseResolution = Services.RhodesMaaPaths.BaseResolution;
@@ -283,6 +284,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaCandidatePreview> CandidateResults { get; }
 
     public ObservableCollection<MaaOcrDetailRow> OcrDetailRows { get; }
+
+    public ObservableCollection<MaaRoiDetailRow> RoiDetailRows { get; }
 
     public ObservableCollection<RhodesRecognitionScanHistoryItem> RecognitionScanHistory { get; }
 
@@ -2057,6 +2060,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         ResourceTaskDiagnostics = RhodesMaaTaskDiagnostics.Summarize(ResourceTaskResults);
         ReplaceCollection(OcrDetailRows, RhodesMaaOcrDetailRows.FromTaskResults(ResourceTaskResults));
+        ReplaceCollection(RoiDetailRows, RhodesMaaRoiDetailRows.FromTaskResults(ResourceTaskResults));
     }
 
     private void RefreshResourceTasks()
