@@ -318,6 +318,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /OpenRoiRescanEvidenceCommand/);
   assert.match(viewModel, /OpenRoiRescanEvidenceAsync/);
   assert.match(viewModel, /比較証跡を開きました/);
+  assert.match(viewModel, /PreviewRoiRescanEvidenceCommand/);
+  assert.match(viewModel, /PreviewRoiRescanEvidenceAsync/);
+  assert.match(viewModel, /RoiRescanEvidencePreviewTitle/);
+  assert.match(viewModel, /RoiRescanEvidencePreviewText/);
+  assert.match(viewModel, /truncated/);
   assert.match(viewModel, /comparisonSummary: RoiRescanComparisonSummary/);
   assert.match(viewModel, /comparisonRows: RoiRescanComparisonRows/);
   assert.match(viewModel, /comparisonBeforeLogPath: _lastRoiRescanBeforePath/);
@@ -380,6 +385,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(mainWindowAxaml, /RoiRescanComparisonEvidenceSummary/);
   assert.match(mainWindowAxaml, /RunRoiRescanComparisonCommand/);
   assert.match(mainWindowAxaml, /OpenRoiRescanEvidenceCommand/);
+  assert.match(mainWindowAxaml, /PreviewRoiRescanEvidenceCommand/);
+  assert.match(mainWindowAxaml, /RoiRescanEvidencePreviewText/);
   assert.match(mainWindowAxaml, /CommandParameter="before"/);
   assert.match(mainWindowAxaml, /CommandParameter="after"/);
   assert.match(roiAdjustmentSessionLog, /maa-roi-adjustment-session/);

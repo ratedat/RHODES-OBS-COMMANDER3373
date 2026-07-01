@@ -41,6 +41,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastRoiSessionPath = "";
     private string _roiRescanComparisonSummary = "再スキャン比較未実行";
     private string _roiRescanComparisonEvidenceSummary = "比較証跡未保存";
+    private string _roiRescanEvidencePreviewTitle = "比較証跡未表示";
+    private string _roiRescanEvidencePreviewText = "";
     private string _lastRoiRescanBeforePath = "";
     private string _lastRoiRescanAfterPath = "";
     private MaaRoiDraftApplyResult _roiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
@@ -245,6 +247,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ExcludeAllRoiBatchDraftsCommand = new AsyncRelayCommand(_ => SetAllRoiBatchDraftsIncludedAsync(false));
         RunRoiRescanComparisonCommand = new AsyncRelayCommand(RunRoiRescanComparisonAsync);
         OpenRoiRescanEvidenceCommand = new AsyncRelayCommand(OpenRoiRescanEvidenceAsync);
+        PreviewRoiRescanEvidenceCommand = new AsyncRelayCommand(PreviewRoiRescanEvidenceAsync);
         RegenerateMaaResourceCommand = new AsyncRelayCommand(RegenerateMaaResourceAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
@@ -878,6 +881,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref _roiRescanComparisonEvidenceSummary, string.IsNullOrWhiteSpace(value) ? "比較証跡未保存" : value);
     }
 
+    public string RoiRescanEvidencePreviewTitle
+    {
+        get => _roiRescanEvidencePreviewTitle;
+        private set => SetProperty(ref _roiRescanEvidencePreviewTitle, string.IsNullOrWhiteSpace(value) ? "比較証跡未表示" : value);
+    }
+
+    public string RoiRescanEvidencePreviewText
+    {
+        get => _roiRescanEvidencePreviewText;
+        private set => SetProperty(ref _roiRescanEvidencePreviewText, value ?? "");
+    }
+
     public string LastCandidateApplySummary
     {
         get => _lastCandidateApplySummary;
@@ -1132,6 +1147,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RunRoiRescanComparisonCommand { get; }
 
     public ICommand OpenRoiRescanEvidenceCommand { get; }
+
+    public ICommand PreviewRoiRescanEvidenceCommand { get; }
 
     public ICommand RegenerateMaaResourceCommand { get; }
 
@@ -2089,6 +2106,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task PreviewRoiRescanEvidenceAsync(object? parameter)
+    {
+        var side = parameter as string;
+        var normalizedSide = string.Equals(side, "after", StringComparison.OrdinalIgnoreCase) ? "after" : "before";
+        var path = normalizedSide == "after" ? _lastRoiRescanAfterPath : _lastRoiRescanBeforePath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            RoiRescanEvidencePreviewTitle = $"{normalizedSide}比較証跡なし";
+            RoiRescanEvidencePreviewText = "";
+            StatusMessage = $"{normalizedSide}比較証跡が見つかりません。";
+            return;
+        }
+
+        var text = await File.ReadAllTextAsync(path);
+        const int maxPreviewLength = 60000;
+        RoiRescanEvidencePreviewTitle = $"{normalizedSide}: {path}";
+        RoiRescanEvidencePreviewText = text.Length <= maxPreviewLength
+            ? text
+            : $"{text[..maxPreviewLength]}\n... truncated {text.Length - maxPreviewLength} chars ...";
+        StatusMessage = $"比較証跡をプレビューしました: {path}";
     }
 
     private async Task PreviewSelectedRoiDraftApplyAsync()
@@ -3426,6 +3465,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ReplaceCollection(RoiRescanComparisonRows, Array.Empty<MaaRoiRescanComparisonRow>());
         RoiRescanComparisonSummary = summary;
         SetRoiRescanComparisonEvidence("", "");
+        RoiRescanEvidencePreviewTitle = "比較証跡未表示";
+        RoiRescanEvidencePreviewText = "";
     }
 
     private void SetRoiRescanComparisonEvidence(string beforePath, string afterPath)
