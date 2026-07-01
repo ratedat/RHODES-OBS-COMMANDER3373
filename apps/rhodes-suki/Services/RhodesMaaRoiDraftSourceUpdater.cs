@@ -63,6 +63,29 @@ public static class RhodesMaaRoiDraftSourceUpdater
         return MaaRoiDraftApplyResult.Failed($"entryに対応するocrRegionsが見つかりません: {draft.Entry}");
     }
 
+    public static async Task<MaaRoiDraftApplyResult> ApplyToMaaTasksFileAsync(
+        string sourcePath,
+        MaaRoiEditDraft draft)
+    {
+        if (!File.Exists(sourcePath))
+            return MaaRoiDraftApplyResult.Failed($"maa-tasks.jsonが見つかりません: {sourcePath}");
+
+        var json = await File.ReadAllTextAsync(sourcePath);
+        var result = ApplyToMaaTasksJson(json, draft, out var updatedJson);
+        if (!result.Succeeded)
+            return result with { SourcePath = sourcePath };
+
+        var backupPath = $"{sourcePath}.bak-{DateTimeOffset.Now:yyyyMMdd-HHmmss-fff}";
+        File.Copy(sourcePath, backupPath, overwrite: false);
+        await File.WriteAllTextAsync(sourcePath, updatedJson);
+        return result with
+        {
+            SourcePath = sourcePath,
+            BackupPath = backupPath,
+            Message = "maa-tasks.jsonへROIを適用しました。Resource再生成を実行してください。",
+        };
+    }
+
     private static bool TryParseRoi(string value, out int[] roi)
     {
         roi = [];

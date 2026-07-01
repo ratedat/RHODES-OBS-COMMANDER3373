@@ -209,6 +209,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
         ExportSelectedRoiDraftCommand = new AsyncRelayCommand(ExportSelectedRoiDraftAsync);
         PreviewSelectedRoiDraftApplyCommand = new AsyncRelayCommand(PreviewSelectedRoiDraftApplyAsync);
+        ApplySelectedRoiDraftCommand = new AsyncRelayCommand(ApplySelectedRoiDraftAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
         ApplyCandidateResultsCommand = new AsyncRelayCommand(ApplyCandidateResultsAsync);
@@ -979,6 +980,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ExportSelectedRoiDraftCommand { get; }
 
     public ICommand PreviewSelectedRoiDraftApplyCommand { get; }
+
+    public ICommand ApplySelectedRoiDraftCommand { get; }
 
     public ICommand SyncRunStateFromApiCommand { get; }
 
@@ -1786,6 +1789,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = result.Succeeded
                 ? $"ROI適用プレビュー: {result.TargetId} {result.PreviousRoi} -> {result.UpdatedRoi}"
                 : $"ROI適用プレビュー失敗: {result.Message}";
+        });
+    }
+
+    private async Task ApplySelectedRoiDraftAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (!SelectedRoiEditDraft.HasSelection)
+            {
+                RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("ROI行を選択してください。");
+                StatusMessage = RoiDraftApplyResult.Message;
+                return;
+            }
+
+            var sourcePath = ResolveMaaTasksSourcePath();
+            var result = await RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksFileAsync(sourcePath, SelectedRoiEditDraft);
+            RoiDraftApplyResult = result;
+            StatusMessage = result.Succeeded
+                ? $"ROIを適用しました: {result.TargetId} / backup={result.BackupPath}"
+                : $"ROI適用失敗: {result.Message}";
         });
     }
 

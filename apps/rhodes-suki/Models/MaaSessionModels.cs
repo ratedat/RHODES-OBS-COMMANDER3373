@@ -310,6 +310,8 @@ public sealed record MaaRoiDraftApplyResult(
     string PreviousRoi,
     string UpdatedRoi)
 {
+    public string BackupPath { get; init; } = "";
+
     public static MaaRoiDraftApplyResult Failed(string message)
     {
         return new MaaRoiDraftApplyResult(false, message, "", "", "", "");

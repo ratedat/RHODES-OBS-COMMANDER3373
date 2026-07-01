@@ -1218,6 +1218,23 @@ static void RoiDraftSourceUpdater()
     Equal(false, RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksJson(source, boxDraft, out _).Succeeded, "box draft rejected");
     var missingDraft = new MaaRoiEditDraft("RhodesOcrRegion_missing", "filtered.roi", "[10,20,30,40]", true);
     Equal(false, RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksJson(source, missingDraft, out _).Succeeded, "missing draft rejected");
+
+    var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-roi-source-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var file = Path.Combine(directory, "maa-tasks.json");
+        File.WriteAllText(file, source);
+        var fileResult = RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksFileAsync(file, draft).GetAwaiter().GetResult();
+        Equal(true, fileResult.Succeeded, "roi source file update succeeded");
+        Equal(true, File.Exists(fileResult.BackupPath), "roi source backup exists");
+        var saved = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
+        Equal(10, saved["ocrRegions"]!.AsArray()[0]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "saved roi x");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
 }
 
 static void MaaNativeEvidenceLog()

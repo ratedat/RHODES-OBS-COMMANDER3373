@@ -254,9 +254,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /SelectedRoiEditDraft/);
   assert.match(viewModel, /ExportSelectedRoiDraftCommand/);
   assert.match(viewModel, /PreviewSelectedRoiDraftApplyCommand/);
+  assert.match(viewModel, /ApplySelectedRoiDraftCommand/);
   assert.match(viewModel, /RoiDraftApplyResult/);
   assert.match(viewModel, /RhodesMaaRoiEditDraftLog\.SaveAsync/);
   assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToMaaTasksJson/);
+  assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToMaaTasksFileAsync/);
   assert.match(viewModel, /RefreshSelectedRoiPreviewRows/);
   assert.match(viewModel, /SelectedOcrDetailRow/);
   assert.match(viewModel, /SelectedResourceTaskResult/);
@@ -284,6 +286,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(roiDraftSourceUpdater, /data\/recognition\/maa-tasks\.json/);
   assert.match(roiDraftSourceUpdater, /RhodesOcrRegion/);
   assert.match(roiDraftSourceUpdater, /ocrRegions/);
+  assert.match(roiDraftSourceUpdater, /ApplyToMaaTasksFileAsync/);
+  assert.match(roiDraftSourceUpdater, /BackupPath/);
   assert.match(viewModel, /Campaigns/);
   assert.match(viewModel, /SelectedCampaign/);
   assert.match(viewModel, /構想/);
@@ -402,6 +406,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectedRoiEditDraft\.Detail/);
   assert.match(xaml, /ExportSelectedRoiDraftCommand/);
   assert.match(xaml, /PreviewSelectedRoiDraftApplyCommand/);
+  assert.match(xaml, /ApplySelectedRoiDraftCommand/);
   assert.match(xaml, /RoiDraftApplyResult\.Message/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRoiPreviewRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedOcrDetailRow, Mode=TwoWay\}"/);
