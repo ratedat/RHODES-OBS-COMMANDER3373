@@ -14,8 +14,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly RhodesMaaSession _session;
     private readonly IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
-    private readonly IReadOnlyList<SukiChoiceItem> _allOperators;
-    private readonly IReadOnlyList<SukiChoiceItem> _allRelics;
+    private readonly IReadOnlyList<SukiChoiceItem> _allOperators = [];
+    private readonly IReadOnlyList<SukiChoiceItem> _allRelics = [];
     private readonly SukiRunStateSnapshot _runState;
     private byte[] _lastCapture = [];
     private string _adbPath = "adb";
