@@ -163,6 +163,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(models, /MaaRoiBatchDraftPreview/);
   assert.match(models, /MaaRoiAdjustmentSessionDraft/);
   assert.match(models, /MaaRoiAdjustmentSessionPayload/);
+  assert.match(models, /MaaRoiAdjustmentSessionItem/);
   assert.match(models, /IsIncluded/);
   assert.match(models, /StateLabel/);
   assert.match(models, /StateDetail/);
@@ -288,6 +289,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(roiAdjustmentSessionLog, /maa-roi-adjustment-session/);
   assert.match(roiAdjustmentSessionLog, /SaveAsync/);
   assert.match(roiAdjustmentSessionLog, /Load/);
+  assert.match(roiAdjustmentSessionLog, /LoadRecent/);
+  assert.match(roiAdjustmentSessionLog, /roi-session-\*\.json/);
   assert.match(roiAdjustmentSessionLog, /MaaRoiAdjustmentSessionDraft\.FromPreview/);
   assert.match(viewModel, /ResolveRoiDraftSourcePath/);
   assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToSourceJson/);

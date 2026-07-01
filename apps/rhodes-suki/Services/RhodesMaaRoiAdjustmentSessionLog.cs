@@ -72,9 +72,46 @@ public static class RhodesMaaRoiAdjustmentSessionLog
         }
     }
 
+    public static IReadOnlyList<MaaRoiAdjustmentSessionItem> LoadRecent(
+        string directory,
+        int limit = 24)
+    {
+        if (!Directory.Exists(directory))
+            return [];
+
+        return Directory
+            .EnumerateFiles(directory, "roi-session-*.json")
+            .Select(TryLoadItem)
+            .Where(item => item is not null)
+            .Cast<MaaRoiAdjustmentSessionItem>()
+            .OrderByDescending(item => item.SortTimestamp)
+            .ThenBy(item => item.SessionPath, StringComparer.OrdinalIgnoreCase)
+            .Take(Math.Max(1, limit))
+            .ToArray();
+    }
+
     private static MaaRoiAdjustmentSessionPayload Empty()
     {
         return new MaaRoiAdjustmentSessionPayload(0, "", null, "", "", "", [], null);
+    }
+
+    private static MaaRoiAdjustmentSessionItem? TryLoadItem(string path)
+    {
+        var payload = Load(path);
+        if (payload.SchemaVersion != 1 || !payload.Kind.Equals("maa-roi-adjustment-session", StringComparison.Ordinal))
+            return null;
+
+        var timestamp = DateTimeOffset.TryParse(payload.CreatedAt, out var parsed)
+            ? parsed
+            : new DateTimeOffset(File.GetLastWriteTimeUtc(path), TimeSpan.Zero);
+        return new MaaRoiAdjustmentSessionItem(
+            payload.ProfileId ?? "",
+            payload.CreatedAt,
+            payload.DraftCount,
+            payload.IncludedCount,
+            payload.ScanLogPath,
+            path,
+            timestamp);
     }
 
     private static string? NormalizeProfile(string? profileId)

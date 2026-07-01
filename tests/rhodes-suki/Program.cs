@@ -1247,6 +1247,21 @@ static void RoiAdjustmentSessionLog()
         Equal(1, loaded.IncludedCount, "loaded roi session included count");
         Equal("RhodesOcrRegion_run_hope_current", loaded.Drafts[0].ToPreview().Entry, "loaded roi session preview entry");
         Equal("確認済み", loaded.Drafts[0].ToPreview().StateLabel, "loaded roi session preview state");
+        var newerFile = RhodesMaaRoiAdjustmentSessionLog.SaveAsync(
+            drafts,
+            "operatorsFull",
+            "recognition-2.json",
+            "capture-2.png",
+            null,
+            directory,
+            createdAt.AddMinutes(10)).GetAwaiter().GetResult();
+        var recent = RhodesMaaRoiAdjustmentSessionLog.LoadRecent(directory, limit: 8);
+        Equal(2, recent.Count, "roi session recent count");
+        Equal(newerFile, recent[0].SessionPath, "roi session recent order");
+        Equal("operatorsFull", recent[0].ProfileId, "roi session recent profile");
+        Equal(2, recent[0].DraftCount, "roi session recent draft count");
+        Equal(1, recent[0].IncludedCount, "roi session recent included count");
+        Equal(true, recent[0].Detail.Contains("2候補", StringComparison.Ordinal), "roi session recent detail");
     }
     finally
     {

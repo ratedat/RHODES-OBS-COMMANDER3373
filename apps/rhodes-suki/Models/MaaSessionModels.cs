@@ -380,6 +380,20 @@ public sealed record MaaRoiAdjustmentSessionPayload(
     public int IncludedCount => Drafts.Count(draft => draft.IsIncluded);
 }
 
+public sealed record MaaRoiAdjustmentSessionItem(
+    string ProfileId,
+    string CreatedAt,
+    int DraftCount,
+    int IncludedCount,
+    string ScanLogPath,
+    string SessionPath,
+    DateTimeOffset SortTimestamp)
+{
+    public string Title => string.IsNullOrWhiteSpace(ProfileId) ? "ROI調整セッション" : $"ROI調整: {ProfileId}";
+
+    public string Detail => $"{DraftCount}候補 / 対象{IncludedCount}件 / {CreatedAt}";
+}
+
 public sealed record MaaRoiDraftApplyResult(
     bool Succeeded,
     string Message,
