@@ -211,10 +211,14 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RunResourceTaskCommand/);
   assert.match(viewModel, /RecognitionScanHistory/);
   assert.match(viewModel, /RefreshRecognitionScanHistoryCommand/);
+  assert.match(viewModel, /LoadRecognitionScanHistoryCommand/);
   assert.match(viewModel, /RhodesRecognitionScanHistory\.LoadRecent/);
+  assert.match(viewModel, /RhodesRecognitionScanHistory\.LoadPayload/);
   assert.match(viewModel, /RhodesSukiDebugPaths\.RecognitionScansDirectory/);
   assert.match(viewModel, /RhodesMaaRecognitionEvidenceLog\.SaveAsync/);
   assert.match(scanHistory, /recognition-\*\.json/);
+  assert.match(scanHistory, /LoadPayload/);
+  assert.match(scanHistory, /ExtractTaskResults/);
   assert.match(scanHistory, /ResourceTaskCount/);
   assert.match(scanHistory, /CandidateCount/);
   assert.match(debugPaths, /Recognition Scans/);
@@ -322,6 +326,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RunAllResourceTasksCommand/);
   assert.match(xaml, /ExportResourceTaskResultsCommand/);
   assert.match(xaml, /RefreshRecognitionScanHistoryCommand/);
+  assert.match(xaml, /LoadRecognitionScanHistoryCommand/);
   assert.match(xaml, /RecognitionScanHistory/);
   assert.match(xaml, /スキャン履歴/);
   assert.match(xaml, /SelectedResourceProfile/);

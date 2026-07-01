@@ -5,6 +5,11 @@ namespace RhodesSuki.Services;
 
 public static class RhodesRecognitionScanHistory
 {
+    private static readonly JsonSerializerOptions ReadOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     public static IReadOnlyList<RhodesRecognitionScanHistoryItem> LoadRecent(
         string directory,
         IEnumerable<string>? extraPaths = null,
@@ -31,6 +36,30 @@ public static class RhodesRecognitionScanHistory
             .ThenBy(item => item.LogPath, StringComparer.OrdinalIgnoreCase)
             .Take(Math.Max(1, limit))
             .ToArray();
+    }
+
+    public static RhodesRecognitionScanHistoryPayload LoadPayload(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return new RhodesRecognitionScanHistoryPayload([], [], "ログファイルが見つかりません。");
+
+        try
+        {
+            var json = File.ReadAllText(path);
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return new RhodesRecognitionScanHistoryPayload([], [], "スキャンログがobjectではありません。");
+
+            return new RhodesRecognitionScanHistoryPayload(
+                RhodesMaaCandidateApiClient.ExtractCandidatePreviews(json),
+                ExtractTaskResults(root),
+                "");
+        }
+        catch (Exception ex)
+        {
+            return new RhodesRecognitionScanHistoryPayload([], [], ex.Message);
+        }
     }
 
     private static RhodesRecognitionScanHistoryItem? TryLoad(string path)
@@ -131,5 +160,18 @@ public static class RhodesRecognitionScanHistory
     private static DateTimeOffset? ParseTimestamp(string value)
     {
         return DateTimeOffset.TryParse(value, out var result) ? result : null;
+    }
+
+    private static IReadOnlyList<MaaTaskRunResult> ExtractTaskResults(JsonElement root)
+    {
+        var evidence = ObjectProperty(root, "evidence");
+        if (evidence.ValueKind != JsonValueKind.Object
+            || !evidence.TryGetProperty("taskResults", out var taskResults)
+            || taskResults.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return JsonSerializer.Deserialize<MaaTaskRunResult[]>(taskResults.GetRawText(), ReadOptions) ?? [];
     }
 }

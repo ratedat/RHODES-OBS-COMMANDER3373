@@ -187,6 +187,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunSelectedProfileAdbScanCommand = new AsyncRelayCommand(RunSelectedProfileAdbScanAsync);
         RefreshRecognitionScanStatusCommand = new AsyncRelayCommand(RefreshRecognitionScanStatusAsync);
         RefreshRecognitionScanHistoryCommand = new AsyncRelayCommand(RefreshRecognitionScanHistoryAsync);
+        LoadRecognitionScanHistoryCommand = new AsyncRelayCommand(parameter => LoadRecognitionScanHistoryAsync(parameter as RhodesRecognitionScanHistoryItem));
         OpenPreviewUrlCommand = new AsyncRelayCommand(OpenPreviewUrlAsync);
         RunAllResourceTasksCommand = new AsyncRelayCommand(RunAllResourceTasksAsync);
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
@@ -840,6 +841,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RefreshRecognitionScanStatusCommand { get; }
 
     public ICommand RefreshRecognitionScanHistoryCommand { get; }
+
+    public ICommand LoadRecognitionScanHistoryCommand { get; }
 
     public ICommand OpenPreviewUrlCommand { get; }
 
@@ -1800,6 +1803,41 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 RhodesSukiDebugPaths.RecognitionScansDirectory,
                 [LastResourceTaskResultsPath]));
         RefreshInspectorRows();
+    }
+
+    private async Task LoadRecognitionScanHistoryAsync(RhodesRecognitionScanHistoryItem? item)
+    {
+        if (item is null)
+            return;
+
+        await RunBusyAsync(() =>
+        {
+            var payload = RhodesRecognitionScanHistory.LoadPayload(item.LogPath);
+            if (!payload.Succeeded)
+            {
+                StatusMessage = $"認識履歴の読込に失敗しました: {payload.Error}";
+                return Task.CompletedTask;
+            }
+
+            CandidateResults.Clear();
+            foreach (var candidate in payload.Candidates)
+            {
+                CandidateResults.Add(candidate);
+            }
+
+            ResourceTaskResults.Clear();
+            foreach (var taskResult in payload.TaskResults)
+            {
+                ResourceTaskResults.Add(taskResult);
+            }
+
+            LastResourceTaskResultsPath = item.LogPath;
+            LastCandidateApplySummary = "履歴から読込";
+            RefreshResourceTaskDiagnostics();
+            RefreshInspectorRows();
+            StatusMessage = $"認識履歴を読み込みました: 候補{CandidateResults.Count}件 / task{ResourceTaskResults.Count}件";
+            return Task.CompletedTask;
+        });
     }
 
     private Task OpenPreviewUrlAsync(object? parameter)

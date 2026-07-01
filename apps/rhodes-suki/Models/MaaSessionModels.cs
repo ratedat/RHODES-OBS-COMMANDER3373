@@ -312,6 +312,14 @@ public sealed record RhodesRecognitionScanHistoryItem(
         : $"{Error} / {LogPath}";
 }
 
+public sealed record RhodesRecognitionScanHistoryPayload(
+    IReadOnlyList<MaaCandidatePreview> Candidates,
+    IReadOnlyList<MaaTaskRunResult> TaskResults,
+    string Error)
+{
+    public bool Succeeded => string.IsNullOrWhiteSpace(Error);
+}
+
 public sealed record MaaCandidatePreview(
     string Kind,
     string Label,

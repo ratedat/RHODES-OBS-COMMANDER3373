@@ -1109,8 +1109,10 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
               "status": "completed",
               "startedAt": "2026-07-01T00:00:00.000Z",
               "completedAt": "2026-07-01T00:00:01.000Z",
-              "counts": { "candidates": 2, "suggestions": 0, "autoApplied": 0, "log": 4 },
-              "candidates": [],
+              "counts": { "candidates": 1, "suggestions": 0, "autoApplied": 0, "log": 4 },
+              "candidates": [
+                { "kind": "relic", "label": "テスト秘宝", "value": "test_relic", "rawText": "テスト秘宝", "confidence": 0.8, "relicId": "test_relic" }
+              ],
               "log": []
             }
             """);
@@ -1138,8 +1140,19 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
         Equal(1, history[0].CandidateCount, "native candidate count");
         Equal(1, history[0].ResourceTaskCount, "native task count");
         Equal("秘宝スキャン", history[1].DisplayProfile, "api profile label");
-        Equal(2, history[1].CandidateCount, "api candidate count");
+        Equal(1, history[1].CandidateCount, "api candidate count");
         Equal(4, history[1].LogCount, "api log count");
+
+        var nativePayload = RhodesRecognitionScanHistory.LoadPayload(history[0].LogPath);
+        Equal(true, nativePayload.Succeeded, "native payload succeeded");
+        Equal(1, nativePayload.Candidates.Count, "native payload candidates");
+        Equal(1, nativePayload.TaskResults.Count, "native payload task results");
+        Equal("グム", nativePayload.Candidates[0].Label, "native payload candidate label");
+
+        var apiPayload = RhodesRecognitionScanHistory.LoadPayload(history[1].LogPath);
+        Equal(true, apiPayload.Succeeded, "api payload succeeded");
+        Equal(1, apiPayload.Candidates.Count, "api payload candidates");
+        Equal(0, apiPayload.TaskResults.Count, "api payload task results");
     }
     finally
     {

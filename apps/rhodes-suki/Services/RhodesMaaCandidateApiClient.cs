@@ -57,13 +57,14 @@ public static class RhodesMaaCandidateApiClient
     public static IReadOnlyList<MaaCandidatePreview> ExtractCandidatePreviews(string json)
     {
         using var document = JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("result", out var result)
-            || !result.TryGetProperty("candidates", out var candidates)
-            || candidates.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
+        if (TryCandidateArray(document.RootElement, out var candidates))
+            return ExtractCandidatePreviews(candidates);
 
+        return [];
+    }
+
+    private static IReadOnlyList<MaaCandidatePreview> ExtractCandidatePreviews(JsonElement candidates)
+    {
         var previews = new List<MaaCandidatePreview>();
         foreach (var candidate in candidates.EnumerateArray())
         {
@@ -97,6 +98,28 @@ public static class RhodesMaaCandidateApiClient
                 JsonInt(candidate, "count")));
         }
         return previews;
+    }
+
+    private static bool TryCandidateArray(JsonElement root, out JsonElement candidates)
+    {
+        if (root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("result", out var result)
+            && result.ValueKind == JsonValueKind.Object
+            && result.TryGetProperty("candidates", out candidates)
+            && candidates.ValueKind == JsonValueKind.Array)
+        {
+            return true;
+        }
+
+        if (root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("candidates", out candidates)
+            && candidates.ValueKind == JsonValueKind.Array)
+        {
+            return true;
+        }
+
+        candidates = default;
+        return false;
     }
 
     private static string JsonString(JsonElement element, string propertyName)
