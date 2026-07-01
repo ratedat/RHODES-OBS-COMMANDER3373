@@ -729,6 +729,33 @@ static void RunCatalogLoadsChoices()
     Equal("is5_sarkaz", catalog.Current.CampaignId, "current campaign");
     Equal(0, catalog.Current.Idea, "current idea");
 
+    var tempDirectory = Path.Combine(Path.GetTempPath(), "rhodes-suki-tests", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(tempDirectory);
+    try
+    {
+        var statePath = Path.Combine(tempDirectory, "current-state.json");
+        File.WriteAllText(
+            statePath,
+            """
+            {
+              "run": {
+                "campaignId": "is5_sarkaz",
+                "squadId": "is5_sarkaz_squad_04"
+              },
+              "operators": [],
+              "relics": [],
+              "preferences": {}
+            }
+            """);
+
+        var squadIdCatalog = RhodesRunCatalog.LoadDefault(RhodesRunCatalog.ResolveDataRoot(), statePath);
+        Equal("指揮分隊", squadIdCatalog.Current.Squad, "current squad id label");
+    }
+    finally
+    {
+        Directory.Delete(tempDirectory, true);
+    }
+
     var is5SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is5_sarkaz").ToArray();
     Equal(3, is5SpecialFields.Length, "is5 special field count");
     Equal("構想", is5SpecialFields.Single(field => field.FieldId == "idea").Label, "idea label");

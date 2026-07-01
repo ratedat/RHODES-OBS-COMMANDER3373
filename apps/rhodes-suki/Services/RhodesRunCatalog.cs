@@ -5,12 +5,13 @@ namespace RhodesSuki.Services;
 
 public static class RhodesRunCatalog
 {
-    public static RhodesRunCatalogSnapshot LoadDefault()
+    public static RhodesRunCatalogSnapshot LoadDefault(string dataRootOverride = "", string statePathOverride = "")
     {
-        var dataRoot = ResolveDataRoot();
+        var dataRoot = string.IsNullOrWhiteSpace(dataRootOverride) ? ResolveDataRoot() : dataRootOverride;
         var campaigns = LoadCampaigns(Path.Combine(dataRoot, "campaigns.json"));
         var selectableEffects = LoadSelectableEffects(ResolveDataPath(dataRoot, "selectable-effects.json"));
-        var state = LoadState(ResolveStatePath(dataRoot), campaigns, selectableEffects);
+        var statePath = string.IsNullOrWhiteSpace(statePathOverride) ? ResolveStatePath(dataRoot) : statePathOverride;
+        var state = LoadState(statePath, campaigns, selectableEffects, dataRoot);
         var operators = LoadOperators(Path.Combine(dataRoot, "operators.json"), dataRoot, state);
         var relics = LoadRelics(Path.Combine(dataRoot, "relics.json"), dataRoot, state);
         return new RhodesRunCatalogSnapshot(campaigns, operators, relics, state);
@@ -163,7 +164,8 @@ public static class RhodesRunCatalog
     private static SukiRunStateSnapshot LoadState(
         string path,
         IReadOnlyList<SukiCampaignPreview> campaigns,
-        IReadOnlyList<SelectableEffectPreview> selectableEffects)
+        IReadOnlyList<SelectableEffectPreview> selectableEffects,
+        string dataRoot)
     {
         if (!File.Exists(path))
         {
@@ -204,7 +206,7 @@ public static class RhodesRunCatalog
             JsonBool(preferences, "relicSelectedOnly"),
             Math.Clamp(JsonNullableInt(preferences, "operatorGridColumns") ?? 2, 1, 4),
             Math.Clamp(JsonNullableInt(preferences, "relicGridColumns") ?? 2, 1, 4),
-            JsonString(run, "squad"),
+            ResolveSquadDisplayName(dataRoot, campaignId, run),
             JsonString(run, "difficulty"),
             JsonInt(run, "hope"),
             JsonNullableInt(run, "maxHope"),
@@ -214,6 +216,39 @@ public static class RhodesRunCatalog
             JsonInt(run, "commandLevel"),
             ReadSpecialInt(run, campaignId, "idea"),
             BuildSpecialFieldStates(run, campaigns, selectableEffects));
+    }
+
+    private static string ResolveSquadDisplayName(string dataRoot, string campaignId, JsonElement run)
+    {
+        var fallback = JsonString(run, "squad");
+        var squadId = JsonString(run, "squadId");
+        if (string.IsNullOrWhiteSpace(squadId))
+            return fallback;
+
+        var path = ResolveDataPath(dataRoot, "squads.json");
+        if (!File.Exists(path))
+            return fallback;
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        if (!root.TryGetProperty("squads", out var squads) || squads.ValueKind != JsonValueKind.Array)
+            return fallback;
+
+        foreach (var item in squads.EnumerateArray())
+        {
+            if (!JsonString(item, "id").Equals(squadId, StringComparison.Ordinal))
+                continue;
+            if (!string.IsNullOrWhiteSpace(campaignId)
+                && !JsonString(item, "campaignId").Equals(campaignId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var name = JsonString(item, "name");
+            return string.IsNullOrWhiteSpace(name) ? fallback : name;
+        }
+
+        return fallback;
     }
 
     private static IReadOnlyList<SukiSpecialFieldState> BuildSpecialFieldStates(
@@ -259,7 +294,9 @@ public static class RhodesRunCatalog
         JsonElement campaignState,
         IReadOnlyDictionary<string, SelectableEffectPreview> effectsById)
     {
-        campaignState.TryGetProperty(field.Id, out var value);
+        JsonElement value = default;
+        if (campaignState.ValueKind == JsonValueKind.Object)
+            campaignState.TryGetProperty(field.Id, out value);
         var kind = FieldKindLabel(field.Type);
         var profileId = SpecialProfileId(campaignId, field.Id);
         return field.Type switch
