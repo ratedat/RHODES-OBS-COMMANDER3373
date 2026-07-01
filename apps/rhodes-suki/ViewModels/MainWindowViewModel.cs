@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows.Input;
@@ -1275,45 +1274,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         CandidateResults.Clear();
-        var apiError = "";
-        IReadOnlyList<MaaCandidatePreview> apiCandidates = [];
-        var apiProfileId = CandidateApiProfileId();
-        if (!string.IsNullOrWhiteSpace(apiProfileId))
-        {
-            try
-            {
-                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                var response = await client.PostAsJsonAsync(
-                    $"{RhodesApiUrl}/api/recognition/maa-resource",
-                    new
-                    {
-                        profile = apiProfileId,
-                        source = "maa-framework",
-                        taskResults = ResourceTaskResults.ToArray(),
-                    });
-                var json = await response.Content.ReadAsStringAsync();
-                if (response.IsSuccessStatusCode)
-                {
-                    apiCandidates = ExtractCandidatePreviews(json);
-                }
-                else
-                {
-                    apiError = $"{(int)response.StatusCode} {Shorten(json, 160)}";
-                }
-            }
-            catch (Exception ex)
-            {
-                apiError = Shorten(ex.Message, 160);
-            }
-        }
-        else
-        {
-            apiError = "allプロファイルでは候補化APIをスキップしました。";
-        }
+        var apiResult = await RhodesMaaCandidateApiClient.ConvertAsync(
+            RhodesApiUrl,
+            CandidateApiProfileId(),
+            ResourceTaskResults);
 
-        if (apiCandidates.Count > 0)
+        if (apiResult.HasCandidates)
         {
-            foreach (var candidate in apiCandidates)
+            foreach (var candidate in apiResult.Candidates)
             {
                 CandidateResults.Add(candidate);
             }
@@ -1330,16 +1298,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (CandidateResults.Count > 0)
         {
             RefreshInspectorRows();
-            StatusMessage = string.IsNullOrWhiteSpace(apiError)
+            StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
                 ? $"候補化APIは0件だったためローカルMAAプレビューを表示しました: {CandidateResults.Count}件"
                 : $"候補化APIに接続できないためローカルMAAプレビューを表示しました: {CandidateResults.Count}件";
             return;
         }
 
         RefreshInspectorRows();
-        StatusMessage = string.IsNullOrWhiteSpace(apiError)
+        StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
             ? "候補は0件です。"
-            : $"候補化API失敗: {apiError}";
+            : $"候補化API失敗: {apiResult.Error}";
     }
 
     private string? CandidateApiProfileId()
@@ -1682,85 +1650,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(path, $"{json}{Environment.NewLine}");
         return path;
-    }
-
-    private static IReadOnlyList<MaaCandidatePreview> ExtractCandidatePreviews(string json)
-    {
-        using var document = JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("result", out var result)
-            || !result.TryGetProperty("candidates", out var candidates)
-            || candidates.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        var previews = new List<MaaCandidatePreview>();
-        foreach (var candidate in candidates.EnumerateArray())
-        {
-            var kind = JsonString(candidate, "kind");
-            var label = JsonString(candidate, "label");
-            var rawText = JsonString(candidate, "rawText");
-            var field = JsonString(candidate, "field");
-            var name = JsonString(candidate, "name");
-            var value = JsonValueText(candidate, "value");
-            var confidence = JsonNumber(candidate, "confidence");
-            previews.Add(new MaaCandidatePreview(
-                kind,
-                string.IsNullOrWhiteSpace(label) ? field : label,
-                string.IsNullOrWhiteSpace(value) ? name : value,
-                rawText,
-                confidence,
-                field,
-                JsonString(candidate, "operatorId"),
-                JsonString(candidate, "relicId"),
-                JsonString(candidate, "campaignId"),
-                JsonString(candidate, "recognitionKey"),
-                JsonString(candidate, "thoughtId"),
-                JsonString(candidate, "ageId")));
-        }
-        return previews;
-    }
-
-    private static string JsonString(JsonElement element, string propertyName)
-    {
-        return element.ValueKind == JsonValueKind.Object
-            && element.TryGetProperty(propertyName, out var property)
-            && property.ValueKind == JsonValueKind.String
-            ? property.GetString() ?? ""
-            : "";
-    }
-
-    private static string JsonValueText(JsonElement element, string propertyName)
-    {
-        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out var property))
-            return "";
-        return property.ValueKind switch
-        {
-            JsonValueKind.String => property.GetString() ?? "",
-            JsonValueKind.Number => property.GetRawText(),
-            JsonValueKind.True => "true",
-            JsonValueKind.False => "false",
-            _ => property.GetRawText(),
-        };
-    }
-
-    private static double? JsonNumber(JsonElement element, string propertyName)
-    {
-        return element.ValueKind == JsonValueKind.Object
-            && element.TryGetProperty(propertyName, out var property)
-            && property.ValueKind == JsonValueKind.Number
-            && property.TryGetDouble(out var value)
-            ? value
-            : null;
-    }
-
-    private static string Shorten(string value, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        var text = value.Trim().ReplaceLineEndings(" ");
-        return text.Length <= maxLength ? text : $"{text[..maxLength]}...";
     }
 
     private async Task RunBusyAsync(Func<Task> action)

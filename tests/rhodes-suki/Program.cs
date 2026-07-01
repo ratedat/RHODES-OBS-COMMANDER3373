@@ -9,6 +9,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA TemplateMatch count becomes a template candidate", TemplateCount),
     ("MAA hit without detail falls back to a simple candidate", HitFallback),
     ("Candidate preview exposes stable debugger identity", CandidatePreviewIdentity),
+    ("MAA candidate API extraction preserves structured ids", CandidateApiExtraction),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
@@ -145,6 +146,51 @@ static void CandidatePreviewIdentity()
     Equal("thought_a", thought.Identity, "thought identity");
     Equal("thought:thought_a", thought.DebugDetail.Split(" · ").First(part => part.StartsWith("thought:", StringComparison.Ordinal)), "thought debug detail");
     Equal(true, thought.DebugDetail.Contains("campaign:is5_sarkaz", StringComparison.Ordinal), "campaign debug detail");
+}
+
+static void CandidateApiExtraction()
+{
+    var candidates = RhodesMaaCandidateApiClient.ExtractCandidatePreviews(
+        """
+        {
+          "result": {
+            "candidates": [
+              {
+                "kind": "runStatus",
+                "field": "hope",
+                "value": 3,
+                "rawText": "3",
+                "confidence": 0.94
+              },
+              {
+                "kind": "thought",
+                "name": "枯れ木と若枝",
+                "value": "fallback",
+                "rawText": "枯れ木と若枝",
+                "confidence": 0.91,
+                "campaignId": "is5_sarkaz",
+                "recognitionKey": "thought:is5_sarkaz:thought_a",
+                "thoughtId": "thought_a"
+              },
+              {
+                "kind": "age",
+                "label": "時代",
+                "value": "age_prime",
+                "rawText": "全盛期",
+                "confidence": 0.88,
+                "ageId": "age_prime"
+              }
+            ]
+          }
+        }
+        """);
+
+    Equal(3, candidates.Count, "api candidate count");
+    Equal("hope", candidates[0].Label, "field fallback label");
+    Equal("3", candidates[0].Value, "numeric value text");
+    Equal("thought_a", candidates[1].ThoughtId, "thought id");
+    Equal("thought_a", candidates[1].Identity, "thought identity");
+    Equal("age_prime", candidates[2].AgeId, "age id");
 }
 
 static void AdbPresets()
