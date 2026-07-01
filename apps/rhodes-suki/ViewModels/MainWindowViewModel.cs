@@ -61,6 +61,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _outputTournamentMode;
     private bool _outputTransparentBackground = true;
     private int _outputScrollSpeed = 13;
+    private bool _showRoiOverlay = true;
     private bool _isBusy;
 
     public MainWindowViewModel(
@@ -768,6 +769,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _lastCandidateApplySummary;
         private set => SetProperty(ref _lastCandidateApplySummary, string.IsNullOrWhiteSpace(value) ? "候補未反映" : value);
+    }
+
+    public bool ShowRoiOverlay
+    {
+        get => _showRoiOverlay;
+        set => SetProperty(ref _showRoiOverlay, value);
     }
 
     public MaaAdbPresetPreview? SelectedAdbPreset
