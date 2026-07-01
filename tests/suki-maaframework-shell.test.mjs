@@ -117,6 +117,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(operatorTaxonomy, /"先鋒"/);
   assert.match(operatorTaxonomy, /"執行者"/);
   assert.match(runStateStore, /SaveChoicesAsync/);
+  assert.match(runStateStore, /SaveRunContextAsync/);
+  assert.match(runStateStore, /SemaphoreSlim/);
   assert.match(runStateStore, /operatorExcludedIds/);
   assert.match(runStateStore, /operatorGridColumns/);
   assert.match(models, /MaaTaskDetailSnapshot/);
@@ -181,6 +183,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesOperatorTaxonomy\.SortClasses/);
   assert.match(viewModel, /RhodesOperatorTaxonomy\.SortBranches/);
   assert.match(viewModel, /RhodesRunStateStore\.SaveChoicesAsync/);
+  assert.match(viewModel, /SetCurrentCampaignCommand/);
   assert.match(viewModel, /SequenceEqual\(items\)/);
   assert.match(mainWindowCodeBehind, /CloseOpenComboBoxesOnOutsidePress/);
   assert.match(mainWindowCodeBehind, /IsDropDownOpen = false/);

@@ -6,6 +6,7 @@ namespace RhodesSuki.Services;
 
 public static class RhodesRunStateStore
 {
+    private static readonly SemaphoreSlim WriteLock = new(1, 1);
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
         WriteIndented = true,
@@ -25,9 +26,36 @@ public static class RhodesRunStateStore
         DateTimeOffset? now = null)
     {
         var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
-        var state = await LoadStateNodeAsync(path);
-        ApplyChoices(state, operators, relics, options, now ?? DateTimeOffset.UtcNow);
-        await WriteJsonAtomicAsync(path, state);
+        await WriteLock.WaitAsync();
+        try
+        {
+            var state = await LoadStateNodeAsync(path);
+            ApplyChoices(state, operators, relics, options, now ?? DateTimeOffset.UtcNow);
+            await WriteJsonAtomicAsync(path, state);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
+    }
+
+    public static async Task SaveRunContextAsync(
+        string campaignId,
+        string? statePath = null,
+        DateTimeOffset? now = null)
+    {
+        var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
+        await WriteLock.WaitAsync();
+        try
+        {
+            var state = await LoadStateNodeAsync(path);
+            ApplyRunContext(state, campaignId, now ?? DateTimeOffset.UtcNow);
+            await WriteJsonAtomicAsync(path, state);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
     }
 
     public static JsonObject ApplyChoices(
@@ -53,6 +81,24 @@ public static class RhodesRunStateStore
         preferences["relicSelectedOnly"] = options.RelicSelectedOnly;
         preferences["operatorGridColumns"] = Math.Clamp(options.OperatorGridColumns, 1, 4);
         preferences["relicGridColumns"] = Math.Clamp(options.RelicGridColumns, 1, 4);
+
+        return state;
+    }
+
+    public static JsonObject ApplyRunContext(JsonObject state, string campaignId, DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(campaignId))
+            throw new ArgumentException("campaignId is required.", nameof(campaignId));
+
+        state["version"] ??= 1;
+        state["updatedAt"] = now.UtcDateTime.ToString("O");
+
+        var run = EnsureObject(state, "run");
+        var previousCampaignId = JsonString(run, "campaignId");
+        var normalizedCampaignId = campaignId.Trim();
+        run["campaignId"] = normalizedCampaignId;
+        if (!string.Equals(previousCampaignId, normalizedCampaignId, StringComparison.Ordinal))
+            ResetRunValues(run);
 
         return state;
     }
@@ -86,6 +132,38 @@ public static class RhodesRunStateStore
         var created = new JsonObject();
         parent[propertyName] = created;
         return created;
+    }
+
+    private static void ResetRunValues(JsonObject run)
+    {
+        foreach (var propertyName in new[]
+        {
+            "squad",
+            "difficulty",
+            "hope",
+            "maxHope",
+            "ingot",
+            "lifePoints",
+            "shield",
+            "idea",
+            "special",
+        })
+        {
+            run.Remove(propertyName);
+        }
+
+        run["commandLevel"] = 1;
+    }
+
+    private static string JsonString(JsonObject parent, string propertyName)
+    {
+        if (parent.TryGetPropertyValue(propertyName, out var node) && node is JsonValue value
+            && value.TryGetValue<string>(out var text))
+        {
+            return text;
+        }
+
+        return "";
     }
 
     private static JsonArray ToJsonArray(IEnumerable<string> values)

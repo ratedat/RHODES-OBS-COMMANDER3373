@@ -17,6 +17,7 @@ var tests = new (string Name, Action Run)[]
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
+    ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
 
@@ -424,6 +425,51 @@ static void ChoicePersistence()
     Equal(3, preferences["relicGridColumns"]!.GetValue<int>(), "relic grid columns");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "updatedAt");
     Equal(3, updated["run"]!.AsObject()["hope"]!.GetValue<int>(), "existing run state preserved");
+}
+
+static void RunContextPersistence()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "version": 1,
+          "run": {
+            "campaignId": "is3_mizuki",
+            "squad": "分隊A",
+            "difficulty": "等級12",
+            "hope": 5,
+            "maxHope": 8,
+            "ingot": 21,
+            "lifePoints": 4,
+            "shield": 2,
+            "commandLevel": 6,
+            "idea": 3,
+            "special": { "is3_mizuki": { "light": 20 } }
+          },
+          "operators": ["gummy"],
+          "relics": ["is3_relic_001"],
+          "preferences": { "operatorGridColumns": 4 }
+        }
+        """)!.AsObject();
+    var updated = RhodesRunStateStore.ApplyRunContext(
+        state,
+        "is5_sarkaz",
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+    var run = updated["run"]!.AsObject();
+    Equal("is5_sarkaz", run["campaignId"]!.GetValue<string>(), "campaign id");
+    Equal(false, run.ContainsKey("hope"), "stale hope removed");
+    Equal(false, run.ContainsKey("maxHope"), "stale max hope removed");
+    Equal(false, run.ContainsKey("squad"), "stale squad removed");
+    Equal(false, run.ContainsKey("special"), "stale special values removed");
+    Equal(1, run["commandLevel"]!.GetValue<int>(), "command level reset");
+    Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "operators preserved");
+    Equal("is3_relic_001", updated["relics"]!.AsArray()[0]!.GetValue<string>(), "relics preserved");
+    Equal(4, updated["preferences"]!.AsObject()["operatorGridColumns"]!.GetValue<int>(), "preferences preserved");
+    Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "updatedAt");
+
+    var sameCampaign = JsonNode.Parse("""{ "run": { "campaignId": "is5_sarkaz", "hope": 3 } }""")!.AsObject();
+    RhodesRunStateStore.ApplyRunContext(sameCampaign, "is5_sarkaz", DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+    Equal(3, sameCampaign["run"]!.AsObject()["hope"]!.GetValue<int>(), "same campaign keeps run values");
 }
 
 static void Equal<T>(T expected, T actual, string label)

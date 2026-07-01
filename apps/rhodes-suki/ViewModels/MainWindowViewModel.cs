@@ -16,7 +16,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private readonly IReadOnlyList<SukiChoiceItem> _allOperators = [];
     private readonly IReadOnlyList<SukiChoiceItem> _allRelics = [];
-    private readonly SukiRunStateSnapshot _runState;
+    private SukiRunStateSnapshot _runState;
     private byte[] _lastCapture = [];
     private string _adbPath = "adb";
     private string _adbSerial = "";
@@ -165,6 +165,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunResourceTaskCommand = new AsyncRelayCommand(parameter => RunResourceTaskAsync(parameter as MaaResourceTaskPreview));
         SetWorkspaceCommand = new AsyncRelayCommand(SetWorkspaceAsync);
         SetChoiceTabCommand = new AsyncRelayCommand(SetChoiceTabAsync);
+        SetCurrentCampaignCommand = new AsyncRelayCommand(SetCurrentCampaignAsync);
         ToggleChoiceSelectedCommand = new AsyncRelayCommand(ToggleChoiceSelectedAsync);
         ToggleChoiceExcludedCommand = new AsyncRelayCommand(ToggleChoiceExcludedAsync);
         ClearVisibleChoicesCommand = new AsyncRelayCommand(ClearVisibleChoicesAsync);
@@ -763,6 +764,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand SetChoiceTabCommand { get; }
 
+    public ICommand SetCurrentCampaignCommand { get; }
+
     public ICommand ToggleChoiceSelectedCommand { get; }
 
     public ICommand ToggleChoiceExcludedCommand { get; }
@@ -878,6 +881,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void RefreshSpecialValuePreviews()
     {
         ReplaceCollection(SpecialValuePreviews, BuildSpecialValuePreviews());
+    }
+
+    private void RefreshRunStatePreviews()
+    {
+        ReplaceCollection(HeaderStatusChips, BuildHeaderStatusChips());
+        ReplaceCollection(RunFieldPreviews, BuildRunFieldPreviews(_runState));
+        RefreshSpecialValuePreviews();
+        RefreshCampaignPreviews();
+        OnPropertyChanged(nameof(CampaignHeaderDetail));
+        OnPropertyChanged(nameof(RunContextSummary));
+        RefreshInspectorRows();
     }
 
     private IEnumerable<SukiSpecialValuePreview> BuildSpecialValuePreviews()
@@ -1004,6 +1018,36 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         WorkspaceTab = ChoiceTab == "recognition" ? "recognition" : "choices";
         StatusMessage = $"{ChoicePanelTitle}を表示しています。";
         return Task.CompletedTask;
+    }
+
+    private async Task SetCurrentCampaignAsync(object? parameter)
+    {
+        var campaignId = parameter switch
+        {
+            SukiCampaignWorkspacePreview preview => preview.Id,
+            SukiCampaignPreview campaign => campaign.Id,
+            string id => id,
+            _ => "",
+        };
+        if (string.IsNullOrWhiteSpace(campaignId))
+            return;
+
+        if (string.Equals(campaignId, _runState.CampaignId, StringComparison.Ordinal))
+        {
+            StatusMessage = "このISは既に現在ランです。";
+            return;
+        }
+
+        await RunBusyAsync(async () =>
+        {
+            await RhodesRunStateStore.SaveRunContextAsync(campaignId);
+            _runState = RhodesRunCatalog.LoadDefault().Current;
+            var campaign = Campaigns.FirstOrDefault(item => string.Equals(item.Id, _runState.CampaignId, StringComparison.Ordinal));
+            if (campaign is not null)
+                SelectedCampaign = campaign;
+            RefreshRunStatePreviews();
+            StatusMessage = $"{campaign?.DisplayName ?? campaignId} を現在ランに設定しました。";
+        });
     }
 
     private async Task ToggleChoiceSelectedAsync(object? parameter)

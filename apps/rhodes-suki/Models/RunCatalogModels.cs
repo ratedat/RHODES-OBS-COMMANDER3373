@@ -65,6 +65,10 @@ public sealed record SukiCampaignWorkspacePreview(
     public string SelectedLabel => IsSelected ? "表示中" : "";
 
     public string CurrentRunLabel => IsCurrentRun ? "ラン元" : "";
+
+    public string CurrentRunActionLabel => IsCurrentRun ? "現在ラン" : "現在ランに設定";
+
+    public bool CanSetCurrentRun => !IsCurrentRun;
 }
 
 public sealed record SukiRuntimeCapabilityPreview(
