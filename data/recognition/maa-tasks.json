@@ -474,6 +474,19 @@
       "scale": 2
     },
     {
+      "id": "is5.thought_list_text",
+      "profileIds": [
+        "is5ThoughtFull"
+      ],
+      "roi": [
+        90,
+        84,
+        1100,
+        540
+      ],
+      "scale": 2
+    },
+    {
       "id": "operator.list_text",
       "profileIds": [
         "operatorsFull"

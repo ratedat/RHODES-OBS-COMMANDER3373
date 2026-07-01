@@ -13,6 +13,8 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
     ("Local MAA candidate converter extracts exact operator name candidates", LocalCandidateConverterOperators),
     ("Local MAA candidate converter extracts current campaign relic candidates", LocalCandidateConverterRelics),
+    ("Local MAA candidate converter preserves duplicate IS5 thought candidates", LocalCandidateConverterThoughts),
+    ("Local MAA candidate converter extracts IS5 age candidates", LocalCandidateConverterAge),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
@@ -280,6 +282,72 @@ static void LocalCandidateConverterRelics()
     Equal("relic|relic", string.Join("|", candidates.Select(item => item.Kind)), "relic kinds");
     Equal(catalog.Current.CampaignId, candidates[0].CampaignId, "relic campaign id");
     Equal($"maa-local:relic:{relics[0].Id}", candidates[0].RecognitionKey, "relic recognition key");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        var encodedText = System.Text.Json.JsonSerializer.Serialize(text);
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{{\"text\":{encodedText},\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterThoughts()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is5ThoughtFull",
+        [
+            M(
+                "RhodesOcrRegion_is5_thought_list_text",
+                [
+                    ("枯れ木と若枝", 0.91),
+                    ("枯れ木と若枝", 0.88),
+                    ("走る都市", 0.86),
+                ]),
+        ]);
+
+    Equal(
+        "is5_sarkaz_selectable_thought_legacy_08|is5_sarkaz_selectable_thought_legacy_08|is5_sarkaz_selectable_thought_insp_20",
+        string.Join("|", candidates.Select(item => item.ThoughtId)),
+        "thought ids");
+    Equal("thought|thought|thought", string.Join("|", candidates.Select(item => item.Kind)), "thought kinds");
+    Equal("is5_sarkaz", candidates[0].CampaignId, "thought campaign id");
+    Equal("maa-local:thought:is5_sarkaz_selectable_thought_legacy_08:0", candidates[0].RecognitionKey, "thought recognition key");
+
+    static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
+    {
+        var resultRows = rows.Select(row =>
+            $"{{\"text\":{System.Text.Json.JsonSerializer.Serialize(row.Text)},\"score\":{row.Score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}");
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{string.Join(",", resultRows)}]}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterAge()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is5AgeFull",
+        [
+            M("RhodesRunStatusTopBarOcr", "魔王の時代（形成期）", 0.99),
+            M("RhodesOcrRegion_is5_age_detail_text", "天 災 の 時 代（全 盛 期）\n最大HP+200%", 0.91),
+        ]);
+
+    Equal(1, candidates.Count, "age candidate count");
+    Equal("age", candidates[0].Kind, "age kind");
+    Equal("is5_sarkaz_selectable_age_is5_age_01_prime", candidates[0].AgeId, "age id");
+    Equal("is5_sarkaz", candidates[0].CampaignId, "age campaign id");
+    Equal("maa-local:age:is5_sarkaz_selectable_age_is5_age_01_prime", candidates[0].RecognitionKey, "age recognition key");
 
     static MaaTaskRunResult M(string entry, string text, double score)
     {

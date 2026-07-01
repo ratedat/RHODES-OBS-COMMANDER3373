@@ -35,6 +35,12 @@ public static class RhodesMaaLocalCandidateConverter
         if (string.Equals(profileId, "relicsFull", StringComparison.Ordinal))
             return RelicCandidates(taskResults).ToArray();
 
+        if (string.Equals(profileId, "is5ThoughtFull", StringComparison.Ordinal))
+            return ThoughtCandidates(taskResults).ToArray();
+
+        if (string.Equals(profileId, "is5AgeFull", StringComparison.Ordinal))
+            return AgeCandidates(taskResults).ToArray();
+
         return [];
     }
 
@@ -199,6 +205,79 @@ public static class RhodesMaaLocalCandidateConverter
         }
     }
 
+    private static IEnumerable<MaaCandidatePreview> AgeCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var textResults = taskResults
+            .Where(taskResult => taskResult.Succeeded && IsAgeEntry(taskResult.Entry))
+            .SelectMany(taskResult => PrimaryTextResults(taskResult.RecognitionDetailJson))
+            .Where(result => !string.IsNullOrWhiteSpace(result.Text))
+            .ToArray();
+        if (textResults.Length == 0)
+            yield break;
+
+        var rawText = string.Join("\n", textResults.Select(result => result.Text));
+        var normalizedText = NormalizeChoiceName(rawText);
+        if (string.IsNullOrWhiteSpace(normalizedText))
+            yield break;
+
+        var confidence = textResults.Max(result => result.Confidence ?? 0);
+        foreach (var effect in LoadSelectableEffects()
+            .Where(effect => effect.Slot == "age" && effect.CampaignId == "is5_sarkaz"))
+        {
+            var matched = AgeAliases(effect).Any(alias => normalizedText.Contains(alias, StringComparison.Ordinal));
+            if (!matched)
+                continue;
+
+            yield return new MaaCandidatePreview(
+                "age",
+                effect.Name,
+                effect.Id,
+                rawText,
+                Math.Max(0.70, confidence),
+                CampaignId: effect.CampaignId,
+                RecognitionKey: $"maa-local:age:{effect.Id}",
+                AgeId: effect.Id);
+        }
+    }
+
+    private static IEnumerable<MaaCandidatePreview> ThoughtCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var thoughts = LoadSelectableEffects()
+            .Where(effect => effect.Slot == "thought" && effect.CampaignId == "is5_sarkaz")
+            .ToArray();
+        var byNormalizedName = thoughts
+            .GroupBy(item => NormalizeChoiceName(item.Name), StringComparer.Ordinal)
+            .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+        var order = 0;
+
+        foreach (var taskResult in taskResults)
+        {
+            if (!taskResult.Succeeded || !IsThoughtNameEntry(taskResult.Entry))
+                continue;
+
+            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
+            {
+                foreach (var token in ChoiceNameTokens(textResult.Text))
+                {
+                    if (!byNormalizedName.TryGetValue(token.Normalized, out var thought))
+                        continue;
+
+                    yield return new MaaCandidatePreview(
+                        "thought",
+                        thought.Name,
+                        thought.Id,
+                        token.Raw,
+                        Math.Max(0.68, textResult.Confidence ?? 0),
+                        CampaignId: thought.CampaignId,
+                        RecognitionKey: $"maa-local:thought:{thought.Id}:{order}",
+                        ThoughtId: thought.Id);
+                    order++;
+                }
+            }
+        }
+    }
+
     private static bool IsOperatorNameEntry(string entry)
     {
         return entry.Equals("RhodesOperatorNameOcr", StringComparison.Ordinal)
@@ -214,14 +293,44 @@ public static class RhodesMaaLocalCandidateConverter
             || entry.Contains("relic.list_text", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsAgeEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is5_age_detail_text", StringComparison.Ordinal)
+            || entry.Equals("RhodesScreen_run_sarkaz_age_detail", StringComparison.Ordinal)
+            || entry.Contains("is5.age_detail_text", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsThoughtNameEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is5_thought_list_text", StringComparison.Ordinal)
+            || entry.Contains("is5.thought_list_text", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<string> AgeAliases(SelectableEffectCandidate effect)
+    {
+        return new[]
+            {
+                effect.Name,
+                $"{effect.ParentName}{effect.VariantLabel}",
+                $"{effect.GroupLabel}{effect.VariantLabel}",
+            }
+            .Select(NormalizeChoiceName)
+            .Where(alias => alias.Length >= 4)
+            .Distinct(StringComparer.Ordinal);
+    }
+
     private static IEnumerable<(string Raw, string Normalized)> ChoiceNameTokens(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
             yield break;
 
         var whole = NormalizeChoiceName(value);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         if (whole.Length >= 2)
+        {
+            seen.Add(whole);
             yield return (value.Trim(), whole);
+        }
 
         var parts = value.Split(
             [' ', '\t', '\r', '\n', '　', ',', '，', '、', '。', ';', '；', ':', '：', '/', '\\', '|'],
@@ -232,7 +341,7 @@ public static class RhodesMaaLocalCandidateConverter
         foreach (var part in parts)
         {
             var normalized = NormalizeChoiceName(part);
-            if (normalized.Length >= 2)
+            if (normalized.Length >= 2 && seen.Add(normalized))
                 yield return (part.Trim(), normalized);
         }
     }
@@ -446,4 +555,60 @@ public static class RhodesMaaLocalCandidateConverter
 
         return null;
     }
+
+    private static IReadOnlyList<SelectableEffectCandidate> LoadSelectableEffects()
+    {
+        var path = ResolveDataPath("selectable-effects.json");
+        if (string.IsNullOrWhiteSpace(path))
+            return [];
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        if (!root.TryGetProperty("selectableEffects", out var effects) || effects.ValueKind != JsonValueKind.Array)
+            return [];
+
+        return effects.EnumerateArray()
+            .Select(item => new SelectableEffectCandidate(
+                JsonString(item, "id"),
+                JsonString(item, "campaignId"),
+                JsonString(item, "slot"),
+                JsonString(item, "name"),
+                JsonString(item, "groupLabel"),
+                JsonString(item, "parentName"),
+                JsonString(item, "variantLabel")))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
+            .ToArray();
+    }
+
+    private static string ResolveDataPath(string fileName)
+    {
+        foreach (var dataRoot in DataRootCandidates().Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var path = Path.Combine(dataRoot, fileName);
+            if (File.Exists(path))
+                return path;
+        }
+        return "";
+    }
+
+    private static IEnumerable<string> DataRootCandidates()
+    {
+        foreach (var origin in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
+        {
+            var current = new DirectoryInfo(origin);
+            for (var i = 0; current is not null && i < 8; i++, current = current.Parent)
+            {
+                yield return Path.Combine(current.FullName, "data");
+            }
+        }
+    }
+
+    private sealed record SelectableEffectCandidate(
+        string Id,
+        string CampaignId,
+        string Slot,
+        string Name,
+        string GroupLabel,
+        string ParentName,
+        string VariantLabel);
 }
