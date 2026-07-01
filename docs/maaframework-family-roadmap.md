@@ -59,7 +59,8 @@ flowchart LR
 - 接続済み: `/api/ocr/glm/status`、`/api/ocr/glm/install`、`/api/ocr/glm/uninstall`、`/api/ocr/glm/ollama/*` による任意 GLM-OCR/Ollama 管理。
 - 接続済み: `/api/recognition/scan/status` による実行中/直近スキャン進捗確認。
 - 接続済み: Suki 側の保存操作から ADB path/serial/preset を `current-state.json` の既存 `adb` スキーマへ同期する。
-- 残作業: Suki 側から OCR engine/OBS/sidecar preference を `current-state.json` の既存設定スキーマへ保存する導線を強化する。
+- 接続済み: Suki 側の保存操作から表示列、選択/除外フィルター、overlay scroll speed、Suki出力部品設定を `preferences` へ同期する。
+- 残作業: Suki 側から OCR engine の選択UIとOBS/sidecarプレビュー起動を既存設定スキーマへ接続する。
 - 残作業: MAAFramework native `Tasker` 実行と Node API 経由の候補化を、同一のスキャン履歴/証跡モデルへ統合する。
 - 残作業: OBS/sidecar 出力設定を Suki 側の設定保存とプレビュー確認に接続する。
 
