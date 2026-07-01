@@ -280,11 +280,14 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ListBox Grid\.Row="2" ItemsSource="\{Binding FilteredRelicRows\}"/);
   assert.match(xaml, /UniformGrid Columns="\{Binding Columns\}"/);
   assert.match(xaml, /RelativeSource=\{RelativeSource AncestorType=Window\}/);
+  assert.match(xaml, /<Button Command="\{Binding DataContext\.ToggleChoiceSelectedCommand, RelativeSource=\{RelativeSource AncestorType=Window\}\}"/);
+  assert.doesNotMatch(xaml, /SelectionButtonLabel/);
+  assert.doesNotMatch(xaml, /ExclusionButtonLabel/);
+  assert.doesNotMatch(xaml, /ToggleChoiceExcludedCommand/);
   assert.doesNotMatch(xaml, /タグで検索/);
   assert.match(xaml, /OperatorShowSelectedFirst/);
   assert.match(xaml, /RelicShowSelectedFirst/);
   assert.match(xaml, /ToggleChoiceSelectedCommand/);
-  assert.match(xaml, /ToggleChoiceExcludedCommand/);
 });
 
 test("MAAFramework roadmap records 1280x720 as a 16:9 base coordinate system", async () => {
