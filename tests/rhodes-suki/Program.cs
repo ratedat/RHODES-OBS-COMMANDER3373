@@ -1210,6 +1210,8 @@ static void RoiDraftSourceUpdater()
     Equal("run.hope.current", result.TargetId, "roi source target");
     Equal("[1,2,3,4]", result.PreviousRoi, "roi previous value");
     Equal("[10,20,30,40]", result.UpdatedRoi, "roi updated value");
+    Equal(true, result.HasDiff, "roi diff visible");
+    Equal("差分: [1,2,3,4] -> [10,20,30,40]", result.DiffSummary, "roi diff summary");
     var root = JsonNode.Parse(updated)!.AsObject();
     var regions = root["ocrRegions"]!.AsArray();
     Equal(10, regions[0]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "updated roi x");

@@ -312,6 +312,22 @@ public sealed record MaaRoiDraftApplyResult(
 {
     public string BackupPath { get; init; } = "";
 
+    public bool HasDiff => Succeeded
+        && !string.IsNullOrWhiteSpace(TargetId)
+        && !string.IsNullOrWhiteSpace(UpdatedRoi);
+
+    public string TargetSummary => HasDiff
+        ? $"対象: {TargetId} / {SourcePath}"
+        : "対象: -";
+
+    public string DiffSummary => HasDiff
+        ? $"差分: {PreviousRoi} -> {UpdatedRoi}"
+        : "差分: -";
+
+    public string BackupSummary => string.IsNullOrWhiteSpace(BackupPath)
+        ? "backup: -"
+        : $"backup: {BackupPath}";
+
     public static MaaRoiDraftApplyResult Failed(string message)
     {
         return new MaaRoiDraftApplyResult(false, message, "", "", "", "");
