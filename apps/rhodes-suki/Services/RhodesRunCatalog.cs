@@ -92,14 +92,8 @@ public static class RhodesRunCatalog
                 var branch = JsonString(item, "branch");
                 var name = JsonString(item, "name");
                 var id = JsonString(item, "id");
-                var obtainMethods = ReadStringArray(item, "obtainMethods");
                 var recruitmentTags = ReadStringArray(item, "recruitmentTags");
-                var detailParts = new[]
-                    {
-                        obtainMethods.Count > 0 ? $"入手: {string.Join(" / ", obtainMethods)}" : "",
-                        recruitmentTags.Count > 0 ? $"タグ: {string.Join(" / ", recruitmentTags)}" : "",
-                    }
-                    .Where(part => !string.IsNullOrWhiteSpace(part));
+                var detail = recruitmentTags.Count > 0 ? $"タグ: {string.Join(" / ", recruitmentTags)}" : "";
                 var choice = new SukiChoiceItem(
                     "operator",
                     id,
@@ -112,8 +106,8 @@ public static class RhodesRunCatalog
                     rarity,
                     JsonNullableInt(item, "displayOrder") ?? index,
                     JsonBool(item, "hiddenByDefault") || JsonBool(item, "isJapanUnreleased"),
-                    string.Join(" / ", detailParts),
-                    $"{id} {name} {rarity} {operatorClass} {branch} {string.Join(" ", obtainMethods)} {string.Join(" ", recruitmentTags)}",
+                    detail,
+                    $"{id} {name} {rarity} {operatorClass} {branch} {string.Join(" ", recruitmentTags)}",
                     ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")));
                 choice.IsSelected = state.SelectedOperatorIds.Contains(id);
                 choice.IsExcluded = state.ExcludedOperatorIds.Contains(id);

@@ -102,6 +102,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(choiceFilter, /ShowSelectedFirst/);
   assert.match(choiceFilter, /HideExcluded/);
   assert.match(choiceFilter, /SelectedOnly/);
+  assert.match(choiceFilter, /OperatorClass/);
+  assert.match(choiceFilter, /OperatorBranch/);
+  assert.match(choiceFilter, /Category/);
+  assert.match(choiceFilter, /Rarity/);
   assert.match(models, /MaaTaskDetailSnapshot/);
   assert.match(models, /MaaResourceProfilePreview/);
   assert.match(models, /MaaCandidatePreview/);
@@ -149,6 +153,13 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /FilteredRelics/);
   assert.match(viewModel, /ToggleChoiceSelectedCommand/);
   assert.match(viewModel, /ToggleChoiceExcludedCommand/);
+  assert.match(viewModel, /PaneColumnOptions/);
+  assert.match(viewModel, /OperatorPaneColumns/);
+  assert.match(viewModel, /RelicPaneColumns/);
+  assert.match(viewModel, /ClampPaneColumns/);
+  assert.match(viewModel, /RefreshChoiceAfterMutation/);
+  assert.match(viewModel, /RefreshOperatorSummaries/);
+  assert.match(viewModel, /RefreshRelicSummaries/);
   assert.match(resource, /RhodesRunStatusTopBarOcr/);
   assert.match(resource, /RhodesOperatorCodenameFlag/);
   assert.match(resource, /OperatorCardCodeNameFlag\.png/);
@@ -252,6 +263,13 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /Text="\{Binding Detail\}"/);
   assert.match(xaml, /OperatorSearch/);
   assert.match(xaml, /RelicSearch/);
+  assert.match(xaml, /OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged/);
+  assert.match(xaml, /RelicSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged/);
+  assert.match(xaml, /PaneColumnOptions/);
+  assert.match(xaml, /OperatorPaneColumns/);
+  assert.match(xaml, /RelicPaneColumns/);
+  assert.match(xaml, /UniformGrid Columns="\{Binding OperatorPaneColumns\}"/);
+  assert.match(xaml, /UniformGrid Columns="\{Binding RelicPaneColumns\}"/);
   assert.match(xaml, /OperatorShowSelectedFirst/);
   assert.match(xaml, /RelicShowSelectedFirst/);
   assert.match(xaml, /ToggleChoiceSelectedCommand/);

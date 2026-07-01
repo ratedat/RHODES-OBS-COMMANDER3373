@@ -237,8 +237,11 @@ static void RunCatalogLoadsChoices()
 
     Equal(5, catalog.Campaigns.Count, "campaign count");
     Equal("IS#5 サルカズの炉辺奇談", is5.DisplayName, "campaign label");
+    var gummy = catalog.Operators.Single(item => item.Name == "グム" && item.OperatorClass == "重装");
     Equal(true, catalog.Operators.Any(item => item.Name == "グム" && item.OperatorClass == "重装"), "operator data");
-    Equal(true, File.Exists(catalog.Operators.Single(item => item.Name == "グム" && item.OperatorClass == "重装").ImagePath), "operator image path");
+    Equal(true, File.Exists(gummy.ImagePath), "operator image path");
+    Equal(false, gummy.Detail.Contains("入手", StringComparison.Ordinal), "operator obtain method hidden");
+    Equal(false, gummy.SearchText.Contains("公開求人", StringComparison.Ordinal), "operator obtain method search hidden");
     Equal(296, is5Relics.Length, "is5 relic count");
     Equal(true, File.Exists(is5Relics.First(item => item.Name == "特選獣肉缶詰").ImagePath), "relic image path");
     Equal(true, catalog.Current.SelectedRelicIds.Contains("is5_sarkaz_relic_254"), "current relic selection");
@@ -279,6 +282,23 @@ static void ChoiceFilters()
 
     var searched = RhodesChoiceFilter.Apply(items, new SukiChoiceFilterOptions(SearchText: "旗手")).ToArray();
     Equal("テンニンカ", searched.Single().Name, "search by detail");
+
+    var vanguards = RhodesChoiceFilter.Apply(items, new SukiChoiceFilterOptions(OperatorClass: "先鋒")).ToArray();
+    Equal(1, vanguards.Length, "class filter excludes hidden by default");
+    Equal("テンニンカ", vanguards[0].Name, "class filter item");
+
+    var rarity4 = RhodesChoiceFilter.Apply(items, new SukiChoiceFilterOptions(Rarity: "★4")).ToArray();
+    Equal(2, rarity4.Length, "rarity filter count");
+
+    var relics = new[]
+    {
+        new SukiChoiceItem("relic", "r1", "特選獣肉缶詰", "No.001 食品", "", "", "is5_sarkaz", "食品", 0, 1, false),
+        new SukiChoiceItem("relic", "r2", "古城の手記", "No.002 書物", "", "", "is5_sarkaz", "書物", 0, 2, false),
+        new SukiChoiceItem("relic", "r3", "別IS", "No.001 食品", "", "", "is4_sami", "食品", 0, 1, false),
+    };
+    var foodRelics = RhodesChoiceFilter.Apply(relics, new SukiChoiceFilterOptions(CampaignId: "is5_sarkaz", Category: "食品")).ToArray();
+    Equal(1, foodRelics.Length, "relic category filter count");
+    Equal("特選獣肉缶詰", foodRelics[0].Name, "relic category filter item");
 }
 
 static void Equal<T>(T expected, T actual, string label)

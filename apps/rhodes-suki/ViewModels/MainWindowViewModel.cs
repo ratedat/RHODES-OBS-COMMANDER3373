@@ -29,6 +29,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _operatorBranchFilter = "すべて";
     private string _relicSearch = "";
     private string _relicCategoryFilter = "すべて";
+    private int _operatorPaneColumns = 2;
+    private int _relicPaneColumns = 2;
     private string _sessionState;
     private string _sessionDetail;
     private string _captureState = "未取得";
@@ -127,6 +129,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OperatorClassOptions = [];
         OperatorBranchOptions = [];
         RelicCategoryOptions = [];
+        PaneColumnOptions = [1, 2, 3, 4];
         _operatorShowSelectedFirst = runCatalog.Current.OperatorShowSelectedFirst;
         _operatorHideExcluded = runCatalog.Current.OperatorHideExcluded;
         _operatorSelectedOnly = runCatalog.Current.OperatorSelectedOnly;
@@ -220,6 +223,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<string> OperatorBranchOptions { get; }
 
     public ObservableCollection<string> RelicCategoryOptions { get; }
+
+    public ObservableCollection<int> PaneColumnOptions { get; }
 
     public ObservableCollection<MaaResourceProfilePreview> ResourceProfiles { get; }
 
@@ -541,6 +546,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetProperty(ref _relicSelectedOnly, value))
                 return;
             RefreshRelicChoices();
+        }
+    }
+
+    public int OperatorPaneColumns
+    {
+        get => _operatorPaneColumns;
+        set
+        {
+            if (!SetProperty(ref _operatorPaneColumns, ClampPaneColumns(value)))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
+    public int RelicPaneColumns
+    {
+        get => _relicPaneColumns;
+        set
+        {
+            if (!SetProperty(ref _relicPaneColumns, ClampPaneColumns(value)))
+                return;
+            RefreshInspectorRows();
         }
     }
 
@@ -969,7 +996,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         item.IsSelected = !item.IsSelected;
         if (item.IsSelected)
             item.IsExcluded = false;
-        RefreshChoiceLists();
+        RefreshChoiceAfterMutation(item.Kind);
         StatusMessage = $"{item.Name}: {(item.IsSelected ? "選択しました。" : "選択を解除しました。")}";
         return Task.CompletedTask;
     }
@@ -982,7 +1009,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         item.IsExcluded = !item.IsExcluded;
         if (item.IsExcluded)
             item.IsSelected = false;
-        RefreshChoiceLists();
+        RefreshChoiceAfterMutation(item.Kind);
         StatusMessage = $"{item.Name}: {(item.IsExcluded ? "表示除外にしました。" : "表示除外を解除しました。")}";
         return Task.CompletedTask;
     }
@@ -1001,7 +1028,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             item.IsSelected = false;
         }
 
-        RefreshChoiceLists();
+        RefreshChoiceAfterBulkMutation(ChoiceTab == "relics" ? "relic" : "operator");
         StatusMessage = $"{ChoicePanelTitle}の表示中選択を解除しました。";
         return Task.CompletedTask;
     }
@@ -1277,6 +1304,57 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CampaignHeaderDetail));
     }
 
+    private void RefreshChoiceAfterMutation(string kind)
+    {
+        if (kind == "relic")
+        {
+            if (RelicShowSelectedFirst || RelicHideExcluded || RelicSelectedOnly)
+                RefreshRelicChoices();
+            else
+                RefreshRelicSummaries();
+            return;
+        }
+
+        if (OperatorShowSelectedFirst || OperatorHideExcluded || OperatorSelectedOnly)
+            RefreshOperatorChoices();
+        else
+            RefreshOperatorSummaries();
+    }
+
+    private void RefreshChoiceAfterBulkMutation(string kind)
+    {
+        if (kind == "relic")
+        {
+            if (RelicShowSelectedFirst || RelicSelectedOnly)
+                RefreshRelicChoices();
+            else
+                RefreshRelicSummaries();
+            return;
+        }
+
+        if (OperatorShowSelectedFirst || OperatorSelectedOnly)
+            RefreshOperatorChoices();
+        else
+            RefreshOperatorSummaries();
+    }
+
+    private void RefreshOperatorSummaries()
+    {
+        OnPropertyChanged(nameof(OperatorListSummary));
+        OnPropertyChanged(nameof(RunContextSummary));
+        OnPropertyChanged(nameof(CampaignHeaderDetail));
+        RefreshInspectorRows();
+    }
+
+    private void RefreshRelicSummaries()
+    {
+        OnPropertyChanged(nameof(RelicListSummary));
+        OnPropertyChanged(nameof(RunContextSummary));
+        OnPropertyChanged(nameof(CampaignHeaderDetail));
+        RefreshCampaignPreviews();
+        RefreshInspectorRows();
+    }
+
     private void RefreshOperatorChoices()
     {
         ReplaceCollection(
@@ -1368,6 +1446,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         value = "すべて";
         OnPropertyChanged(propertyName);
+    }
+
+    private static int ClampPaneColumns(int value)
+    {
+        return Math.Clamp(value, 1, 4);
     }
 
     private static void ReplaceCollection<T>(ObservableCollection<T> target, IEnumerable<T> source)

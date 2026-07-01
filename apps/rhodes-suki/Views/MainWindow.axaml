@@ -219,38 +219,47 @@
             <Grid Grid.Row="2">
               <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsOperatorsPanelVisible}">
                 <Grid ColumnDefinitions="*,110,145,145" ColumnSpacing="8">
-                  <TextBox Text="{Binding OperatorSearch, Mode=TwoWay}" PlaceholderText="名前、職業、職分、タグで検索" />
+                  <TextBox Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分、タグで検索" />
                   <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" />
                   <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" />
                   <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" />
                 </Grid>
 
-                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="14">
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,76,Auto,Auto,Auto" ColumnSpacing="14">
                   <TextBlock Text="{Binding OperatorListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
-                  <CheckBox Grid.Column="1" Content="優先表示" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" />
-                  <CheckBox Grid.Column="2" Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" />
-                  <CheckBox Grid.Column="3" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
+                  <TextBlock Grid.Column="1" Text="列" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding PaneColumnOptions}" SelectedItem="{Binding OperatorPaneColumns, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="3" Content="優先表示" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
                 </Grid>
 
                 <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                   <ItemsControl ItemsSource="{Binding FilteredOperators}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Columns="{Binding OperatorPaneColumns}" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="86">
-                          <Grid ColumnDefinitions="64,*,92,100" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
-                            <Border Grid.RowSpan="3" Width="54" Height="54" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
+                        <Border CornerRadius="7" Padding="9" Margin="0,0,8,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="132">
+                          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="7">
+                            <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+                              <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
                               <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
-                            </Border>
-
-                            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                              <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                              <TextBlock Grid.Column="1" Text="{Binding StateLabel}" FontSize="11" Opacity="0.72" VerticalAlignment="Center" />
+                              </Border>
+                              <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                              </StackPanel>
                             </Grid>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Heading}" FontSize="12" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.58" />
-
-                            <Button Grid.Column="2" Grid.RowSpan="3" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
-                            <Button Grid.Column="3" Grid.RowSpan="3" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.58" />
+                            <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="7">
+                              <Button Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                              <Button Grid.Column="1" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                            </Grid>
                           </Grid>
                         </Border>
                       </DataTemplate>
@@ -261,36 +270,45 @@
 
               <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsRelicsPanelVisible}">
                 <Grid ColumnDefinitions="*,260" ColumnSpacing="8">
-                  <TextBox Text="{Binding RelicSearch, Mode=TwoWay}" PlaceholderText="秘宝名、番号、効果で検索" />
+                  <TextBox Text="{Binding RelicSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="秘宝名、番号、効果で検索" />
                   <ComboBox Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" />
                 </Grid>
 
-                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="14">
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,76,Auto,Auto,Auto" ColumnSpacing="14">
                   <TextBlock Text="{Binding RelicListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
-                  <CheckBox Grid.Column="1" Content="優先表示" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" />
-                  <CheckBox Grid.Column="2" Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" />
-                  <CheckBox Grid.Column="3" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
+                  <TextBlock Grid.Column="1" Text="列" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding PaneColumnOptions}" SelectedItem="{Binding RelicPaneColumns, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="3" Content="優先表示" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
                 </Grid>
 
                 <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                   <ItemsControl ItemsSource="{Binding FilteredRelics}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Columns="{Binding RelicPaneColumns}" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="96">
-                          <Grid ColumnDefinitions="64,*,92,100" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
-                            <Border Grid.RowSpan="3" Width="54" Height="54" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
+                        <Border CornerRadius="7" Padding="9" Margin="0,0,8,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="148">
+                          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="7">
+                            <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+                              <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
                               <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
-                            </Border>
-
-                            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                              <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                              <TextBlock Grid.Column="1" Text="{Binding StateLabel}" FontSize="11" Opacity="0.72" VerticalAlignment="Center" />
+                              </Border>
+                              <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                              </StackPanel>
                             </Grid>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Heading}" FontSize="12" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.58" />
-
-                            <Button Grid.Column="2" Grid.RowSpan="3" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
-                            <Button Grid.Column="3" Grid.RowSpan="3" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="3" Opacity="0.58" />
+                            <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="7">
+                              <Button Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                              <Button Grid.Column="1" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                            </Grid>
                           </Grid>
                         </Border>
                       </DataTemplate>
