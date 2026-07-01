@@ -1290,6 +1290,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+            CandidateApiProfileId(),
+            ResourceTaskResults);
+        if (localCandidates.Count > 0)
+        {
+            foreach (var candidate in localCandidates)
+            {
+                CandidateResults.Add(candidate);
+            }
+
+            RefreshInspectorRows();
+            StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
+                ? $"ローカル候補化しました: {CandidateResults.Count}件"
+                : $"候補化APIに接続できないためローカル候補化しました: {CandidateResults.Count}件";
+            return;
+        }
+
         foreach (var candidate in RhodesMaaResultPreview.FromTaskResults(ResourceTaskResults))
         {
             CandidateResults.Add(candidate);

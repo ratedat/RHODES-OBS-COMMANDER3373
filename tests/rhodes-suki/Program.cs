@@ -10,6 +10,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA hit without detail falls back to a simple candidate", HitFallback),
     ("Candidate preview exposes stable debugger identity", CandidatePreviewIdentity),
     ("MAA candidate API extraction preserves structured ids", CandidateApiExtraction),
+    ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
@@ -191,6 +192,39 @@ static void CandidateApiExtraction()
     Equal("thought_a", candidates[1].ThoughtId, "thought id");
     Equal("thought_a", candidates[1].Identity, "thought identity");
     Equal("age_prime", candidates[2].AgeId, "age id");
+}
+
+static void LocalCandidateConverterRunStatus()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesOcrRegion_run_hope_current", "3", 0.94),
+            M("RhodesOcrRegion_run_hope_max", "8", 0.95),
+            M("RhodesTemplate_runStatusFull_run_ingot", "2O", 0.96),
+            M("RhodesOcrRegion_run_life_points", "4", 0.91),
+            M("RhodesOcrRegion_run_shield", "図", 0.89),
+            M("RhodesOcrRegion_run_command_level", "I", 0.88),
+            M("RhodesTemplate_runStatusFull_run_idea_current", "7", 0.90),
+            M("RhodesOcrRegion_operator_name", "グム", 0.99),
+        ]);
+
+    Equal("hope|maxHope|ingot|lifePoints|shield|commandLevel|idea", string.Join("|", candidates.Select(item => item.Field)), "local run fields");
+    Equal("3|8|20|4|2|1|7", string.Join("|", candidates.Select(item => item.Value)), "local run values");
+    Equal("is5_sarkaz", candidates.Single(item => item.Field == "idea").CampaignId, "idea campaign id");
+    Equal("maa-local:ingot:run.ingot", candidates.Single(item => item.Field == "ingot").RecognitionKey, "local recognition key");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"TaskId=1; detail={{\"best\":{{\"text\":\"{text}\",\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}}}",
+            "OCR",
+            true);
+    }
 }
 
 static void AdbPresets()
