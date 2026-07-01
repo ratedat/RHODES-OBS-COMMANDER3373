@@ -36,6 +36,16 @@ public static class RhodesChoiceFilter
             .ToArray();
     }
 
+    public static bool RequiresFullRefreshAfterSelectionMutation(SukiChoiceFilterOptions options)
+    {
+        return options.ShowSelectedFirst || options.SelectedOnly;
+    }
+
+    public static bool RequiresFullRefreshAfterExclusionMutation(SukiChoiceFilterOptions options)
+    {
+        return options.ShowSelectedFirst || options.HideExcluded || options.SelectedOnly;
+    }
+
     private static bool IsAll(string value)
     {
         return string.IsNullOrWhiteSpace(value) || value == "すべて" || value.Equals("all", StringComparison.OrdinalIgnoreCase);

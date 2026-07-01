@@ -112,6 +112,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(choiceFilter, /ShowSelectedFirst/);
   assert.match(choiceFilter, /HideExcluded/);
   assert.match(choiceFilter, /SelectedOnly/);
+  assert.match(choiceFilter, /RequiresFullRefreshAfterSelectionMutation/);
+  assert.match(choiceFilter, /RequiresFullRefreshAfterExclusionMutation/);
   assert.match(choiceFilter, /OperatorClass/);
   assert.match(choiceFilter, /OperatorBranch/);
   assert.match(choiceFilter, /Category/);
@@ -212,7 +214,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /OperatorPaneColumns/);
   assert.match(viewModel, /RelicPaneColumns/);
   assert.match(viewModel, /ClampPaneColumns/);
-  assert.match(viewModel, /RefreshChoiceAfterMutation/);
+  assert.match(viewModel, /RefreshChoiceAfterSelectionMutation/);
+  assert.match(viewModel, /RefreshChoiceAfterExclusionMutation/);
+  assert.match(viewModel, /PersistChoiceStateInBackground\(\);/);
   assert.match(viewModel, /RefreshOperatorSummaries/);
   assert.match(viewModel, /RefreshRelicSummaries/);
   assert.match(viewModel, /RefreshOperatorRows/);

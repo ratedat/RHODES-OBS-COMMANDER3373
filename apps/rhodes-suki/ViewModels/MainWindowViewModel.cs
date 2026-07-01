@@ -1158,38 +1158,40 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
-    private async Task ToggleChoiceSelectedAsync(object? parameter)
+    private Task ToggleChoiceSelectedAsync(object? parameter)
     {
         if (parameter is not SukiChoiceItem item)
-            return;
+            return Task.CompletedTask;
 
         item.IsSelected = !item.IsSelected;
         if (item.IsSelected)
             item.IsExcluded = false;
-        RefreshChoiceAfterMutation(item.Kind);
-        if (await PersistChoiceStateAsync())
-            StatusMessage = $"{item.Name}: {(item.IsSelected ? "選択しました。" : "選択を解除しました。")}";
+        RefreshChoiceAfterSelectionMutation(item.Kind);
+        PersistChoiceStateInBackground();
+        StatusMessage = $"{item.Name}: {(item.IsSelected ? "選択しました。" : "選択を解除しました。")}";
+        return Task.CompletedTask;
     }
 
-    private async Task ToggleChoiceExcludedAsync(object? parameter)
+    private Task ToggleChoiceExcludedAsync(object? parameter)
     {
         if (parameter is not SukiChoiceItem item)
-            return;
+            return Task.CompletedTask;
 
         item.IsExcluded = !item.IsExcluded;
         if (item.IsExcluded)
             item.IsSelected = false;
-        RefreshChoiceAfterMutation(item.Kind);
-        if (await PersistChoiceStateAsync())
-            StatusMessage = $"{item.Name}: {(item.IsExcluded ? "表示除外にしました。" : "表示除外を解除しました。")}";
+        RefreshChoiceAfterExclusionMutation(item.Kind);
+        PersistChoiceStateInBackground();
+        StatusMessage = $"{item.Name}: {(item.IsExcluded ? "表示除外にしました。" : "表示除外を解除しました。")}";
+        return Task.CompletedTask;
     }
 
-    private async Task ClearVisibleChoicesAsync()
+    private Task ClearVisibleChoicesAsync()
     {
         if (ChoiceTab == "recognition")
         {
             StatusMessage = "認識タスクには手動選択がありません。";
-            return;
+            return Task.CompletedTask;
         }
 
         var target = ChoiceTab == "relics" ? FilteredRelics : FilteredOperators;
@@ -1199,8 +1201,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         RefreshChoiceAfterBulkMutation(ChoiceTab == "relics" ? "relic" : "operator");
-        if (await PersistChoiceStateAsync())
-            StatusMessage = $"{ChoicePanelTitle}の表示中選択を解除しました。";
+        PersistChoiceStateInBackground();
+        StatusMessage = $"{ChoicePanelTitle}の表示中選択を解除しました。";
+        return Task.CompletedTask;
     }
 
     private Task ApplyAdbPresetAsync(MaaAdbPresetPreview? preset)
@@ -1573,18 +1576,51 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CampaignHeaderDetail));
     }
 
-    private void RefreshChoiceAfterMutation(string kind)
+    private void RefreshChoiceAfterSelectionMutation(string kind)
     {
         if (kind == "relic")
         {
-            if (RelicShowSelectedFirst || RelicHideExcluded || RelicSelectedOnly)
+            var options = new SukiChoiceFilterOptions(
+                ShowSelectedFirst: RelicShowSelectedFirst,
+                HideExcluded: RelicHideExcluded,
+                SelectedOnly: RelicSelectedOnly);
+            if (RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(options))
                 RefreshRelicChoices();
             else
                 RefreshRelicSummaries();
             return;
         }
 
-        if (OperatorShowSelectedFirst || OperatorHideExcluded || OperatorSelectedOnly)
+        var operatorOptions = new SukiChoiceFilterOptions(
+            ShowSelectedFirst: OperatorShowSelectedFirst,
+            HideExcluded: OperatorHideExcluded,
+            SelectedOnly: OperatorSelectedOnly);
+        if (RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(operatorOptions))
+            RefreshOperatorChoices();
+        else
+            RefreshOperatorSummaries();
+    }
+
+    private void RefreshChoiceAfterExclusionMutation(string kind)
+    {
+        if (kind == "relic")
+        {
+            var options = new SukiChoiceFilterOptions(
+                ShowSelectedFirst: RelicShowSelectedFirst,
+                HideExcluded: RelicHideExcluded,
+                SelectedOnly: RelicSelectedOnly);
+            if (RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(options))
+                RefreshRelicChoices();
+            else
+                RefreshRelicSummaries();
+            return;
+        }
+
+        var operatorOptions = new SukiChoiceFilterOptions(
+            ShowSelectedFirst: OperatorShowSelectedFirst,
+            HideExcluded: OperatorHideExcluded,
+            SelectedOnly: OperatorSelectedOnly);
+        if (RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(operatorOptions))
             RefreshOperatorChoices();
         else
             RefreshOperatorSummaries();

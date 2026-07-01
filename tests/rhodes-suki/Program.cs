@@ -997,6 +997,11 @@ static void ChoiceFilters()
     var foodRelics = RhodesChoiceFilter.Apply(relics, new SukiChoiceFilterOptions(CampaignId: "is5_sarkaz", Category: "食品")).ToArray();
     Equal(1, foodRelics.Length, "relic category filter count");
     Equal("特選獣肉缶詰", foodRelics[0].Name, "relic category filter item");
+
+    Equal(false, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(HideExcluded: true)), "selection does not rebuild for hide excluded only");
+    Equal(true, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(ShowSelectedFirst: true)), "selection rebuilds for selected first");
+    Equal(true, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(SelectedOnly: true)), "selection rebuilds for selected only");
+    Equal(true, RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(new SukiChoiceFilterOptions(HideExcluded: true)), "exclusion rebuilds for hide excluded");
 }
 
 static void ChoiceRows()
