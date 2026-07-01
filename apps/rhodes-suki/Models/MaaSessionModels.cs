@@ -340,9 +340,28 @@ public sealed record MaaRoiBatchApplyResult(
     int AppliedCount,
     IReadOnlyList<MaaRoiDraftApplyResult> Results)
 {
+    public string MaaTasksBackupPath { get; init; } = "";
+
+    public string ScanProfilesBackupPath { get; init; } = "";
+
     public string Summary => Succeeded
         ? $"ROI一括適用: {AppliedCount}件"
         : $"ROI一括適用失敗: {Message}";
+
+    public string BackupSummary
+    {
+        get
+        {
+            var backups = new[]
+            {
+                string.IsNullOrWhiteSpace(MaaTasksBackupPath) ? "" : $"maa={MaaTasksBackupPath}",
+                string.IsNullOrWhiteSpace(ScanProfilesBackupPath) ? "" : $"scan={ScanProfilesBackupPath}",
+            }
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToArray();
+            return backups.Length == 0 ? "backup: -" : $"backup: {string.Join(" / ", backups)}";
+        }
+    }
 
     public static MaaRoiBatchApplyResult Failed(string message, IReadOnlyList<MaaRoiDraftApplyResult>? results = null)
     {

@@ -262,9 +262,13 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /ExportSelectedRoiDraftCommand/);
   assert.match(viewModel, /PreviewSelectedRoiDraftApplyCommand/);
   assert.match(viewModel, /ApplySelectedRoiDraftCommand/);
+  assert.match(viewModel, /PreviewVisibleRoiDraftsApplyCommand/);
+  assert.match(viewModel, /ApplyVisibleRoiDraftsCommand/);
+  assert.match(viewModel, /VisibleResourceRoiDrafts/);
   assert.match(viewModel, /RegenerateMaaResourceCommand/);
   assert.match(viewModel, /MaaResourceGenerationResult/);
   assert.match(viewModel, /RoiDraftApplyResult/);
+  assert.match(viewModel, /RoiBatchApplyResult/);
   assert.match(viewModel, /RhodesMaaRoiEditDraftLog\.SaveAsync/);
   assert.match(viewModel, /ResolveRoiDraftSourcePath/);
   assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToSourceJson/);
@@ -279,6 +283,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(roiDraftSourceUpdater, /templateOcrRegions/);
   assert.match(roiDraftSourceUpdater, /searchRoi/);
   assert.match(roiDraftBatchSourceUpdater, /ApplyToSourceJsons/);
+  assert.match(roiDraftBatchSourceUpdater, /ApplyToSourceFilesAsync/);
   assert.match(roiDraftBatchSourceUpdater, /MaaRoiBatchApplyResult/);
   assert.match(roiDraftBatchSourceUpdater, /updatedMaaTasksJson/);
   assert.match(roiDraftBatchSourceUpdater, /updatedScanProfilesJson/);
@@ -435,12 +440,16 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ExportSelectedRoiDraftCommand/);
   assert.match(xaml, /PreviewSelectedRoiDraftApplyCommand/);
   assert.match(xaml, /ApplySelectedRoiDraftCommand/);
+  assert.match(xaml, /PreviewVisibleRoiDraftsApplyCommand/);
+  assert.match(xaml, /ApplyVisibleRoiDraftsCommand/);
   assert.match(xaml, /RegenerateMaaResourceCommand/);
   assert.match(xaml, /MaaResourceGenerationResult\.Message/);
   assert.match(xaml, /RoiDraftApplyResult\.Message/);
   assert.match(xaml, /RoiDraftApplyResult\.TargetSummary/);
   assert.match(xaml, /RoiDraftApplyResult\.DiffSummary/);
   assert.match(xaml, /RoiDraftApplyResult\.BackupSummary/);
+  assert.match(xaml, /RoiBatchApplyResult\.Summary/);
+  assert.match(xaml, /RoiBatchApplyResult\.BackupSummary/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRoiPreviewRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedOcrDetailRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRecognitionScanLogRow, Mode=TwoWay\}"/);

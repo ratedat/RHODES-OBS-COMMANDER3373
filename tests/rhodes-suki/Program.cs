@@ -1343,6 +1343,27 @@ static void RoiDraftBatchSourceUpdater()
     Equal(1, failed.AppliedCount, "batch roi reports successful attempts before failure");
     Equal(maaTasks, failedMaaTasks, "failed batch keeps maa source unchanged");
     Equal(scanProfiles, failedScanProfiles, "failed batch keeps scan source unchanged");
+
+    var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-roi-batch-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var maaTasksPath = Path.Combine(directory, "maa-tasks.json");
+        var scanProfilesPath = Path.Combine(directory, "scan-profiles.json");
+        File.WriteAllText(maaTasksPath, maaTasks);
+        File.WriteAllText(scanProfilesPath, scanProfiles);
+        var fileResult = RhodesMaaRoiDraftBatchSourceUpdater.ApplyToSourceFilesAsync(maaTasksPath, scanProfilesPath, drafts).GetAwaiter().GetResult();
+        Equal(true, fileResult.Succeeded, "batch roi file update succeeded");
+        Equal(true, File.Exists(fileResult.MaaTasksBackupPath), "batch maa backup exists");
+        Equal(true, File.Exists(fileResult.ScanProfilesBackupPath), "batch scan backup exists");
+        Equal(true, fileResult.BackupSummary.Contains("maa=", StringComparison.Ordinal), "batch backup summary maa");
+        Equal(101, JsonNode.Parse(File.ReadAllText(maaTasksPath))!["ocrRegions"]!.AsArray()[0]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "batch file updated maa roi");
+        Equal(201, JsonNode.Parse(File.ReadAllText(scanProfilesPath))!["profiles"]!.AsArray()[0]!.AsObject()["templateOcrRegions"]!.AsArray()[0]!.AsObject()["searchRoi"]!.AsObject()["x"]!.GetValue<int>(), "batch file updated scan roi");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
 }
 
 static void MaaGeneratedResourceBuilder()

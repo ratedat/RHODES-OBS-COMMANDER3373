@@ -38,6 +38,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastResourceTaskResultsPath = "";
     private string _lastRoiDraftPath = "";
     private MaaRoiDraftApplyResult _roiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
+    private MaaRoiBatchApplyResult _roiBatchApplyResult = MaaRoiBatchApplyResult.Failed("未確認");
     private MaaResourceGenerationResult _maaResourceGenerationResult = MaaResourceGenerationResult.Failed("未実行");
     private string _rhodesApiUrl = "http://127.0.0.1:5173";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
@@ -211,6 +212,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ExportSelectedRoiDraftCommand = new AsyncRelayCommand(ExportSelectedRoiDraftAsync);
         PreviewSelectedRoiDraftApplyCommand = new AsyncRelayCommand(PreviewSelectedRoiDraftApplyAsync);
         ApplySelectedRoiDraftCommand = new AsyncRelayCommand(ApplySelectedRoiDraftAsync);
+        PreviewVisibleRoiDraftsApplyCommand = new AsyncRelayCommand(PreviewVisibleRoiDraftsApplyAsync);
+        ApplyVisibleRoiDraftsCommand = new AsyncRelayCommand(ApplyVisibleRoiDraftsAsync);
         RegenerateMaaResourceCommand = new AsyncRelayCommand(RegenerateMaaResourceAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
@@ -848,6 +851,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public MaaRoiBatchApplyResult RoiBatchApplyResult
+    {
+        get => _roiBatchApplyResult;
+        private set
+        {
+            if (!SetProperty(ref _roiBatchApplyResult, value))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
     public MaaResourceGenerationResult MaaResourceGenerationResult
     {
         get => _maaResourceGenerationResult;
@@ -995,6 +1009,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand PreviewSelectedRoiDraftApplyCommand { get; }
 
     public ICommand ApplySelectedRoiDraftCommand { get; }
+
+    public ICommand PreviewVisibleRoiDraftsApplyCommand { get; }
+
+    public ICommand ApplyVisibleRoiDraftsCommand { get; }
 
     public ICommand RegenerateMaaResourceCommand { get; }
 
@@ -1825,6 +1843,63 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = result.Succeeded
                 ? $"ROIを適用しました: {result.TargetId} / backup={result.BackupPath}"
                 : $"ROI適用失敗: {result.Message}";
+        });
+    }
+
+    private async Task PreviewVisibleRoiDraftsApplyAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var drafts = VisibleResourceRoiDrafts();
+            if (drafts.Count == 0)
+            {
+                RoiBatchApplyResult = MaaRoiBatchApplyResult.Failed("表示中のResource ROI候補がありません。");
+                StatusMessage = RoiBatchApplyResult.Message;
+                return;
+            }
+
+            var maaTasksPath = ResolveMaaTasksSourcePath();
+            var scanProfilesPath = ResolveScanProfilesSourcePath();
+            if (!File.Exists(maaTasksPath) || !File.Exists(scanProfilesPath))
+            {
+                RoiBatchApplyResult = MaaRoiBatchApplyResult.Failed($"ROI生成元JSONが見つかりません: maa={maaTasksPath} / scan={scanProfilesPath}");
+                StatusMessage = RoiBatchApplyResult.Message;
+                return;
+            }
+
+            var result = RhodesMaaRoiDraftBatchSourceUpdater.ApplyToSourceJsons(
+                await File.ReadAllTextAsync(maaTasksPath),
+                await File.ReadAllTextAsync(scanProfilesPath),
+                drafts,
+                out _,
+                out _);
+            RoiBatchApplyResult = result;
+            StatusMessage = result.Succeeded
+                ? $"ROI一括適用プレビュー: {result.AppliedCount}件"
+                : $"ROI一括適用プレビュー失敗: {result.Message}";
+        });
+    }
+
+    private async Task ApplyVisibleRoiDraftsAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var drafts = VisibleResourceRoiDrafts();
+            if (drafts.Count == 0)
+            {
+                RoiBatchApplyResult = MaaRoiBatchApplyResult.Failed("表示中のResource ROI候補がありません。");
+                StatusMessage = RoiBatchApplyResult.Message;
+                return;
+            }
+
+            var result = await RhodesMaaRoiDraftBatchSourceUpdater.ApplyToSourceFilesAsync(
+                ResolveMaaTasksSourcePath(),
+                ResolveScanProfilesSourcePath(),
+                drafts);
+            RoiBatchApplyResult = result;
+            StatusMessage = result.Succeeded
+                ? $"ROIを一括適用しました: {result.AppliedCount}件 / {result.BackupSummary}"
+                : $"ROI一括適用失敗: {result.Message}";
         });
     }
 
@@ -2741,6 +2816,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return RhodesMaaRoiDraftSourceUpdater.UsesScanProfilesSource(draft)
             ? ResolveScanProfilesSourcePath()
             : ResolveMaaTasksSourcePath();
+    }
+
+    private IReadOnlyList<MaaRoiEditDraft> VisibleResourceRoiDrafts()
+    {
+        return RoiPreviewRows
+            .Where(row => row.IsResourceRoiCandidate)
+            .Select(MaaRoiEditDraft.FromPreview)
+            .Where(draft => draft.HasSelection && draft.IsResourceRoiCandidate)
+            .ToArray();
     }
 
     private static string ResolveGeneratedPipelinePath()

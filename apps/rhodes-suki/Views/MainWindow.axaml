@@ -858,6 +858,16 @@
                   </Grid>
                 </Border>
 
+                <Border CornerRadius="7" Padding="9" Background="#121A1C" BorderBrush="#2E4448" BorderThickness="1">
+                  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                    <TextBlock Text="表示中ROI一括" FontSize="13" FontWeight="SemiBold" />
+                    <Button Grid.Column="1" Content="全候補確認" Command="{Binding PreviewVisibleRoiDraftsApplyCommand}" Padding="8,3" />
+                    <Button Grid.Column="2" Content="全候補適用" Command="{Binding ApplyVisibleRoiDraftsCommand}" Padding="8,3" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding RoiBatchApplyResult.Summary}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.66" />
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding RoiBatchApplyResult.BackupSummary}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.50" />
+                  </Grid>
+                </Border>
+
                 <Button Content="{Binding MaaResourceGenerationResult.Message}" Command="{Binding RegenerateMaaResourceCommand}" HorizontalContentAlignment="Left" Padding="9,6" />
 
                 <ListBox ItemsSource="{Binding RoiPreviewRows}" SelectedItem="{Binding SelectedRoiPreviewRow, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">

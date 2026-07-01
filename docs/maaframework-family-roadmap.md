@@ -81,7 +81,8 @@ flowchart LR
 - 接続済み: `RhodesTemplate_*` のROI編集ドラフトを `data/recognition/scan-profiles.json` の `templateOcrRegions[].searchRoi` へ対応付け、バックアップ付きで適用できる。
 - 接続済み: ROIドラフト適用後の対象ファイル、target、before/after、backupをUI内で確認できる。
 - 接続済み: 複数ROIドラフトを `maa-tasks.json` と `scan-profiles.json` の両生成元へ振り分け、全件成功時だけ更新JSONを返すバッチ適用基盤を追加した。
-- 残作業: 複数ROIドラフトのUI選択、差分一覧、バックアップ付き一括ファイル書き込みを追加する。
+- 接続済み: 表示中のResource ROI候補を一括プレビューし、`maa-tasks.json` / `scan-profiles.json` を各1回バックアップして一括適用できる。
+- 残作業: 複数ROIドラフトの差分一覧をUIで個別に確認し、適用対象をチェックで絞れるようにする。
 
 ## First Milestone
 - SukiUI shell が起動する
