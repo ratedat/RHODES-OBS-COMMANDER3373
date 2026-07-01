@@ -33,6 +33,7 @@ var tests = new (string Name, Action Run)[]
     ("Recognition candidate applier keeps the best duplicate run status candidate", CandidateRunStatusApplyBestDuplicate),
     ("Recognition candidate applier can select operator and relic candidates", CandidateChoiceApply),
     ("Recognition candidate applier can apply IS5 thought and age candidates", CandidateIs5SpecialApply),
+    ("Recognition candidate applier can apply IS4 revelation and IS6 coin candidates", CandidateOtherSpecialApply),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
 
@@ -188,18 +189,47 @@ static void CandidateApiExtraction()
                 "rawText": "全盛期",
                 "confidence": 0.88,
                 "ageId": "age_prime"
+              },
+              {
+                "kind": "revelation",
+                "label": "啓示板",
+                "value": "fallback",
+                "rawText": "修辞A",
+                "confidence": 0.84,
+                "campaignId": "is4_sami",
+                "fieldId": "revelationBoard",
+                "slotKind": "rhetoric",
+                "effectId": "rhetoric_a"
+              },
+              {
+                "kind": "coin",
+                "name": "通宝A",
+                "value": "fallback_coin",
+                "rawText": "通宝A",
+                "confidence": 0.83,
+                "campaignId": "is6_sui",
+                "fieldId": "coins",
+                "coinId": "coin_a",
+                "statusId": "status_a",
+                "face": "back",
+                "count": 2
               }
             ]
           }
         }
         """);
 
-    Equal(3, candidates.Count, "api candidate count");
+    Equal(5, candidates.Count, "api candidate count");
     Equal("hope", candidates[0].Label, "field fallback label");
     Equal("3", candidates[0].Value, "numeric value text");
     Equal("thought_a", candidates[1].ThoughtId, "thought id");
     Equal("thought_a", candidates[1].Identity, "thought identity");
     Equal("age_prime", candidates[2].AgeId, "age id");
+    Equal("rhetoric_a", candidates[3].EffectId, "revelation effect id");
+    Equal("coin_a", candidates[4].CoinId, "coin id");
+    Equal("status_a", candidates[4].StatusId, "coin status id");
+    Equal("back", candidates[4].Face, "coin face");
+    Equal(2, candidates[4].Count, "coin count");
 }
 
 static void CandidateMergerSupplementsLocalCandidates()
@@ -209,6 +239,8 @@ static void CandidateMergerSupplementsLocalCandidates()
             new MaaCandidatePreview("runStatus", "希望", "3", "3", 0.94, Field: "hope"),
             new MaaCandidatePreview("operator", "グム", "gummy", "グム", 0.91, OperatorId: "gummy"),
             new MaaCandidatePreview("thought", "枯れ木と若枝", "fallback", "枯れ木と若枝", 0.91, CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
+            new MaaCandidatePreview("revelation", "修辞A", "fallback", "修辞A", 0.91, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "rhetoric", EffectId: "rhetoric_a"),
+            new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.91, CampaignId: "is6_sui", CoinId: "coin_a", Count: 1),
         ],
         [
             new MaaCandidatePreview("runStatus", "希望", "3", "3", 0.99, Field: "hope"),
@@ -218,12 +250,18 @@ static void CandidateMergerSupplementsLocalCandidates()
             new MaaCandidatePreview("thought", "枯れ木と若枝", "fallback", "枯れ木と若枝", 0.88, CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
             new MaaCandidatePreview("thought", "走る都市", "fallback", "走る都市", 0.87, CampaignId: "is5_sarkaz", ThoughtId: "thought_b"),
             new MaaCandidatePreview("age", "天災の時代（全盛期）", "age_prime", "天災の時代（全盛期）", 0.9, CampaignId: "is5_sarkaz", AgeId: "age_prime"),
+            new MaaCandidatePreview("revelation", "修辞A", "fallback", "修辞A", 0.99, CampaignId: "is4_sami", FieldId: "revelation", SlotKind: "rhetoric", EffectId: "rhetoric_a"),
+            new MaaCandidatePreview("revelation", "本因A", "fallback", "本因A", 0.89, CampaignId: "is4_sami", FieldId: "revelation", SlotKind: "cause", EffectId: "cause_a"),
+            new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.99, CampaignId: "is6_sui", CoinId: "coin_a", Count: 1),
+            new MaaCandidatePreview("coin", "通宝A裏", "fallback", "通宝A", 0.89, CampaignId: "is6_sui", CoinId: "coin_a", Face: "back", Count: 1),
         ]);
 
     Equal("hope|maxHope", string.Join("|", merged.Where(item => item.Kind == "runStatus").Select(item => item.Field)), "merged run status fields");
     Equal("gummy|purestream", string.Join("|", merged.Where(item => item.Kind == "operator").Select(item => item.OperatorId)), "merged operators");
     Equal("thought_a", string.Join("|", merged.Where(item => item.Kind == "thought").Select(item => item.ThoughtId)), "primary thought preserved without local duplicates");
     Equal("age_prime", string.Join("|", merged.Where(item => item.Kind == "age").Select(item => item.AgeId)), "local age supplemented");
+    Equal("rhetoric_a|cause_a", string.Join("|", merged.Where(item => item.Kind == "revelation").Select(item => item.EffectId)), "merged revelation candidates");
+    Equal("coin_a:front|coin_a:back", string.Join("|", merged.Where(item => item.Kind == "coin").Select(item => $"{item.CoinId}:{(string.IsNullOrWhiteSpace(item.Face) ? "front" : item.Face)}")), "merged coin candidates");
 }
 
 static void LocalCandidateConverterRunStatus()
@@ -962,6 +1000,47 @@ static void CandidateIs5SpecialApply()
     Equal("age_prime", special["age"]!.GetValue<string>(), "best age");
     Equal(21, special["idea"]!.GetValue<int>(), "existing idea preserved");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "is5 special updatedAt");
+}
+
+static void CandidateOtherSpecialApply()
+{
+    var revelationState = JsonNode.Parse("""{ "run": { "campaignId": "is4_sami" } }""")!.AsObject();
+    var revelationSummary = RhodesRecognitionCandidateApplier.Apply(
+        revelationState,
+        [
+            new MaaCandidatePreview("revelation", "本因A", "fallback", "本因A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "cause", EffectId: "cause_a"),
+            new MaaCandidatePreview("revelation", "構成A", "fallback", "構成A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "structure", EffectId: "structure_a"),
+            new MaaCandidatePreview("revelation", "修辞A", "fallback", "修辞A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "rhetoric", EffectId: "rhetoric_a", Count: 2),
+            new MaaCandidatePreview("coin", "別IS通宝", "coin_a", "通宝A", 0.9, CampaignId: "is6_sui", CoinId: "coin_a"),
+        ],
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+
+    Equal(3, revelationSummary.AppliedCount, "applied revelation count");
+    Equal(1, revelationSummary.IgnoredCount, "ignored revelation count");
+    var board = revelationState["run"]!.AsObject()["special"]!.AsObject()["is4_sami"]!.AsObject()["revelation"]!.AsObject();
+    Equal("cause_a", board["causeId"]!.GetValue<string>(), "revelation cause");
+    Equal("structure_a", board["structureId"]!.GetValue<string>(), "revelation structure");
+    Equal("rhetoric_a", board["rhetorics"]!.AsArray()[0]!.AsObject()["effectId"]!.GetValue<string>(), "revelation rhetoric");
+    Equal(2, board["rhetorics"]!.AsArray()[0]!.AsObject()["count"]!.GetValue<int>(), "revelation rhetoric count");
+
+    var coinState = JsonNode.Parse("""{ "run": { "campaignId": "is6_sui" } }""")!.AsObject();
+    var coinSummary = RhodesRecognitionCandidateApplier.Apply(
+        coinState,
+        [
+            new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", Count: 2),
+            new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", StatusId: "status_a", Face: "back", Count: 3),
+            new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", StatusId: "status_a", Face: "back", Count: 4),
+        ],
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+
+    Equal(3, coinSummary.AppliedCount, "applied coin count");
+    var coins = coinState["run"]!.AsObject()["special"]!.AsObject()["is6_sui"]!.AsObject()["coins"]!.AsArray();
+    Equal(2, coins.Count, "coin slot count");
+    Equal(2, coins[0]!.AsObject()["count"]!.GetValue<int>(), "coin plain count");
+    Equal("front", coins[0]!.AsObject()["face"]!.GetValue<string>(), "coin plain face");
+    Equal("status_a", coins[1]!.AsObject()["statusId"]!.GetValue<string>(), "coin status");
+    Equal("back", coins[1]!.AsObject()["face"]!.GetValue<string>(), "coin face");
+    Equal(7, coins[1]!.AsObject()["count"]!.GetValue<int>(), "coin merged count");
 }
 
 static void Equal<T>(T expected, T actual, string label)

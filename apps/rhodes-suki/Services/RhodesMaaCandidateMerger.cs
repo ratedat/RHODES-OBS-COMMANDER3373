@@ -55,6 +55,22 @@ public static class RhodesMaaCandidateMerger
                     && CandidateId(item.RelicId, item.Value).Equals(id, StringComparison.Ordinal));
         }
 
+        if (IsKind(candidate, "revelation"))
+        {
+            var id = RevelationKey(candidate);
+            return !string.IsNullOrWhiteSpace(id)
+                && !existing.Any(item => IsKind(item, "revelation")
+                    && RevelationKey(item).Equals(id, StringComparison.Ordinal));
+        }
+
+        if (IsKind(candidate, "coin"))
+        {
+            var id = CoinKey(candidate);
+            return !string.IsNullOrWhiteSpace(id)
+                && !existing.Any(item => IsKind(item, "coin")
+                    && CoinKey(item).Equals(id, StringComparison.Ordinal));
+        }
+
         if (!string.IsNullOrWhiteSpace(candidate.RecognitionKey))
         {
             return !existing.Any(item => item.RecognitionKey.Equals(candidate.RecognitionKey, StringComparison.Ordinal));
@@ -71,5 +87,42 @@ public static class RhodesMaaCandidateMerger
     private static string CandidateId(string primary, string fallback)
     {
         return string.IsNullOrWhiteSpace(primary) ? fallback.Trim() : primary.Trim();
+    }
+
+    private static string RevelationKey(MaaCandidatePreview candidate)
+    {
+        var effectId = CandidateId(candidate.EffectId, candidate.Value);
+        if (string.IsNullOrWhiteSpace(effectId))
+            return "";
+
+        var fieldId = CandidateId(candidate.FieldId, "revelation");
+        return string.Join(
+            "\u001f",
+            [
+                candidate.CampaignId.Trim(),
+                fieldId.Equals("revelationBoard", StringComparison.Ordinal)
+                    ? "revelation"
+                    : fieldId,
+                candidate.SlotKind.Trim(),
+                effectId,
+                candidate.StateId.Trim(),
+            ]);
+    }
+
+    private static string CoinKey(MaaCandidatePreview candidate)
+    {
+        var coinId = CandidateId(candidate.CoinId, candidate.Value);
+        if (string.IsNullOrWhiteSpace(coinId))
+            return "";
+
+        return string.Join(
+            "\u001f",
+            [
+                candidate.CampaignId.Trim(),
+                coinId,
+                candidate.StatusId.Trim(),
+                candidate.Face.Equals("back", StringComparison.OrdinalIgnoreCase) ? "back" : "front",
+                Math.Max(1, candidate.Count).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ]);
     }
 }

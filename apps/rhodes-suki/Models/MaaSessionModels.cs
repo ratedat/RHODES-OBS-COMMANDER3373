@@ -154,9 +154,17 @@ public sealed record MaaCandidatePreview(
     string CampaignId = "",
     string RecognitionKey = "",
     string ThoughtId = "",
-    string AgeId = "")
+    string AgeId = "",
+    string FieldId = "",
+    string SlotKind = "",
+    string EffectId = "",
+    string StateId = "",
+    string CoinId = "",
+    string StatusId = "",
+    string Face = "",
+    int Count = 0)
 {
-    public string Identity => FirstNonEmpty(Field, OperatorId, RelicId, ThoughtId, AgeId, RecognitionKey, CampaignId);
+    public string Identity => FirstNonEmpty(Field, OperatorId, RelicId, ThoughtId, AgeId, EffectId, CoinId, RecognitionKey, CampaignId);
 
     public string DebugDetail
     {
@@ -169,6 +177,11 @@ public sealed record MaaCandidatePreview(
                 Part("relic", RelicId),
                 Part("thought", ThoughtId),
                 Part("age", AgeId),
+                Part("effect", EffectId),
+                Part("coin", CoinId),
+                Part("status", StatusId),
+                Part("slot", SlotKind),
+                Part("fieldId", FieldId),
                 Part("campaign", CampaignId),
                 Part("key", RecognitionKey),
             }.Where(part => !string.IsNullOrWhiteSpace(part));

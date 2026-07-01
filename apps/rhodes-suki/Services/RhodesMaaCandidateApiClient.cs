@@ -86,7 +86,15 @@ public static class RhodesMaaCandidateApiClient
                 JsonString(candidate, "campaignId"),
                 JsonString(candidate, "recognitionKey"),
                 JsonString(candidate, "thoughtId"),
-                JsonString(candidate, "ageId")));
+                JsonString(candidate, "ageId"),
+                JsonString(candidate, "fieldId"),
+                JsonString(candidate, "slotKind"),
+                JsonString(candidate, "effectId"),
+                JsonString(candidate, "stateId"),
+                JsonString(candidate, "coinId"),
+                JsonString(candidate, "statusId"),
+                JsonString(candidate, "face"),
+                JsonInt(candidate, "count")));
         }
         return previews;
     }
@@ -122,6 +130,19 @@ public static class RhodesMaaCandidateApiClient
             && property.TryGetDouble(out var value)
             ? value
             : null;
+    }
+
+    private static int JsonInt(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out var property))
+            return 0;
+
+        if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var value))
+            return value;
+
+        return property.ValueKind == JsonValueKind.String && int.TryParse(property.GetString(), out value)
+            ? value
+            : 0;
     }
 
     private static string Shorten(string value, int maxLength)
