@@ -162,6 +162,13 @@ public sealed record SukiOptionalRuntimeProbeSnapshot(
     SukiOptionalRuntimeStatus Glm,
     SukiOptionalRuntimeStatus Ollama);
 
+public sealed record SukiHypervisorStatus(
+    string State,
+    string Detail,
+    bool Available,
+    bool RequiresBiosChange,
+    string Severity);
+
 public sealed record MaaCandidatePreview(
     string Kind,
     string Label,

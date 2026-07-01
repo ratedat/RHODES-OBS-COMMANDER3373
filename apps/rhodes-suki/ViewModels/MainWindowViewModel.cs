@@ -41,6 +41,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastCandidateApplySummary = "候補未反映";
     private SukiOptionalRuntimeStatus _glmRuntimeStatus = new("GLM-OCR", "未確認", "状態確認を実行してください。", false, false);
     private SukiOptionalRuntimeStatus _ollamaRuntimeStatus = new("Ollama", "未確認", "状態確認を実行してください。", false, false);
+    private SukiHypervisorStatus _hypervisorStatus = new("未確認", "Google Play Gamesや一部エミュレーターの前提確認", false, false, "info");
     private Bitmap? _lastCaptureImage;
     private MaaAdbPresetPreview? _selectedAdbPreset;
     private MaaResourceProfilePreview? _selectedResourceProfile;
@@ -889,8 +890,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "hyperv",
             "Hyper-V",
             "PLATFORM",
-            "確認対象",
-            "Google Play Gamesや一部エミュレーターの前提確認",
+            _hypervisorStatus.State,
+            _hypervisorStatus.Detail,
             "診断",
             false);
     }
@@ -1033,6 +1034,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             yield return new SukiInspectorRow("ADB", AdbHeaderTitle, AdbHeaderDetail);
             yield return new SukiInspectorRow("端末", $"{AdbDevices.Count}件", SessionState);
+            yield return new SukiInspectorRow("Hyper-V", _hypervisorStatus.State, _hypervisorStatus.Detail);
+            yield return new SukiInspectorRow("任意OCR", $"GLM={_glmRuntimeStatus.State} / Ollama={_ollamaRuntimeStatus.State}", RhodesApiUrl);
             yield break;
         }
 
@@ -1238,13 +1241,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunBusyAsync(async () =>
         {
-            StatusMessage = "任意ランタイム状態を確認しています。";
-            var snapshot = await RhodesOptionalRuntimeProbe.ProbeAsync(RhodesApiUrl);
+            StatusMessage = "ランタイム状態を確認しています。";
+            var optionalTask = RhodesOptionalRuntimeProbe.ProbeAsync(RhodesApiUrl);
+            var hypervisorTask = RhodesHypervisorProbe.ProbeAsync(RhodesApiUrl);
+            await Task.WhenAll(optionalTask, hypervisorTask);
+            var snapshot = optionalTask.Result;
             _glmRuntimeStatus = snapshot.Glm;
             _ollamaRuntimeStatus = snapshot.Ollama;
+            _hypervisorStatus = hypervisorTask.Result;
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
-            StatusMessage = $"任意ランタイム状態: GLM={snapshot.Glm.State}, Ollama={snapshot.Ollama.State}";
+            StatusMessage = $"ランタイム状態: GLM={snapshot.Glm.State}, Ollama={snapshot.Ollama.State}, Hyper-V={_hypervisorStatus.State}";
         });
     }
 

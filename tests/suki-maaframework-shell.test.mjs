@@ -45,6 +45,7 @@ test("Suki service tests cover MAA Resource detail conversion behavior", async (
 test("Suki shell keeps MAA session and probe code in thin RHODES-owned services", async () => {
   const session = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaSession.cs", "utf8");
   const optionalRuntimeProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesOptionalRuntimeProbe.cs", "utf8");
+  const hypervisorProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesHypervisorProbe.cs", "utf8");
   const runtimeProbe = await fs.readFile("apps/rhodes-suki/Services/MaaFrameworkRuntimeProbe.cs", "utf8");
   const probe = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionProbe.cs", "utf8");
   const catalog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResourceCatalog.cs", "utf8");
@@ -229,6 +230,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(resource, /RhodesProbe/);
   assert.match(optionalRuntimeProbe, /api\/ocr\/glm\/status/);
   assert.match(optionalRuntimeProbe, /api\/ocr\/glm\/ollama\/status/);
+  assert.match(hypervisorProbe, /api\/system\/hypervisor/);
+  assert.match(hypervisorProbe, /BIOS要確認/);
+  assert.match(hypervisorProbe, /Windows機能要確認/);
+  assert.match(viewModel, /RhodesHypervisorProbe\.ProbeAsync/);
+  assert.match(viewModel, /_hypervisorStatus\.State/);
   assert.match(runtimeProbe, /Visual C\+\+ 2015-2022 Redistributable x64/);
   assert.match(runtimeProbe, /vcruntime140_1\.dll/);
   assert.match(runtimeProbe, /BuildStatus/);
@@ -325,6 +331,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ランタイム/);
   assert.match(xaml, /RuntimeCapabilities/);
   assert.match(xaml, /InstallLabel/);
+  assert.match(xaml, /状態確認/);
   assert.match(xaml, /インスペクタ/);
   assert.match(xaml, /InspectorRows/);
   assert.match(xaml, /FilteredOperatorRows/);

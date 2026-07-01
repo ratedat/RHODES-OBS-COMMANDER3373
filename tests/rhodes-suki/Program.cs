@@ -25,6 +25,7 @@ var tests = new (string Name, Action Run)[]
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
+    ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
     ("MAA task diagnostics summarize counts and OCR previews", TaskDiagnostics),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
@@ -682,6 +683,54 @@ static void OptionalRuntimeStatusParsing()
     Equal(false, missing.Installed, "missing flag");
     Equal("導入中", installing.State, "installing state");
     Equal(true, installing.Installing, "installing flag");
+}
+
+static void HypervisorStatusParsing()
+{
+    var ready = RhodesHypervisorProbe.ParseStatusJson(
+        """
+        {
+          "platform": "win32",
+          "supported": true,
+          "available": true,
+          "requiresBiosChange": false,
+          "severity": "ok",
+          "message": "Hyper-V/Windows Hypervisorは有効です。"
+        }
+        """);
+    Equal("有効", ready.State, "ready state");
+    Equal(true, ready.Available, "ready available");
+    Equal("ok", ready.Severity, "ready severity");
+
+    var bios = RhodesHypervisorProbe.ParseStatusJson(
+        """
+        {
+          "platform": "win32",
+          "supported": true,
+          "available": false,
+          "requiresBiosChange": true,
+          "severity": "error",
+          "message": "BIOS/UEFIでCPU仮想化支援を有効化してください。"
+        }
+        """);
+    Equal("BIOS要確認", bios.State, "bios state");
+    Equal(true, bios.RequiresBiosChange, "bios flag");
+    Equal(true, bios.Detail.Contains("BIOS", StringComparison.Ordinal), "bios guidance detail");
+
+    var windowsFeature = RhodesHypervisorProbe.ParseStatusJson(
+        """
+        {
+          "platform": "win32",
+          "supported": true,
+          "available": false,
+          "requiresBiosChange": false,
+          "severity": "warning",
+          "message": "Windowsの機能でHyper-Vを有効化してください。"
+        }
+        """);
+    Equal("Windows機能要確認", windowsFeature.State, "windows feature state");
+    Equal(false, windowsFeature.RequiresBiosChange, "windows feature bios flag");
+    Equal(true, windowsFeature.Detail.Contains("Hyper-V", StringComparison.Ordinal), "windows feature detail");
 }
 
 static void MaaFrameworkRuntimeDiagnostics()
