@@ -34,6 +34,7 @@ var tests = new (string Name, Action Run)[]
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
     ("MAA task diagnostics summarize counts and OCR previews", TaskDiagnostics),
+    ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
@@ -1049,6 +1050,43 @@ static void TaskDiagnostics()
     Equal(1, diagnostics.TemplateCandidateCount, "template candidates");
     Equal(true, diagnostics.Lines.Any(line => line.Contains("グム", StringComparison.Ordinal)), "ocr line");
     Equal(true, diagnostics.Lines.Any(line => line.Contains("RhodesBrokenTask", StringComparison.Ordinal)), "failed line");
+}
+
+static void MaaNativeEvidenceLog()
+{
+    var json = RhodesMaaRecognitionEvidenceLog.BuildJson(
+        [
+            new MaaTaskRunResult(
+                "RhodesOcrRegion_operator_name",
+                "Succeeded",
+                true,
+                "ocr detail",
+                """{"filtered_results":[{"text":"グム","score":0.88}]}""",
+                "OCR",
+                true),
+            new MaaTaskRunResult("RhodesBrokenTask", "Failed", false, "missing task", "", "", false),
+        ],
+        [
+            new MaaCandidatePreview("operator", "グム", "gummy", "グム", 0.88, OperatorId: "gummy"),
+        ],
+        "operatorsFull",
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"),
+        DateTimeOffset.Parse("2026-07-01T00:00:02Z"),
+        "request-a",
+        "scan-a");
+
+    var root = JsonNode.Parse(json)!.AsObject();
+    Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
+    Equal("operatorsFull", root["profileId"]!.GetValue<string>(), "evidence profile");
+    Equal("suki-maa-native", root["source"]!.GetValue<string>(), "evidence source");
+    var counts = root["counts"]!.AsObject();
+    Equal(1, counts["candidates"]!.GetValue<int>(), "evidence candidate count");
+    Equal(2, counts["resourceTasks"]!.GetValue<int>(), "evidence task count");
+    Equal(1, counts["failedResourceTasks"]!.GetValue<int>(), "evidence failed count");
+    Equal("maa-task", root["log"]!.AsArray()[0]!.AsObject()["event"]!.GetValue<string>(), "evidence log event");
+    var evidence = root["evidence"]!.AsObject();
+    Equal("maa-resource-task-results", evidence["kind"]!.GetValue<string>(), "evidence kind");
+    Equal(2, evidence["diagnostics"]!.AsObject()["total"]!.GetValue<int>(), "evidence diagnostics");
 }
 
 static void ResourceTaskSummary()

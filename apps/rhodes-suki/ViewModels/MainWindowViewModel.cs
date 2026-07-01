@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using System.Windows.Input;
 using Avalonia.Media.Imaging;
 using RhodesSuki.Models;
@@ -1587,9 +1586,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunBusyAsync(async () =>
         {
-            var path = await SaveResourceTaskResultsAsync(ResourceTaskResults, SelectedResourceProfile?.Id);
+            var path = await SaveResourceTaskResultsAsync(
+                ResourceTaskResults,
+                SelectedResourceProfile?.Id,
+                CandidateResults);
             LastResourceTaskResultsPath = path;
-            StatusMessage = $"MAA task結果を保存しました: {path}";
+            StatusMessage = $"MAA scan証跡を保存しました: {path}";
         });
     }
 
@@ -1826,8 +1828,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshInspectorRows();
         if (ResourceTaskResults.Any())
         {
-            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(ResourceTaskResults, SelectedResourceProfile?.Id);
-            StatusMessage = $"MAA task結果を保存しました: {LastResourceTaskResultsPath}";
+            var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+                CandidateApiProfileId(),
+                ResourceTaskResults);
+            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
+                ResourceTaskResults,
+                SelectedResourceProfile?.Id,
+                localCandidates);
+            StatusMessage = $"MAA scan証跡を保存しました: {LastResourceTaskResultsPath}";
         }
     }
 
@@ -1856,6 +1864,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 CandidateResults.Add(candidate);
             }
             RefreshInspectorRows();
+            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
+                ResourceTaskResults,
+                SelectedResourceProfile?.Id,
+                CandidateResults);
             var supplementalCount = CandidateResults.Count - apiResult.Candidates.Count;
             StatusMessage = supplementalCount > 0
                 ? $"候補化しました: {CandidateResults.Count}件 (ローカル補完 +{supplementalCount})"
@@ -1870,6 +1882,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             RefreshInspectorRows();
+            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
+                ResourceTaskResults,
+                SelectedResourceProfile?.Id,
+                CandidateResults);
             StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
                 ? $"ローカル候補化しました: {CandidateResults.Count}件"
                 : $"候補化APIに接続できないためローカル候補化しました: {CandidateResults.Count}件";
@@ -1884,6 +1900,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (CandidateResults.Count > 0)
         {
             RefreshInspectorRows();
+            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
+                ResourceTaskResults,
+                SelectedResourceProfile?.Id,
+                CandidateResults);
             StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
                 ? $"候補化APIは0件だったためローカルMAAプレビューを表示しました: {CandidateResults.Count}件"
                 : $"候補化APIに接続できないためローカルMAAプレビューを表示しました: {CandidateResults.Count}件";
@@ -1891,6 +1911,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         RefreshInspectorRows();
+        LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
+            ResourceTaskResults,
+            SelectedResourceProfile?.Id,
+            CandidateResults);
         StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
             ? "候補は0件です。"
             : $"候補化API失敗: {apiResult.Error}";
@@ -2254,21 +2278,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return path;
     }
 
-    private static async Task<string> SaveResourceTaskResultsAsync(IEnumerable<MaaTaskRunResult> taskResults, string? profileId)
+    private static async Task<string> SaveResourceTaskResultsAsync(
+        IEnumerable<MaaTaskRunResult> taskResults,
+        string? profileId,
+        IEnumerable<MaaCandidatePreview>? candidates = null)
     {
-        var directory = Path.Combine(AppContext.BaseDirectory, "RHODES OBS COMMANDER3373 Debug Logs", "maa-resource-results");
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, $"suki-maa-resource-results-{DateTimeOffset.Now:yyyyMMdd-HHmmss-fff}.json");
-        var payload = new
-        {
-            schemaVersion = 1,
-            createdAt = DateTimeOffset.Now,
-            profile = string.IsNullOrWhiteSpace(profileId) || profileId == "all" ? null : profileId,
-            taskResults = taskResults.ToArray(),
-        };
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(path, $"{json}{Environment.NewLine}");
-        return path;
+        var directory = Path.Combine(AppContext.BaseDirectory, "RHODES OBS COMMANDER3373 Debug Logs", "recognition-scans");
+        return await RhodesMaaRecognitionEvidenceLog.SaveAsync(
+            taskResults,
+            candidates ?? [],
+            profileId,
+            directory);
     }
 
     private async Task RunBusyAsync(Func<Task> action)
