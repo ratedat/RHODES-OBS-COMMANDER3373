@@ -20,6 +20,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(csproj, /data\\relics\.json/);
   assert.match(csproj, /data\\current-state\.json/);
   assert.match(csproj, /data\\selectable-effects\.json/);
+  assert.match(csproj, /data\\recognition\\maa-tasks\.json/);
+  assert.match(csproj, /data\\recognition\\scan-profiles\.json/);
   assert.match(packageJson, /"maa:resource:generate": "node tools\/generate-maa-resource\.mjs"/);
   assert.match(packageJson, /"maa:resource:check": "node tools\/generate-maa-resource\.mjs --check"/);
   assert.match(packageJson, /"suki:test": "dotnet run --project tests\/rhodes-suki\/RhodesSuki\.ServiceTests\.csproj"/);
@@ -251,7 +253,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /SelectedRoiPreviewRows/);
   assert.match(viewModel, /SelectedRoiEditDraft/);
   assert.match(viewModel, /ExportSelectedRoiDraftCommand/);
+  assert.match(viewModel, /PreviewSelectedRoiDraftApplyCommand/);
+  assert.match(viewModel, /RoiDraftApplyResult/);
   assert.match(viewModel, /RhodesMaaRoiEditDraftLog\.SaveAsync/);
+  assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToMaaTasksJson/);
   assert.match(viewModel, /RefreshSelectedRoiPreviewRows/);
   assert.match(viewModel, /SelectedOcrDetailRow/);
   assert.match(viewModel, /SelectedResourceTaskResult/);
@@ -396,6 +401,8 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectedRoiEditDraft\.RoiJson/);
   assert.match(xaml, /SelectedRoiEditDraft\.Detail/);
   assert.match(xaml, /ExportSelectedRoiDraftCommand/);
+  assert.match(xaml, /PreviewSelectedRoiDraftApplyCommand/);
+  assert.match(xaml, /RoiDraftApplyResult\.Message/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRoiPreviewRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedOcrDetailRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRecognitionScanLogRow, Mode=TwoWay\}"/);

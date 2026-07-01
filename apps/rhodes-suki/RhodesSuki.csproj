@@ -49,5 +49,11 @@
     <Content Include="..\..\data\selectable-effects.json" Link="data\selectable-effects.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\data\recognition\maa-tasks.json" Link="data\recognition\maa-tasks.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\recognition\scan-profiles.json" Link="data\recognition\scan-profiles.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

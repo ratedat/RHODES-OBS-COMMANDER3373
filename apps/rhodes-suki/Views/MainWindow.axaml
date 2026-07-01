@@ -844,11 +844,13 @@
                 </ListBox>
 
                 <Border CornerRadius="7" Padding="9" Background="#151913" BorderBrush="#3A4528" BorderThickness="1">
-                  <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
                     <TextBlock Text="{Binding SelectedRoiEditDraft.StatusLabel}" FontSize="13" FontWeight="SemiBold" />
                     <TextBlock Grid.Column="1" Text="{Binding SelectedRoiEditDraft.RoiJson}" FontFamily="Consolas" FontSize="11" Opacity="0.78" />
-                    <Button Grid.Column="2" Content="書出し" Command="{Binding ExportSelectedRoiDraftCommand}" Padding="8,3" />
-                    <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding SelectedRoiEditDraft.Detail}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.58" />
+                    <Button Grid.Column="2" Content="適用確認" Command="{Binding PreviewSelectedRoiDraftApplyCommand}" Padding="8,3" />
+                    <Button Grid.Column="3" Content="書出し" Command="{Binding ExportSelectedRoiDraftCommand}" Padding="8,3" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="{Binding SelectedRoiEditDraft.Detail}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.58" />
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Text="{Binding RoiDraftApplyResult.Message}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.58" />
                   </Grid>
                 </Border>
 

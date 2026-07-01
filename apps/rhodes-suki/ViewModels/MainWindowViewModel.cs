@@ -37,6 +37,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastCapturePath = "";
     private string _lastResourceTaskResultsPath = "";
     private string _lastRoiDraftPath = "";
+    private MaaRoiDraftApplyResult _roiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
     private string _rhodesApiUrl = "http://127.0.0.1:5173";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
     private string _lastCandidateApplySummary = "候補未反映";
@@ -207,6 +208,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunAllResourceTasksCommand = new AsyncRelayCommand(RunAllResourceTasksAsync);
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
         ExportSelectedRoiDraftCommand = new AsyncRelayCommand(ExportSelectedRoiDraftAsync);
+        PreviewSelectedRoiDraftApplyCommand = new AsyncRelayCommand(PreviewSelectedRoiDraftApplyAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
         ApplyCandidateResultsCommand = new AsyncRelayCommand(ApplyCandidateResultsAsync);
@@ -832,6 +834,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref _selectedRoiEditDraft, value);
     }
 
+    public MaaRoiDraftApplyResult RoiDraftApplyResult
+    {
+        get => _roiDraftApplyResult;
+        private set
+        {
+            if (!SetProperty(ref _roiDraftApplyResult, value))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
     public MaaOcrDetailRow? SelectedOcrDetailRow
     {
         get => _selectedOcrDetailRow;
@@ -964,6 +977,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ExportResourceTaskResultsCommand { get; }
 
     public ICommand ExportSelectedRoiDraftCommand { get; }
+
+    public ICommand PreviewSelectedRoiDraftApplyCommand { get; }
 
     public ICommand SyncRunStateFromApiCommand { get; }
 
@@ -1230,7 +1245,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             yield return new SukiInspectorRow(
                 "ROIドラフト",
                 string.IsNullOrWhiteSpace(LastRoiDraftPath) ? SelectedRoiEditDraft.StatusLabel : LastRoiDraftPath,
-                SelectedRoiEditDraft.Detail);
+                $"{SelectedRoiEditDraft.Detail} / {RoiDraftApplyResult.Message}");
             yield return new SukiInspectorRow(
                 "結果JSON",
                 string.IsNullOrWhiteSpace(LastResourceTaskResultsPath) ? "-" : LastResourceTaskResultsPath,
@@ -1746,6 +1761,34 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private async Task PreviewSelectedRoiDraftApplyAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (!SelectedRoiEditDraft.HasSelection)
+            {
+                RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("ROI行を選択してください。");
+                StatusMessage = RoiDraftApplyResult.Message;
+                return;
+            }
+
+            var sourcePath = ResolveMaaTasksSourcePath();
+            if (!File.Exists(sourcePath))
+            {
+                RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed($"maa-tasks.jsonが見つかりません: {sourcePath}");
+                StatusMessage = RoiDraftApplyResult.Message;
+                return;
+            }
+
+            var json = await File.ReadAllTextAsync(sourcePath);
+            var result = RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksJson(json, SelectedRoiEditDraft, out _);
+            RoiDraftApplyResult = result with { SourcePath = result.Succeeded ? sourcePath : result.SourcePath };
+            StatusMessage = result.Succeeded
+                ? $"ROI適用プレビュー: {result.TargetId} {result.PreviousRoi} -> {result.UpdatedRoi}"
+                : $"ROI適用プレビュー失敗: {result.Message}";
+        });
+    }
+
     private async Task SyncRunStateFromApiAsync()
     {
         await RunBusyAsync(async () =>
@@ -2219,6 +2262,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SelectedRoiPreviewRows,
             _selectedRoiPreviewRow is null ? [] : [_selectedRoiPreviewRow]);
         SelectedRoiEditDraft = MaaRoiEditDraft.FromPreview(_selectedRoiPreviewRow);
+        RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
     }
 
     private void SelectRoiForOcrDetail(MaaOcrDetailRow? row)
@@ -2589,6 +2633,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             candidates ?? [],
             profileId,
             RhodesSukiDebugPaths.RecognitionScansDirectory);
+    }
+
+    private static string ResolveMaaTasksSourcePath()
+    {
+        foreach (var origin in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() }.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var candidate = Path.Combine(origin, RhodesMaaRoiDraftSourceUpdater.MaaTasksSourcePath);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, RhodesMaaRoiDraftSourceUpdater.MaaTasksSourcePath);
     }
 
     private async Task RunBusyAsync(Func<Task> action)
