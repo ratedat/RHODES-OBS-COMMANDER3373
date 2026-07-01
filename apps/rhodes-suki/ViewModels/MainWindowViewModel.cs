@@ -84,6 +84,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _outputTransparentBackground = true;
     private int _outputScrollSpeed = 13;
     private bool _showRoiOverlay = true;
+    private int _roiSnapStep = 1;
     private bool _isBusy;
 
     public MainWindowViewModel(
@@ -226,6 +227,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshRoiAdjustmentSessionsCommand = new AsyncRelayCommand(RefreshRoiAdjustmentSessionsAsync);
         LoadRoiAdjustmentSessionCommand = new AsyncRelayCommand(parameter => LoadRoiAdjustmentSessionAsync(parameter as MaaRoiAdjustmentSessionItem));
         SelectRoiPreviewCommand = new AsyncRelayCommand(parameter => SelectRoiPreviewAsync(parameter as MaaRoiPreviewRow));
+        SetRoiSnapStepCommand = new AsyncRelayCommand(parameter => SetRoiSnapStepAsync(parameter as string));
         AdjustSelectedRoiDraftCommand = new AsyncRelayCommand(parameter => AdjustSelectedRoiDraftAsync(parameter as string));
         PreviewSelectedRoiDraftApplyCommand = new AsyncRelayCommand(PreviewSelectedRoiDraftApplyAsync);
         ApplySelectedRoiDraftCommand = new AsyncRelayCommand(ApplySelectedRoiDraftAsync);
@@ -859,6 +861,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set => SetProperty(ref _showRoiOverlay, value);
     }
 
+    public int RoiSnapStep
+    {
+        get => _roiSnapStep;
+        private set => SetProperty(ref _roiSnapStep, Math.Clamp(value, 1, 32));
+    }
+
+    public string RoiSnapStepLabel => $"step {RoiSnapStep}px";
+
     public MaaRoiPreviewRow? SelectedRoiPreviewRow
     {
         get => _selectedRoiPreviewRow;
@@ -1054,6 +1064,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand LoadRoiAdjustmentSessionCommand { get; }
 
     public ICommand SelectRoiPreviewCommand { get; }
+
+    public ICommand SetRoiSnapStepCommand { get; }
 
     public ICommand AdjustSelectedRoiDraftCommand { get; }
 
@@ -2006,8 +2018,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         var adjusted = _roiDragOrigin.ToArray();
-        adjusted[0] = Math.Max(0, adjusted[0] + (int)Math.Round(pointerX - _roiDragStartX, MidpointRounding.AwayFromZero));
-        adjusted[1] = Math.Max(0, adjusted[1] + (int)Math.Round(pointerY - _roiDragStartY, MidpointRounding.AwayFromZero));
+        adjusted[0] = Math.Max(0, adjusted[0] + SnapDelta(pointerX - _roiDragStartX));
+        adjusted[1] = Math.Max(0, adjusted[1] + SnapDelta(pointerY - _roiDragStartY));
         SelectedRoiEditDraft = SelectedRoiEditDraft with { RoiJson = RoiJson(adjusted) };
         UpdateSelectedRoiOverlay(adjusted);
         UpdateRoiBatchDraftForSelected();
@@ -2045,8 +2057,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         var adjusted = _roiResizeOrigin.ToArray();
-        var dx = (int)Math.Round(pointerX - _roiResizeStartX, MidpointRounding.AwayFromZero);
-        var dy = (int)Math.Round(pointerY - _roiResizeStartY, MidpointRounding.AwayFromZero);
+        var dx = SnapDelta(pointerX - _roiResizeStartX);
+        var dy = SnapDelta(pointerY - _roiResizeStartY);
         if (_roiResizeMode.Equals("topLeft", StringComparison.Ordinal))
         {
             var nextX = Math.Clamp(adjusted[0] + dx, 0, adjusted[0] + adjusted[2] - 1);
@@ -2077,6 +2089,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StatusMessage = $"ROIリサイズ終了: {SelectedRoiEditDraft.RoiJson}";
     }
 
+    private async Task SetRoiSnapStepAsync(string? value)
+    {
+        await RunBusyAsync(() =>
+        {
+            if (int.TryParse(value, out var step))
+                RoiSnapStep = step;
+            OnPropertyChanged(nameof(RoiSnapStepLabel));
+            StatusMessage = $"ROI調整ステップ: {RoiSnapStep}px";
+            return Task.CompletedTask;
+        });
+    }
+
     private async Task AdjustSelectedRoiDraftAsync(string? operation)
     {
         await RunBusyAsync(() =>
@@ -2095,7 +2119,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return Task.CompletedTask;
             }
 
-            var adjusted = AdjustRoi(roi, operation);
+            var adjusted = AdjustRoi(roi, operation, RoiSnapStep);
             SelectedRoiEditDraft = SelectedRoiEditDraft with { RoiJson = RoiJson(adjusted) };
             UpdateSelectedRoiOverlay(adjusted);
             UpdateRoiBatchDraftForSelected();
@@ -2866,34 +2890,43 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private static int[] AdjustRoi(int[] roi, string? operation)
+    private int SnapDelta(double value)
+    {
+        var rounded = (int)Math.Round(value, MidpointRounding.AwayFromZero);
+        return RoiSnapStep <= 1
+            ? rounded
+            : (int)Math.Round(rounded / (double)RoiSnapStep, MidpointRounding.AwayFromZero) * RoiSnapStep;
+    }
+
+    private static int[] AdjustRoi(int[] roi, string? operation, int step)
     {
         var result = roi.ToArray();
+        step = Math.Clamp(step, 1, 32);
         switch (operation)
         {
             case "left":
-                result[0] = Math.Max(0, result[0] - 1);
+                result[0] = Math.Max(0, result[0] - step);
                 break;
             case "right":
-                result[0] += 1;
+                result[0] += step;
                 break;
             case "up":
-                result[1] = Math.Max(0, result[1] - 1);
+                result[1] = Math.Max(0, result[1] - step);
                 break;
             case "down":
-                result[1] += 1;
+                result[1] += step;
                 break;
             case "wider":
-                result[2] += 1;
+                result[2] += step;
                 break;
             case "narrower":
-                result[2] = Math.Max(1, result[2] - 1);
+                result[2] = Math.Max(1, result[2] - step);
                 break;
             case "taller":
-                result[3] += 1;
+                result[3] += step;
                 break;
             case "shorter":
-                result[3] = Math.Max(1, result[3] - 1);
+                result[3] = Math.Max(1, result[3] - step);
                 break;
         }
 

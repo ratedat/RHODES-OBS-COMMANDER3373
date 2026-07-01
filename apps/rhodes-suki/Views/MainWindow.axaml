@@ -898,14 +898,18 @@
                     <Button Grid.Column="3" Content="適用" Command="{Binding ApplySelectedRoiDraftCommand}" Padding="8,3" />
                     <Button Grid.Column="4" Content="書出し" Command="{Binding ExportSelectedRoiDraftCommand}" Padding="8,3" />
                     <WrapPanel Grid.Row="1" Grid.ColumnSpan="5">
-                      <Button Content="左1" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="left" Padding="7,2" Margin="0,0,6,6" />
-                      <Button Content="右1" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="right" Padding="7,2" Margin="0,0,6,6" />
-                      <Button Content="上1" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="up" Padding="7,2" Margin="0,0,6,6" />
-                      <Button Content="下1" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="down" Padding="7,2" Margin="0,0,6,6" />
-                      <Button Content="幅+1" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="wider" Padding="7,2" Margin="0,0,6,6" />
-                      <Button Content="幅-1" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="narrower" Padding="7,2" Margin="0,0,6,6" />
-                      <Button Content="高+1" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="taller" Padding="7,2" Margin="0,0,6,6" />
-                      <Button Content="高-1" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="shorter" Padding="7,2" Margin="0,0,6,6" />
+                      <TextBlock Text="{Binding RoiSnapStepLabel}" FontFamily="Consolas" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,6" Opacity="0.72" />
+                      <Button Content="1px" Command="{Binding SetRoiSnapStepCommand}" CommandParameter="1" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="4px" Command="{Binding SetRoiSnapStepCommand}" CommandParameter="4" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="8px" Command="{Binding SetRoiSnapStepCommand}" CommandParameter="8" Padding="7,2" Margin="0,0,10,6" />
+                      <Button Content="左" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="left" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="右" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="right" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="上" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="up" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="下" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="down" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="幅+" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="wider" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="幅-" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="narrower" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="高+" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="taller" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="高-" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="shorter" Padding="7,2" Margin="0,0,6,6" />
                     </WrapPanel>
                     <TextBlock Grid.Row="2" Grid.ColumnSpan="5" Text="{Binding SelectedRoiEditDraft.Detail}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.58" />
                     <TextBlock Grid.Row="3" Grid.ColumnSpan="5" Text="{Binding RoiDraftApplyResult.Message}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.58" />

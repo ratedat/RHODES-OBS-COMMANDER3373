@@ -298,6 +298,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /ClearRecognitionPayload/);
   assert.match(viewModel, /SelectRoiPreviewCommand/);
   assert.match(viewModel, /SelectRoiPreviewAsync/);
+  assert.match(viewModel, /RoiSnapStep/);
+  assert.match(viewModel, /RoiSnapStepLabel/);
+  assert.match(viewModel, /SetRoiSnapStepCommand/);
+  assert.match(viewModel, /SetRoiSnapStepAsync/);
+  assert.match(viewModel, /SnapDelta/);
   assert.match(viewModel, /BeginRoiDrag/);
   assert.match(viewModel, /UpdateRoiDrag/);
   assert.match(viewModel, /EndRoiDrag/);
@@ -312,7 +317,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /UpdateSelectedRoiOverlay/);
   assert.match(viewModel, /UpdateRoiBatchDraftForSelected/);
   assert.match(viewModel, /TryParseDraftRoi/);
-  assert.match(viewModel, /AdjustRoi/);
+  assert.match(viewModel, /AdjustRoi\(roi, operation, RoiSnapStep\)/);
   assert.match(viewModel, /RhodesMaaRoiAdjustmentSessionLog\.SaveAsync/);
   assert.match(viewModel, /RhodesMaaRoiAdjustmentSessionLog\.LoadRecent/);
   assert.match(viewModel, /RhodesMaaRoiAdjustmentSessionLog\.Load/);
@@ -520,6 +525,10 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /PointerMoved="RoiResizePointerMoved"/);
   assert.match(xaml, /PointerReleased="RoiResizePointerReleased"/);
   assert.match(xaml, /ExportSelectedRoiDraftCommand/);
+  assert.match(xaml, /RoiSnapStepLabel/);
+  assert.match(xaml, /SetRoiSnapStepCommand/);
+  assert.match(xaml, /CommandParameter="4"/);
+  assert.match(xaml, /CommandParameter="8"/);
   assert.match(xaml, /AdjustSelectedRoiDraftCommand/);
   assert.match(xaml, /CommandParameter="left"/);
   assert.match(xaml, /CommandParameter="wider"/);
