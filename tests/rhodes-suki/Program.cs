@@ -14,6 +14,7 @@ var tests = new (string Name, Action Run)[]
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
+    ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
 
 var failures = new List<string>();
@@ -241,7 +242,9 @@ static void RunCatalogLoadsChoices()
     Equal(true, catalog.Operators.Any(item => item.Name == "グム" && item.OperatorClass == "重装"), "operator data");
     Equal(true, File.Exists(gummy.ImagePath), "operator image path");
     Equal(false, gummy.Detail.Contains("入手", StringComparison.Ordinal), "operator obtain method hidden");
+    Equal(false, gummy.Detail.Contains("タグ", StringComparison.Ordinal), "operator tags hidden");
     Equal(false, gummy.SearchText.Contains("公開求人", StringComparison.Ordinal), "operator obtain method search hidden");
+    Equal(false, gummy.SearchText.Contains("タグ", StringComparison.Ordinal), "operator tag search hidden");
     Equal(296, is5Relics.Length, "is5 relic count");
     Equal(true, File.Exists(is5Relics.First(item => item.Name == "特選獣肉缶詰").ImagePath), "relic image path");
     Equal(true, catalog.Current.SelectedRelicIds.Contains("is5_sarkaz_relic_254"), "current relic selection");
@@ -299,6 +302,27 @@ static void ChoiceFilters()
     var foodRelics = RhodesChoiceFilter.Apply(relics, new SukiChoiceFilterOptions(CampaignId: "is5_sarkaz", Category: "食品")).ToArray();
     Equal(1, foodRelics.Length, "relic category filter count");
     Equal("特選獣肉缶詰", foodRelics[0].Name, "relic category filter item");
+}
+
+static void ChoiceRows()
+{
+    var items = Enumerable.Range(0, 5)
+        .Select(index => new SukiChoiceItem("operator", $"op{index}", $"op{index}", "★4 先鋒 / 旗手", "先鋒", "旗手", "", "", 4, index, false))
+        .ToArray();
+
+    var rows = RhodesChoiceRows.Build(items, 4).ToArray();
+    Equal(2, rows.Length, "four pane row count");
+    Equal(4, rows[0].Columns, "four pane column count");
+    Equal(4, rows[0].Items.Count, "first row item count");
+    Equal(1, rows[1].Items.Count, "last row item count");
+
+    var lowClampRows = RhodesChoiceRows.Build(items, 0).ToArray();
+    Equal(1, lowClampRows[0].Columns, "low column clamp");
+    Equal(5, lowClampRows.Length, "one pane row count");
+
+    var highClampRows = RhodesChoiceRows.Build(items, 9).ToArray();
+    Equal(4, highClampRows[0].Columns, "high column clamp");
+    Equal(2, highClampRows.Length, "high clamp row count");
 }
 
 static void Equal<T>(T expected, T actual, string label)

@@ -235,6 +235,10 @@ public sealed record SukiChoiceFilterOptions(
     bool SelectedOnly = false,
     bool IncludeHidden = false);
 
+public sealed record SukiChoiceRow(
+    int Columns,
+    IReadOnlyList<SukiChoiceItem> Items);
+
 public sealed class SukiChoiceItem : INotifyPropertyChanged
 {
     private bool _isSelected;

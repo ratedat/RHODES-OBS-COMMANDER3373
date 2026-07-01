@@ -219,7 +219,7 @@
             <Grid Grid.Row="2">
               <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsOperatorsPanelVisible}">
                 <Grid ColumnDefinitions="*,110,145,145" ColumnSpacing="8">
-                  <TextBox Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分、タグで検索" />
+                  <TextBox Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分で検索" />
                   <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" />
                   <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" />
                   <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" />
@@ -234,38 +234,41 @@
                   <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
                 </Grid>
 
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                  <ItemsControl ItemsSource="{Binding FilteredOperators}">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate>
-                        <UniformGrid Columns="{Binding OperatorPaneColumns}" />
-                      </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Border CornerRadius="7" Padding="9" Margin="0,0,8,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="132">
-                          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="7">
-                            <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
-                              <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
-                              <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
-                              </Border>
-                              <StackPanel Grid.Column="1" Spacing="2">
-                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                              </StackPanel>
-                            </Grid>
-                            <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.58" />
-                            <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="7">
-                              <Button Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                              <Button Grid.Column="1" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                            </Grid>
-                          </Grid>
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
+                <ListBox Grid.Row="2" ItemsSource="{Binding FilteredOperatorRows}" Background="Transparent" BorderThickness="0" Padding="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <UniformGrid Columns="{Binding Columns}" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border CornerRadius="7" Padding="9" Margin="0,0,8,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="92">
+                              <Grid RowDefinitions="Auto,Auto" RowSpacing="7">
+                                <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+                                  <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
+                                    <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                                  </Border>
+                                  <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                                  </StackPanel>
+                                </Grid>
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="7">
+                                  <Button Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                  <Button Grid.Column="1" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                </Grid>
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
               </Grid>
 
               <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsRelicsPanelVisible}">
@@ -283,38 +286,42 @@
                   <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
                 </Grid>
 
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                  <ItemsControl ItemsSource="{Binding FilteredRelics}">
-                    <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate>
-                        <UniformGrid Columns="{Binding RelicPaneColumns}" />
-                      </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Border CornerRadius="7" Padding="9" Margin="0,0,8,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="148">
-                          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="7">
-                            <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
-                              <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
-                              <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
-                              </Border>
-                              <StackPanel Grid.Column="1" Spacing="2">
-                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                              </StackPanel>
-                            </Grid>
-                            <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="3" Opacity="0.58" />
-                            <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="7">
-                              <Button Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                              <Button Grid.Column="1" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                            </Grid>
-                          </Grid>
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
+                <ListBox Grid.Row="2" ItemsSource="{Binding FilteredRelicRows}" Background="Transparent" BorderThickness="0" Padding="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <UniformGrid Columns="{Binding Columns}" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border CornerRadius="7" Padding="9" Margin="0,0,8,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="148">
+                              <Grid RowDefinitions="Auto,*,Auto" RowSpacing="7">
+                                <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+                                  <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
+                                    <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
+                                  </Border>
+                                  <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                                  </StackPanel>
+                                </Grid>
+                                <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="3" Opacity="0.58" />
+                                <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="7">
+                                  <Button Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                  <Button Grid.Column="1" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                </Grid>
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
               </Grid>
             </Grid>
           </Grid>

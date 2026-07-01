@@ -54,6 +54,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const runCatalog = await fs.readFile("apps/rhodes-suki/Services/RhodesRunCatalog.cs", "utf8");
   const bitmapPathConverter = await fs.readFile("apps/rhodes-suki/Services/RhodesBitmapPathConverter.cs", "utf8");
   const choiceFilter = await fs.readFile("apps/rhodes-suki/Services/RhodesChoiceFilter.cs", "utf8");
+  const choiceRows = await fs.readFile("apps/rhodes-suki/Services/RhodesChoiceRows.cs", "utf8");
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
   const runModels = await fs.readFile("apps/rhodes-suki/Models/RunCatalogModels.cs", "utf8");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
@@ -106,6 +107,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(choiceFilter, /OperatorBranch/);
   assert.match(choiceFilter, /Category/);
   assert.match(choiceFilter, /Rarity/);
+  assert.match(choiceRows, /Math\.Clamp\(columns, 1, 4\)/);
+  assert.match(choiceRows, /new SukiChoiceRow/);
   assert.match(models, /MaaTaskDetailSnapshot/);
   assert.match(models, /MaaResourceProfilePreview/);
   assert.match(models, /MaaCandidatePreview/);
@@ -115,6 +118,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runModels, /SukiCampaignPreview/);
   assert.match(runModels, /SukiSpecialFieldState/);
   assert.match(runModels, /SukiChoiceItem/);
+  assert.match(runModels, /SukiChoiceRow/);
   assert.match(runModels, /ImagePath/);
   assert.match(runModels, /SelectionButtonLabel/);
   assert.match(runModels, /ExclusionButtonLabel/);
@@ -151,6 +155,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.doesNotMatch(viewModel, /想念/);
   assert.match(viewModel, /FilteredOperators/);
   assert.match(viewModel, /FilteredRelics/);
+  assert.match(viewModel, /FilteredOperatorRows/);
+  assert.match(viewModel, /FilteredRelicRows/);
   assert.match(viewModel, /ToggleChoiceSelectedCommand/);
   assert.match(viewModel, /ToggleChoiceExcludedCommand/);
   assert.match(viewModel, /PaneColumnOptions/);
@@ -160,6 +166,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RefreshChoiceAfterMutation/);
   assert.match(viewModel, /RefreshOperatorSummaries/);
   assert.match(viewModel, /RefreshRelicSummaries/);
+  assert.match(viewModel, /RefreshOperatorRows/);
+  assert.match(viewModel, /RefreshRelicRows/);
   assert.match(resource, /RhodesRunStatusTopBarOcr/);
   assert.match(resource, /RhodesOperatorCodenameFlag/);
   assert.match(resource, /OperatorCardCodeNameFlag\.png/);
@@ -254,8 +262,8 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /InstallLabel/);
   assert.match(xaml, /インスペクタ/);
   assert.match(xaml, /InspectorRows/);
-  assert.match(xaml, /FilteredOperators/);
-  assert.match(xaml, /FilteredRelics/);
+  assert.match(xaml, /FilteredOperatorRows/);
+  assert.match(xaml, /FilteredRelicRows/);
   assert.match(xaml, /RhodesBitmapPathConverter/);
   assert.match(xaml, /ImagePath, Converter=\{StaticResource BitmapPathConverter\}/);
   assert.match(xaml, /Text="\{Binding Name\}"/);
@@ -268,8 +276,11 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /PaneColumnOptions/);
   assert.match(xaml, /OperatorPaneColumns/);
   assert.match(xaml, /RelicPaneColumns/);
-  assert.match(xaml, /UniformGrid Columns="\{Binding OperatorPaneColumns\}"/);
-  assert.match(xaml, /UniformGrid Columns="\{Binding RelicPaneColumns\}"/);
+  assert.match(xaml, /ListBox Grid\.Row="2" ItemsSource="\{Binding FilteredOperatorRows\}"/);
+  assert.match(xaml, /ListBox Grid\.Row="2" ItemsSource="\{Binding FilteredRelicRows\}"/);
+  assert.match(xaml, /UniformGrid Columns="\{Binding Columns\}"/);
+  assert.match(xaml, /RelativeSource=\{RelativeSource AncestorType=Window\}/);
+  assert.doesNotMatch(xaml, /タグで検索/);
   assert.match(xaml, /OperatorShowSelectedFirst/);
   assert.match(xaml, /RelicShowSelectedFirst/);
   assert.match(xaml, /ToggleChoiceSelectedCommand/);
