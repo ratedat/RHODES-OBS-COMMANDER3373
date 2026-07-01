@@ -30,7 +30,7 @@ public static class RhodesRecognitionCandidateApplier
         DateTimeOffset now,
         bool runStatusOnly)
     {
-        var candidateList = candidates.ToList();
+        var candidateList = NormalizeCandidatesForApply(candidates);
         var applied = new List<string>();
         var handledIndexes = runStatusOnly
             ? new HashSet<int>()
@@ -54,22 +54,57 @@ public static class RhodesRecognitionCandidateApplier
         return new SukiCandidateApplySummary(applied.Count, ignored, applied);
     }
 
+    private static List<MaaCandidatePreview> NormalizeCandidatesForApply(IEnumerable<MaaCandidatePreview> candidates)
+    {
+        var normalized = new List<MaaCandidatePreview>();
+        var bestRunStatusByField = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var candidate in candidates)
+        {
+            if (!CandidateIsKind(candidate, "runStatus"))
+            {
+                normalized.Add(candidate);
+                continue;
+            }
+
+            var field = CandidateId(candidate.Field, candidate.Value);
+            if (string.IsNullOrWhiteSpace(field))
+            {
+                normalized.Add(candidate);
+                continue;
+            }
+
+            if (!bestRunStatusByField.TryGetValue(field, out var existingIndex))
+            {
+                bestRunStatusByField[field] = normalized.Count;
+                normalized.Add(candidate);
+                continue;
+            }
+
+            var existing = normalized[existingIndex];
+            if ((candidate.Confidence ?? 0) > (existing.Confidence ?? 0))
+                normalized[existingIndex] = candidate;
+        }
+
+        return normalized;
+    }
+
     private static bool ApplyCandidate(
         JsonObject state,
         MaaCandidatePreview candidate,
         ICollection<string> applied,
         bool runStatusOnly)
     {
-        if (candidate.Kind.Equals("runStatus", StringComparison.OrdinalIgnoreCase))
+        if (CandidateIsKind(candidate, "runStatus"))
             return ApplyRunStatusCandidate(state, candidate, applied);
 
         if (runStatusOnly)
             return false;
 
-        if (candidate.Kind.Equals("operator", StringComparison.OrdinalIgnoreCase))
+        if (CandidateIsKind(candidate, "operator"))
             return ApplyStringSetCandidate(state, "operators", candidate.OperatorId, candidate.Value, applied, "operator");
 
-        if (candidate.Kind.Equals("relic", StringComparison.OrdinalIgnoreCase))
+        if (CandidateIsKind(candidate, "relic"))
             return ApplyRelicCandidate(state, candidate, applied);
 
         return false;
@@ -340,6 +375,11 @@ public static class RhodesRecognitionCandidateApplier
     {
         return string.IsNullOrWhiteSpace(candidate.CampaignId)
             || candidate.CampaignId.Equals(Is5CampaignId, StringComparison.Ordinal);
+    }
+
+    private static bool CandidateIsKind(MaaCandidatePreview candidate, string kind)
+    {
+        return candidate.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string CandidateId(string primaryValue, string fallbackValue)

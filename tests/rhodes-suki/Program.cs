@@ -30,6 +30,7 @@ var tests = new (string Name, Action Run)[]
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
+    ("Recognition candidate applier keeps the best duplicate run status candidate", CandidateRunStatusApplyBestDuplicate),
     ("Recognition candidate applier can select operator and relic candidates", CandidateChoiceApply),
     ("Recognition candidate applier can apply IS5 thought and age candidates", CandidateIs5SpecialApply),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
@@ -858,6 +859,29 @@ static void CandidateRunStatusApply()
     Equal(7, run["special"]!.AsObject()["is5_sarkaz"]!.AsObject()["idea"]!.GetValue<int>(), "idea");
     Equal("gummy", state["operators"]!.AsArray()[0]!.GetValue<string>(), "unrelated selections preserved");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "updatedAt");
+}
+
+static void CandidateRunStatusApplyBestDuplicate()
+{
+    var state = JsonNode.Parse("""{ "run": { "campaignId": "is5_sarkaz" } }""")!.AsObject();
+    var candidates = new[]
+    {
+        new MaaCandidatePreview("runStatus", "希望", "5", "5", 0.95, Field: "hope"),
+        new MaaCandidatePreview("runStatus", "希望", "3", "3", 0.40, Field: "hope"),
+        new MaaCandidatePreview("runStatus", "希望上限", "8", "8", 0.90, Field: "maxHope"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.ApplyRunStatus(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+
+    Equal(2, summary.AppliedCount, "applied duplicate count");
+    Equal(0, summary.IgnoredCount, "ignored duplicate count");
+    Equal("hope|maxHope", string.Join("|", summary.AppliedFields), "applied duplicate fields");
+    var run = state["run"]!.AsObject();
+    Equal(5, run["hope"]!.GetValue<int>(), "best hope");
+    Equal(8, run["maxHope"]!.GetValue<int>(), "max hope");
 }
 
 static void CandidateChoiceApply()
