@@ -304,15 +304,25 @@ public sealed record MaaRoiEditDraft(
 
 public sealed class MaaRoiBatchDraftPreview
 {
-    public MaaRoiBatchDraftPreview(MaaRoiEditDraft draft, bool isIncluded = true)
+    public MaaRoiBatchDraftPreview(
+        MaaRoiEditDraft draft,
+        bool isIncluded = true,
+        string stateLabel = "未確認",
+        string stateDetail = "")
     {
         Draft = draft;
         IsIncluded = isIncluded;
+        StateLabel = string.IsNullOrWhiteSpace(stateLabel) ? "未確認" : stateLabel;
+        StateDetail = stateDetail;
     }
 
     public MaaRoiEditDraft Draft { get; }
 
     public bool IsIncluded { get; set; }
+
+    public string StateLabel { get; }
+
+    public string StateDetail { get; }
 
     public string Entry => Draft.Entry;
 

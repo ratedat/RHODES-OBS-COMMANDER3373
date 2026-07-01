@@ -872,10 +872,12 @@
                         <DataTemplate>
                           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,4,0,0">
                             <CheckBox IsChecked="{Binding IsIncluded, Mode=TwoWay}" VerticalAlignment="Center" />
-                            <StackPanel Grid.Column="1">
+                            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                               <TextBlock Text="{Binding Entry}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.76" />
-                              <TextBlock Text="{Binding RoiJson}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.52" />
-                            </StackPanel>
+                              <TextBlock Grid.Column="1" Text="{Binding StateLabel}" FontSize="10" Opacity="0.78" />
+                              <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding RoiJson}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.52" />
+                              <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding StateDetail}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.46" />
+                            </Grid>
                           </Grid>
                         </DataTemplate>
                       </ListBox.ItemTemplate>

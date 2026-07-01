@@ -1319,6 +1319,10 @@ static void RoiDraftBatchSourceUpdater()
         new MaaRoiEditDraft("RhodesOcrRegion_run_hope_current", "detail.roi", "[101,102,103,104]", true),
         new MaaRoiEditDraft("RhodesTemplate_runStatusFull_run_ingot", "detail.roi", "[201,202,203,204]", true),
     };
+    var draftPreview = new MaaRoiBatchDraftPreview(drafts[0], false, "適用済み", "差分あり");
+    Equal(false, draftPreview.IsIncluded, "batch draft preview included state");
+    Equal("適用済み", draftPreview.StateLabel, "batch draft preview state label");
+    Equal("差分あり", draftPreview.StateDetail, "batch draft preview state detail");
 
     var result = RhodesMaaRoiDraftBatchSourceUpdater.ApplyToSourceJsons(
         maaTasks,

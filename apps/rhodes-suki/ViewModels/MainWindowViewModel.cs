@@ -1883,6 +1883,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 out _,
                 out _);
             RoiBatchApplyResult = result;
+            UpdateRoiBatchDraftStates(result, result.Succeeded ? "確認済み" : "失敗");
             StatusMessage = result.Succeeded
                 ? $"ROI一括適用プレビュー: {result.AppliedCount}件"
                 : $"ROI一括適用プレビュー失敗: {result.Message}";
@@ -1906,6 +1907,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 ResolveScanProfilesSourcePath(),
                 drafts);
             RoiBatchApplyResult = result;
+            UpdateRoiBatchDraftStates(result, result.Succeeded ? "適用済み" : "失敗");
             StatusMessage = result.Succeeded
                 ? $"ROIを一括適用しました: {result.AppliedCount}件 / {result.BackupSummary}"
                 : $"ROI一括適用失敗: {result.Message}";
@@ -1915,7 +1917,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private Task SetAllRoiBatchDraftsIncludedAsync(bool isIncluded)
     {
         var next = RoiBatchDrafts
-            .Select(item => new MaaRoiBatchDraftPreview(item.Draft, isIncluded))
+            .Select(item =>
+            {
+                var stateLabel = isIncluded && item.StateLabel == "対象外" ? "未確認" : item.StateLabel;
+                return new MaaRoiBatchDraftPreview(
+                    item.Draft,
+                    isIncluded,
+                    isIncluded ? stateLabel : "対象外",
+                    isIncluded ? item.StateDetail : "");
+            })
             .ToArray();
         ReplaceCollection(RoiBatchDrafts, next);
         RoiBatchApplyResult = MaaRoiBatchApplyResult.Failed("未確認");
@@ -1923,6 +1933,30 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ? $"表示中ROI候補を全選択しました: {next.Length}件"
             : $"表示中ROI候補を全解除しました: {next.Length}件";
         return Task.CompletedTask;
+    }
+
+    private void UpdateRoiBatchDraftStates(MaaRoiBatchApplyResult result, string successStateLabel)
+    {
+        if (result.Results.Count == 0)
+            return;
+
+        var resultIndex = 0;
+        var next = RoiBatchDrafts
+            .Select(item =>
+            {
+                if (!item.IsIncluded)
+                    return new MaaRoiBatchDraftPreview(item.Draft, false, "対象外", "");
+
+                if (resultIndex >= result.Results.Count)
+                    return new MaaRoiBatchDraftPreview(item.Draft, true, "未確認", item.StateDetail);
+
+                var itemResult = result.Results[resultIndex++];
+                return itemResult.Succeeded
+                    ? new MaaRoiBatchDraftPreview(item.Draft, true, successStateLabel, itemResult.DiffSummary)
+                    : new MaaRoiBatchDraftPreview(item.Draft, true, "失敗", itemResult.Message);
+            })
+            .ToArray();
+        ReplaceCollection(RoiBatchDrafts, next);
     }
 
     private async Task RegenerateMaaResourceAsync()
@@ -2434,14 +2468,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshRoiBatchDrafts()
     {
-        var previous = RoiBatchDrafts.ToDictionary(item => item.Key, item => item.IsIncluded, StringComparer.Ordinal);
+        var previous = RoiBatchDrafts.ToDictionary(item => item.Key, StringComparer.Ordinal);
         var drafts = RoiPreviewRows
             .Where(row => row.IsResourceRoiCandidate)
             .Select(row => MaaRoiEditDraft.FromPreview(row))
             .Where(draft => draft.HasSelection && draft.IsResourceRoiCandidate)
-            .Select(draft => new MaaRoiBatchDraftPreview(
-                draft,
-                !previous.TryGetValue($"{draft.Entry}|{draft.Source}|{draft.RoiJson}", out var included) || included))
+            .Select(draft =>
+            {
+                var key = $"{draft.Entry}|{draft.Source}|{draft.RoiJson}";
+                return previous.TryGetValue(key, out var item)
+                    ? new MaaRoiBatchDraftPreview(draft, item.IsIncluded, item.StateLabel, item.StateDetail)
+                    : new MaaRoiBatchDraftPreview(draft);
+            })
             .ToArray();
         ReplaceCollection(RoiBatchDrafts, drafts);
     }
