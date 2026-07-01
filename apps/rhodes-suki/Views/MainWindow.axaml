@@ -17,13 +17,57 @@
     <services:RhodesBitmapPathConverter x:Key="BitmapPathConverter" />
   </suki:SukiWindow.Resources>
   <suki:SukiWindow.Styles>
+    <Style Selector="ListBox.choicePane">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ListBox.choicePane ListBoxItem">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <ContentPresenter
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}"
+              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="ListBox.choicePane ListBoxItem:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.choicePane ListBoxItem:selected">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
     <Style Selector="Button.choiceCard">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Stretch" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <ContentPresenter
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}"
+              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </ControlTemplate>
+      </Setter>
     </Style>
     <Style Selector="Button.choiceCard:pointerover">
       <Setter Property="Background" Value="Transparent" />
@@ -252,19 +296,19 @@
                   <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
                 </Grid>
 
-                <ListBox Grid.Row="2" ItemsSource="{Binding FilteredOperatorRows}" Background="Transparent" BorderThickness="0" Padding="0">
+                <ListBox Grid.Row="2" Classes="choicePane" ItemsSource="{Binding FilteredOperatorRows}">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
-                      <ItemsControl ItemsSource="{Binding Items}">
+                      <ItemsControl ItemsSource="{Binding Items}" HorizontalAlignment="Stretch">
                         <ItemsControl.ItemsPanel>
                           <ItemsPanelTemplate>
-                            <UniformGrid Columns="{Binding Columns}" />
+                            <UniformGrid Columns="{Binding Columns}" HorizontalAlignment="Stretch" />
                           </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                           <DataTemplate>
-                            <Button Classes="choiceCard" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Margin="0,0,8,8">
-                              <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="70">
+                            <Button Classes="choiceCard" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                              <Border CornerRadius="7" Padding="9" Margin="0,0,8,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="70" HorizontalAlignment="Stretch">
                                 <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
                                   <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
                                     <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
@@ -300,19 +344,19 @@
                   <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
                 </Grid>
 
-                <ListBox Grid.Row="2" ItemsSource="{Binding FilteredRelicRows}" Background="Transparent" BorderThickness="0" Padding="0">
+                <ListBox Grid.Row="2" Classes="choicePane" ItemsSource="{Binding FilteredRelicRows}">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
-                      <ItemsControl ItemsSource="{Binding Items}">
+                      <ItemsControl ItemsSource="{Binding Items}" HorizontalAlignment="Stretch">
                         <ItemsControl.ItemsPanel>
                           <ItemsPanelTemplate>
-                            <UniformGrid Columns="{Binding Columns}" />
+                            <UniformGrid Columns="{Binding Columns}" HorizontalAlignment="Stretch" />
                           </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                           <DataTemplate>
-                            <Button Classes="choiceCard" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Margin="0,0,8,8">
-                              <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="118">
+                            <Button Classes="choiceCard" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                              <Border CornerRadius="7" Padding="9" Margin="0,0,8,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="118" HorizontalAlignment="Stretch">
                                 <Grid RowDefinitions="Auto,*" RowSpacing="7">
                                   <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
                                     <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">

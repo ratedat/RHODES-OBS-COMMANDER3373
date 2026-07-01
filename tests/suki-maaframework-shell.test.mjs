@@ -277,9 +277,14 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /PaneColumnOptions/);
   assert.match(xaml, /OperatorPaneColumns/);
   assert.match(xaml, /RelicPaneColumns/);
-  assert.match(xaml, /ListBox Grid\.Row="2" ItemsSource="\{Binding FilteredOperatorRows\}"/);
-  assert.match(xaml, /ListBox Grid\.Row="2" ItemsSource="\{Binding FilteredRelicRows\}"/);
+  assert.match(xaml, /Selector="ListBox\.choicePane ListBoxItem"/);
+  assert.match(xaml, /HorizontalContentAlignment" Value="Stretch"/);
+  assert.match(xaml, /Content="\{TemplateBinding Content\}"/);
+  assert.match(xaml, /ContentTemplate="\{TemplateBinding ContentTemplate\}"/);
+  assert.match(xaml, /ListBox Grid\.Row="2" Classes="choicePane" ItemsSource="\{Binding FilteredOperatorRows\}"/);
+  assert.match(xaml, /ListBox Grid\.Row="2" Classes="choicePane" ItemsSource="\{Binding FilteredRelicRows\}"/);
   assert.match(xaml, /UniformGrid Columns="\{Binding Columns\}"/);
+  assert.match(xaml, /UniformGrid Columns="\{Binding Columns\}" HorizontalAlignment="Stretch"/);
   assert.match(xaml, /RelativeSource=\{RelativeSource AncestorType=Window\}/);
   assert.match(xaml, /Selector="Button\.choiceCard"/);
   assert.match(xaml, /Classes="choiceCard"/);
