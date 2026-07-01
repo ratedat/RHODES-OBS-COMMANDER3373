@@ -173,6 +173,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunSelectedProfileAdbScanCommand = new AsyncRelayCommand(RunSelectedProfileAdbScanAsync);
         RunAllResourceTasksCommand = new AsyncRelayCommand(RunAllResourceTasksAsync);
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
+        SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
         ApplyCandidateResultsCommand = new AsyncRelayCommand(ApplyCandidateResultsAsync);
         RunProbeCommand = new AsyncRelayCommand(parameter => RunProbeAsync(parameter as MaaProbePayloadPreview));
@@ -792,6 +793,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand ExportResourceTaskResultsCommand { get; }
 
+    public ICommand SyncRunStateFromApiCommand { get; }
+
     public ICommand ConvertResourceTaskResultsCommand { get; }
 
     public ICommand ApplyCandidateResultsCommand { get; }
@@ -1316,6 +1319,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var path = await SaveResourceTaskResultsAsync(ResourceTaskResults, SelectedResourceProfile?.Id);
             LastResourceTaskResultsPath = path;
             StatusMessage = $"MAA task結果を保存しました: {path}";
+        });
+    }
+
+    private async Task SyncRunStateFromApiAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            StatusMessage = "API状態を読み込んでいます。";
+            var result = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
+            if (!result.Succeeded)
+            {
+                StatusMessage = $"API状態同期に失敗しました: {result.Error}";
+                return;
+            }
+
+            await RhodesRunStateStore.ReplaceStateJsonAsync(result.StateJson);
+            ReloadRunStateFromStore();
+            StatusMessage = "API状態をSuki表示へ同期しました。";
         });
     }
 

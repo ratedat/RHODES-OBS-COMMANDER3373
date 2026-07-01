@@ -79,6 +79,24 @@ public static class RhodesRunStateStore
         }
     }
 
+    public static async Task ReplaceStateJsonAsync(string stateJson, string? statePath = null)
+    {
+        var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
+        var node = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson) as JsonObject
+            ?? new JsonObject { ["version"] = 1 };
+
+        await WriteLock.WaitAsync();
+        try
+        {
+            node["version"] ??= 1;
+            await WriteJsonAtomicAsync(path, node);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
+    }
+
     public static JsonObject ApplyChoices(
         JsonObject state,
         IEnumerable<SukiChoiceItem> operators,

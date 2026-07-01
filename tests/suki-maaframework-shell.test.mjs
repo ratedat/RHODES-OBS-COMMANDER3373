@@ -63,6 +63,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const candidateApplier = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionCandidateApplier.cs", "utf8");
   const candidateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaCandidateApiClient.cs", "utf8");
   const scanApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanApiClient.cs", "utf8");
+  const stateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesStateApiClient.cs", "utf8");
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
   const runModels = await fs.readFile("apps/rhodes-suki/Models/RunCatalogModels.cs", "utf8");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
@@ -127,6 +128,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runStateStore, /SaveChoicesAsync/);
   assert.match(runStateStore, /SaveRunContextAsync/);
   assert.match(runStateStore, /SaveCandidatesAsync/);
+  assert.match(runStateStore, /ReplaceStateJsonAsync/);
   assert.match(runStateStore, /SemaphoreSlim/);
   assert.match(runStateStore, /operatorExcludedIds/);
   assert.match(runStateStore, /operatorGridColumns/);
@@ -191,6 +193,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(scanApiClient, /api\/recognition\/scan/);
   assert.match(scanApiClient, /ExtractResult/);
   assert.match(scanApiClient, /RhodesMaaCandidateApiClient\.ExtractCandidatePreviews/);
+  assert.match(stateApiClient, /api\/state/);
+  assert.match(viewModel, /SyncRunStateFromApiCommand/);
+  assert.match(viewModel, /RhodesStateApiClient\.FetchAsync/);
+  assert.match(viewModel, /RhodesRunStateStore\.ReplaceStateJsonAsync/);
   assert.match(viewModel, /CandidateApiProfileId/);
   assert.match(viewModel, /RunSelectedProfileAdbScanCommand/);
   assert.match(viewModel, /RhodesRecognitionScanApiClient\.RunAsync/);
@@ -293,6 +299,8 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RunSelectedProfileRecognitionAndApplyCommand/);
   assert.match(xaml, /RunSelectedProfileAdbScanCommand/);
   assert.match(xaml, /ADB API/);
+  assert.match(xaml, /SyncRunStateFromApiCommand/);
+  assert.match(xaml, /API状態同期/);
   assert.match(xaml, /OpenRecognitionProfileCommand/);
   assert.match(xaml, /CommandParameter="\{Binding ProfileId\}"/);
   assert.match(xaml, /CommandParameter="runStatusFull"/);

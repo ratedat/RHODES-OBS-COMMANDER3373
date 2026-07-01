@@ -35,6 +35,7 @@ var tests = new (string Name, Action Run)[]
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
+    ("Run state store can replace state from API JSON", StateApiReplacement),
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
@@ -1121,6 +1122,40 @@ static void ChoicePersistence()
     Equal(3, preferences["relicGridColumns"]!.GetValue<int>(), "relic grid columns");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "updatedAt");
     Equal(3, updated["run"]!.AsObject()["hope"]!.GetValue<int>(), "existing run state preserved");
+}
+
+static void StateApiReplacement()
+{
+    var tempDirectory = Directory.CreateTempSubdirectory("rhodes-suki-state-api-").FullName;
+    try
+    {
+        var statePath = Path.Combine(tempDirectory, "current-state.json");
+        RhodesRunStateStore.ReplaceStateJsonAsync(
+            """
+            {
+              "run": {
+                "campaignId": "is5_sarkaz",
+                "hope": 9,
+                "maxHope": 12,
+                "special": { "is5_sarkaz": { "idea": 4 } }
+              },
+              "operators": ["gummy"],
+              "relics": []
+            }
+            """,
+            statePath).GetAwaiter().GetResult();
+
+        var catalog = RhodesRunCatalog.LoadDefault(RhodesRunCatalog.ResolveDataRoot(), statePath);
+        Equal("is5_sarkaz", catalog.Current.CampaignId, "api campaign id");
+        Equal(9, catalog.Current.Hope, "api hope");
+        Equal(12, catalog.Current.MaxHope, "api max hope");
+        Equal(4, catalog.Current.Idea, "api idea");
+        Equal(true, catalog.Current.SelectedOperatorIds.Contains("gummy"), "api selected operator");
+    }
+    finally
+    {
+        Directory.Delete(tempDirectory, true);
+    }
 }
 
 static void RunContextPersistence()
