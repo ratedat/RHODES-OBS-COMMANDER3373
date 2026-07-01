@@ -40,6 +40,7 @@ var tests = new (string Name, Action Run)[]
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
     ("Run state store can replace state from API JSON", StateApiReplacement),
+    ("State API client can apply Suki ADB settings into current state JSON", StateApiAdbSettingsApply),
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
@@ -1315,6 +1316,33 @@ static void StateApiReplacement()
     {
         Directory.Delete(tempDirectory, true);
     }
+}
+
+static void StateApiAdbSettingsApply()
+{
+    var updated = JsonNode.Parse(RhodesStateApiClient.ApplyAdbSettingsToStateJson(
+        """
+        {
+          "version": 1,
+          "run": { "campaignId": "is5_sarkaz", "hope": 3 },
+          "adb": { "connectionPreset": "auto", "serial": "" },
+          "operators": ["gummy"]
+        }
+        """,
+        new RhodesAdbApiSettings(
+            true,
+            "google-play-games-dev",
+            "C:/Google/adb.exe",
+            "127.0.0.1:6520")))!.AsObject();
+
+    var adb = updated["adb"]!.AsObject();
+    Equal("google-play-games-dev", adb["connectionPreset"]!.GetValue<string>(), "adb preset");
+    Equal("C:/Google/adb.exe", adb["adbPath"]!.GetValue<string>(), "adb path");
+    Equal("127.0.0.1:6520", adb["serial"]!.GetValue<string>(), "adb serial");
+    Equal(true, adb["restartServerOnFailure"]!.GetValue<bool>(), "adb restart server");
+    Equal(5, adb["reconnectAttempts"]!.GetValue<int>(), "adb reconnect attempts");
+    Equal("is5_sarkaz", updated["run"]!.AsObject()["campaignId"]!.GetValue<string>(), "run preserved");
+    Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "operators preserved");
 }
 
 static void RunContextPersistence()

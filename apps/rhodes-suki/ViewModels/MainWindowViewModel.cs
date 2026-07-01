@@ -1129,8 +1129,41 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 RhodesApiUrl,
                 SelectedAdbPreset?.Id ?? "auto",
                 SelectedResourceProfile?.Id ?? "runStatusFull"));
-            StatusMessage = $"Suki設定を保存しました: {RhodesSukiSettingsStore.DefaultPath}";
+            var apiError = await SaveAdbSettingsToApiStateAsync();
+            StatusMessage = string.IsNullOrWhiteSpace(apiError)
+                ? $"Suki設定とADB API設定を保存しました: {RhodesSukiSettingsStore.DefaultPath}"
+                : $"Suki設定を保存しました。ADB API設定の反映は失敗: {apiError}";
         });
+    }
+
+    private async Task<string> SaveAdbSettingsToApiStateAsync()
+    {
+        var fetched = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
+        if (!fetched.Succeeded)
+        {
+            _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", fetched.Error, false, false);
+            RefreshRuntimeCapabilities();
+            return fetched.Error;
+        }
+
+        var updated = RhodesStateApiClient.ApplyAdbSettingsToStateJson(
+            fetched.StateJson,
+            new RhodesAdbApiSettings(
+                true,
+                SelectedAdbPreset?.Id ?? "auto",
+                AdbPath,
+                AdbSerial));
+        var saved = await RhodesStateApiClient.SaveAsync(RhodesApiUrl, updated);
+        if (!saved.Succeeded)
+        {
+            _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", saved.Error, false, false);
+            RefreshRuntimeCapabilities();
+            return saved.Error;
+        }
+
+        _rhodesApiStatus = RhodesApiStatusProbe.ParseStateJson(saved.StateJson);
+        RefreshRuntimeCapabilities();
+        return "";
     }
 
     private Task SetWorkspaceAsync(object? parameter)
