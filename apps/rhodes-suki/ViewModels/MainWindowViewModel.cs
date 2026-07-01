@@ -1907,7 +1907,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 LastResourceTaskResultsPath,
                 LastCapturePath,
                 RoiBatchApplyResult,
-                RhodesSukiDebugPaths.RoiSessionsDirectory);
+                RhodesSukiDebugPaths.RoiSessionsDirectory,
+                comparisonSummary: RoiRescanComparisonSummary,
+                comparisonRows: RoiRescanComparisonRows);
             RefreshRoiAdjustmentSessions();
             StatusMessage = $"ROI調整セッションを保存しました: {LastRoiSessionPath}";
         });
@@ -1970,10 +1972,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 TryLoadCapturePreviewFromPath(payload.CapturePath);
             RoiBatchApplyResult = payload.BatchResult ?? MaaRoiBatchApplyResult.Failed("未確認");
             ReplaceCollection(RoiBatchDrafts, payload.Drafts.Select(draft => draft.ToPreview()));
+            ReplaceCollection(RoiRescanComparisonRows, payload.SafeComparisonRows);
+            RoiRescanComparisonSummary = payload.SafeComparisonSummary;
             RefreshRoiAdjustmentSessions();
             StatusMessage = restoredScan
-                ? $"ROI調整セッションを再開しました: 候補{CandidateResults.Count}件 / task{ResourceTaskResults.Count}件 / ROI候補{RoiBatchDrafts.Count}件"
-                : $"ROI調整セッションを再開しました: ROI候補{RoiBatchDrafts.Count}件 / 元スキャン未復元";
+                ? $"ROI調整セッションを再開しました: 候補{CandidateResults.Count}件 / task{ResourceTaskResults.Count}件 / ROI候補{RoiBatchDrafts.Count}件 / 比較{RoiRescanComparisonRows.Count}件"
+                : $"ROI調整セッションを再開しました: ROI候補{RoiBatchDrafts.Count}件 / 比較{RoiRescanComparisonRows.Count}件 / 元スキャン未復元";
             return Task.CompletedTask;
         });
     }

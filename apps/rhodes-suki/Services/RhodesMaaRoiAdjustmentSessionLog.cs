@@ -22,7 +22,9 @@ public static class RhodesMaaRoiAdjustmentSessionLog
         string? scanLogPath,
         string? capturePath,
         MaaRoiBatchApplyResult? batchResult,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        string? comparisonSummary = null,
+        IEnumerable<MaaRoiRescanComparisonRow>? comparisonRows = null)
     {
         var payload = new MaaRoiAdjustmentSessionPayload(
             1,
@@ -32,7 +34,9 @@ public static class RhodesMaaRoiAdjustmentSessionLog
             capturePath?.Trim() ?? "",
             createdAt.UtcDateTime.ToString("O"),
             drafts.Select(MaaRoiAdjustmentSessionDraft.FromPreview).ToArray(),
-            batchResult);
+            batchResult,
+            comparisonSummary?.Trim() ?? "",
+            comparisonRows?.ToArray() ?? []);
 
         return JsonSerializer.Serialize(payload, WriteOptions);
     }
@@ -44,7 +48,9 @@ public static class RhodesMaaRoiAdjustmentSessionLog
         string? capturePath,
         MaaRoiBatchApplyResult? batchResult,
         string directory,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null,
+        string? comparisonSummary = null,
+        IEnumerable<MaaRoiRescanComparisonRow>? comparisonRows = null)
     {
         Directory.CreateDirectory(directory);
         var timestamp = createdAt ?? DateTimeOffset.UtcNow;
@@ -52,7 +58,7 @@ public static class RhodesMaaRoiAdjustmentSessionLog
         var file = Path.Combine(
             directory,
             $"roi-session-{TimestampForFile(timestamp)}-{SanitizeFilePart(normalizedProfile)}.json");
-        var json = BuildJson(drafts, profileId, scanLogPath, capturePath, batchResult, timestamp);
+        var json = BuildJson(drafts, profileId, scanLogPath, capturePath, batchResult, timestamp, comparisonSummary, comparisonRows);
         await File.WriteAllTextAsync(file, $"{json}{Environment.NewLine}");
         return file;
     }
@@ -92,7 +98,7 @@ public static class RhodesMaaRoiAdjustmentSessionLog
 
     private static MaaRoiAdjustmentSessionPayload Empty()
     {
-        return new MaaRoiAdjustmentSessionPayload(0, "", null, "", "", "", [], null);
+        return new MaaRoiAdjustmentSessionPayload(0, "", null, "", "", "", [], null, "", []);
     }
 
     private static MaaRoiAdjustmentSessionItem? TryLoadItem(string path)
@@ -109,6 +115,7 @@ public static class RhodesMaaRoiAdjustmentSessionLog
             payload.CreatedAt,
             payload.DraftCount,
             payload.IncludedCount,
+            payload.ComparisonCount,
             payload.ScanLogPath,
             path,
             timestamp);

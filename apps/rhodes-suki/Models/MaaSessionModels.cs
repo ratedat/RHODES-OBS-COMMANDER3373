@@ -397,11 +397,19 @@ public sealed record MaaRoiAdjustmentSessionPayload(
     string CapturePath,
     string CreatedAt,
     IReadOnlyList<MaaRoiAdjustmentSessionDraft> Drafts,
-    MaaRoiBatchApplyResult? BatchResult)
+    MaaRoiBatchApplyResult? BatchResult,
+    string? ComparisonSummary,
+    IReadOnlyList<MaaRoiRescanComparisonRow>? ComparisonRows)
 {
+    public IReadOnlyList<MaaRoiRescanComparisonRow> SafeComparisonRows => ComparisonRows ?? [];
+
     public int DraftCount => Drafts.Count;
 
     public int IncludedCount => Drafts.Count(draft => draft.IsIncluded);
+
+    public int ComparisonCount => SafeComparisonRows.Count;
+
+    public string SafeComparisonSummary => string.IsNullOrWhiteSpace(ComparisonSummary) ? "再スキャン比較未実行" : ComparisonSummary;
 }
 
 public sealed record MaaRoiAdjustmentSessionItem(
@@ -409,13 +417,16 @@ public sealed record MaaRoiAdjustmentSessionItem(
     string CreatedAt,
     int DraftCount,
     int IncludedCount,
+    int ComparisonCount,
     string ScanLogPath,
     string SessionPath,
     DateTimeOffset SortTimestamp)
 {
     public string Title => string.IsNullOrWhiteSpace(ProfileId) ? "ROI調整セッション" : $"ROI調整: {ProfileId}";
 
-    public string Detail => $"{DraftCount}候補 / 対象{IncludedCount}件 / {CreatedAt}";
+    public string Detail => ComparisonCount > 0
+        ? $"{DraftCount}候補 / 対象{IncludedCount}件 / 比較{ComparisonCount}件 / {CreatedAt}"
+        : $"{DraftCount}候補 / 対象{IncludedCount}件 / {CreatedAt}";
 }
 
 public sealed record MaaRoiDraftApplyResult(
