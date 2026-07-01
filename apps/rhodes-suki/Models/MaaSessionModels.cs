@@ -333,6 +333,53 @@ public sealed class MaaRoiBatchDraftPreview
     public string Key => $"{Draft.Entry}|{Draft.Source}|{Draft.RoiJson}";
 }
 
+public sealed record MaaRoiAdjustmentSessionDraft(
+    string Entry,
+    string Source,
+    string RoiJson,
+    bool IsResourceRoiCandidate,
+    bool IsIncluded,
+    string StateLabel,
+    string StateDetail)
+{
+    public static MaaRoiAdjustmentSessionDraft FromPreview(MaaRoiBatchDraftPreview preview)
+    {
+        return new MaaRoiAdjustmentSessionDraft(
+            preview.Draft.Entry,
+            preview.Draft.Source,
+            preview.Draft.RoiJson,
+            preview.Draft.IsResourceRoiCandidate,
+            preview.IsIncluded,
+            preview.StateLabel,
+            preview.StateDetail);
+    }
+
+    public MaaRoiEditDraft ToEditDraft()
+    {
+        return new MaaRoiEditDraft(Entry, Source, RoiJson, IsResourceRoiCandidate);
+    }
+
+    public MaaRoiBatchDraftPreview ToPreview()
+    {
+        return new MaaRoiBatchDraftPreview(ToEditDraft(), IsIncluded, StateLabel, StateDetail);
+    }
+}
+
+public sealed record MaaRoiAdjustmentSessionPayload(
+    int SchemaVersion,
+    string Kind,
+    string? ProfileId,
+    string ScanLogPath,
+    string CapturePath,
+    string CreatedAt,
+    IReadOnlyList<MaaRoiAdjustmentSessionDraft> Drafts,
+    MaaRoiBatchApplyResult? BatchResult)
+{
+    public int DraftCount => Drafts.Count;
+
+    public int IncludedCount => Drafts.Count(draft => draft.IsIncluded);
+}
+
 public sealed record MaaRoiDraftApplyResult(
     bool Succeeded,
     string Message,

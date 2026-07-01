@@ -38,6 +38,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA ROI detail rows expose rect, roi, and point boxes", RoiDetailRowsExposeRectVariants),
     ("MAA ROI preview projector scales actual image coordinates to 1280x720", RoiPreviewProjectorScalesImageCoordinates),
     ("MAA ROI edit draft evidence uses stable JSON shape", RoiEditDraftEvidence),
+    ("MAA ROI adjustment session log preserves scan-scoped drafts", RoiAdjustmentSessionLog),
     ("MAA ROI draft source updater maps generated entries back to source ROI", RoiDraftSourceUpdater),
     ("MAA ROI draft batch updater applies multiple source files atomically", RoiDraftBatchSourceUpdater),
     ("MAA generated resource builder converts source JSON to pipeline nodes", MaaGeneratedResourceBuilder),
@@ -1184,6 +1185,68 @@ static void RoiEditDraftEvidence()
         var file = RhodesMaaRoiEditDraftLog.SaveAsync(draft, "runStatusFull", directory, exportedAt).GetAwaiter().GetResult();
         Equal(true, File.Exists(file), "roi draft file exists");
         Equal(true, Path.GetFileName(file).Contains("runStatusFull", StringComparison.Ordinal), "roi draft filename profile");
+    }
+    finally
+    {
+        if (Directory.Exists(directory))
+            Directory.Delete(directory, true);
+    }
+}
+
+static void RoiAdjustmentSessionLog()
+{
+    var drafts = new[]
+    {
+        new MaaRoiBatchDraftPreview(
+            new MaaRoiEditDraft("RhodesOcrRegion_run_hope_current", "detail.roi", "[10,20,30,40]", true),
+            true,
+            "確認済み",
+            "差分: [1,2,3,4] -> [10,20,30,40]"),
+        new MaaRoiBatchDraftPreview(
+            new MaaRoiEditDraft("RhodesTemplate_runStatusFull_run_ingot", "detail.roi", "[50,60,70,80]", true),
+            false,
+            "対象外",
+            ""),
+    };
+    var batchResult = new MaaRoiBatchApplyResult(
+        true,
+        "ROIドラフトを1件適用できます。",
+        1,
+        [new MaaRoiDraftApplyResult(true, "ok", "data/recognition/maa-tasks.json", "run.hope.current", "[1,2,3,4]", "[10,20,30,40]")]);
+    var createdAt = DateTimeOffset.Parse("2026-07-01T00:00:00Z");
+    var json = RhodesMaaRoiAdjustmentSessionLog.BuildJson(
+        drafts,
+        "runStatusFull",
+        "recognition.json",
+        "capture.png",
+        batchResult,
+        createdAt);
+    var root = JsonNode.Parse(json)!.AsObject();
+    Equal(1, root["schemaVersion"]!.GetValue<int>(), "roi session schema version");
+    Equal("maa-roi-adjustment-session", root["kind"]!.GetValue<string>(), "roi session kind");
+    Equal("runStatusFull", root["profileId"]!.GetValue<string>(), "roi session profile");
+    Equal("recognition.json", root["scanLogPath"]!.GetValue<string>(), "roi session scan log path");
+    Equal(2, root["drafts"]!.AsArray().Count, "roi session draft count");
+    Equal("確認済み", root["drafts"]!.AsArray()[0]!.AsObject()["stateLabel"]!.GetValue<string>(), "roi session draft state");
+
+    var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-roi-session-{Guid.NewGuid():N}");
+    try
+    {
+        var file = RhodesMaaRoiAdjustmentSessionLog.SaveAsync(
+            drafts,
+            "runStatusFull",
+            "recognition.json",
+            "capture.png",
+            batchResult,
+            directory,
+            createdAt).GetAwaiter().GetResult();
+        Equal(true, File.Exists(file), "roi session file exists");
+        Equal(true, Path.GetFileName(file).Contains("runStatusFull", StringComparison.Ordinal), "roi session filename profile");
+        var loaded = RhodesMaaRoiAdjustmentSessionLog.Load(file);
+        Equal(2, loaded.DraftCount, "loaded roi session draft count");
+        Equal(1, loaded.IncludedCount, "loaded roi session included count");
+        Equal("RhodesOcrRegion_run_hope_current", loaded.Drafts[0].ToPreview().Entry, "loaded roi session preview entry");
+        Equal("確認済み", loaded.Drafts[0].ToPreview().StateLabel, "loaded roi session preview state");
     }
     finally
     {
