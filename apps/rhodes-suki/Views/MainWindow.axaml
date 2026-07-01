@@ -739,7 +739,31 @@
             </Grid>
 
             <Border Grid.Row="1" CornerRadius="7" Padding="8" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1">
-              <Image Source="{Binding LastCaptureImage}" Stretch="Uniform" />
+              <Viewbox Stretch="Uniform">
+                <Canvas Width="1280" Height="720">
+                  <Image Source="{Binding LastCaptureImage}" Width="1280" Height="720" Stretch="Fill" />
+                  <ItemsControl ItemsSource="{Binding RoiDetailRows}" IsHitTestVisible="False" Width="1280" Height="720">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <Canvas Width="1280" Height="720" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Canvas.Left="{Binding X}"
+                                Canvas.Top="{Binding Y}"
+                                Width="{Binding Width}"
+                                Height="{Binding Height}"
+                                BorderBrush="#36E2B6"
+                                BorderThickness="3"
+                                Background="#2236E2B6">
+                          <TextBlock Text="{Binding Source}" FontSize="16" Foreground="#F3FFFB" Background="#CC081011" Padding="4,1" />
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Canvas>
+              </Viewbox>
             </Border>
 
             <TextBlock Grid.Row="2" Text="候補" FontSize="13" FontWeight="SemiBold" />

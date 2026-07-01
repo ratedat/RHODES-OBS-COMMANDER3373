@@ -346,6 +346,9 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RecognitionScanLogRows/);
   assert.match(xaml, /OcrDetailRows/);
   assert.match(xaml, /RoiDetailRows/);
+  assert.match(xaml, /Canvas Width="1280" Height="720"/);
+  assert.match(xaml, /Canvas\.Left="\{Binding X\}"/);
+  assert.match(xaml, /Canvas\.Top="\{Binding Y\}"/);
   assert.match(xaml, /スキャン履歴/);
   assert.match(xaml, /SelectedResourceProfile/);
   assert.match(xaml, /ResourceProfiles/);

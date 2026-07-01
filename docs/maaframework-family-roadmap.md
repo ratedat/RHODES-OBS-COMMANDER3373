@@ -69,7 +69,8 @@ flowchart LR
 - 接続済み: スキャン履歴の `log[].path` がPNG/JPGの場合、読込時に右側プレビューへスクリーンショットを復元する。
 - 接続済み: MAA `RecognitionDetailJson` の `filtered_results` / `best_result` / `all_results` をOCR detail行として整形表示する。
 - 接続済み: MAA `RecognitionDetailJson` の `roi` / `rect` / `box` をROI detail行として抽出表示する。
-- 残作業: スキャン履歴のROIオーバーレイを画像プレビュー上へ重ね描きする。
+- 接続済み: 抽出したROI detail行を1280x720基準のスクリーンショットプレビュー上へ重ね描きする。
+- 残作業: ROI overlayのON/OFF、選択中行だけ強調、実画像解像度が1280x720以外だった場合の座標変換を追加する。
 
 ## First Milestone
 - SukiUI shell が起動する
