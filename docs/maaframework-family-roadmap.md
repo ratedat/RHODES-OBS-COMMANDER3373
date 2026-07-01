@@ -78,7 +78,8 @@ flowchart LR
 - 接続済み: 選択ROIから1280x720基準の編集ドラフトを生成し、`RHODES OBS COMMANDER3373 Debug Logs/ROI Drafts` へJSON書き出しできる。
 - 接続済み: ROI編集ドラフトを `data/recognition/maa-tasks.json` の生成元ROIへ対応付け、適用確認、バックアップ付き適用、Suki内Resource再生成まで実行できる。
 - 接続済み: Suki内Resource再生成後、MAA接続済みなら `Resource` / `Controller` / `Tasker` を再初期化して生成済みResourceを即時再読込する。
-- 残作業: `scan-profiles.json` のtemplate/search ROI系ドラフト適用にも拡張する。
+- 接続済み: `RhodesTemplate_*` のROI編集ドラフトを `data/recognition/scan-profiles.json` の `templateOcrRegions[].searchRoi` へ対応付け、バックアップ付きで適用できる。
+- 残作業: ROIドラフト適用後の差分レビューをUI内で読みやすくし、複数ROIをまとめて適用できるようにする。
 
 ## First Milestone
 - SukiUI shell が起動する

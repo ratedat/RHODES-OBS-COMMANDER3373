@@ -1220,6 +1220,43 @@ static void RoiDraftSourceUpdater()
     var missingDraft = new MaaRoiEditDraft("RhodesOcrRegion_missing", "filtered.roi", "[10,20,30,40]", true);
     Equal(false, RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksJson(source, missingDraft, out _).Succeeded, "missing draft rejected");
 
+    var scanSource = """
+    {
+      "version": 1,
+      "profiles": [
+        {
+          "id": "runStatusFull",
+          "templateOcrRegions": [
+            {
+              "idPrefix": "run.ingot",
+              "templatePath": "assets/recognition/templates/run/IngotIcon.png",
+              "searchRoi": { "x": 1, "y": 2, "width": 3, "height": 4 }
+            },
+            {
+              "idPrefix": "run.hope",
+              "templatePath": "assets/recognition/templates/run/HopeIcon.png",
+              "searchRoi": { "x": 5, "y": 6, "width": 7, "height": 8 }
+            }
+          ]
+        }
+      ]
+    }
+    """;
+    var templateDraft = new MaaRoiEditDraft("RhodesTemplate_runStatusFull_run_ingot", "detail.roi", "[11,22,33,44]", true);
+    var templateResult = RhodesMaaRoiDraftSourceUpdater.ApplyToScanProfilesJson(scanSource, templateDraft, out var updatedScan);
+    Equal(true, templateResult.Succeeded, "scan profile roi update succeeded");
+    Equal("data/recognition/scan-profiles.json", templateResult.SourcePath, "scan profile source path");
+    Equal("runStatusFull.run.ingot", templateResult.TargetId, "scan profile target");
+    Equal("[1,2,3,4]", templateResult.PreviousRoi, "scan profile previous roi");
+    Equal("[11,22,33,44]", templateResult.UpdatedRoi, "scan profile updated roi");
+    var scanRoot = JsonNode.Parse(updatedScan)!.AsObject();
+    var searchRoi = scanRoot["profiles"]!.AsArray()[0]!.AsObject()["templateOcrRegions"]!.AsArray()[0]!.AsObject()["searchRoi"]!.AsObject();
+    Equal(11, searchRoi["x"]!.GetValue<int>(), "scan profile roi x");
+    Equal(5, scanRoot["profiles"]!.AsArray()[0]!.AsObject()["templateOcrRegions"]!.AsArray()[1]!.AsObject()["searchRoi"]!.AsObject()["x"]!.GetValue<int>(), "unrelated scan profile roi unchanged");
+    Equal(true, RhodesMaaRoiDraftSourceUpdater.UsesScanProfilesSource(templateDraft), "template draft resolves scan profiles");
+    var sourceResult = RhodesMaaRoiDraftSourceUpdater.ApplyToSourceJson(scanSource, templateDraft, out _);
+    Equal(true, sourceResult.Succeeded, "generic source update delegates scan profile");
+
     var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-roi-source-{Guid.NewGuid():N}");
     Directory.CreateDirectory(directory);
     try
@@ -1231,6 +1268,14 @@ static void RoiDraftSourceUpdater()
         Equal(true, File.Exists(fileResult.BackupPath), "roi source backup exists");
         var saved = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
         Equal(10, saved["ocrRegions"]!.AsArray()[0]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "saved roi x");
+
+        var scanFile = Path.Combine(directory, "scan-profiles.json");
+        File.WriteAllText(scanFile, scanSource);
+        var scanFileResult = RhodesMaaRoiDraftSourceUpdater.ApplyToSourceFileAsync(scanFile, templateDraft).GetAwaiter().GetResult();
+        Equal(true, scanFileResult.Succeeded, "scan profile source file update succeeded");
+        Equal(true, File.Exists(scanFileResult.BackupPath), "scan profile source backup exists");
+        var savedScan = JsonNode.Parse(File.ReadAllText(scanFile))!.AsObject();
+        Equal(11, savedScan["profiles"]!.AsArray()[0]!.AsObject()["templateOcrRegions"]!.AsArray()[0]!.AsObject()["searchRoi"]!.AsObject()["x"]!.GetValue<int>(), "saved scan profile roi x");
     }
     finally
     {

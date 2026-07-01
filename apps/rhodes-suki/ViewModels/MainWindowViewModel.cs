@@ -1791,16 +1791,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            var sourcePath = ResolveMaaTasksSourcePath();
+            var sourcePath = ResolveRoiDraftSourcePath(SelectedRoiEditDraft);
             if (!File.Exists(sourcePath))
             {
-                RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed($"maa-tasks.jsonが見つかりません: {sourcePath}");
+                RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed($"ROI生成元JSONが見つかりません: {sourcePath}");
                 StatusMessage = RoiDraftApplyResult.Message;
                 return;
             }
 
             var json = await File.ReadAllTextAsync(sourcePath);
-            var result = RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksJson(json, SelectedRoiEditDraft, out _);
+            var result = RhodesMaaRoiDraftSourceUpdater.ApplyToSourceJson(json, SelectedRoiEditDraft, out _);
             RoiDraftApplyResult = result with { SourcePath = result.Succeeded ? sourcePath : result.SourcePath };
             StatusMessage = result.Succeeded
                 ? $"ROI適用プレビュー: {result.TargetId} {result.PreviousRoi} -> {result.UpdatedRoi}"
@@ -1819,8 +1819,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            var sourcePath = ResolveMaaTasksSourcePath();
-            var result = await RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksFileAsync(sourcePath, SelectedRoiEditDraft);
+            var sourcePath = ResolveRoiDraftSourcePath(SelectedRoiEditDraft);
+            var result = await RhodesMaaRoiDraftSourceUpdater.ApplyToSourceFileAsync(sourcePath, SelectedRoiEditDraft);
             RoiDraftApplyResult = result;
             StatusMessage = result.Succeeded
                 ? $"ROIを適用しました: {result.TargetId} / backup={result.BackupPath}"
@@ -2734,6 +2734,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return Path.Combine(AppContext.BaseDirectory, RhodesMaaGeneratedResourceBuilder.ScanProfilesSourcePath);
+    }
+
+    private static string ResolveRoiDraftSourcePath(MaaRoiEditDraft draft)
+    {
+        return RhodesMaaRoiDraftSourceUpdater.UsesScanProfilesSource(draft)
+            ? ResolveScanProfilesSourcePath()
+            : ResolveMaaTasksSourcePath();
     }
 
     private static string ResolveGeneratedPipelinePath()

@@ -8,6 +8,7 @@ namespace RhodesSuki.Services;
 public static class RhodesMaaRoiDraftSourceUpdater
 {
     public const string MaaTasksSourcePath = "data/recognition/maa-tasks.json";
+    public const string ScanProfilesSourcePath = "data/recognition/scan-profiles.json";
 
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
@@ -63,6 +64,77 @@ public static class RhodesMaaRoiDraftSourceUpdater
         return MaaRoiDraftApplyResult.Failed($"entryに対応するocrRegionsが見つかりません: {draft.Entry}");
     }
 
+    public static MaaRoiDraftApplyResult ApplyToScanProfilesJson(
+        string json,
+        MaaRoiEditDraft draft,
+        out string updatedJson)
+    {
+        updatedJson = json;
+        if (!draft.HasSelection)
+            return MaaRoiDraftApplyResult.Failed("ROIドラフトが未選択です。");
+
+        if (!draft.IsResourceRoiCandidate)
+            return MaaRoiDraftApplyResult.Failed("Resource ROI候補ではないため適用できません。");
+
+        if (!TryParseRoi(draft.RoiJson, out var roi))
+            return MaaRoiDraftApplyResult.Failed("ROI座標JSONを解析できません。");
+
+        JsonNode? root;
+        try
+        {
+            root = JsonNode.Parse(json);
+        }
+        catch (JsonException ex)
+        {
+            return MaaRoiDraftApplyResult.Failed($"scan-profiles JSONを解析できません: {ex.Message}");
+        }
+
+        if (root is not JsonObject rootObject || rootObject["profiles"] is not JsonArray profiles)
+            return MaaRoiDraftApplyResult.Failed("profilesが見つかりません。");
+
+        foreach (var profileNode in profiles.OfType<JsonObject>())
+        {
+            var profileId = profileNode["id"]?.GetValue<string>() ?? "";
+            if (profileNode["templateOcrRegions"] is not JsonArray regions)
+                continue;
+
+            var index = 0;
+            foreach (var regionNode in regions.OfType<JsonObject>())
+            {
+                var idPrefix = regionNode["idPrefix"]?.GetValue<string>() ?? "";
+                var suffix = string.IsNullOrWhiteSpace(idPrefix) ? index.ToString() : idPrefix;
+                if (!draft.Entry.Equals(NodeName("RhodesTemplate", $"{profileId}.{suffix}"), StringComparison.Ordinal))
+                {
+                    index++;
+                    continue;
+                }
+
+                var previous = RoiToJson(regionNode["searchRoi"] as JsonObject);
+                regionNode["searchRoi"] = RoiObject(roi);
+                updatedJson = $"{rootObject.ToJsonString(WriteOptions)}{Environment.NewLine}";
+                return new MaaRoiDraftApplyResult(
+                    true,
+                    "scan-profiles.jsonのtemplateOcrRegions searchRoiを更新できます。",
+                    ScanProfilesSourcePath,
+                    $"{profileId}.{suffix}",
+                    previous,
+                    draft.RoiJson);
+            }
+        }
+
+        return MaaRoiDraftApplyResult.Failed($"entryに対応するtemplateOcrRegionsが見つかりません: {draft.Entry}");
+    }
+
+    public static MaaRoiDraftApplyResult ApplyToSourceJson(
+        string json,
+        MaaRoiEditDraft draft,
+        out string updatedJson)
+    {
+        return UsesScanProfilesSource(draft)
+            ? ApplyToScanProfilesJson(json, draft, out updatedJson)
+            : ApplyToMaaTasksJson(json, draft, out updatedJson);
+    }
+
     public static async Task<MaaRoiDraftApplyResult> ApplyToMaaTasksFileAsync(
         string sourcePath,
         MaaRoiEditDraft draft)
@@ -84,6 +156,43 @@ public static class RhodesMaaRoiDraftSourceUpdater
             BackupPath = backupPath,
             Message = "maa-tasks.jsonへROIを適用しました。Resource再生成を実行してください。",
         };
+    }
+
+    public static async Task<MaaRoiDraftApplyResult> ApplyToScanProfilesFileAsync(
+        string sourcePath,
+        MaaRoiEditDraft draft)
+    {
+        if (!File.Exists(sourcePath))
+            return MaaRoiDraftApplyResult.Failed($"scan-profiles.jsonが見つかりません: {sourcePath}");
+
+        var json = await File.ReadAllTextAsync(sourcePath);
+        var result = ApplyToScanProfilesJson(json, draft, out var updatedJson);
+        if (!result.Succeeded)
+            return result with { SourcePath = sourcePath };
+
+        var backupPath = $"{sourcePath}.bak-{DateTimeOffset.Now:yyyyMMdd-HHmmss-fff}";
+        File.Copy(sourcePath, backupPath, overwrite: false);
+        await File.WriteAllTextAsync(sourcePath, updatedJson);
+        return result with
+        {
+            SourcePath = sourcePath,
+            BackupPath = backupPath,
+            Message = "scan-profiles.jsonへROIを適用しました。Resource再生成を実行してください。",
+        };
+    }
+
+    public static async Task<MaaRoiDraftApplyResult> ApplyToSourceFileAsync(
+        string sourcePath,
+        MaaRoiEditDraft draft)
+    {
+        return UsesScanProfilesSource(draft)
+            ? await ApplyToScanProfilesFileAsync(sourcePath, draft)
+            : await ApplyToMaaTasksFileAsync(sourcePath, draft);
+    }
+
+    public static bool UsesScanProfilesSource(MaaRoiEditDraft draft)
+    {
+        return draft.Entry.StartsWith("RhodesTemplate_", StringComparison.Ordinal);
     }
 
     private static bool TryParseRoi(string value, out int[] roi)
@@ -123,6 +232,39 @@ public static class RhodesMaaRoiDraftSourceUpdater
             .Select(item => item!.Value)
             .ToArray();
         return values.Length == 4 ? $"[{values[0]},{values[1]},{values[2]},{values[3]}]" : "";
+    }
+
+    private static string RoiToJson(JsonObject? obj)
+    {
+        if (obj is null)
+            return "";
+
+        var values = new[]
+        {
+            IntValue(obj, "x"),
+            IntValue(obj, "y"),
+            IntValue(obj, "width"),
+            IntValue(obj, "height"),
+        };
+        return values.All(item => item.HasValue)
+            ? $"[{values[0]},{values[1]},{values[2]},{values[3]}]"
+            : "";
+    }
+
+    private static JsonObject RoiObject(int[] roi)
+    {
+        return new JsonObject
+        {
+            ["x"] = roi[0],
+            ["y"] = roi[1],
+            ["width"] = roi[2],
+            ["height"] = roi[3],
+        };
+    }
+
+    private static int? IntValue(JsonObject obj, string propertyName)
+    {
+        return obj[propertyName]?.GetValue<int>();
     }
 
     private static string NodeName(string prefix, string id)
