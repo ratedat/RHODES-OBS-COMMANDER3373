@@ -13,6 +13,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(csproj, /resource\\base\\pipeline\\rhodes-generated\.json/);
   assert.match(csproj, /interface\.json/);
   assert.match(csproj, /assets\\recognition\\templates\\run\\\*\.png/);
+  assert.match(csproj, /assets\\operators\\\*\*\\\*\.png/);
+  assert.match(csproj, /assets\\relics\\\*\*\\\*\.png/);
   assert.match(csproj, /data\\campaigns\.json/);
   assert.match(csproj, /data\\operators\.json/);
   assert.match(csproj, /data\\relics\.json/);
@@ -50,6 +52,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const diagnostics = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaTaskDiagnostics.cs", "utf8");
   const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
   const runCatalog = await fs.readFile("apps/rhodes-suki/Services/RhodesRunCatalog.cs", "utf8");
+  const bitmapPathConverter = await fs.readFile("apps/rhodes-suki/Services/RhodesBitmapPathConverter.cs", "utf8");
   const choiceFilter = await fs.readFile("apps/rhodes-suki/Services/RhodesChoiceFilter.cs", "utf8");
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
   const runModels = await fs.readFile("apps/rhodes-suki/Models/RunCatalogModels.cs", "utf8");
@@ -92,7 +95,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runCatalog, /selectable-effects\.json/);
   assert.match(runCatalog, /ResolveStatePath/);
   assert.match(runCatalog, /IsProjectRootStatePath/);
+  assert.match(runCatalog, /ResolveLocalPath/);
   assert.match(runCatalog, /SukiRunStateSnapshot/);
+  assert.match(bitmapPathConverter, /IValueConverter/);
+  assert.match(bitmapPathConverter, /new Bitmap\(path\)/);
   assert.match(choiceFilter, /ShowSelectedFirst/);
   assert.match(choiceFilter, /HideExcluded/);
   assert.match(choiceFilter, /SelectedOnly/);
@@ -105,6 +111,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runModels, /SukiCampaignPreview/);
   assert.match(runModels, /SukiSpecialFieldState/);
   assert.match(runModels, /SukiChoiceItem/);
+  assert.match(runModels, /ImagePath/);
   assert.match(runModels, /SelectionButtonLabel/);
   assert.match(runModels, /ExclusionButtonLabel/);
   assert.match(viewModel, /ConnectCommand/);
@@ -238,6 +245,11 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /InspectorRows/);
   assert.match(xaml, /FilteredOperators/);
   assert.match(xaml, /FilteredRelics/);
+  assert.match(xaml, /RhodesBitmapPathConverter/);
+  assert.match(xaml, /ImagePath, Converter=\{StaticResource BitmapPathConverter\}/);
+  assert.match(xaml, /Text="\{Binding Name\}"/);
+  assert.match(xaml, /Text="\{Binding Heading\}"/);
+  assert.match(xaml, /Text="\{Binding Detail\}"/);
   assert.match(xaml, /OperatorSearch/);
   assert.match(xaml, /RelicSearch/);
   assert.match(xaml, /OperatorShowSelectedFirst/);

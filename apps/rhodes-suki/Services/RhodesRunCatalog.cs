@@ -11,8 +11,8 @@ public static class RhodesRunCatalog
         var campaigns = LoadCampaigns(Path.Combine(dataRoot, "campaigns.json"));
         var selectableEffects = LoadSelectableEffects(ResolveDataPath(dataRoot, "selectable-effects.json"));
         var state = LoadState(ResolveStatePath(dataRoot), campaigns, selectableEffects);
-        var operators = LoadOperators(Path.Combine(dataRoot, "operators.json"), state);
-        var relics = LoadRelics(Path.Combine(dataRoot, "relics.json"), state);
+        var operators = LoadOperators(Path.Combine(dataRoot, "operators.json"), dataRoot, state);
+        var relics = LoadRelics(Path.Combine(dataRoot, "relics.json"), dataRoot, state);
         return new RhodesRunCatalogSnapshot(campaigns, operators, relics, state);
     }
 
@@ -77,7 +77,7 @@ public static class RhodesRunCatalog
             .ToArray();
     }
 
-    private static IReadOnlyList<SukiChoiceItem> LoadOperators(string path, SukiRunStateSnapshot state)
+    private static IReadOnlyList<SukiChoiceItem> LoadOperators(string path, string dataRoot, SukiRunStateSnapshot state)
     {
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         var root = document.RootElement;
@@ -92,6 +92,14 @@ public static class RhodesRunCatalog
                 var branch = JsonString(item, "branch");
                 var name = JsonString(item, "name");
                 var id = JsonString(item, "id");
+                var obtainMethods = ReadStringArray(item, "obtainMethods");
+                var recruitmentTags = ReadStringArray(item, "recruitmentTags");
+                var detailParts = new[]
+                    {
+                        obtainMethods.Count > 0 ? $"入手: {string.Join(" / ", obtainMethods)}" : "",
+                        recruitmentTags.Count > 0 ? $"タグ: {string.Join(" / ", recruitmentTags)}" : "",
+                    }
+                    .Where(part => !string.IsNullOrWhiteSpace(part));
                 var choice = new SukiChoiceItem(
                     "operator",
                     id,
@@ -104,8 +112,9 @@ public static class RhodesRunCatalog
                     rarity,
                     JsonNullableInt(item, "displayOrder") ?? index,
                     JsonBool(item, "hiddenByDefault") || JsonBool(item, "isJapanUnreleased"),
-                    string.Join(" / ", ReadStringArray(item, "obtainMethods")),
-                    $"{id} {name} {rarity} {operatorClass} {branch} {string.Join(" ", ReadStringArray(item, "obtainMethods"))} {string.Join(" ", ReadStringArray(item, "recruitmentTags"))}");
+                    string.Join(" / ", detailParts),
+                    $"{id} {name} {rarity} {operatorClass} {branch} {string.Join(" ", obtainMethods)} {string.Join(" ", recruitmentTags)}",
+                    ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")));
                 choice.IsSelected = state.SelectedOperatorIds.Contains(id);
                 choice.IsExcluded = state.ExcludedOperatorIds.Contains(id);
                 return choice;
@@ -117,7 +126,7 @@ public static class RhodesRunCatalog
             .ToArray();
     }
 
-    private static IReadOnlyList<SukiChoiceItem> LoadRelics(string path, SukiRunStateSnapshot state)
+    private static IReadOnlyList<SukiChoiceItem> LoadRelics(string path, string dataRoot, SukiRunStateSnapshot state)
     {
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         var root = document.RootElement;
@@ -146,7 +155,8 @@ public static class RhodesRunCatalog
                     number > 0 ? number : index,
                     false,
                     effect,
-                    $"{id} {number} {name} {category} {effect}");
+                    $"{id} {number} {name} {category} {effect}",
+                    ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")));
                 choice.IsSelected = state.SelectedRelicIds.Contains(id);
                 choice.IsExcluded = state.ExcludedRelicIds.Contains(id);
                 return choice;
@@ -521,6 +531,30 @@ public static class RhodesRunCatalog
             .Select(item => item.GetString() ?? "")
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .ToArray();
+    }
+
+    private static JsonElement JsonObject(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.Object
+            ? property
+            : default;
+    }
+
+    private static string ResolveLocalPath(string dataRoot, string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return "";
+
+        if (Path.IsPathFullyQualified(relativePath) && File.Exists(relativePath))
+            return relativePath;
+
+        return CandidateRoots()
+            .Prepend(Directory.GetParent(dataRoot)?.FullName ?? dataRoot)
+            .Select(root => Path.GetFullPath(Path.Combine(root, relativePath)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(File.Exists) ?? "";
     }
 
     private static string JsonString(JsonElement element, string propertyName, string fallback = "")

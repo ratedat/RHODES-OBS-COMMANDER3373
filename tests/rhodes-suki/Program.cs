@@ -238,7 +238,9 @@ static void RunCatalogLoadsChoices()
     Equal(5, catalog.Campaigns.Count, "campaign count");
     Equal("IS#5 サルカズの炉辺奇談", is5.DisplayName, "campaign label");
     Equal(true, catalog.Operators.Any(item => item.Name == "グム" && item.OperatorClass == "重装"), "operator data");
+    Equal(true, File.Exists(catalog.Operators.Single(item => item.Name == "グム" && item.OperatorClass == "重装").ImagePath), "operator image path");
     Equal(296, is5Relics.Length, "is5 relic count");
+    Equal(true, File.Exists(is5Relics.First(item => item.Name == "特選獣肉缶詰").ImagePath), "relic image path");
     Equal(true, catalog.Current.SelectedRelicIds.Contains("is5_sarkaz_relic_254"), "current relic selection");
     Equal("is5_sarkaz", catalog.Current.CampaignId, "current campaign");
     Equal(0, catalog.Current.Idea, "current idea");

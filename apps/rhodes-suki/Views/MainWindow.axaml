@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:services="clr-namespace:RhodesSuki.Services"
     xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
     mc:Ignorable="d"
     Width="1500"
@@ -12,6 +13,9 @@
     MinWidth="1180"
     MinHeight="720"
     Title="{Binding Title}">
+  <suki:SukiWindow.Resources>
+    <services:RhodesBitmapPathConverter x:Key="BitmapPathConverter" />
+  </suki:SukiWindow.Resources>
   <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="12">
     <Border CornerRadius="10" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
@@ -232,16 +236,21 @@
                   <ItemsControl ItemsSource="{Binding FilteredOperators}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,82,88" ColumnSpacing="8">
-                            <StackPanel Spacing="2">
-                              <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
-                              <TextBlock Text="{Binding Heading}" FontSize="12" Opacity="0.66" />
-                            </StackPanel>
-                            <Button Grid.Column="1" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                            <Button Grid.Column="2" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                            <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
-                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding StateLabel}" FontSize="11" HorizontalAlignment="Right" Opacity="0.7" />
+                        <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="86">
+                          <Grid ColumnDefinitions="64,*,92,100" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                            <Border Grid.RowSpan="3" Width="54" Height="54" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
+                              <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                            </Border>
+
+                            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                              <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Text="{Binding StateLabel}" FontSize="11" Opacity="0.72" VerticalAlignment="Center" />
+                            </Grid>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Heading}" FontSize="12" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.58" />
+
+                            <Button Grid.Column="2" Grid.RowSpan="3" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
+                            <Button Grid.Column="3" Grid.RowSpan="3" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
                           </Grid>
                         </Border>
                       </DataTemplate>
@@ -267,16 +276,21 @@
                   <ItemsControl ItemsSource="{Binding FilteredRelics}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,82,88" ColumnSpacing="8">
-                            <StackPanel Spacing="2">
-                              <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
-                              <TextBlock Text="{Binding Heading}" FontSize="12" Opacity="0.66" />
-                            </StackPanel>
-                            <Button Grid.Column="1" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                            <Button Grid.Column="2" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" />
-                            <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
-                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding StateLabel}" FontSize="11" HorizontalAlignment="Right" Opacity="0.7" />
+                        <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="96">
+                          <Grid ColumnDefinitions="64,*,92,100" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                            <Border Grid.RowSpan="3" Width="54" Height="54" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
+                              <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
+                            </Border>
+
+                            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                              <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Text="{Binding StateLabel}" FontSize="11" Opacity="0.72" VerticalAlignment="Center" />
+                            </Grid>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Heading}" FontSize="12" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.58" />
+
+                            <Button Grid.Column="2" Grid.RowSpan="3" Content="{Binding SelectionButtonLabel}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
+                            <Button Grid.Column="3" Grid.RowSpan="3" Content="{Binding ExclusionButtonLabel}" Command="{Binding DataContext.ToggleChoiceExcludedCommand, ElementName=Root}" CommandParameter="{Binding}" VerticalAlignment="Center" />
                           </Grid>
                         </Border>
                       </DataTemplate>

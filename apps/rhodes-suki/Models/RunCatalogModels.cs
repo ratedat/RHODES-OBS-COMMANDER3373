@@ -253,7 +253,8 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
         int sortOrder,
         bool hiddenByDefault,
         string detail = "",
-        string searchText = "")
+        string searchText = "",
+        string imagePath = "")
     {
         Kind = kind;
         Id = id;
@@ -267,6 +268,7 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
         SortOrder = sortOrder;
         HiddenByDefault = hiddenByDefault;
         Detail = detail;
+        ImagePath = imagePath;
         SearchText = string.IsNullOrWhiteSpace(searchText)
             ? $"{id} {name} {heading} {operatorClass} {operatorBranch} {campaignId} {category} {detail}"
             : searchText;
@@ -283,6 +285,8 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
     public string Heading { get; }
 
     public string Detail { get; }
+
+    public string ImagePath { get; }
 
     public string OperatorClass { get; }
 
