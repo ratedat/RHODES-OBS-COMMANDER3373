@@ -93,6 +93,55 @@ public static class RhodesStateApiClient
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }
 
+    public static string ApplySukiPreferencesToStateJson(
+        string stateJson,
+        SukiChoicePersistenceOptions choiceOptions,
+        SukiOutputPreferences outputPreferences)
+    {
+        var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson)?.AsObject() ?? [];
+        var preferences = root["preferences"] as JsonObject;
+        if (preferences is null)
+        {
+            preferences = [];
+            root["preferences"] = preferences;
+        }
+
+        preferences["operatorShowSelectedFirst"] = choiceOptions.OperatorShowSelectedFirst;
+        preferences["operatorHideExcluded"] = choiceOptions.OperatorHideExcluded;
+        preferences["operatorSelectedOnly"] = choiceOptions.OperatorSelectedOnly;
+        preferences["relicShowSelectedFirst"] = choiceOptions.RelicShowSelectedFirst;
+        preferences["relicHideExcluded"] = choiceOptions.RelicHideExcluded;
+        preferences["relicSelectedOnly"] = choiceOptions.RelicSelectedOnly;
+        preferences["operatorGridColumns"] = Math.Clamp(choiceOptions.OperatorGridColumns, 1, 6);
+        preferences["relicGridColumns"] = Math.Clamp(choiceOptions.RelicGridColumns, 1, 6);
+
+        var scrollSpeed = Math.Clamp(outputPreferences.ScrollSpeed, 0, 30);
+        foreach (var field in new[]
+        {
+            "compactRelicScrollSpeed",
+            "verticalRelicScrollSpeed",
+            "verticalOperatorScrollSpeed",
+            "horizontalRelicScrollSpeed",
+            "horizontalOperatorScrollSpeed",
+        })
+        {
+            preferences[field] = scrollSpeed;
+        }
+
+        preferences["sukiOutputSeparateWindow"] = outputPreferences.SeparateWindow;
+        preferences["sukiOutputTransparentBackground"] = outputPreferences.TransparentBackground;
+        preferences["sukiOutputParts"] = ToOutputPartsJson(outputPreferences.Parts);
+
+        var currentMode = JsonString(root, "mode");
+        if (outputPreferences.TournamentMode)
+            root["mode"] = "tournament";
+        else if (string.Equals(currentMode, "tournament", StringComparison.OrdinalIgnoreCase))
+            root["mode"] = "casual";
+
+        root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
+        return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+    }
+
     private static string Shorten(string value, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -100,5 +149,36 @@ public static class RhodesStateApiClient
 
         var text = value.Trim().ReplaceLineEndings(" ");
         return text.Length <= maxLength ? text : $"{text[..maxLength]}...";
+    }
+
+    private static JsonArray ToOutputPartsJson(IEnumerable<SukiOutputPartState> parts)
+    {
+        var array = new JsonArray();
+        foreach (var part in parts)
+        {
+            if (string.IsNullOrWhiteSpace(part.Id))
+                continue;
+
+            array.Add(new JsonObject
+            {
+                ["id"] = part.Id,
+                ["enabled"] = part.Enabled,
+                ["scrollEnabled"] = part.ScrollEnabled,
+                ["hideExcluded"] = part.HideExcluded,
+                ["width"] = Math.Max(1, part.Width),
+                ["height"] = Math.Max(1, part.Height),
+            });
+        }
+
+        return array;
+    }
+
+    private static string JsonString(JsonObject parent, string propertyName)
+    {
+        return parent.TryGetPropertyValue(propertyName, out var node)
+            && node is JsonValue value
+            && value.TryGetValue<string>(out var text)
+            ? text
+            : "";
     }
 }

@@ -41,6 +41,7 @@ var tests = new (string Name, Action Run)[]
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
     ("Run state store can replace state from API JSON", StateApiReplacement),
     ("State API client can apply Suki ADB settings into current state JSON", StateApiAdbSettingsApply),
+    ("State API client can apply Suki display preferences into current state JSON", StateApiSukiPreferencesApply),
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
@@ -1343,6 +1344,54 @@ static void StateApiAdbSettingsApply()
     Equal(5, adb["reconnectAttempts"]!.GetValue<int>(), "adb reconnect attempts");
     Equal("is5_sarkaz", updated["run"]!.AsObject()["campaignId"]!.GetValue<string>(), "run preserved");
     Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "operators preserved");
+}
+
+static void StateApiSukiPreferencesApply()
+{
+    var updated = JsonNode.Parse(RhodesStateApiClient.ApplySukiPreferencesToStateJson(
+        """
+        {
+          "version": 1,
+          "mode": "casual",
+          "run": { "campaignId": "is5_sarkaz" },
+          "preferences": {
+            "ocrEngine": "glm-ocr",
+            "compactRelicScrollSpeed": 9
+          }
+        }
+        """,
+        new SukiChoicePersistenceOptions(
+            true,
+            true,
+            false,
+            false,
+            true,
+            false,
+            4,
+            3),
+        new SukiOutputPreferences(
+            true,
+            true,
+            false,
+            42,
+            [
+                new SukiOutputPartState("operators", true, false, true, 420, 132),
+                new SukiOutputPartState("relics", true, true, true, 420, 170),
+            ])))!.AsObject();
+
+    Equal("tournament", updated["mode"]!.GetValue<string>(), "mode tournament");
+    var preferences = updated["preferences"]!.AsObject();
+    Equal("glm-ocr", preferences["ocrEngine"]!.GetValue<string>(), "ocr engine preserved");
+    Equal(true, preferences["operatorShowSelectedFirst"]!.GetValue<bool>(), "operator selected first");
+    Equal(true, preferences["operatorHideExcluded"]!.GetValue<bool>(), "operator hide excluded");
+    Equal(4, preferences["operatorGridColumns"]!.GetValue<int>(), "operator columns");
+    Equal(3, preferences["relicGridColumns"]!.GetValue<int>(), "relic columns");
+    Equal(30, preferences["compactRelicScrollSpeed"]!.GetValue<int>(), "scroll speed clamped");
+    Equal(30, preferences["horizontalOperatorScrollSpeed"]!.GetValue<int>(), "operator scroll speed");
+    Equal(true, preferences["sukiOutputSeparateWindow"]!.GetValue<bool>(), "separate window");
+    Equal(false, preferences["sukiOutputTransparentBackground"]!.GetValue<bool>(), "transparent background");
+    Equal(2, preferences["sukiOutputParts"]!.AsArray().Count, "output parts count");
+    Equal("operators", preferences["sukiOutputParts"]!.AsArray()[0]!.AsObject()["id"]!.GetValue<string>(), "first output part");
 }
 
 static void RunContextPersistence()

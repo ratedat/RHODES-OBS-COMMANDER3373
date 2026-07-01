@@ -54,6 +54,21 @@ public sealed record RhodesAdbApiSettings(
     string AdbPath,
     string Serial);
 
+public sealed record SukiOutputPreferences(
+    bool SeparateWindow,
+    bool TournamentMode,
+    bool TransparentBackground,
+    int ScrollSpeed,
+    IReadOnlyList<SukiOutputPartState> Parts);
+
+public sealed record SukiOutputPartState(
+    string Id,
+    bool Enabled,
+    bool ScrollEnabled,
+    bool HideExcluded,
+    int Width,
+    int Height);
+
 public sealed record RhodesSukiSettings(
     string AdbPath = "adb",
     string AdbSerial = "",

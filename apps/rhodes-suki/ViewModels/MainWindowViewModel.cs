@@ -58,7 +58,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _outputSeparateWindow = true;
     private bool _outputTournamentMode;
     private bool _outputTransparentBackground = true;
-    private int _outputScrollSpeed = 40;
+    private int _outputScrollSpeed = 13;
     private bool _isBusy;
 
     public MainWindowViewModel(
@@ -653,7 +653,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         get => _outputScrollSpeed;
         set
         {
-            if (!SetProperty(ref _outputScrollSpeed, Math.Clamp(value, 0, 160)))
+            if (!SetProperty(ref _outputScrollSpeed, Math.Clamp(value, 0, 30)))
                 return;
             RefreshInspectorRows();
         }
@@ -1153,6 +1153,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 SelectedAdbPreset?.Id ?? "auto",
                 AdbPath,
                 AdbSerial));
+        updated = RhodesStateApiClient.ApplySukiPreferencesToStateJson(
+            updated,
+            new SukiChoicePersistenceOptions(
+                OperatorShowSelectedFirst,
+                OperatorHideExcluded,
+                OperatorSelectedOnly,
+                RelicShowSelectedFirst,
+                RelicHideExcluded,
+                RelicSelectedOnly,
+                OperatorPaneColumns,
+                RelicPaneColumns),
+            new SukiOutputPreferences(
+                OutputSeparateWindow,
+                OutputTournamentMode,
+                OutputTransparentBackground,
+                OutputScrollSpeed,
+                OutputParts.Select(part => new SukiOutputPartState(
+                    part.Id,
+                    part.Enabled,
+                    part.ScrollEnabled,
+                    part.HideExcluded,
+                    part.Width,
+                    part.Height)).ToArray()));
         var saved = await RhodesStateApiClient.SaveAsync(RhodesApiUrl, updated);
         if (!saved.Succeeded)
         {
