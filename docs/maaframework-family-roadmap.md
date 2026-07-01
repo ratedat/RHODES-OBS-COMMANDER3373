@@ -101,7 +101,8 @@ flowchart LR
 - 接続済み: ROI調整ステップを1/4/8pxで切り替え、ボタン調整・ドラッグ移動・リサイズへ同じスナップを適用できる。
 - 接続済み: 選択中ROIを元の検出ROIへ戻し、一括候補の状態も未確認へ戻せる。
 - 接続済み: ROI overlayのドラッグ/リサイズ中にEscで開始時ROIへ戻し、pointer captureを解除できる。
-- 残作業: ROI調整後の再スキャン比較を同一画面で実行し、before/afterの認識結果差分を表示する。
+- 接続済み: ROI調整後に同じResource profileを再スキャンし、before/afterの候補追加・変化・消失を同一画面で比較表示できる。
+- 残作業: 再スキャン比較のbefore/after証跡JSONを保存し、ROI調整セッションへ比較結果も紐付ける。
 
 ## First Milestone
 - SukiUI shell が起動する

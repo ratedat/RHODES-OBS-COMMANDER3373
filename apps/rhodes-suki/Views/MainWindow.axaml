@@ -1038,6 +1038,28 @@
                   </Grid>
                 </Border>
 
+                <Border CornerRadius="7" Padding="9" Background="#151915" BorderBrush="#3B4730" BorderThickness="1">
+                  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
+                    <TextBlock Text="調整後再スキャン比較" FontSize="13" FontWeight="SemiBold" />
+                    <Button Grid.Column="1" Content="再スキャン比較" Command="{Binding RunRoiRescanComparisonCommand}" Padding="8,3" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding RoiRescanComparisonSummary}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.68" />
+                    <ListBox Grid.Row="2" Grid.ColumnSpan="2" ItemsSource="{Binding RoiRescanComparisonRows}" MaxHeight="132" Background="Transparent" BorderThickness="0" Padding="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="6" Padding="8" Background="#101514" BorderBrush="#2F3A30" BorderThickness="1" Margin="0,0,0,6">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="8" RowSpacing="2">
+                              <TextBlock Text="{Binding StateLabel}" FontSize="11" FontWeight="SemiBold" Opacity="0.82" />
+                              <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                              <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding ValueDiff}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.72" />
+                              <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Detail}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.46" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+
                 <Button Content="{Binding MaaResourceGenerationResult.Message}" Command="{Binding RegenerateMaaResourceCommand}" HorizontalContentAlignment="Left" Padding="9,6" />
 
                 <ListBox ItemsSource="{Binding RoiPreviewRows}" SelectedItem="{Binding SelectedRoiPreviewRow, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">

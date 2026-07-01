@@ -81,6 +81,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const runModels = await fs.readFile("apps/rhodes-suki/Models/RunCatalogModels.cs", "utf8");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
   const mainWindowCodeBehind = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml.cs", "utf8");
+  const mainWindowAxaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
   const resource = await fs.readFile("apps/rhodes-suki/resource/base/pipeline/rhodes.json", "utf8");
   const generatedResource = await fs.readFile("apps/rhodes-suki/resource/base/pipeline/rhodes-generated.json", "utf8");
   const projectInterface = await fs.readFile("apps/rhodes-suki/interface.json", "utf8");
@@ -172,6 +173,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(models, /MaaRoiAdjustmentSessionDraft/);
   assert.match(models, /MaaRoiAdjustmentSessionPayload/);
   assert.match(models, /MaaRoiAdjustmentSessionItem/);
+  assert.match(models, /MaaRoiRescanComparisonRow/);
+  assert.match(models, /ValueDiff/);
   assert.match(models, /IsIncluded/);
   assert.match(models, /StateLabel/);
   assert.match(models, /StateDetail/);
@@ -295,6 +298,14 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /LastRoiSessionPath/);
   assert.match(viewModel, /RoiAdjustmentSessions/);
   assert.match(viewModel, /RoiSessionRestoreNotice/);
+  assert.match(viewModel, /RoiRescanComparisonRows/);
+  assert.match(viewModel, /RoiRescanComparisonSummary/);
+  assert.match(viewModel, /RunRoiRescanComparisonCommand/);
+  assert.match(viewModel, /RunRoiRescanComparisonAsync/);
+  assert.match(viewModel, /CompareRoiRescanCandidates/);
+  assert.match(viewModel, /SnapshotCandidatesForComparison/);
+  assert.match(viewModel, /BuildRoiRescanComparisonSummary/);
+  assert.match(viewModel, /ClearRoiRescanComparison/);
   assert.match(viewModel, /RefreshRoiAdjustmentSessionsCommand/);
   assert.match(viewModel, /LoadRoiAdjustmentSessionCommand/);
   assert.match(viewModel, /LoadRoiAdjustmentSessionAsync/);
@@ -335,6 +346,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesMaaRoiAdjustmentSessionLog\.Load/);
   assert.match(viewModel, /RhodesRecognitionScanHistory\.LoadPayload\(payload\.ScanLogPath\)/);
   assert.match(viewModel, /同じ画面を再スキャン/);
+  assert.match(mainWindowAxaml, /調整後再スキャン比較/);
+  assert.match(mainWindowAxaml, /RoiRescanComparisonRows/);
+  assert.match(mainWindowAxaml, /RunRoiRescanComparisonCommand/);
   assert.match(roiAdjustmentSessionLog, /maa-roi-adjustment-session/);
   assert.match(roiAdjustmentSessionLog, /SaveAsync/);
   assert.match(roiAdjustmentSessionLog, /Load/);

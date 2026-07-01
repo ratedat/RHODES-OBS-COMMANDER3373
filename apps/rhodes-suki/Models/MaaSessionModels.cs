@@ -711,6 +711,24 @@ public sealed record MaaCandidatePreview(
     }
 }
 
+public sealed record MaaRoiRescanComparisonRow(
+    string State,
+    string Label,
+    string BeforeValue,
+    string AfterValue,
+    string Detail)
+{
+    public string StateLabel => State switch
+    {
+        "added" => "追加",
+        "removed" => "消失",
+        "changed" => "変化",
+        _ => State,
+    };
+
+    public string ValueDiff => $"{BeforeValue} -> {AfterValue}";
+}
+
 public sealed record SukiCandidateApplySummary(
     int AppliedCount,
     int IgnoredCount,

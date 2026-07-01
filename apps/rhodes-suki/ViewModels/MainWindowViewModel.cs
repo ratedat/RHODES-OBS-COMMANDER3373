@@ -39,6 +39,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastResourceTaskResultsPath = "";
     private string _lastRoiDraftPath = "";
     private string _lastRoiSessionPath = "";
+    private string _roiRescanComparisonSummary = "再スキャン比較未実行";
     private MaaRoiDraftApplyResult _roiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
     private MaaRoiBatchApplyResult _roiBatchApplyResult = MaaRoiBatchApplyResult.Failed("未確認");
     private MaaResourceGenerationResult _maaResourceGenerationResult = MaaResourceGenerationResult.Failed("未実行");
@@ -193,6 +194,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SelectedRoiPreviewRows = [];
         RoiBatchDrafts = [];
         RoiAdjustmentSessions = [];
+        RoiRescanComparisonRows = [];
         RecognitionScanHistory = [];
         RecognitionScanLogRows = [];
         BaseResolution = Services.RhodesMaaPaths.BaseResolution;
@@ -236,6 +238,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ApplyVisibleRoiDraftsCommand = new AsyncRelayCommand(ApplyVisibleRoiDraftsAsync);
         IncludeAllRoiBatchDraftsCommand = new AsyncRelayCommand(_ => SetAllRoiBatchDraftsIncludedAsync(true));
         ExcludeAllRoiBatchDraftsCommand = new AsyncRelayCommand(_ => SetAllRoiBatchDraftsIncludedAsync(false));
+        RunRoiRescanComparisonCommand = new AsyncRelayCommand(RunRoiRescanComparisonAsync);
         RegenerateMaaResourceCommand = new AsyncRelayCommand(RegenerateMaaResourceAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
@@ -338,6 +341,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaRoiBatchDraftPreview> RoiBatchDrafts { get; }
 
     public ObservableCollection<MaaRoiAdjustmentSessionItem> RoiAdjustmentSessions { get; }
+
+    public ObservableCollection<MaaRoiRescanComparisonRow> RoiRescanComparisonRows { get; }
 
     public ObservableCollection<RhodesRecognitionScanHistoryItem> RecognitionScanHistory { get; }
 
@@ -850,6 +855,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref _roiSessionRestoreNotice, string.IsNullOrWhiteSpace(value) ? "ROI調整セッション未読込" : value);
     }
 
+    public string RoiRescanComparisonSummary
+    {
+        get => _roiRescanComparisonSummary;
+        private set
+        {
+            if (!SetProperty(ref _roiRescanComparisonSummary, string.IsNullOrWhiteSpace(value) ? "再スキャン比較未実行" : value))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
     public string LastCandidateApplySummary
     {
         get => _lastCandidateApplySummary;
@@ -1083,6 +1099,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand IncludeAllRoiBatchDraftsCommand { get; }
 
     public ICommand ExcludeAllRoiBatchDraftsCommand { get; }
+
+    public ICommand RunRoiRescanComparisonCommand { get; }
 
     public ICommand RegenerateMaaResourceCommand { get; }
 
@@ -1356,6 +1374,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 "ROIセッション",
                 string.IsNullOrWhiteSpace(LastRoiSessionPath) ? $"{RoiBatchDrafts.Count}候補" : LastRoiSessionPath,
                 $"{RoiBatchApplyResult.Summary} / 保存{RoiAdjustmentSessions.Count}件");
+            yield return new SukiInspectorRow("ROI比較", RoiRescanComparisonSummary, $"{RoiRescanComparisonRows.Count}差分");
             yield return new SukiInspectorRow("MAA Resource", MaaResourceGenerationResult.Message, MaaResourceGenerationResult.OutputPath);
             yield return new SukiInspectorRow(
                 "結果JSON",
@@ -1959,6 +1978,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private async Task RunRoiRescanComparisonAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var beforeTaskResults = ResourceTaskResults.ToArray();
+            if (beforeTaskResults.Length == 0)
+            {
+                ClearRoiRescanComparison("比較元のResource task結果がありません。先に元スキャンまたは履歴読込を実行してください。");
+                StatusMessage = RoiRescanComparisonSummary;
+                return;
+            }
+
+            if (!ResourceTasks.Any())
+            {
+                ClearRoiRescanComparison("選択プロファイルにResource taskがありません。");
+                StatusMessage = RoiRescanComparisonSummary;
+                return;
+            }
+
+            var beforeCandidates = SnapshotCandidatesForComparison(beforeTaskResults, CandidateResults);
+            await RunAllResourceTasksCoreAsync();
+            await ConvertResourceTaskResultsCoreAsync();
+
+            var afterCandidates = CandidateResults.ToArray();
+            var comparisonRows = CompareRoiRescanCandidates(beforeCandidates, afterCandidates);
+            ReplaceCollection(RoiRescanComparisonRows, comparisonRows);
+            RoiRescanComparisonSummary = BuildRoiRescanComparisonSummary(beforeCandidates.Count, afterCandidates.Length, comparisonRows);
+            StatusMessage = RoiRescanComparisonSummary;
+            RefreshInspectorRows();
+        });
+    }
+
     private async Task PreviewSelectedRoiDraftApplyAsync()
     {
         await RunBusyAsync(async () =>
@@ -2468,6 +2519,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
+            ClearRoiRescanComparison();
             CandidateResults.Clear();
             ResourceTaskResults.Clear();
             RecognitionScanLogRows.Clear();
@@ -2586,6 +2638,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         string logPath,
         string candidateApplySummary)
     {
+        ClearRoiRescanComparison();
         CandidateResults.Clear();
         foreach (var candidate in payload.Candidates)
         {
@@ -2613,6 +2666,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void ClearRecognitionPayload(string logPath, string candidateApplySummary)
     {
+        ClearRoiRescanComparison();
         CandidateResults.Clear();
         ResourceTaskResults.Clear();
         RecognitionScanLogRows.Clear();
@@ -2662,6 +2716,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RunAllResourceTasksCoreAsync()
     {
+        ClearRoiRescanComparison();
         ResourceTaskResults.Clear();
         CandidateResults.Clear();
         RecognitionScanLogRows.Clear();
@@ -2803,6 +2858,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         await RunBusyAsync(async () =>
         {
+            ClearRoiRescanComparison();
             var result = await _session.RunResourceTaskAsync(task.Entry);
             ResourceTaskResults.Add(result);
             RefreshResourceTaskDiagnostics();
@@ -3253,6 +3309,206 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return Math.Clamp(value, 1, 4);
     }
 
+    private IReadOnlyList<MaaCandidatePreview> SnapshotCandidatesForComparison(
+        IReadOnlyList<MaaTaskRunResult> taskResults,
+        IEnumerable<MaaCandidatePreview> candidates)
+    {
+        var currentCandidates = candidates.ToArray();
+        if (currentCandidates.Length > 0)
+            return currentCandidates;
+
+        return RhodesMaaLocalCandidateConverter.FromTaskResults(CandidateApiProfileId(), taskResults);
+    }
+
+    private void ClearRoiRescanComparison(string summary = "再スキャン比較未実行")
+    {
+        ReplaceCollection(RoiRescanComparisonRows, Array.Empty<MaaRoiRescanComparisonRow>());
+        RoiRescanComparisonSummary = summary;
+    }
+
+    private static IReadOnlyList<MaaRoiRescanComparisonRow> CompareRoiRescanCandidates(
+        IEnumerable<MaaCandidatePreview> beforeCandidates,
+        IEnumerable<MaaCandidatePreview> afterCandidates)
+    {
+        var before = CandidateComparisonMap(beforeCandidates);
+        var after = CandidateComparisonMap(afterCandidates);
+        var orderedKeys = before.Values
+            .OrderBy(item => item.Order)
+            .Select(item => item.Key)
+            .Concat(after.Values.OrderBy(item => item.Order).Select(item => item.Key))
+            .Distinct(StringComparer.Ordinal);
+        var rows = new List<MaaRoiRescanComparisonRow>();
+        foreach (var key in orderedKeys)
+        {
+            var hasBefore = before.TryGetValue(key, out var beforeItem);
+            var hasAfter = after.TryGetValue(key, out var afterItem);
+            if (!hasBefore && hasAfter && afterItem is not null)
+            {
+                rows.Add(new MaaRoiRescanComparisonRow(
+                    "added",
+                    afterItem.Label,
+                    "-",
+                    afterItem.DisplayValue,
+                    afterItem.Detail));
+                continue;
+            }
+
+            if (hasBefore && !hasAfter && beforeItem is not null)
+            {
+                rows.Add(new MaaRoiRescanComparisonRow(
+                    "removed",
+                    beforeItem.Label,
+                    beforeItem.DisplayValue,
+                    "-",
+                    beforeItem.Detail));
+                continue;
+            }
+
+            if (beforeItem is null || afterItem is null || beforeItem.Signature == afterItem.Signature)
+                continue;
+
+            rows.Add(new MaaRoiRescanComparisonRow(
+                "changed",
+                afterItem.Label,
+                beforeItem.DisplayValue,
+                afterItem.DisplayValue,
+                $"{beforeItem.Detail} / after: {afterItem.Detail}"));
+        }
+
+        return rows;
+    }
+
+    private static string BuildRoiRescanComparisonSummary(
+        int beforeCount,
+        int afterCount,
+        IReadOnlyList<MaaRoiRescanComparisonRow> rows)
+    {
+        var added = rows.Count(row => row.State == "added");
+        var removed = rows.Count(row => row.State == "removed");
+        var changed = rows.Count(row => row.State == "changed");
+        return rows.Count == 0
+            ? $"再スキャン比較: 差分なし (before {beforeCount}件 / after {afterCount}件)"
+            : $"再スキャン比較: 追加{added} / 変化{changed} / 消失{removed} (before {beforeCount}件 / after {afterCount}件)";
+    }
+
+    private static IReadOnlyDictionary<string, CandidateComparisonItem> CandidateComparisonMap(
+        IEnumerable<MaaCandidatePreview> candidates)
+    {
+        var map = new Dictionary<string, CandidateComparisonItem>(StringComparer.Ordinal);
+        var order = 0;
+        foreach (var candidate in candidates)
+        {
+            var key = CandidateComparisonKey(candidate);
+            if (string.IsNullOrWhiteSpace(key))
+                key = $"candidate:{order}:{candidate.Kind}:{candidate.Label}:{candidate.Value}";
+
+            var item = new CandidateComparisonItem(
+                key,
+                order,
+                CandidateComparisonLabel(candidate),
+                CandidateComparisonSignature(candidate),
+                CandidateComparisonDisplayValue(candidate),
+                CandidateComparisonDetail(candidate),
+                candidate.Confidence);
+            if (!map.TryGetValue(key, out var existing) || (item.Confidence ?? 0) > (existing.Confidence ?? 0))
+            {
+                map[key] = item with { Order = existing?.Order ?? item.Order };
+            }
+            order++;
+        }
+
+        return map;
+    }
+
+    private static string CandidateComparisonKey(MaaCandidatePreview candidate)
+    {
+        if (!string.IsNullOrWhiteSpace(candidate.Field))
+            return $"field:{candidate.Field}:{candidate.CampaignId}:{candidate.FieldId}:{candidate.SlotKind}";
+        if (!string.IsNullOrWhiteSpace(candidate.OperatorId))
+            return $"operator:{candidate.OperatorId}";
+        if (!string.IsNullOrWhiteSpace(candidate.RelicId))
+            return $"relic:{candidate.CampaignId}:{candidate.RelicId}";
+        if (!string.IsNullOrWhiteSpace(candidate.ThoughtId))
+            return $"thought:{candidate.CampaignId}:{candidate.ThoughtId}";
+        if (!string.IsNullOrWhiteSpace(candidate.AgeId))
+            return $"age:{candidate.CampaignId}:{candidate.AgeId}";
+        if (!string.IsNullOrWhiteSpace(candidate.EffectId))
+            return $"effect:{candidate.CampaignId}:{candidate.EffectId}:{candidate.SlotKind}";
+        if (!string.IsNullOrWhiteSpace(candidate.CoinId))
+            return $"coin:{candidate.CampaignId}:{candidate.CoinId}";
+        if (!string.IsNullOrWhiteSpace(candidate.StatusId))
+            return $"status:{candidate.CampaignId}:{candidate.StatusId}";
+
+        return FirstNonEmpty(candidate.RecognitionKey, candidate.Identity, candidate.CampaignId);
+    }
+
+    private static string CandidateComparisonSignature(MaaCandidatePreview candidate)
+    {
+        return string.Join(
+            "|",
+            candidate.Kind,
+            candidate.Field,
+            candidate.OperatorId,
+            candidate.RelicId,
+            candidate.ThoughtId,
+            candidate.AgeId,
+            candidate.EffectId,
+            candidate.CoinId,
+            candidate.StatusId,
+            candidate.Value,
+            candidate.Count,
+            candidate.Face,
+            candidate.CampaignId);
+    }
+
+    private static string CandidateComparisonLabel(MaaCandidatePreview candidate)
+    {
+        return FirstNonEmpty(candidate.Label, candidate.Field, candidate.Kind, candidate.Value, candidate.Identity);
+    }
+
+    private static string CandidateComparisonDisplayValue(MaaCandidatePreview candidate)
+    {
+        var label = CandidateComparisonLabel(candidate);
+        if (candidate.Count > 0)
+            return $"{label} x{candidate.Count}";
+        if (!string.IsNullOrWhiteSpace(candidate.Field))
+            return $"{label}={FirstNonEmpty(candidate.Value, candidate.RawText, "-")}";
+
+        var id = FirstNonEmpty(
+            candidate.OperatorId,
+            candidate.RelicId,
+            candidate.ThoughtId,
+            candidate.AgeId,
+            candidate.EffectId,
+            candidate.CoinId,
+            candidate.StatusId,
+            candidate.Value);
+        return string.IsNullOrWhiteSpace(id) || id == label
+            ? label
+            : $"{label} ({id})";
+    }
+
+    private static string CandidateComparisonDetail(MaaCandidatePreview candidate)
+    {
+        var parts = new[]
+        {
+            candidate.DebugDetail,
+            string.IsNullOrWhiteSpace(candidate.RawText) ? "" : $"raw:{candidate.RawText}",
+            candidate.Confidence.HasValue ? $"conf:{candidate.Confidence.Value:0.###}" : "",
+        };
+        return string.Join(" / ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                return value.Trim();
+        }
+        return "";
+    }
+
     private static void ReplaceCollection<T>(ObservableCollection<T> target, IEnumerable<T> source)
     {
         var items = source as IReadOnlyList<T> ?? source.ToArray();
@@ -3265,6 +3521,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             target.Add(item);
         }
     }
+
+    private sealed record CandidateComparisonItem(
+        string Key,
+        int Order,
+        string Label,
+        string Signature,
+        string DisplayValue,
+        string Detail,
+        double? Confidence);
 
     private async Task RunProbeCoreAsync(MaaProbePayloadPreview payload)
     {
