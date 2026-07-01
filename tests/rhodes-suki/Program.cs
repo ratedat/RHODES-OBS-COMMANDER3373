@@ -767,7 +767,8 @@ static void RunCatalogLoadsChoices()
             {
               "run": {
                 "campaignId": "is5_sarkaz",
-                "squadId": "is5_sarkaz_squad_04"
+                "squadId": "is5_sarkaz_squad_16",
+                "squadRandomEffectOptionId": "is5_sarkaz_mimic_02"
               },
               "operators": [],
               "relics": [],
@@ -776,7 +777,8 @@ static void RunCatalogLoadsChoices()
             """);
 
         var squadIdCatalog = RhodesRunCatalog.LoadDefault(RhodesRunCatalog.ResolveDataRoot(), statePath);
-        Equal("指揮分隊", squadIdCatalog.Current.Squad, "current squad id label");
+        Equal("奇想天外分隊", squadIdCatalog.Current.Squad, "current squad id label");
+        Equal("組み合わせ02: #5破壊戦術分隊 + #3精神論分隊", squadIdCatalog.Current.SquadRandomEffect, "current squad option label");
     }
     finally
     {

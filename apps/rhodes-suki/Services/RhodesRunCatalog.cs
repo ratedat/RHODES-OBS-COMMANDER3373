@@ -207,6 +207,7 @@ public static class RhodesRunCatalog
             Math.Clamp(JsonNullableInt(preferences, "operatorGridColumns") ?? 2, 1, 4),
             Math.Clamp(JsonNullableInt(preferences, "relicGridColumns") ?? 2, 1, 4),
             ResolveSquadDisplayName(dataRoot, campaignId, run),
+            ResolveSquadRandomEffectDisplayName(dataRoot, campaignId, run),
             JsonString(run, "difficulty"),
             JsonInt(run, "hope"),
             JsonNullableInt(run, "maxHope"),
@@ -249,6 +250,50 @@ public static class RhodesRunCatalog
         }
 
         return fallback;
+    }
+
+    private static string ResolveSquadRandomEffectDisplayName(string dataRoot, string campaignId, JsonElement run)
+    {
+        var optionId = JsonString(run, "squadRandomEffectOptionId");
+        if (string.IsNullOrWhiteSpace(optionId))
+            return "";
+
+        var squadId = JsonString(run, "squadId");
+        var path = ResolveDataPath(dataRoot, "squads.json");
+        if (!File.Exists(path))
+            return optionId;
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        if (!root.TryGetProperty("squads", out var squads) || squads.ValueKind != JsonValueKind.Array)
+            return optionId;
+
+        foreach (var squad in squads.EnumerateArray())
+        {
+            if (!string.IsNullOrWhiteSpace(campaignId)
+                && !JsonString(squad, "campaignId").Equals(campaignId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            if (!string.IsNullOrWhiteSpace(squadId)
+                && !JsonString(squad, "id").Equals(squadId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            if (!squad.TryGetProperty("randomEffectOptions", out var options) || options.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (var option in options.EnumerateArray())
+            {
+                if (!JsonString(option, "id").Equals(optionId, StringComparison.Ordinal))
+                    continue;
+
+                var label = JsonString(option, "label");
+                return string.IsNullOrWhiteSpace(label) ? optionId : label;
+            }
+        }
+
+        return optionId;
     }
 
     private static IReadOnlyList<SukiSpecialFieldState> BuildSpecialFieldStates(

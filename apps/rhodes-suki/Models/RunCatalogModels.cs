@@ -213,6 +213,7 @@ public sealed record SukiRunStateSnapshot(
     int OperatorGridColumns = 2,
     int RelicGridColumns = 2,
     string Squad = "",
+    string SquadRandomEffect = "",
     string Difficulty = "",
     int Hope = 0,
     int? MaxHope = null,

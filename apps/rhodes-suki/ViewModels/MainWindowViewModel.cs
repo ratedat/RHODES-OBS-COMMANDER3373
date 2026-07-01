@@ -804,6 +804,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         yield return new SukiRunFieldPreview("指揮Lv", $"Lv{state.CommandLevel}", "OCR", "run.command_level", "指揮Lvパネル");
         yield return new SukiRunFieldPreview("等級", string.IsNullOrWhiteSpace(state.Difficulty) ? "-" : state.Difficulty, "Manual / squad panel", "run.difficulty_grade", "閉じたマップ上のバッジではなく分隊情報から確定");
         yield return new SukiRunFieldPreview("分隊", string.IsNullOrWhiteSpace(state.Squad) ? "-" : state.Squad, "Manual / OCR", "run.squad_name", "分隊カードまたは情報パネル");
+        yield return new SukiRunFieldPreview("分隊効果", string.IsNullOrWhiteSpace(state.SquadRandomEffect) ? "-" : state.SquadRandomEffect, "OCR / effect match", "run.squad_card", "ランダム分隊効果がある場合の確定候補");
     }
 
     private IEnumerable<SukiRuntimeCapabilityPreview> BuildRuntimeCapabilities()
