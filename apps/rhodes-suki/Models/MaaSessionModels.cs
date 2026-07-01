@@ -210,6 +210,27 @@ public sealed record MaaRoiDetailRow(
     string Raw)
 {
     public string BoundsLabel => $"{X},{Y} {Width}x{Height}";
+
+    public string Kind => RoiKind(Source);
+
+    public bool IsResourceRoiCandidate => Kind.Equals("roi", StringComparison.OrdinalIgnoreCase);
+
+    public string EditKindLabel => IsResourceRoiCandidate
+        ? "Resource ROI候補"
+        : Kind.Equals("box", StringComparison.OrdinalIgnoreCase)
+            ? "OCR文字枠"
+            : "診断枠";
+
+    public string RoiJson => $"[{X},{Y},{Width},{Height}]";
+
+    private static string RoiKind(string source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return "";
+
+        var dot = source.LastIndexOf('.');
+        return dot >= 0 && dot + 1 < source.Length ? source[(dot + 1)..] : source;
+    }
 }
 
 public sealed record MaaRoiPreviewRow(
@@ -224,7 +245,35 @@ public sealed record MaaRoiPreviewRow(
 {
     public string BoundsLabel => $"{X:0.#},{Y:0.#} {Width:0.#}x{Height:0.#}";
 
+    public string Kind => RoiKind(Source);
+
+    public bool IsResourceRoiCandidate => Kind.Equals("roi", StringComparison.OrdinalIgnoreCase);
+
+    public string EditKindLabel => IsResourceRoiCandidate
+        ? "Resource ROI候補"
+        : Kind.Equals("box", StringComparison.OrdinalIgnoreCase)
+            ? "OCR文字枠"
+            : "診断枠";
+
+    public string DisplayTitle => $"{Entry} / {Source}";
+
+    public string ProjectedRoiJson => $"[{RoundCoordinate(X)},{RoundCoordinate(Y)},{RoundCoordinate(Width)},{RoundCoordinate(Height)}]";
+
     public string Key => $"{Entry}|{Source}|{Raw}|{X:0.###},{Y:0.###},{Width:0.###},{Height:0.###}";
+
+    private static int RoundCoordinate(double value)
+    {
+        return (int)Math.Round(value, MidpointRounding.AwayFromZero);
+    }
+
+    private static string RoiKind(string source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return "";
+
+        var dot = source.LastIndexOf('.');
+        return dot >= 0 && dot + 1 < source.Length ? source[(dot + 1)..] : source;
+    }
 }
 
 public sealed record MaaTaskDetailSnapshot(

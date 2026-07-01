@@ -1102,10 +1102,16 @@ static void RoiDetailRowsExposeRectVariants()
     Equal(3, rows.Count, "roi row count");
     Equal("detail.rect", rows[0].Source, "detail rect source");
     Equal("1,2 30x40", rows[0].BoundsLabel, "detail bounds");
+    Equal("rect", rows[0].Kind, "detail rect kind");
+    Equal("診断枠", rows[0].EditKindLabel, "detail rect label");
     Equal("filtered.roi", rows[1].Source, "filtered roi source");
     Equal("5,6 70x80", rows[1].BoundsLabel, "filtered bounds");
+    Equal(true, rows[1].IsResourceRoiCandidate, "filtered roi edit candidate");
+    Equal("Resource ROI候補", rows[1].EditKindLabel, "filtered roi label");
+    Equal("[5,6,70,80]", rows[1].RoiJson, "filtered roi json");
     Equal("best.box", rows[2].Source, "best box source");
     Equal("10,20 20x30", rows[2].BoundsLabel, "box bounds");
+    Equal("OCR文字枠", rows[2].EditKindLabel, "box label");
 }
 
 static void RoiPreviewProjectorScalesImageCoordinates()
@@ -1124,6 +1130,8 @@ static void RoiPreviewProjectorScalesImageCoordinates()
     Equal(72.0, projected[0].Height, "projected height");
     Equal("1600x900->1280x720", projected[0].ScaleLabel, "projected scale label");
     Equal("entry|filtered.roi|[800,450,160,90]|640,360,128,72", projected[0].Key, "projected key");
+    Equal("Resource ROI候補", projected[0].EditKindLabel, "projected edit label");
+    Equal("[640,360,128,72]", projected[0].ProjectedRoiJson, "projected roi json");
 
     var oneToOne = RhodesMaaRoiPreviewProjector.Project(sourceRows, new MaaBaseResolution(1280, 720), 0, 0);
     Equal(800.0, oneToOne[0].X, "one-to-one x");
