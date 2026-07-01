@@ -37,6 +37,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA OCR detail rows expose raw OCR result groups", OcrDetailRowsExposeRawGroups),
     ("MAA ROI detail rows expose rect, roi, and point boxes", RoiDetailRowsExposeRectVariants),
     ("MAA ROI preview projector scales actual image coordinates to 1280x720", RoiPreviewProjectorScalesImageCoordinates),
+    ("MAA ROI edit draft evidence uses stable JSON shape", RoiEditDraftEvidence),
     ("MAA ROI selection matcher links OCR detail rows to ROI previews", RoiSelectionMatcherLinksOcrRows),
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
@@ -1160,6 +1161,32 @@ static void RoiSelectionMatcherLinksOcrRows()
     Equal(null, RhodesMaaRoiSelectionMatcher.MatchForOcrDetail(roiRows, new MaaOcrDetailRow("entry-c", "グム", 0.91, "filtered", "OCR")), "missing match");
     Equal("target", RhodesMaaRoiSelectionMatcher.MatchForTaskResult(roiRows, new MaaTaskRunResult("entry-a", "Succeeded", true, ""))?.Raw, "matched task roi");
     Equal("target", RhodesMaaRoiSelectionMatcher.MatchForLogRow(roiRows, new RhodesRecognitionScanLogRow("maa-task", "", "entry-a", "", "", "", ""))?.Raw, "matched log roi");
+}
+
+static void RoiEditDraftEvidence()
+{
+    var draft = new MaaRoiEditDraft("RhodesOcrRegion_test", "filtered.roi", "[10,20,30,40]", true);
+    var exportedAt = DateTimeOffset.Parse("2026-07-01T00:00:00Z");
+    var json = RhodesMaaRoiEditDraftLog.BuildJson(draft, "runStatusFull", exportedAt);
+    var root = JsonNode.Parse(json)!.AsObject();
+    Equal(1, root["schemaVersion"]!.GetValue<int>(), "roi draft schema version");
+    Equal("maa-roi-edit-draft", root["kind"]!.GetValue<string>(), "roi draft kind");
+    Equal("runStatusFull", root["profileId"]!.GetValue<string>(), "roi draft profile");
+    Equal("RhodesOcrRegion_test", root["draft"]!.AsObject()["entry"]!.GetValue<string>(), "roi draft entry");
+    Equal("[10,20,30,40]", root["draft"]!.AsObject()["roiJson"]!.GetValue<string>(), "roi draft json");
+
+    var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-roi-draft-{Guid.NewGuid():N}");
+    try
+    {
+        var file = RhodesMaaRoiEditDraftLog.SaveAsync(draft, "runStatusFull", directory, exportedAt).GetAwaiter().GetResult();
+        Equal(true, File.Exists(file), "roi draft file exists");
+        Equal(true, Path.GetFileName(file).Contains("runStatusFull", StringComparison.Ordinal), "roi draft filename profile");
+    }
+    finally
+    {
+        if (Directory.Exists(directory))
+            Directory.Delete(directory, true);
+    }
 }
 
 static void MaaNativeEvidenceLog()

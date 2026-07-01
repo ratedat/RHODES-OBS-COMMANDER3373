@@ -55,6 +55,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const diagnostics = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaTaskDiagnostics.cs", "utf8");
   const ocrDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaOcrDetailRows.cs", "utf8");
   const roiDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDetailRows.cs", "utf8");
+  const roiEditDraftLog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiEditDraftLog.cs", "utf8");
   const roiPreviewProjector = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiPreviewProjector.cs", "utf8");
   const roiSelectionMatcher = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiSelectionMatcher.cs", "utf8");
   const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
@@ -247,6 +248,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /SelectedRoiPreviewRow/);
   assert.match(viewModel, /SelectedRoiPreviewRows/);
   assert.match(viewModel, /SelectedRoiEditDraft/);
+  assert.match(viewModel, /ExportSelectedRoiDraftCommand/);
+  assert.match(viewModel, /RhodesMaaRoiEditDraftLog\.SaveAsync/);
   assert.match(viewModel, /RefreshSelectedRoiPreviewRows/);
   assert.match(viewModel, /SelectedOcrDetailRow/);
   assert.match(viewModel, /SelectedResourceTaskResult/);
@@ -268,6 +271,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(roiPreviewProjector, /baseResolution\.Width/);
   assert.match(viewModel, /ShowRoiOverlay/);
   assert.match(debugPaths, /Recognition Scans/);
+  assert.match(debugPaths, /ROI Drafts/);
+  assert.match(roiEditDraftLog, /maa-roi-edit-draft/);
+  assert.match(roiEditDraftLog, /SaveAsync/);
   assert.match(viewModel, /Campaigns/);
   assert.match(viewModel, /SelectedCampaign/);
   assert.match(viewModel, /構想/);
@@ -384,6 +390,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectedRoiEditDraft\.StatusLabel/);
   assert.match(xaml, /SelectedRoiEditDraft\.RoiJson/);
   assert.match(xaml, /SelectedRoiEditDraft\.Detail/);
+  assert.match(xaml, /ExportSelectedRoiDraftCommand/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRoiPreviewRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedOcrDetailRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRecognitionScanLogRow, Mode=TwoWay\}"/);

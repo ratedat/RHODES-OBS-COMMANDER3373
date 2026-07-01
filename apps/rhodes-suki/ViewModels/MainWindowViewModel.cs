@@ -36,6 +36,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _captureState = "未取得";
     private string _lastCapturePath = "";
     private string _lastResourceTaskResultsPath = "";
+    private string _lastRoiDraftPath = "";
     private string _rhodesApiUrl = "http://127.0.0.1:5173";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
     private string _lastCandidateApplySummary = "候補未反映";
@@ -205,6 +206,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OpenPreviewUrlCommand = new AsyncRelayCommand(OpenPreviewUrlAsync);
         RunAllResourceTasksCommand = new AsyncRelayCommand(RunAllResourceTasksAsync);
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
+        ExportSelectedRoiDraftCommand = new AsyncRelayCommand(ExportSelectedRoiDraftAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
         ApplyCandidateResultsCommand = new AsyncRelayCommand(ApplyCandidateResultsAsync);
@@ -754,6 +756,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public string LastRoiDraftPath
+    {
+        get => _lastRoiDraftPath;
+        private set
+        {
+            if (!SetProperty(ref _lastRoiDraftPath, value ?? ""))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
     public Bitmap? LastCaptureImage
     {
         get => _lastCaptureImage;
@@ -949,6 +962,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RunAllResourceTasksCommand { get; }
 
     public ICommand ExportResourceTaskResultsCommand { get; }
+
+    public ICommand ExportSelectedRoiDraftCommand { get; }
 
     public ICommand SyncRunStateFromApiCommand { get; }
 
@@ -1212,6 +1227,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 RecognitionScanHistory.FirstOrDefault()?.Detail ?? RhodesSukiDebugPaths.RecognitionScansDirectory);
             yield return new SukiInspectorRow("候補", $"{CandidateResults.Count}件", ResourceTaskDiagnostics.Summary);
             yield return new SukiInspectorRow("適用", LastCandidateApplySummary, "data/current-state.json");
+            yield return new SukiInspectorRow(
+                "ROIドラフト",
+                string.IsNullOrWhiteSpace(LastRoiDraftPath) ? SelectedRoiEditDraft.StatusLabel : LastRoiDraftPath,
+                SelectedRoiEditDraft.Detail);
             yield return new SukiInspectorRow(
                 "結果JSON",
                 string.IsNullOrWhiteSpace(LastResourceTaskResultsPath) ? "-" : LastResourceTaskResultsPath,
@@ -1706,6 +1725,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 CandidateResults);
             LastResourceTaskResultsPath = path;
             StatusMessage = $"MAA scan証跡を保存しました: {path}";
+        });
+    }
+
+    private async Task ExportSelectedRoiDraftAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (!SelectedRoiEditDraft.HasSelection)
+            {
+                StatusMessage = "ROI行を選択してください。";
+                return;
+            }
+
+            LastRoiDraftPath = await RhodesMaaRoiEditDraftLog.SaveAsync(
+                SelectedRoiEditDraft,
+                SelectedResourceProfile?.Id,
+                RhodesSukiDebugPaths.RoiDraftsDirectory);
+            StatusMessage = $"ROIドラフトを保存しました: {LastRoiDraftPath}";
         });
     }
 
