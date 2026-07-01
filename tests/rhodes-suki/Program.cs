@@ -1113,7 +1113,10 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
               "candidates": [
                 { "kind": "relic", "label": "テスト秘宝", "value": "test_relic", "rawText": "テスト秘宝", "confidence": 0.8, "relicId": "test_relic" }
               ],
-              "log": []
+              "log": [
+                { "event": "capture", "at": "2026-07-01T00:00:00.100Z", "stage": "scan", "path": "O:/debug/shot.png" },
+                { "event": "recognize", "at": "2026-07-01T00:00:00.900Z", "count": 1 }
+              ]
             }
             """);
         File.WriteAllText(
@@ -1147,12 +1150,17 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
         Equal(true, nativePayload.Succeeded, "native payload succeeded");
         Equal(1, nativePayload.Candidates.Count, "native payload candidates");
         Equal(1, nativePayload.TaskResults.Count, "native payload task results");
+        Equal(1, nativePayload.LogRows.Count, "native payload log rows");
+        Equal("maa-task", nativePayload.LogRows[0].DisplayName, "native payload log event");
         Equal("グム", nativePayload.Candidates[0].Label, "native payload candidate label");
 
         var apiPayload = RhodesRecognitionScanHistory.LoadPayload(history[1].LogPath);
         Equal(true, apiPayload.Succeeded, "api payload succeeded");
         Equal(1, apiPayload.Candidates.Count, "api payload candidates");
         Equal(0, apiPayload.TaskResults.Count, "api payload task results");
+        Equal(2, apiPayload.LogRows.Count, "api payload log rows");
+        Equal("capture", apiPayload.LogRows[0].DisplayName, "api payload log event");
+        Equal("O:/debug/shot.png", apiPayload.LogRows[0].Path, "api payload log path");
     }
     finally
     {

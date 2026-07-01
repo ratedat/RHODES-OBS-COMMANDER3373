@@ -766,6 +766,21 @@
             <TextBlock Grid.Row="4" Text="詳細" FontSize="13" FontWeight="SemiBold" />
             <ScrollViewer Grid.Row="5" VerticalScrollBarVisibility="Auto">
               <StackPanel Spacing="8">
+                <ItemsControl ItemsSource="{Binding RecognitionScanLogRows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="7" Padding="9" Background="#101617" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" />
+                          <TextBlock Grid.Column="1" Text="{Binding At}" FontFamily="Consolas" FontSize="11" Opacity="0.58" />
+                          <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Summary}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.66" />
+                          <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Path}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.44" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <ItemsControl ItemsSource="{Binding ResourceTaskResults}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>

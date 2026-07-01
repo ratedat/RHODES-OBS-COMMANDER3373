@@ -315,9 +315,25 @@ public sealed record RhodesRecognitionScanHistoryItem(
 public sealed record RhodesRecognitionScanHistoryPayload(
     IReadOnlyList<MaaCandidatePreview> Candidates,
     IReadOnlyList<MaaTaskRunResult> TaskResults,
+    IReadOnlyList<RhodesRecognitionScanLogRow> LogRows,
     string Error)
 {
     public bool Succeeded => string.IsNullOrWhiteSpace(Error);
+}
+
+public sealed record RhodesRecognitionScanLogRow(
+    string Event,
+    string At,
+    string Stage,
+    string Label,
+    string Detail,
+    string Path)
+{
+    public string DisplayName => string.IsNullOrWhiteSpace(Event) ? "event不明" : Event;
+
+    public string Context => string.Join(" / ", new[] { Stage, Label }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    public string Summary => string.IsNullOrWhiteSpace(Context) ? Detail : $"{Context} / {Detail}";
 }
 
 public sealed record MaaCandidatePreview(

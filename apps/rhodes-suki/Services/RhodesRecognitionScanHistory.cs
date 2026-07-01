@@ -41,7 +41,7 @@ public static class RhodesRecognitionScanHistory
     public static RhodesRecognitionScanHistoryPayload LoadPayload(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-            return new RhodesRecognitionScanHistoryPayload([], [], "ログファイルが見つかりません。");
+            return new RhodesRecognitionScanHistoryPayload([], [], [], "ログファイルが見つかりません。");
 
         try
         {
@@ -49,16 +49,17 @@ public static class RhodesRecognitionScanHistory
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
-                return new RhodesRecognitionScanHistoryPayload([], [], "スキャンログがobjectではありません。");
+                return new RhodesRecognitionScanHistoryPayload([], [], [], "スキャンログがobjectではありません。");
 
             return new RhodesRecognitionScanHistoryPayload(
                 RhodesMaaCandidateApiClient.ExtractCandidatePreviews(json),
                 ExtractTaskResults(root),
+                ExtractLogRows(root),
                 "");
         }
         catch (Exception ex)
         {
-            return new RhodesRecognitionScanHistoryPayload([], [], ex.Message);
+            return new RhodesRecognitionScanHistoryPayload([], [], [], ex.Message);
         }
     }
 
@@ -173,5 +174,62 @@ public static class RhodesRecognitionScanHistory
         }
 
         return JsonSerializer.Deserialize<MaaTaskRunResult[]>(taskResults.GetRawText(), ReadOptions) ?? [];
+    }
+
+    private static IReadOnlyList<RhodesRecognitionScanLogRow> ExtractLogRows(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty("log", out var log)
+            || log.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var rows = new List<RhodesRecognitionScanLogRow>();
+        foreach (var entry in log.EnumerateArray())
+        {
+            if (entry.ValueKind != JsonValueKind.Object)
+                continue;
+
+            rows.Add(new RhodesRecognitionScanLogRow(
+                JsonString(entry, "event"),
+                JsonString(entry, "at"),
+                JsonString(entry, "stage"),
+                JsonString(entry, "label"),
+                BuildLogDetail(entry),
+                JsonString(entry, "path")));
+        }
+        return rows;
+    }
+
+    private static string BuildLogDetail(JsonElement entry)
+    {
+        var parts = new List<string>();
+        foreach (var property in entry.EnumerateObject())
+        {
+            if (property.Name is "event" or "at" or "stage" or "label" or "path")
+                continue;
+
+            var value = JsonValueText(property.Value);
+            if (!string.IsNullOrWhiteSpace(value))
+                parts.Add($"{property.Name}={value}");
+        }
+
+        return string.Join(", ", parts);
+    }
+
+    private static string JsonValueText(JsonElement value)
+    {
+        var text = value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? "",
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => "",
+            JsonValueKind.Undefined => "",
+            _ => value.GetRawText(),
+        };
+        return text.Length <= 160 ? text : $"{text[..160]}...";
     }
 }

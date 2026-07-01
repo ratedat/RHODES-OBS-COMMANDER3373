@@ -164,6 +164,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ResourceTaskResults = [];
         CandidateResults = [];
         RecognitionScanHistory = [];
+        RecognitionScanLogRows = [];
         BaseResolution = Services.RhodesMaaPaths.BaseResolution;
         ResourceRoot = sessionSnapshot.ResourceRoot;
         AgentBinaryRoot = sessionSnapshot.AgentBinaryRoot;
@@ -281,6 +282,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaCandidatePreview> CandidateResults { get; }
 
     public ObservableCollection<RhodesRecognitionScanHistoryItem> RecognitionScanHistory { get; }
+
+    public ObservableCollection<RhodesRecognitionScanLogRow> RecognitionScanLogRows { get; }
 
     public MaaTaskDiagnosticsSnapshot ResourceTaskDiagnostics
     {
@@ -1733,6 +1736,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             CandidateResults.Clear();
             ResourceTaskResults.Clear();
+            RecognitionScanLogRows.Clear();
             LastCandidateApplySummary = "既存ADBスキャンAPI実行";
             RefreshResourceTaskDiagnostics();
             RefreshInspectorRows();
@@ -1754,6 +1758,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             var syncError = await SyncRunStateFromApiCoreAsync();
             LastResourceTaskResultsPath = result.LogPath;
+            var savedPayload = RhodesRecognitionScanHistory.LoadPayload(result.LogPath);
+            if (savedPayload.Succeeded)
+            {
+                RecognitionScanLogRows.Clear();
+                foreach (var logRow in savedPayload.LogRows)
+                {
+                    RecognitionScanLogRows.Add(logRow);
+                }
+            }
             var syncSummary = string.IsNullOrWhiteSpace(syncError)
                 ? "API状態同期済み"
                 : $"API状態同期失敗: {syncError}";
@@ -1826,16 +1839,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             ResourceTaskResults.Clear();
+            RecognitionScanLogRows.Clear();
             foreach (var taskResult in payload.TaskResults)
             {
                 ResourceTaskResults.Add(taskResult);
+            }
+
+            foreach (var logRow in payload.LogRows)
+            {
+                RecognitionScanLogRows.Add(logRow);
             }
 
             LastResourceTaskResultsPath = item.LogPath;
             LastCandidateApplySummary = "履歴から読込";
             RefreshResourceTaskDiagnostics();
             RefreshInspectorRows();
-            StatusMessage = $"認識履歴を読み込みました: 候補{CandidateResults.Count}件 / task{ResourceTaskResults.Count}件";
+            StatusMessage = $"認識履歴を読み込みました: 候補{CandidateResults.Count}件 / task{ResourceTaskResults.Count}件 / log{RecognitionScanLogRows.Count}件";
             return Task.CompletedTask;
         });
     }
@@ -1882,6 +1901,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         ResourceTaskResults.Clear();
         CandidateResults.Clear();
+        RecognitionScanLogRows.Clear();
         LastCandidateApplySummary = "候補未反映";
         RefreshResourceTaskDiagnostics();
         RefreshInspectorRows();
