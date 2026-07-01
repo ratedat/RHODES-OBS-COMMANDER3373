@@ -38,6 +38,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA ROI detail rows expose rect, roi, and point boxes", RoiDetailRowsExposeRectVariants),
     ("MAA ROI preview projector scales actual image coordinates to 1280x720", RoiPreviewProjectorScalesImageCoordinates),
     ("MAA ROI edit draft evidence uses stable JSON shape", RoiEditDraftEvidence),
+    ("MAA ROI draft source updater maps generated entries back to source ROI", RoiDraftSourceUpdater),
     ("MAA ROI selection matcher links OCR detail rows to ROI previews", RoiSelectionMatcherLinksOcrRows),
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
@@ -1187,6 +1188,36 @@ static void RoiEditDraftEvidence()
         if (Directory.Exists(directory))
             Directory.Delete(directory, true);
     }
+}
+
+static void RoiDraftSourceUpdater()
+{
+    var source = """
+    {
+      "version": 1,
+      "ocrRegions": [
+        { "id": "run.hope.current", "roi": [1,2,3,4] },
+        { "id": "run.hope.max", "roi": [5,6,7,8] }
+      ]
+    }
+    """;
+    var draft = new MaaRoiEditDraft("RhodesOcrRegion_run_hope_current", "filtered.roi", "[10,20,30,40]", true);
+    var result = RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksJson(source, draft, out var updated);
+
+    Equal(true, result.Succeeded, "roi source update succeeded");
+    Equal("data/recognition/maa-tasks.json", result.SourcePath, "roi source path");
+    Equal("run.hope.current", result.TargetId, "roi source target");
+    Equal("[1,2,3,4]", result.PreviousRoi, "roi previous value");
+    Equal("[10,20,30,40]", result.UpdatedRoi, "roi updated value");
+    var root = JsonNode.Parse(updated)!.AsObject();
+    var regions = root["ocrRegions"]!.AsArray();
+    Equal(10, regions[0]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "updated roi x");
+    Equal(5, regions[1]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "unrelated roi unchanged");
+
+    var boxDraft = new MaaRoiEditDraft("RhodesOcrRegion_run_hope_current", "best.box", "[10,20,30,40]", false);
+    Equal(false, RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksJson(source, boxDraft, out _).Succeeded, "box draft rejected");
+    var missingDraft = new MaaRoiEditDraft("RhodesOcrRegion_missing", "filtered.roi", "[10,20,30,40]", true);
+    Equal(false, RhodesMaaRoiDraftSourceUpdater.ApplyToMaaTasksJson(source, missingDraft, out _).Succeeded, "missing draft rejected");
 }
 
 static void MaaNativeEvidenceLog()

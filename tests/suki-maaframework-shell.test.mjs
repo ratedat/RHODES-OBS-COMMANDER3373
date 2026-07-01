@@ -56,6 +56,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const ocrDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaOcrDetailRows.cs", "utf8");
   const roiDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDetailRows.cs", "utf8");
   const roiEditDraftLog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiEditDraftLog.cs", "utf8");
+  const roiDraftSourceUpdater = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDraftSourceUpdater.cs", "utf8");
   const roiPreviewProjector = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiPreviewProjector.cs", "utf8");
   const roiSelectionMatcher = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiSelectionMatcher.cs", "utf8");
   const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
@@ -152,6 +153,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(models, /ProjectedRoiJson/);
   assert.match(models, /IsResourceRoiCandidate/);
   assert.match(models, /MaaRoiEditDraft/);
+  assert.match(models, /MaaRoiDraftApplyResult/);
   assert.match(models, /FromPreview/);
   assert.match(models, /SukiOptionalRuntimeStatus/);
   assert.match(models, /MaaCandidatePreview/);
@@ -274,6 +276,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(debugPaths, /ROI Drafts/);
   assert.match(roiEditDraftLog, /maa-roi-edit-draft/);
   assert.match(roiEditDraftLog, /SaveAsync/);
+  assert.match(roiDraftSourceUpdater, /data\/recognition\/maa-tasks\.json/);
+  assert.match(roiDraftSourceUpdater, /RhodesOcrRegion/);
+  assert.match(roiDraftSourceUpdater, /ocrRegions/);
   assert.match(viewModel, /Campaigns/);
   assert.match(viewModel, /SelectedCampaign/);
   assert.match(viewModel, /構想/);

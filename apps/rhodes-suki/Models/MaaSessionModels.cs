@@ -302,6 +302,20 @@ public sealed record MaaRoiEditDraft(
     }
 }
 
+public sealed record MaaRoiDraftApplyResult(
+    bool Succeeded,
+    string Message,
+    string SourcePath,
+    string TargetId,
+    string PreviousRoi,
+    string UpdatedRoi)
+{
+    public static MaaRoiDraftApplyResult Failed(string message)
+    {
+        return new MaaRoiDraftApplyResult(false, message, "", "", "", "");
+    }
+}
+
 public sealed record MaaTaskDetailSnapshot(
     string Summary,
     string RecognitionDetailJson,
