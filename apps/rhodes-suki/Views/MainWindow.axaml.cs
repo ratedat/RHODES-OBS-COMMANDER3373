@@ -12,11 +12,13 @@ public partial class MainWindow : SukiWindow
 {
     private Control? _roiDragSource;
     private Control? _roiResizeSource;
+    private IPointer? _roiActivePointer;
 
     public MainWindow()
     {
         InitializeComponent();
         AddHandler(PointerPressedEvent, CloseOpenComboBoxesOnOutsidePress, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(KeyDownEvent, CancelRoiInteractionOnEscape, RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
     private void CloseOpenComboBoxesOnOutsidePress(object? sender, PointerPressedEventArgs e)
@@ -45,6 +47,7 @@ public partial class MainWindow : SukiWindow
 
         viewModel.BeginRoiDrag(row, RoiPointerX(e), RoiPointerY(e));
         _roiDragSource = control;
+        _roiActivePointer = e.Pointer;
         e.Pointer.Capture(control);
         e.Handled = true;
     }
@@ -66,6 +69,7 @@ public partial class MainWindow : SukiWindow
         viewModel.EndRoiDrag();
         e.Pointer.Capture(null);
         _roiDragSource = null;
+        _roiActivePointer = null;
         e.Handled = true;
     }
 
@@ -76,6 +80,7 @@ public partial class MainWindow : SukiWindow
 
         viewModel.EndRoiDrag();
         _roiDragSource = null;
+        _roiActivePointer = null;
     }
 
     private void RoiResizePointerPressed(object? sender, PointerPressedEventArgs e)
@@ -89,6 +94,7 @@ public partial class MainWindow : SukiWindow
 
         viewModel.BeginRoiResize(row, RoiPointerX(e), RoiPointerY(e), control.Tag as string);
         _roiResizeSource = control;
+        _roiActivePointer = e.Pointer;
         e.Pointer.Capture(control);
         e.Handled = true;
     }
@@ -110,6 +116,7 @@ public partial class MainWindow : SukiWindow
         viewModel.EndRoiResize();
         e.Pointer.Capture(null);
         _roiResizeSource = null;
+        _roiActivePointer = null;
         e.Handled = true;
     }
 
@@ -120,6 +127,20 @@ public partial class MainWindow : SukiWindow
 
         viewModel.EndRoiResize();
         _roiResizeSource = null;
+        _roiActivePointer = null;
+    }
+
+    private void CancelRoiInteractionOnEscape(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        viewModel.CancelRoiInteraction();
+        _roiActivePointer?.Capture(null);
+        _roiActivePointer = null;
+        _roiDragSource = null;
+        _roiResizeSource = null;
+        e.Handled = true;
     }
 
     private double RoiPointerX(PointerEventArgs e)

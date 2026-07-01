@@ -2109,6 +2109,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StatusMessage = $"ROIリサイズ終了: {SelectedRoiEditDraft.RoiJson}";
     }
 
+    public void CancelRoiInteraction()
+    {
+        if (_roiDragOrigin.Length == 4)
+        {
+            RestoreSelectedRoi(_roiDragOrigin, "ROIドラッグをキャンセルしました。");
+            _roiDragOrigin = [];
+            return;
+        }
+
+        if (_roiResizeOrigin.Length == 4)
+        {
+            RestoreSelectedRoi(_roiResizeOrigin, "ROIリサイズをキャンセルしました。");
+            _roiResizeOrigin = [];
+            _roiResizeMode = "";
+        }
+    }
+
     private async Task SetRoiSnapStepAsync(string? value)
     {
         await RunBusyAsync(() =>
@@ -2132,11 +2149,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return Task.CompletedTask;
             }
 
-            SelectedRoiEditDraft = MaaRoiEditDraft.FromPreview(_selectedRoiPreviewRow);
-            ReplaceCollection(SelectedRoiPreviewRows, [_selectedRoiPreviewRow]);
-            UpdateRoiBatchDraftForSelected("未確認", "元ROIへ戻しました。");
-            RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
-            StatusMessage = $"ROIを元に戻しました: {SelectedRoiEditDraft.RoiJson}";
+            if (TryParseDraftRoi(MaaRoiEditDraft.FromPreview(_selectedRoiPreviewRow).RoiJson, out var roi))
+                RestoreSelectedRoi(roi, "ROIを元に戻しました。");
             return Task.CompletedTask;
         });
     }
@@ -2870,6 +2884,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 Height = roi[3],
                 Raw = SelectedRoiEditDraft.RoiJson,
             }]);
+    }
+
+    private void RestoreSelectedRoi(int[] roi, string message)
+    {
+        SelectedRoiEditDraft = SelectedRoiEditDraft with { RoiJson = RoiJson(roi) };
+        UpdateSelectedRoiOverlay(roi);
+        UpdateRoiBatchDraftForSelected("未確認", message);
+        RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
+        StatusMessage = $"{message}: {SelectedRoiEditDraft.RoiJson}";
     }
 
     private void UpdateRoiBatchDraftForSelected(string stateLabel = "調整済み", string? stateDetail = null)

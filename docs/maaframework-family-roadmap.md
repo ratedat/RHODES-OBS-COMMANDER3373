@@ -100,7 +100,8 @@ flowchart LR
 - 接続済み: ROI overlay上の左/右/上/下辺ハンドルを直接ドラッグして片側だけをリサイズできる。
 - 接続済み: ROI調整ステップを1/4/8pxで切り替え、ボタン調整・ドラッグ移動・リサイズへ同じスナップを適用できる。
 - 接続済み: 選択中ROIを元の検出ROIへ戻し、一括候補の状態も未確認へ戻せる。
-- 残作業: ROI overlayのドラッグ中Escキャンセル操作を追加する。
+- 接続済み: ROI overlayのドラッグ/リサイズ中にEscで開始時ROIへ戻し、pointer captureを解除できる。
+- 残作業: ROI調整後の再スキャン比較を同一画面で実行し、before/afterの認識結果差分を表示する。
 
 ## First Milestone
 - SukiUI shell が起動する

@@ -308,7 +308,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /SetRoiSnapStepAsync/);
   assert.match(viewModel, /ResetSelectedRoiDraftCommand/);
   assert.match(viewModel, /ResetSelectedRoiDraftAsync/);
-  assert.match(viewModel, /元ROIへ戻しました/);
+  assert.match(viewModel, /ROIを元に戻しました/);
   assert.match(viewModel, /SnapDelta/);
   assert.match(viewModel, /BeginRoiDrag/);
   assert.match(viewModel, /UpdateRoiDrag/);
@@ -316,6 +316,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /BeginRoiResize/);
   assert.match(viewModel, /UpdateRoiResize/);
   assert.match(viewModel, /EndRoiResize/);
+  assert.match(viewModel, /CancelRoiInteraction/);
+  assert.match(viewModel, /RestoreSelectedRoi/);
+  assert.match(viewModel, /ROIドラッグをキャンセル/);
   assert.match(viewModel, /_roiResizeMode/);
   assert.match(viewModel, /topLeft/);
   assert.match(viewModel, /right/);
@@ -354,6 +357,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(mainWindowCodeBehind, /viewModel\.BeginRoiDrag/);
   assert.match(mainWindowCodeBehind, /viewModel\.UpdateRoiDrag/);
   assert.match(mainWindowCodeBehind, /viewModel\.EndRoiDrag/);
+  assert.match(mainWindowCodeBehind, /CancelRoiInteractionOnEscape/);
+  assert.match(mainWindowCodeBehind, /Key\.Escape/);
+  assert.match(mainWindowCodeBehind, /viewModel\.CancelRoiInteraction/);
+  assert.match(mainWindowCodeBehind, /_roiActivePointer\?\.Capture\(null\)/);
   assert.match(mainWindowCodeBehind, /RoiResizePointerPressed/);
   assert.match(mainWindowCodeBehind, /RoiResizePointerMoved/);
   assert.match(mainWindowCodeBehind, /RoiResizePointerReleased/);
