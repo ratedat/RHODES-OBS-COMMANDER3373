@@ -82,7 +82,8 @@ flowchart LR
 - 接続済み: ROIドラフト適用後の対象ファイル、target、before/after、backupをUI内で確認できる。
 - 接続済み: 複数ROIドラフトを `maa-tasks.json` と `scan-profiles.json` の両生成元へ振り分け、全件成功時だけ更新JSONを返すバッチ適用基盤を追加した。
 - 接続済み: 表示中のResource ROI候補を一括プレビューし、`maa-tasks.json` / `scan-profiles.json` を各1回バックアップして一括適用できる。
-- 残作業: 複数ROIドラフトの差分一覧をUIで個別に確認し、適用対象をチェックで絞れるようにする。
+- 接続済み: 一括プレビュー/適用結果のtargetとbefore/afterをUI内の差分一覧で確認できる。
+- 残作業: 複数ROIドラフトの適用対象をチェックで絞れるようにする。
 
 ## First Milestone
 - SukiUI shell が起動する

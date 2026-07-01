@@ -859,12 +859,22 @@
                 </Border>
 
                 <Border CornerRadius="7" Padding="9" Background="#121A1C" BorderBrush="#2E4448" BorderThickness="1">
-                  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
                     <TextBlock Text="表示中ROI一括" FontSize="13" FontWeight="SemiBold" />
                     <Button Grid.Column="1" Content="全候補確認" Command="{Binding PreviewVisibleRoiDraftsApplyCommand}" Padding="8,3" />
                     <Button Grid.Column="2" Content="全候補適用" Command="{Binding ApplyVisibleRoiDraftsCommand}" Padding="8,3" />
                     <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding RoiBatchApplyResult.Summary}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.66" />
                     <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding RoiBatchApplyResult.BackupSummary}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.50" />
+                    <ListBox Grid.Row="3" Grid.ColumnSpan="3" ItemsSource="{Binding RoiBatchApplyResult.Results}" MaxHeight="132" Background="Transparent" BorderThickness="0" Padding="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid RowDefinitions="Auto,Auto" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding TargetSummary}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.66" />
+                            <TextBlock Grid.Row="1" Text="{Binding DiffSummary}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.78" />
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
                   </Grid>
                 </Border>
 

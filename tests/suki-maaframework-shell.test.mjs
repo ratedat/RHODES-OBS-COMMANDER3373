@@ -450,6 +450,9 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RoiDraftApplyResult\.BackupSummary/);
   assert.match(xaml, /RoiBatchApplyResult\.Summary/);
   assert.match(xaml, /RoiBatchApplyResult\.BackupSummary/);
+  assert.match(xaml, /RoiBatchApplyResult\.Results/);
+  assert.match(xaml, /TargetSummary/);
+  assert.match(xaml, /DiffSummary/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRoiPreviewRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedOcrDetailRow, Mode=TwoWay\}"/);
   assert.match(xaml, /SelectedItem="\{Binding SelectedRecognitionScanLogRow, Mode=TwoWay\}"/);
