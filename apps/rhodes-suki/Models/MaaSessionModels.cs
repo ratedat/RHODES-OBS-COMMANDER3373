@@ -734,7 +734,8 @@ public sealed record MaaRoiRescanComparisonRow(
     string BeforeValue,
     string AfterValue,
     string Detail,
-    string CandidateKey = "")
+    string CandidateKey = "",
+    string TaskEntry = "")
 {
     public string StateLabel => State switch
     {

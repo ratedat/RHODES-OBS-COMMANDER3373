@@ -2036,6 +2036,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             var beforeCandidates = SnapshotCandidatesForComparison(beforeTaskResults, CandidateResults);
+            var beforeSourceEntries = CandidateSourceEntries(CandidateApiProfileId(), beforeTaskResults);
             var beforeEvidencePath = await SaveResourceTaskResultsAsync(
                 beforeTaskResults,
                 SelectedResourceProfile?.Id,
@@ -2043,8 +2044,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await RunAllResourceTasksCoreAsync();
             await ConvertResourceTaskResultsCoreAsync();
 
+            var afterTaskResults = ResourceTaskResults.ToArray();
             var afterCandidates = CandidateResults.ToArray();
-            var comparisonRows = CompareRoiRescanCandidates(beforeCandidates, afterCandidates);
+            var afterSourceEntries = CandidateSourceEntries(CandidateApiProfileId(), afterTaskResults);
+            var comparisonRows = CompareRoiRescanCandidates(
+                beforeCandidates,
+                afterCandidates,
+                beforeSourceEntries,
+                afterSourceEntries);
             ReplaceCollection(RoiRescanComparisonRows, comparisonRows);
             RoiRescanComparisonSummary = BuildRoiRescanComparisonSummary(beforeCandidates.Count, afterCandidates.Length, comparisonRows);
             SetRoiRescanComparisonEvidence(beforeEvidencePath, LastResourceTaskResultsPath);
@@ -3394,6 +3401,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return RhodesMaaLocalCandidateConverter.FromTaskResults(CandidateApiProfileId(), taskResults);
     }
 
+    private static IReadOnlyDictionary<string, string> CandidateSourceEntries(
+        string? profileId,
+        IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var entries = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var taskResult in taskResults)
+        {
+            var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(profileId, [taskResult]);
+            foreach (var candidate in candidates)
+            {
+                var key = CandidateComparisonKey(candidate);
+                if (!string.IsNullOrWhiteSpace(key) && !entries.ContainsKey(key))
+                    entries[key] = taskResult.Entry;
+            }
+        }
+
+        return entries;
+    }
+
     private void ClearRoiRescanComparison(string summary = "再スキャン比較未実行")
     {
         SelectedRoiRescanComparisonRow = null;
@@ -3414,7 +3440,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private static IReadOnlyList<MaaRoiRescanComparisonRow> CompareRoiRescanCandidates(
         IEnumerable<MaaCandidatePreview> beforeCandidates,
-        IEnumerable<MaaCandidatePreview> afterCandidates)
+        IEnumerable<MaaCandidatePreview> afterCandidates,
+        IReadOnlyDictionary<string, string>? beforeSourceEntries = null,
+        IReadOnlyDictionary<string, string>? afterSourceEntries = null)
     {
         var before = CandidateComparisonMap(beforeCandidates);
         var after = CandidateComparisonMap(afterCandidates);
@@ -3436,7 +3464,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     "-",
                     afterItem.DisplayValue,
                     afterItem.Detail,
-                    key));
+                    key,
+                    CandidateSourceEntry(key, beforeSourceEntries, afterSourceEntries)));
                 continue;
             }
 
@@ -3448,7 +3477,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     beforeItem.DisplayValue,
                     "-",
                     beforeItem.Detail,
-                    key));
+                    key,
+                    CandidateSourceEntry(key, beforeSourceEntries, afterSourceEntries)));
                 continue;
             }
 
@@ -3461,27 +3491,59 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 beforeItem.DisplayValue,
                 afterItem.DisplayValue,
                 $"{beforeItem.Detail} / after: {afterItem.Detail}",
-                key));
+                key,
+                CandidateSourceEntry(key, beforeSourceEntries, afterSourceEntries)));
         }
 
         return rows;
     }
 
+    private static string CandidateSourceEntry(
+        string key,
+        IReadOnlyDictionary<string, string>? beforeSourceEntries,
+        IReadOnlyDictionary<string, string>? afterSourceEntries)
+    {
+        if (afterSourceEntries is not null && afterSourceEntries.TryGetValue(key, out var afterEntry))
+            return afterEntry;
+        return beforeSourceEntries is not null && beforeSourceEntries.TryGetValue(key, out var beforeEntry)
+            ? beforeEntry
+            : "";
+    }
+
     private void SelectCandidateForComparison(MaaRoiRescanComparisonRow? row)
     {
-        if (row is null || string.IsNullOrWhiteSpace(row.CandidateKey))
+        if (row is null)
             return;
+
+        if (!string.IsNullOrWhiteSpace(row.TaskEntry))
+        {
+            var task = ResourceTaskResults.FirstOrDefault(result => result.Entry.Equals(row.TaskEntry, StringComparison.Ordinal));
+            if (task is not null)
+                SelectedResourceTaskResult = task;
+        }
+
+        if (string.IsNullOrWhiteSpace(row.CandidateKey))
+        {
+            StatusMessage = string.IsNullOrWhiteSpace(row.TaskEntry)
+                ? $"比較差分を選択しました: {row.Label}"
+                : $"比較差分のtaskを選択しました: {row.TaskEntry}";
+            return;
+        }
 
         var selected = CandidateResults.FirstOrDefault(candidate =>
             CandidateComparisonKey(candidate).Equals(row.CandidateKey, StringComparison.Ordinal));
         if (selected is null)
         {
-            StatusMessage = $"比較差分に対応する候補は現在の候補一覧にありません: {row.Label}";
+            StatusMessage = string.IsNullOrWhiteSpace(row.TaskEntry)
+                ? $"比較差分に対応する候補は現在の候補一覧にありません: {row.Label}"
+                : $"比較差分のtaskを選択しました: {row.TaskEntry} / 候補は現在の一覧にありません";
             return;
         }
 
         SelectedCandidateResult = selected;
-        StatusMessage = $"比較差分の候補を選択しました: {selected.Label}";
+        StatusMessage = string.IsNullOrWhiteSpace(row.TaskEntry)
+            ? $"比較差分の候補を選択しました: {selected.Label}"
+            : $"比較差分の候補とtaskを選択しました: {selected.Label} / {row.TaskEntry}";
     }
 
     private static string BuildRoiRescanComparisonSummary(
