@@ -108,7 +108,8 @@ flowchart LR
 - 接続済み: 再スキャン比較の差分行にcandidate keyを保持し、現在の候補一覧に対応候補がある場合は選択状態へ連動できる。
 - 接続済み: 再スキャン比較の差分行ごとに該当task entryを保持し、現在のResource task結果一覧に対応entryがある場合は選択状態へ連動できる。
 - 接続済み: 再スキャン比較のbefore/after証跡JSONをSuki内の読み取り専用プレビューで確認できる。
-- 残作業: 証跡JSONプレビューを該当candidate/task entryへ絞り込む。
+- 接続済み: 証跡JSONプレビューを選択中差分行のcandidate key/task entryへ絞り込める。
+- 残作業: 絞り込み済み証跡ビューを専用ツリー表示にし、候補/Resource task/ログを折りたたみ表示できるようにする。
 
 ## First Milestone
 - SukiUI shell が起動する

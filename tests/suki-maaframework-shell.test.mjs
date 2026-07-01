@@ -322,6 +322,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /PreviewRoiRescanEvidenceAsync/);
   assert.match(viewModel, /RoiRescanEvidencePreviewTitle/);
   assert.match(viewModel, /RoiRescanEvidencePreviewText/);
+  assert.match(viewModel, /BuildRoiRescanEvidencePreview/);
+  assert.match(viewModel, /CandidateJsonKey/);
+  assert.match(viewModel, /EvidenceTaskResults/);
+  assert.match(viewModel, /matched evidence: none/);
   assert.match(viewModel, /truncated/);
   assert.match(viewModel, /comparisonSummary: RoiRescanComparisonSummary/);
   assert.match(viewModel, /comparisonRows: RoiRescanComparisonRows/);

@@ -2122,12 +2122,135 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var text = await File.ReadAllTextAsync(path);
-        const int maxPreviewLength = 60000;
         RoiRescanEvidencePreviewTitle = $"{normalizedSide}: {path}";
-        RoiRescanEvidencePreviewText = text.Length <= maxPreviewLength
+        RoiRescanEvidencePreviewText = BuildRoiRescanEvidencePreview(text, SelectedRoiRescanComparisonRow);
+        StatusMessage = $"比較証跡をプレビューしました: {path}";
+    }
+
+    private static string BuildRoiRescanEvidencePreview(string json, MaaRoiRescanComparisonRow? selectedRow)
+    {
+        if (selectedRow is null
+            || (string.IsNullOrWhiteSpace(selectedRow.CandidateKey) && string.IsNullOrWhiteSpace(selectedRow.TaskEntry)))
+        {
+            return TruncateEvidencePreview(json);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var sections = new List<string>
+            {
+                $"filter: candidateKey={selectedRow.CandidateKey} / taskEntry={selectedRow.TaskEntry}",
+            };
+
+            var matchedCandidates = JsonArray(root, "candidates")
+                .Where(candidate => CandidateJsonKey(candidate).Equals(selectedRow.CandidateKey, StringComparison.Ordinal))
+                .ToArray();
+            if (matchedCandidates.Length > 0)
+            {
+                sections.Add("candidates:");
+                sections.Add(string.Join(
+                    "\n",
+                    matchedCandidates.Select(candidate => JsonSerializer.Serialize(candidate, options))));
+            }
+
+            var matchedTasks = EvidenceTaskResults(root)
+                .Where(task => JsonString(task, "entry").Equals(selectedRow.TaskEntry, StringComparison.Ordinal))
+                .ToArray();
+            if (matchedTasks.Length > 0)
+            {
+                sections.Add("taskResults:");
+                sections.Add(string.Join(
+                    "\n",
+                    matchedTasks.Select(task => JsonSerializer.Serialize(task, options))));
+            }
+
+            var matchedLogRows = JsonArray(root, "log")
+                .Where(row => JsonString(row, "entry").Equals(selectedRow.TaskEntry, StringComparison.Ordinal))
+                .ToArray();
+            if (matchedLogRows.Length > 0)
+            {
+                sections.Add("log:");
+                sections.Add(string.Join(
+                    "\n",
+                    matchedLogRows.Select(row => JsonSerializer.Serialize(row, options))));
+            }
+
+            if (sections.Count == 1)
+                sections.Add("matched evidence: none");
+
+            return TruncateEvidencePreview(string.Join("\n\n", sections));
+        }
+        catch (JsonException)
+        {
+            return TruncateEvidencePreview(json);
+        }
+    }
+
+    private static IReadOnlyList<JsonElement> JsonArray(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.Array
+            ? property.EnumerateArray().ToArray()
+            : [];
+    }
+
+    private static IReadOnlyList<JsonElement> EvidenceTaskResults(JsonElement root)
+    {
+        return root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("evidence", out var evidence)
+            ? JsonArray(evidence, "taskResults")
+            : [];
+    }
+
+    private static string CandidateJsonKey(JsonElement candidate)
+    {
+        var field = JsonString(candidate, "field");
+        if (!string.IsNullOrWhiteSpace(field))
+            return $"field:{field}:{JsonString(candidate, "campaignId")}:{JsonString(candidate, "fieldId")}:{JsonString(candidate, "slotKind")}";
+        var operatorId = JsonString(candidate, "operatorId");
+        if (!string.IsNullOrWhiteSpace(operatorId))
+            return $"operator:{operatorId}";
+        var relicId = JsonString(candidate, "relicId");
+        if (!string.IsNullOrWhiteSpace(relicId))
+            return $"relic:{JsonString(candidate, "campaignId")}:{relicId}";
+        var thoughtId = JsonString(candidate, "thoughtId");
+        if (!string.IsNullOrWhiteSpace(thoughtId))
+            return $"thought:{JsonString(candidate, "campaignId")}:{thoughtId}";
+        var ageId = JsonString(candidate, "ageId");
+        if (!string.IsNullOrWhiteSpace(ageId))
+            return $"age:{JsonString(candidate, "campaignId")}:{ageId}";
+        var effectId = JsonString(candidate, "effectId");
+        if (!string.IsNullOrWhiteSpace(effectId))
+            return $"effect:{JsonString(candidate, "campaignId")}:{effectId}:{JsonString(candidate, "slotKind")}";
+        var coinId = JsonString(candidate, "coinId");
+        if (!string.IsNullOrWhiteSpace(coinId))
+            return $"coin:{JsonString(candidate, "campaignId")}:{coinId}";
+        var statusId = JsonString(candidate, "statusId");
+        if (!string.IsNullOrWhiteSpace(statusId))
+            return $"status:{JsonString(candidate, "campaignId")}:{statusId}";
+
+        return FirstNonEmpty(JsonString(candidate, "recognitionKey"), JsonString(candidate, "campaignId"));
+    }
+
+    private static string JsonString(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.String
+            ? property.GetString() ?? ""
+            : "";
+    }
+
+    private static string TruncateEvidencePreview(string text)
+    {
+        const int maxPreviewLength = 60000;
+        return text.Length <= maxPreviewLength
             ? text
             : $"{text[..maxPreviewLength]}\n... truncated {text.Length - maxPreviewLength} chars ...";
-        StatusMessage = $"比較証跡をプレビューしました: {path}";
     }
 
     private async Task PreviewSelectedRoiDraftApplyAsync()
