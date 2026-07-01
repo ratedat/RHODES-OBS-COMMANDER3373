@@ -662,7 +662,7 @@
               <TextBlock Text="プレビュー / 結果" FontSize="18" FontWeight="SemiBold" />
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <Button Content="候補を反映" Command="{Binding ApplyCandidateResultsCommand}" Padding="8,4" />
-                <TextBlock Text="ADB撮影" FontSize="12" VerticalAlignment="Center" Opacity="0.58" />
+                <TextBlock Text="{Binding LastCandidateApplySummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.58" />
               </StackPanel>
             </Grid>
 

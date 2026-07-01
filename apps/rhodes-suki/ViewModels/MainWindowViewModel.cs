@@ -36,6 +36,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastCapturePath = "";
     private string _rhodesApiUrl = "http://127.0.0.1:5173";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
+    private string _lastCandidateApplySummary = "候補未反映";
     private Bitmap? _lastCaptureImage;
     private MaaAdbPresetPreview? _selectedAdbPreset;
     private MaaResourceProfilePreview? _selectedResourceProfile;
@@ -705,6 +706,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref _statusMessage, value);
     }
 
+    public string LastCandidateApplySummary
+    {
+        get => _lastCandidateApplySummary;
+        private set => SetProperty(ref _lastCandidateApplySummary, string.IsNullOrWhiteSpace(value) ? "候補未反映" : value);
+    }
+
     public MaaAdbPresetPreview? SelectedAdbPreset
     {
         get => _selectedAdbPreset;
@@ -968,6 +975,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             yield return new SukiInspectorRow("認識プロファイル", SelectedResourceProfile?.DisplayName ?? "-", SelectedResourceProfile?.ProfileSummary ?? "");
             yield return new SukiInspectorRow("候補", $"{CandidateResults.Count}件", ResourceTaskDiagnostics.Summary);
+            yield return new SukiInspectorRow("適用", LastCandidateApplySummary, "data/current-state.json");
             yield break;
         }
 
@@ -1247,19 +1255,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         if (!CandidateResults.Any())
         {
+            LastCandidateApplySummary = "反映なし: 候補0件";
             StatusMessage = "反映する候補がありません。";
+            RefreshInspectorRows();
             return;
         }
 
         var summary = await RhodesRunStateStore.SaveCandidatesAsync(CandidateResults);
         if (summary.AppliedCount <= 0)
         {
+            LastCandidateApplySummary = $"反映なし: 無視 {summary.IgnoredCount}件";
             StatusMessage = $"状態へ反映できる候補はありませんでした。無視: {summary.IgnoredCount}件";
+            RefreshInspectorRows();
             return;
         }
 
         ReloadRunStateFromStore();
+        LastCandidateApplySummary = $"{summary.AppliedCount}件: {string.Join(", ", summary.AppliedFields)}";
         StatusMessage = $"状態へ反映しました: {summary.AppliedCount}件 ({string.Join(", ", summary.AppliedFields)})";
+        RefreshInspectorRows();
     }
 
     private async Task RunSelectedProfileRecognitionAsync()
@@ -1295,6 +1309,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         ResourceTaskResults.Clear();
         CandidateResults.Clear();
+        LastCandidateApplySummary = "候補未反映";
         RefreshResourceTaskDiagnostics();
         RefreshInspectorRows();
         if (!ResourceTasks.Any())
