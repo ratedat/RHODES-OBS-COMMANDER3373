@@ -53,6 +53,15 @@ flowchart LR
 - 取り込むのは `MaaTasker` セッション、`AppendRecognition` payload、認識結果可視化の考え方に限定する
 - 基準点切り出しが必要になった時は、1280x720 の切り出し対象を明示してユーザーへ依頼する
 
+## Current Suki Bridge Status
+- 接続済み: `GET /api/health` による RHODES API 状態、`/api/state` からの状態同期、`/api/recognition/scan` による既存ADBスキャン実行。
+- 接続済み: `/api/adb/detect` による MAA 風ADB候補/端末検出、`/api/adb/test` による解像度/スクリーンショット確認。
+- 接続済み: `/api/ocr/glm/status`、`/api/ocr/glm/install`、`/api/ocr/glm/uninstall`、`/api/ocr/glm/ollama/*` による任意 GLM-OCR/Ollama 管理。
+- 接続済み: `/api/recognition/scan/status` による実行中/直近スキャン進捗確認。
+- 残作業: Suki 側から ADB/ランタイム設定を `current-state.json` の既存設定スキーマへ保存する導線を強化する。
+- 残作業: MAAFramework native `Tasker` 実行と Node API 経由の候補化を、同一のスキャン履歴/証跡モデルへ統合する。
+- 残作業: OBS/sidecar 出力設定を Suki 側の設定保存とプレビュー確認に接続する。
+
 ## First Milestone
 - SukiUI shell が起動する
 - MAAFramework binding assembly を参照できる
