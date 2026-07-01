@@ -25,6 +25,7 @@ var tests = new (string Name, Action Run)[]
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
+    ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
@@ -726,6 +727,47 @@ static void OptionalRuntimeStatusParsing()
     Equal(false, missing.Installed, "missing flag");
     Equal("導入中", installing.State, "installing state");
     Equal(true, installing.Installing, "installing flag");
+}
+
+static void RhodesApiStatusParsing()
+{
+    var health = RhodesApiStatusProbe.ParseHealthJson(
+        """
+        {
+          "ok": true,
+          "version": "0.1.0",
+          "state": {
+            "campaignId": "is5_sarkaz",
+            "operators": 3,
+            "relics": 2,
+            "pendingSuggestions": 1
+          },
+          "recognition": {
+            "active": true,
+            "activeProfileId": "operatorsFull"
+          }
+        }
+        """);
+    Equal("接続済み", health.State, "health state");
+    Equal(true, health.Installed, "health connected flag");
+    Equal(true, health.Detail.Contains("version=0.1.0", StringComparison.Ordinal), "health version detail");
+    Equal(true, health.Detail.Contains("campaign=is5_sarkaz", StringComparison.Ordinal), "health campaign detail");
+    Equal(true, health.Detail.Contains("operators=3", StringComparison.Ordinal), "health operators detail");
+    Equal(true, health.Detail.Contains("scan=running", StringComparison.Ordinal), "health scan detail");
+
+    var state = RhodesApiStatusProbe.ParseStateJson(
+        """
+        {
+          "updatedAt": "2026-07-01T00:00:00Z",
+          "run": { "campaignId": "is6_sui" },
+          "operators": ["gummy", "rain"],
+          "relics": ["relic_a"]
+        }
+        """);
+    Equal("接続済み", state.State, "state fallback state");
+    Equal(true, state.Detail.Contains("campaign=is6_sui", StringComparison.Ordinal), "state campaign detail");
+    Equal(true, state.Detail.Contains("operators=2", StringComparison.Ordinal), "state operators detail");
+    Equal(true, state.Detail.Contains("relics=1", StringComparison.Ordinal), "state relics detail");
 }
 
 static void HypervisorStatusParsing()

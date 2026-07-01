@@ -1,5 +1,6 @@
 export const stateUrl = "/api/state";
 export const masterUrl = "/api/master";
+export const healthUrl = "/api/health";
 export const resetStateUrl = "/api/state/reset";
 export const recognitionScanUrl = "/api/recognition/scan";
 export const recognitionScanCancelUrl = "/api/recognition/scan/cancel";

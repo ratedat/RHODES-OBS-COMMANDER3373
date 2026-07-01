@@ -29,6 +29,26 @@ async function captureConsoleDuring(callback) {
   }
 }
 
+test("health API exposes app, state, and runtime endpoint summary", async () => {
+  const { server, port } = await startServer({ port: 0 });
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/health`);
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.app, "RHODES OBS COMMANDER3373");
+    assert.equal(typeof payload.version, "string");
+    assert.equal(typeof payload.state.campaignId === "string" || payload.state.campaignId === null, true);
+    assert.equal(payload.recognition.active, false);
+    assert.equal(payload.endpoints.state, "/api/state");
+    assert.equal(payload.endpoints.recognitionScan, "/api/recognition/scan");
+    assert.equal(payload.endpoints.glmOcr, "/api/ocr/glm/status");
+  } finally {
+    await closeServer(server);
+  }
+});
+
 test("recognition scan API accepts POST profile requests without using the default ADB runner", async () => {
   const recognitionLogDir = await tempRecognitionLogDir();
   const { server, port } = await startServer({

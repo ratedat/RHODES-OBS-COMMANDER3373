@@ -37,6 +37,7 @@ const CURRENT_STATE = path.join(STATE_DIR, "current-state.json");
 const ADB_WORK_DIR = path.join(STATE_DIR, "adb-work");
 const RECOGNITION_LOG_DIR = path.join(STATE_DIR, "recognition-logs");
 const EXAMPLE_STATE = path.join(DATA, "overlay-state.example.json");
+const PACKAGE_JSON = path.join(ROOT, "package.json");
 const SCAN_PROFILES = path.join(DATA, "recognition", "scan-profiles.json");
 const MAA_TASKS = path.join(DATA, "recognition", "maa-tasks.json");
 const MAA_OPERATOR_OCR_MAP = path.join(DATA, "recognition", "maa-operator-name-ocr.json");
@@ -142,6 +143,41 @@ async function ensureState() {
     await writeJsonAtomic(CURRENT_STATE, state);
     return state;
   }
+}
+
+async function buildHealthPayload({ activeScanStatus = null, lastScanSummary = null } = {}) {
+  const [state, packageJson] = await Promise.all([
+    ensureState(),
+    readJson(PACKAGE_JSON).catch(() => ({})),
+  ]);
+  const run = state.run && typeof state.run === "object" ? state.run : {};
+  return {
+    ok: true,
+    app: "RHODES OBS COMMANDER3373",
+    version: packageJson.version || "unknown",
+    state: {
+      campaignId: run.campaignId || null,
+      updatedAt: state.updatedAt || null,
+      operators: Array.isArray(state.operators) ? state.operators.length : 0,
+      relics: Array.isArray(state.relics) ? state.relics.length : 0,
+      pendingSuggestions: Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions.length : 0,
+    },
+    recognition: {
+      active: Boolean(activeScanStatus),
+      activeProfileId: activeScanStatus?.profileId || null,
+      activeStage: activeScanStatus?.stage || null,
+      lastScan: lastScanSummary,
+    },
+    endpoints: {
+      state: "/api/state",
+      master: "/api/master",
+      recognitionScan: "/api/recognition/scan",
+      recognitionScanStatus: "/api/recognition/scan/status",
+      hypervisor: "/api/system/hypervisor",
+      glmOcr: "/api/ocr/glm/status",
+      ollama: "/api/ocr/glm/ollama/status",
+    },
+  };
 }
 
 async function recognitionProfiles() {
@@ -747,6 +783,10 @@ export function createAppServer({
 
     if (req.method === "GET" && url.pathname === "/api/master") {
       return sendJson(res, 200, await masterData());
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/health") {
+      return sendJson(res, 200, await buildHealthPayload({ activeScanStatus, lastScanSummary }));
     }
 
     if (req.method === "GET" && url.pathname === "/api/state") {

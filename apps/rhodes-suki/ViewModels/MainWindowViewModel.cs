@@ -1263,16 +1263,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "ランタイム状態を確認しています。";
+            var apiTask = RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
             var optionalTask = RhodesOptionalRuntimeProbe.ProbeAsync(RhodesApiUrl);
             var hypervisorTask = RhodesHypervisorProbe.ProbeAsync(RhodesApiUrl);
-            await Task.WhenAll(optionalTask, hypervisorTask);
+            await Task.WhenAll(apiTask, optionalTask, hypervisorTask);
             var snapshot = optionalTask.Result;
+            _rhodesApiStatus = apiTask.Result;
             _glmRuntimeStatus = snapshot.Glm;
             _ollamaRuntimeStatus = snapshot.Ollama;
             _hypervisorStatus = hypervisorTask.Result;
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
-            StatusMessage = $"ランタイム状態: GLM={snapshot.Glm.State}, Ollama={snapshot.Ollama.State}, Hyper-V={_hypervisorStatus.State}";
+            StatusMessage = $"ランタイム状態: API={_rhodesApiStatus.State}, GLM={snapshot.Glm.State}, Ollama={snapshot.Ollama.State}, Hyper-V={_hypervisorStatus.State}";
         });
     }
 
@@ -1464,7 +1466,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         await RhodesRunStateStore.ReplaceStateJsonAsync(result.StateJson);
-        _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続済み", "state取得済み", true, false);
+        _rhodesApiStatus = RhodesApiStatusProbe.ParseStateJson(result.StateJson);
         RefreshRuntimeCapabilities();
         ReloadRunStateFromStore();
         return "";
