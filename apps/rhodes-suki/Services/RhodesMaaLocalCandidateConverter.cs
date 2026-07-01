@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using RhodesSuki.Models;
 
@@ -25,10 +26,13 @@ public static class RhodesMaaLocalCandidateConverter
         string? profileId,
         IEnumerable<MaaTaskRunResult> taskResults)
     {
-        if (!string.Equals(profileId, "runStatusFull", StringComparison.Ordinal))
-            return [];
+        if (string.Equals(profileId, "runStatusFull", StringComparison.Ordinal))
+            return RunStatusCandidates(taskResults).ToArray();
 
-        return RunStatusCandidates(taskResults).ToArray();
+        if (string.Equals(profileId, "operatorsFull", StringComparison.Ordinal))
+            return OperatorCandidates(taskResults).ToArray();
+
+        return [];
     }
 
     private static IEnumerable<MaaCandidatePreview> RunStatusCandidates(IEnumerable<MaaTaskRunResult> taskResults)
@@ -81,11 +85,124 @@ public static class RhodesMaaLocalCandidateConverter
         };
     }
 
+    private static IEnumerable<MaaCandidatePreview> OperatorCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var operators = RhodesRunCatalog.LoadDefault().Operators
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
+            .ToArray();
+        var byNormalizedName = operators
+            .GroupBy(item => NormalizeOperatorName(item.Name), StringComparer.Ordinal)
+            .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+        var matched = new Dictionary<string, (SukiChoiceItem Operator, string RawText, double? Confidence, int Order)>(
+            StringComparer.Ordinal);
+        var order = 0;
+
+        foreach (var taskResult in taskResults)
+        {
+            if (!taskResult.Succeeded || !IsOperatorNameEntry(taskResult.Entry))
+                continue;
+
+            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
+            {
+                foreach (var token in OperatorNameTokens(textResult.Text))
+                {
+                    if (!byNormalizedName.TryGetValue(token.Normalized, out var op))
+                        continue;
+
+                    if (!matched.TryGetValue(op.Id, out var existing))
+                    {
+                        matched[op.Id] = (op, token.Raw, textResult.Confidence, order);
+                    }
+                    else if ((textResult.Confidence ?? 0) > (existing.Confidence ?? 0))
+                    {
+                        matched[op.Id] = (op, token.Raw, textResult.Confidence, existing.Order);
+                    }
+                }
+            }
+
+            order++;
+        }
+
+        foreach (var item in matched.Values.OrderBy(item => item.Order))
+        {
+            yield return new MaaCandidatePreview(
+                "operator",
+                item.Operator.Name,
+                item.Operator.Id,
+                item.RawText,
+                Math.Max(0.70, item.Confidence ?? 0),
+                OperatorId: item.Operator.Id,
+                RecognitionKey: $"maa-local:operator:{item.Operator.Id}");
+        }
+    }
+
+    private static bool IsOperatorNameEntry(string entry)
+    {
+        return entry.Equals("RhodesOperatorNameOcr", StringComparison.Ordinal)
+            || entry.Equals("RhodesOcrRegion_operator_name", StringComparison.Ordinal)
+            || entry.StartsWith("RhodesOcrRegion_operator_name_", StringComparison.Ordinal)
+            || entry.Contains("operator.card.name", StringComparison.OrdinalIgnoreCase)
+            || entry.Contains("operator.recruit.name", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<(string Raw, string Normalized)> OperatorNameTokens(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            yield break;
+
+        var whole = NormalizeOperatorName(value);
+        if (whole.Length >= 2)
+            yield return (value.Trim(), whole);
+
+        var parts = value.Split(
+            [' ', '\t', '\r', '\n', '　', ',', '，', '、', '。', ';', '；', ':', '：', '/', '\\', '|'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0)
+            parts = [value.Trim()];
+
+        foreach (var part in parts)
+        {
+            var normalized = NormalizeOperatorName(part);
+            if (normalized.Length >= 2)
+                yield return (part.Trim(), normalized);
+        }
+    }
+
+    private static string NormalizeOperatorName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        var normalized = value.Trim().Normalize(NormalizationForm.FormKC);
+        var chars = new List<char>();
+        foreach (var ch in normalized)
+        {
+            if (char.IsWhiteSpace(ch))
+                continue;
+
+            if (ch is '・' or '･' or '「' or '」' or '『' or '』' or '【' or '】' or '[' or ']' or '(' or ')' or '（' or '）')
+                continue;
+
+            chars.Add(ch);
+        }
+        return new string(chars.ToArray());
+    }
+
     private static (string Text, double? Confidence) PrimaryTextResult(string value)
+    {
+        var results = PrimaryTextResults(value);
+        if (results.Count > 0)
+            return results[0];
+
+        return ("", null);
+    }
+
+    private static IReadOnlyList<(string Text, double? Confidence)> PrimaryTextResults(string value)
     {
         using var document = ParseRecognitionDetail(value);
         if (document is null)
-            return ("", null);
+            return [];
 
         var root = document.RootElement;
         if (root.ValueKind == JsonValueKind.Object
@@ -95,6 +212,7 @@ public static class RhodesMaaLocalCandidateConverter
             root = nested;
         }
 
+        var results = new List<(string Text, double? Confidence)>();
         foreach (var item in PrimaryResults(root))
         {
             if (item.ValueKind != JsonValueKind.Object)
@@ -102,10 +220,14 @@ public static class RhodesMaaLocalCandidateConverter
 
             var text = JsonString(item, "text");
             if (!string.IsNullOrWhiteSpace(text))
-                return (text.Trim(), JsonNumber(item, "score") ?? JsonNumber(item, "confidence") ?? JsonNumber(item, "prob"));
+            {
+                results.Add((
+                    text.Trim(),
+                    JsonNumber(item, "score") ?? JsonNumber(item, "confidence") ?? JsonNumber(item, "prob")));
+            }
         }
 
-        return ("", null);
+        return results;
     }
 
     private static JsonDocument? ParseRecognitionDetail(string value)

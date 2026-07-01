@@ -11,6 +11,7 @@ var tests = new (string Name, Action Run)[]
     ("Candidate preview exposes stable debugger identity", CandidatePreviewIdentity),
     ("MAA candidate API extraction preserves structured ids", CandidateApiExtraction),
     ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
+    ("Local MAA candidate converter extracts exact operator name candidates", LocalCandidateConverterOperators),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
@@ -222,6 +223,36 @@ static void LocalCandidateConverterRunStatus()
             true,
             "detail",
             $"TaskId=1; detail={{\"best\":{{\"text\":\"{text}\",\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterOperators()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [
+            M("RhodesRunStatusTopBarOcr", "メイ", 0.99),
+            M("RhodesOcrRegion_operator_name_left_1", "グム", 0.91),
+            M("RhodesOcrRegion_operator_name_center_1", "セイリュウ", 0.92),
+            M("RhodesOcrRegion_operator_name_right_1", "テンニンカ", 0.93),
+            M("RhodesOcrRegion_operator_name_left_2", "ワイルド メイン", 0.94),
+        ]);
+
+    Equal("gummy|purestream|myrtle|wildmane", string.Join("|", candidates.Select(item => item.OperatorId)), "operator ids");
+    Equal("operator|operator|operator|operator", string.Join("|", candidates.Select(item => item.Kind)), "operator kinds");
+    Equal(false, candidates.Any(item => item.OperatorId == "may"), "operator substring false positive");
+    Equal("maa-local:operator:gummy", candidates[0].RecognitionKey, "operator recognition key");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{{\"text\":\"{text}\",\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
             "OCR",
             true);
     }
