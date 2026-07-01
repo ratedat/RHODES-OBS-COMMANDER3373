@@ -39,6 +39,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA ROI preview projector scales actual image coordinates to 1280x720", RoiPreviewProjectorScalesImageCoordinates),
     ("MAA ROI edit draft evidence uses stable JSON shape", RoiEditDraftEvidence),
     ("MAA ROI draft source updater maps generated entries back to source ROI", RoiDraftSourceUpdater),
+    ("MAA generated resource builder converts source JSON to pipeline nodes", MaaGeneratedResourceBuilder),
     ("MAA ROI selection matcher links OCR detail rows to ROI previews", RoiSelectionMatcherLinksOcrRows),
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
@@ -1235,6 +1236,19 @@ static void RoiDraftSourceUpdater()
     {
         Directory.Delete(directory, true);
     }
+}
+
+static void MaaGeneratedResourceBuilder()
+{
+    var generated = RhodesMaaGeneratedResourceBuilder.BuildJson(
+        File.ReadAllText(Path.Combine("data", "recognition", "maa-tasks.json")),
+        File.ReadAllText(Path.Combine("data", "recognition", "scan-profiles.json")));
+    var root = JsonNode.Parse(generated)!.AsObject();
+    Equal(true, root.ContainsKey("RhodesGeneratedEmpty"), "generated empty node");
+    Equal("OCR", root["RhodesOcrRegion_run_hope_current"]!.AsObject()["recognition"]!.GetValue<string>(), "generated hope recognition");
+    Equal(941, root["RhodesOcrRegion_run_hope_current"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "generated hope roi x");
+    Equal("TemplateMatch", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated template recognition");
+    Equal("run/IngotIcon.png", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["template"]!.GetValue<string>(), "generated template path");
 }
 
 static void MaaNativeEvidenceLog()

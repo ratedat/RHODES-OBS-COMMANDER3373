@@ -59,6 +59,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const roiDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDetailRows.cs", "utf8");
   const roiEditDraftLog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiEditDraftLog.cs", "utf8");
   const roiDraftSourceUpdater = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDraftSourceUpdater.cs", "utf8");
+  const generatedResourceBuilder = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaGeneratedResourceBuilder.cs", "utf8");
   const roiPreviewProjector = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiPreviewProjector.cs", "utf8");
   const roiSelectionMatcher = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiSelectionMatcher.cs", "utf8");
   const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
@@ -288,6 +289,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(roiDraftSourceUpdater, /ocrRegions/);
   assert.match(roiDraftSourceUpdater, /ApplyToMaaTasksFileAsync/);
   assert.match(roiDraftSourceUpdater, /BackupPath/);
+  assert.match(generatedResourceBuilder, /maa-tasks\.json/);
+  assert.match(generatedResourceBuilder, /scan-profiles\.json/);
+  assert.match(generatedResourceBuilder, /TemplateMatch/);
+  assert.match(generatedResourceBuilder, /RhodesTemplate/);
   assert.match(viewModel, /Campaigns/);
   assert.match(viewModel, /SelectedCampaign/);
   assert.match(viewModel, /構想/);
