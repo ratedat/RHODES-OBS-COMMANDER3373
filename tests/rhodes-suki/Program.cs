@@ -12,6 +12,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA candidate API extraction preserves structured ids", CandidateApiExtraction),
     ("MAA candidate merger supplements missing local candidates safely", CandidateMergerSupplementsLocalCandidates),
     ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
+    ("Local MAA candidate converter keeps the best duplicate run status field", LocalCandidateConverterRunStatusBestDuplicate),
     ("Local MAA candidate converter extracts exact operator name candidates", LocalCandidateConverterOperators),
     ("Local MAA candidate converter extracts current campaign relic candidates", LocalCandidateConverterRelics),
     ("Local MAA candidate converter preserves duplicate IS5 thought candidates", LocalCandidateConverterThoughts),
@@ -243,6 +244,32 @@ static void LocalCandidateConverterRunStatus()
     Equal("3|8|20|4|2|1|7", string.Join("|", candidates.Select(item => item.Value)), "local run values");
     Equal("is5_sarkaz", candidates.Single(item => item.Field == "idea").CampaignId, "idea campaign id");
     Equal("maa-local:ingot:run.ingot", candidates.Single(item => item.Field == "ingot").RecognitionKey, "local recognition key");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"TaskId=1; detail={{\"best\":{{\"text\":\"{text}\",\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterRunStatusBestDuplicate()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesOcrRegion_run_hope_current", "3", 0.40),
+            M("RhodesTemplate_runStatusFull_run_hope_current", "5", 0.96),
+            M("RhodesOcrRegion_run_hope_max", "8", 0.95),
+        ]);
+
+    Equal("hope|maxHope", string.Join("|", candidates.Select(item => item.Field)), "best duplicate fields");
+    Equal("5|8", string.Join("|", candidates.Select(item => item.Value)), "best duplicate values");
 
     static MaaTaskRunResult M(string entry, string text, double score)
     {

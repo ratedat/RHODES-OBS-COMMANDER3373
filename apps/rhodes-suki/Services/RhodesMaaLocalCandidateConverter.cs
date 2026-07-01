@@ -30,7 +30,7 @@ public static class RhodesMaaLocalCandidateConverter
             return AllProfileCandidates(taskResults).ToArray();
 
         if (string.Equals(profileId, "runStatusFull", StringComparison.Ordinal))
-            return RunStatusCandidates(taskResults).ToArray();
+            return BestRunStatusCandidates(RunStatusCandidates(taskResults));
 
         if (string.Equals(profileId, "operatorsFull", StringComparison.Ordinal))
             return OperatorCandidates(taskResults).ToArray();
@@ -50,12 +50,36 @@ public static class RhodesMaaLocalCandidateConverter
     private static IReadOnlyList<MaaCandidatePreview> AllProfileCandidates(IEnumerable<MaaTaskRunResult> taskResults)
     {
         var results = taskResults.ToArray();
-        var candidates = RunStatusCandidates(results)
+        var candidates = BestRunStatusCandidates(RunStatusCandidates(results))
             .Concat(OperatorCandidates(results))
             .Concat(RelicCandidates(results))
             .Concat(ThoughtCandidates(results))
             .Concat(AgeCandidates(results));
         return RhodesMaaCandidateMerger.Merge([], candidates);
+    }
+
+    private static IReadOnlyList<MaaCandidatePreview> BestRunStatusCandidates(IEnumerable<MaaCandidatePreview> candidates)
+    {
+        var bestByField = new Dictionary<string, (MaaCandidatePreview Candidate, int Index)>(StringComparer.Ordinal);
+        var index = 0;
+        foreach (var candidate in candidates)
+        {
+            var field = string.IsNullOrWhiteSpace(candidate.Field) ? candidate.Value : candidate.Field;
+            if (!bestByField.TryGetValue(field, out var existing))
+            {
+                bestByField[field] = (candidate, index);
+            }
+            else if ((candidate.Confidence ?? 0) > (existing.Candidate.Confidence ?? 0))
+            {
+                bestByField[field] = (candidate, existing.Index);
+            }
+            index++;
+        }
+
+        return bestByField.Values
+            .OrderBy(item => item.Index)
+            .Select(item => item.Candidate)
+            .ToArray();
     }
 
     private static IEnumerable<MaaCandidatePreview> RunStatusCandidates(IEnumerable<MaaTaskRunResult> taskResults)
