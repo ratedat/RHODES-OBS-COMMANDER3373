@@ -188,6 +188,18 @@ public sealed record MaaTaskRunResult(
     string Algorithm = "",
     bool Hit = false);
 
+public sealed record MaaOcrDetailRow(
+    string Entry,
+    string Text,
+    double? Score,
+    string Source,
+    string Algorithm)
+{
+    public string ScoreLabel => Score.HasValue ? Score.Value.ToString("0.###") : "-";
+
+    public string Detail => $"{Source} / {Algorithm}";
+}
+
 public sealed record MaaTaskDetailSnapshot(
     string Summary,
     string RecognitionDetailJson,

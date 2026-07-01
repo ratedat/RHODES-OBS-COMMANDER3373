@@ -34,6 +34,7 @@ var tests = new (string Name, Action Run)[]
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
     ("MAA task diagnostics summarize counts and OCR previews", TaskDiagnostics),
+    ("MAA OCR detail rows expose raw OCR result groups", OcrDetailRowsExposeRawGroups),
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
@@ -1016,7 +1017,7 @@ static void MaaFrameworkRuntimeDiagnostics()
 static void TaskDiagnostics()
 {
     var diagnostics = RhodesMaaTaskDiagnostics.Summarize(
-    [
+        [
         new MaaTaskRunResult(
             "RhodesOcrRegion_operator_name",
             "Succeeded",
@@ -1051,6 +1052,32 @@ static void TaskDiagnostics()
     Equal(1, diagnostics.TemplateCandidateCount, "template candidates");
     Equal(true, diagnostics.Lines.Any(line => line.Contains("グム", StringComparison.Ordinal)), "ocr line");
     Equal(true, diagnostics.Lines.Any(line => line.Contains("RhodesBrokenTask", StringComparison.Ordinal)), "failed line");
+}
+
+static void OcrDetailRowsExposeRawGroups()
+{
+    var rows = RhodesMaaOcrDetailRows.FromTaskResults(
+        [
+            new MaaTaskRunResult(
+                "RhodesOcrRegion_test",
+                "Succeeded",
+                true,
+                "",
+                """
+                prefix {"result":{"filtered_results":[{"text":"グム","score":0.91}],"best_result":{"text":"グム","confidence":"0.88"},"all_results":[{"text":"クム","score":0.4}]}}
+                """,
+                "OCR",
+                true),
+        ]);
+
+    Equal(3, rows.Count, "ocr detail row count");
+    Equal("filtered", rows[0].Source, "filtered source");
+    Equal("グム", rows[0].Text, "filtered text");
+    Equal(0.91, rows[0].Score, "filtered score");
+    Equal("best", rows[1].Source, "best source");
+    Equal(0.88, rows[1].Score, "best score");
+    Equal("all", rows[2].Source, "all source");
+    Equal("RhodesOcrRegion_test", rows[2].Entry, "row entry");
 }
 
 static void MaaNativeEvidenceLog()
