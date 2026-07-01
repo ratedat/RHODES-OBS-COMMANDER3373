@@ -249,6 +249,22 @@ public sealed record MaaRoiPreviewRow(
 
     public double TopLeftHandleY => Math.Max(0, Y - 12);
 
+    public double LeftHandleX => Math.Max(0, X - 10);
+
+    public double LeftHandleY => Math.Max(0, Y + (Height / 2) - 10);
+
+    public double TopHandleX => Math.Max(0, X + (Width / 2) - 10);
+
+    public double TopHandleY => Math.Max(0, Y - 10);
+
+    public double RightHandleX => Math.Max(0, X + Width - 10);
+
+    public double RightHandleY => Math.Max(0, Y + (Height / 2) - 10);
+
+    public double BottomHandleX => Math.Max(0, X + (Width / 2) - 10);
+
+    public double BottomHandleY => Math.Max(0, Y + Height - 10);
+
     public double ResizeHandleX => Math.Max(0, X + Width - 12);
 
     public double ResizeHandleY => Math.Max(0, Y + Height - 12);

@@ -811,7 +811,67 @@
                                   PointerMoved="RoiResizePointerMoved"
                                   PointerReleased="RoiResizePointerReleased"
                                   PointerCaptureLost="RoiResizePointerCaptureLost">
-                            <TextBlock Text="↖" FontSize="16" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          <TextBlock Text="↖" FontSize="16" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          </Border>
+                          <Border Canvas.Left="{Binding LeftHandleX}"
+                                  Canvas.Top="{Binding LeftHandleY}"
+                                  Width="20"
+                                  Height="20"
+                                  CornerRadius="3"
+                                  BorderBrush="#111100"
+                                  BorderThickness="2"
+                                  Background="#EEFFD447"
+                                  Tag="left"
+                                  PointerPressed="RoiResizePointerPressed"
+                                  PointerMoved="RoiResizePointerMoved"
+                                  PointerReleased="RoiResizePointerReleased"
+                                  PointerCaptureLost="RoiResizePointerCaptureLost">
+                            <TextBlock Text="←" FontSize="14" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          </Border>
+                          <Border Canvas.Left="{Binding TopHandleX}"
+                                  Canvas.Top="{Binding TopHandleY}"
+                                  Width="20"
+                                  Height="20"
+                                  CornerRadius="3"
+                                  BorderBrush="#111100"
+                                  BorderThickness="2"
+                                  Background="#EEFFD447"
+                                  Tag="top"
+                                  PointerPressed="RoiResizePointerPressed"
+                                  PointerMoved="RoiResizePointerMoved"
+                                  PointerReleased="RoiResizePointerReleased"
+                                  PointerCaptureLost="RoiResizePointerCaptureLost">
+                            <TextBlock Text="↑" FontSize="14" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          </Border>
+                          <Border Canvas.Left="{Binding RightHandleX}"
+                                  Canvas.Top="{Binding RightHandleY}"
+                                  Width="20"
+                                  Height="20"
+                                  CornerRadius="3"
+                                  BorderBrush="#111100"
+                                  BorderThickness="2"
+                                  Background="#EEFFD447"
+                                  Tag="right"
+                                  PointerPressed="RoiResizePointerPressed"
+                                  PointerMoved="RoiResizePointerMoved"
+                                  PointerReleased="RoiResizePointerReleased"
+                                  PointerCaptureLost="RoiResizePointerCaptureLost">
+                            <TextBlock Text="→" FontSize="14" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          </Border>
+                          <Border Canvas.Left="{Binding BottomHandleX}"
+                                  Canvas.Top="{Binding BottomHandleY}"
+                                  Width="20"
+                                  Height="20"
+                                  CornerRadius="3"
+                                  BorderBrush="#111100"
+                                  BorderThickness="2"
+                                  Background="#EEFFD447"
+                                  Tag="bottom"
+                                  PointerPressed="RoiResizePointerPressed"
+                                  PointerMoved="RoiResizePointerMoved"
+                                  PointerReleased="RoiResizePointerReleased"
+                                  PointerCaptureLost="RoiResizePointerCaptureLost">
+                            <TextBlock Text="↓" FontSize="14" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
                           </Border>
                           <Border Canvas.Left="{Binding ResizeHandleX}"
                                 Canvas.Top="{Binding ResizeHandleY}"

@@ -2062,14 +2062,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var adjusted = _roiResizeOrigin.ToArray();
         var dx = SnapDelta(pointerX - _roiResizeStartX);
         var dy = SnapDelta(pointerY - _roiResizeStartY);
-        if (_roiResizeMode.Equals("topLeft", StringComparison.Ordinal))
+        if (_roiResizeMode.Equals("topLeft", StringComparison.Ordinal) || _roiResizeMode.Equals("left", StringComparison.Ordinal))
         {
             var nextX = Math.Clamp(adjusted[0] + dx, 0, adjusted[0] + adjusted[2] - 1);
             var nextY = Math.Clamp(adjusted[1] + dy, 0, adjusted[1] + adjusted[3] - 1);
             adjusted[2] = Math.Max(1, adjusted[2] - (nextX - adjusted[0]));
-            adjusted[3] = Math.Max(1, adjusted[3] - (nextY - adjusted[1]));
             adjusted[0] = nextX;
+            if (_roiResizeMode.Equals("topLeft", StringComparison.Ordinal))
+            {
+                adjusted[3] = Math.Max(1, adjusted[3] - (nextY - adjusted[1]));
+                adjusted[1] = nextY;
+            }
+        }
+        else if (_roiResizeMode.Equals("top", StringComparison.Ordinal))
+        {
+            var nextY = Math.Clamp(adjusted[1] + dy, 0, adjusted[1] + adjusted[3] - 1);
+            adjusted[3] = Math.Max(1, adjusted[3] - (nextY - adjusted[1]));
             adjusted[1] = nextY;
+        }
+        else if (_roiResizeMode.Equals("right", StringComparison.Ordinal))
+        {
+            adjusted[2] = Math.Max(1, adjusted[2] + dx);
+        }
+        else if (_roiResizeMode.Equals("bottom", StringComparison.Ordinal))
+        {
+            adjusted[3] = Math.Max(1, adjusted[3] + dy);
         }
         else
         {
