@@ -334,6 +334,22 @@ public sealed record MaaRoiDraftApplyResult(
     }
 }
 
+public sealed record MaaRoiBatchApplyResult(
+    bool Succeeded,
+    string Message,
+    int AppliedCount,
+    IReadOnlyList<MaaRoiDraftApplyResult> Results)
+{
+    public string Summary => Succeeded
+        ? $"ROI一括適用: {AppliedCount}件"
+        : $"ROI一括適用失敗: {Message}";
+
+    public static MaaRoiBatchApplyResult Failed(string message, IReadOnlyList<MaaRoiDraftApplyResult>? results = null)
+    {
+        return new MaaRoiBatchApplyResult(false, message, results?.Count(item => item.Succeeded) ?? 0, results ?? []);
+    }
+}
+
 public sealed record MaaResourceGenerationResult(
     bool Succeeded,
     string Message,

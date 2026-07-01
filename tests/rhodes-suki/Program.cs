@@ -39,6 +39,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA ROI preview projector scales actual image coordinates to 1280x720", RoiPreviewProjectorScalesImageCoordinates),
     ("MAA ROI edit draft evidence uses stable JSON shape", RoiEditDraftEvidence),
     ("MAA ROI draft source updater maps generated entries back to source ROI", RoiDraftSourceUpdater),
+    ("MAA ROI draft batch updater applies multiple source files atomically", RoiDraftBatchSourceUpdater),
     ("MAA generated resource builder converts source JSON to pipeline nodes", MaaGeneratedResourceBuilder),
     ("MAA ROI selection matcher links OCR detail rows to ROI previews", RoiSelectionMatcherLinksOcrRows),
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
@@ -1283,6 +1284,65 @@ static void RoiDraftSourceUpdater()
     {
         Directory.Delete(directory, true);
     }
+}
+
+static void RoiDraftBatchSourceUpdater()
+{
+    var maaTasks = """
+    {
+      "version": 1,
+      "ocrRegions": [
+        { "id": "run.hope.current", "roi": [1,2,3,4] },
+        { "id": "run.hope.max", "roi": [5,6,7,8] }
+      ]
+    }
+    """;
+    var scanProfiles = """
+    {
+      "version": 1,
+      "profiles": [
+        {
+          "id": "runStatusFull",
+          "templateOcrRegions": [
+            {
+              "idPrefix": "run.ingot",
+              "templatePath": "assets/recognition/templates/run/IngotIcon.png",
+              "searchRoi": { "x": 10, "y": 20, "width": 30, "height": 40 }
+            }
+          ]
+        }
+      ]
+    }
+    """;
+    var drafts = new[]
+    {
+        new MaaRoiEditDraft("RhodesOcrRegion_run_hope_current", "detail.roi", "[101,102,103,104]", true),
+        new MaaRoiEditDraft("RhodesTemplate_runStatusFull_run_ingot", "detail.roi", "[201,202,203,204]", true),
+    };
+
+    var result = RhodesMaaRoiDraftBatchSourceUpdater.ApplyToSourceJsons(
+        maaTasks,
+        scanProfiles,
+        drafts,
+        out var updatedMaaTasks,
+        out var updatedScanProfiles);
+
+    Equal(true, result.Succeeded, "batch roi update succeeded");
+    Equal(2, result.AppliedCount, "batch roi applied count");
+    Equal("ROI一括適用: 2件", result.Summary, "batch roi summary");
+    Equal(101, JsonNode.Parse(updatedMaaTasks)!["ocrRegions"]!.AsArray()[0]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "batch updated maa roi");
+    Equal(201, JsonNode.Parse(updatedScanProfiles)!["profiles"]!.AsArray()[0]!.AsObject()["templateOcrRegions"]!.AsArray()[0]!.AsObject()["searchRoi"]!.AsObject()["x"]!.GetValue<int>(), "batch updated scan roi");
+
+    var failed = RhodesMaaRoiDraftBatchSourceUpdater.ApplyToSourceJsons(
+        maaTasks,
+        scanProfiles,
+        [drafts[0], new MaaRoiEditDraft("RhodesOcrRegion_missing", "detail.roi", "[1,1,1,1]", true)],
+        out var failedMaaTasks,
+        out var failedScanProfiles);
+    Equal(false, failed.Succeeded, "batch roi update fails atomically");
+    Equal(1, failed.AppliedCount, "batch roi reports successful attempts before failure");
+    Equal(maaTasks, failedMaaTasks, "failed batch keeps maa source unchanged");
+    Equal(scanProfiles, failedScanProfiles, "failed batch keeps scan source unchanged");
 }
 
 static void MaaGeneratedResourceBuilder()

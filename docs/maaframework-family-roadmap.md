@@ -79,7 +79,9 @@ flowchart LR
 - 接続済み: ROI編集ドラフトを `data/recognition/maa-tasks.json` の生成元ROIへ対応付け、適用確認、バックアップ付き適用、Suki内Resource再生成まで実行できる。
 - 接続済み: Suki内Resource再生成後、MAA接続済みなら `Resource` / `Controller` / `Tasker` を再初期化して生成済みResourceを即時再読込する。
 - 接続済み: `RhodesTemplate_*` のROI編集ドラフトを `data/recognition/scan-profiles.json` の `templateOcrRegions[].searchRoi` へ対応付け、バックアップ付きで適用できる。
-- 残作業: ROIドラフト適用後の差分レビューをUI内で読みやすくし、複数ROIをまとめて適用できるようにする。
+- 接続済み: ROIドラフト適用後の対象ファイル、target、before/after、backupをUI内で確認できる。
+- 接続済み: 複数ROIドラフトを `maa-tasks.json` と `scan-profiles.json` の両生成元へ振り分け、全件成功時だけ更新JSONを返すバッチ適用基盤を追加した。
+- 残作業: 複数ROIドラフトのUI選択、差分一覧、バックアップ付き一括ファイル書き込みを追加する。
 
 ## First Milestone
 - SukiUI shell が起動する

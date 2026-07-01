@@ -59,6 +59,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const roiDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDetailRows.cs", "utf8");
   const roiEditDraftLog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiEditDraftLog.cs", "utf8");
   const roiDraftSourceUpdater = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDraftSourceUpdater.cs", "utf8");
+  const roiDraftBatchSourceUpdater = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiDraftBatchSourceUpdater.cs", "utf8");
   const generatedResourceBuilder = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaGeneratedResourceBuilder.cs", "utf8");
   const roiPreviewProjector = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiPreviewProjector.cs", "utf8");
   const roiSelectionMatcher = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiSelectionMatcher.cs", "utf8");
@@ -157,6 +158,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(models, /IsResourceRoiCandidate/);
   assert.match(models, /MaaRoiEditDraft/);
   assert.match(models, /MaaRoiDraftApplyResult/);
+  assert.match(models, /MaaRoiBatchApplyResult/);
   assert.match(models, /TargetSummary/);
   assert.match(models, /DiffSummary/);
   assert.match(models, /BackupSummary/);
@@ -276,6 +278,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(roiDraftSourceUpdater, /ApplyToSourceJson/);
   assert.match(roiDraftSourceUpdater, /templateOcrRegions/);
   assert.match(roiDraftSourceUpdater, /searchRoi/);
+  assert.match(roiDraftBatchSourceUpdater, /ApplyToSourceJsons/);
+  assert.match(roiDraftBatchSourceUpdater, /MaaRoiBatchApplyResult/);
+  assert.match(roiDraftBatchSourceUpdater, /updatedMaaTasksJson/);
+  assert.match(roiDraftBatchSourceUpdater, /updatedScanProfilesJson/);
   assert.match(viewModel, /RefreshSelectedRoiPreviewRows/);
   assert.match(viewModel, /SelectedOcrDetailRow/);
   assert.match(viewModel, /SelectedResourceTaskResult/);
