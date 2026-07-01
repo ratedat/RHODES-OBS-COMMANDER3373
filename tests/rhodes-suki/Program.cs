@@ -20,6 +20,7 @@ var tests = new (string Name, Action Run)[]
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
     ("Recognition candidate applier can select operator and relic candidates", CandidateChoiceApply),
+    ("Recognition candidate applier can apply IS5 thought and age candidates", CandidateIs5SpecialApply),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
 
@@ -534,7 +535,7 @@ static void CandidateChoiceApply()
         new MaaCandidatePreview("operator", "重複", "gummy", "グム", 0.91, OperatorId: "gummy"),
         new MaaCandidatePreview("relic", "秘宝B", "is5_sarkaz_relic_002", "秘宝B", 0.86, RelicId: "is5_sarkaz_relic_002", CampaignId: "is5_sarkaz"),
         new MaaCandidatePreview("relic", "別IS秘宝", "is3_relic_001", "別IS秘宝", 0.86, RelicId: "is3_relic_001", CampaignId: "is3_mizuki"),
-        new MaaCandidatePreview("thought", "思案", "thought_001", "思案", 0.86),
+        new MaaCandidatePreview("thought", "別IS思案", "thought_001", "思案", 0.86, CampaignId: "is4_sami", ThoughtId: "thought_001"),
     };
 
     var summary = RhodesRecognitionCandidateApplier.Apply(
@@ -548,6 +549,47 @@ static void CandidateChoiceApply()
     Equal("gummy|rain", string.Join("|", state["operators"]!.AsArray().Select(item => item!.GetValue<string>())), "operators");
     Equal("is5_sarkaz_relic_001|is5_sarkaz_relic_002", string.Join("|", state["relics"]!.AsArray().Select(item => item!.GetValue<string>())), "relics");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "choice updatedAt");
+}
+
+static void CandidateIs5SpecialApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is5_sarkaz",
+            "special": { "is5_sarkaz": { "idea": 21 } }
+          }
+        }
+        """)!.AsObject();
+    var candidates = new[]
+    {
+        new MaaCandidatePreview("thought", "枯れ木と若枝", "fallback_a", "枯れ木と若枝", 0.91, CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
+        new MaaCandidatePreview("thought", "枯れ木と若枝", "fallback_a", "枯れ木と若枝", 0.88, CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
+        new MaaCandidatePreview("thought", "走る都市", "thought_b", "走る都市", 0.86, CampaignId: "is5_sarkaz"),
+        new MaaCandidatePreview("age", "形成期", "age_formation", "形成期", 0.65, CampaignId: "is5_sarkaz", AgeId: "age_formation"),
+        new MaaCandidatePreview("age", "全盛期", "age_prime", "全盛期", 0.95, CampaignId: "is5_sarkaz", AgeId: "age_prime"),
+        new MaaCandidatePreview("age", "別IS時代", "age_other", "別IS時代", 0.99, CampaignId: "is4_sami", AgeId: "age_other"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+
+    Equal(5, summary.AppliedCount, "applied is5 special count");
+    Equal(1, summary.IgnoredCount, "ignored is5 special count");
+    Equal("thought:thought_a|thought:thought_a|thought:thought_b|age:age_formation|age:age_prime", string.Join("|", summary.AppliedFields), "applied is5 special fields");
+    var special = state["run"]!.AsObject()["special"]!.AsObject()["is5_sarkaz"]!.AsObject();
+    var thought = special["thought"]!.AsArray();
+    Equal(2, thought.Count, "thought item count");
+    Equal("thought_a", thought[0]!.AsObject()["effectId"]!.GetValue<string>(), "first thought id");
+    Equal(2, thought[0]!.AsObject()["count"]!.GetValue<int>(), "first thought count");
+    Equal("thought_b", thought[1]!.AsObject()["effectId"]!.GetValue<string>(), "second thought id");
+    Equal(1, thought[1]!.AsObject()["count"]!.GetValue<int>(), "second thought count");
+    Equal("age_prime", special["age"]!.GetValue<string>(), "best age");
+    Equal(21, special["idea"]!.GetValue<int>(), "existing idea preserved");
+    Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "is5 special updatedAt");
 }
 
 static void Equal<T>(T expected, T actual, string label)

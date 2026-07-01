@@ -30,10 +30,18 @@ public static class RhodesRecognitionCandidateApplier
         DateTimeOffset now,
         bool runStatusOnly)
     {
+        var candidateList = candidates.ToList();
         var applied = new List<string>();
+        var handledIndexes = runStatusOnly
+            ? new HashSet<int>()
+            : ApplyIs5SpecialCandidates(state, candidateList, applied);
         var ignored = 0;
-        foreach (var candidate in candidates)
+        for (var index = 0; index < candidateList.Count; index++)
         {
+            if (handledIndexes.Contains(index))
+                continue;
+
+            var candidate = candidateList[index];
             if (!ApplyCandidate(state, candidate, applied, runStatusOnly))
             {
                 ignored++;
@@ -65,6 +73,17 @@ public static class RhodesRecognitionCandidateApplier
             return ApplyRelicCandidate(state, candidate, applied);
 
         return false;
+    }
+
+    private static HashSet<int> ApplyIs5SpecialCandidates(
+        JsonObject state,
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        ICollection<string> applied)
+    {
+        var handled = new HashSet<int>();
+        handled.UnionWith(ApplyThoughtCandidates(state, candidates, applied));
+        handled.UnionWith(ApplyAgeCandidates(state, candidates, applied));
+        return handled;
     }
 
     private static bool ApplyRunStatusCandidate(JsonObject state, MaaCandidatePreview candidate, ICollection<string> applied)
@@ -129,18 +148,112 @@ public static class RhodesRecognitionCandidateApplier
         if (!int.TryParse(candidate.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || value < 0)
             return false;
 
-        var campaignId = string.IsNullOrWhiteSpace(candidate.CampaignId) ? JsonString(run, "campaignId") : candidate.CampaignId;
-        if (string.IsNullOrWhiteSpace(campaignId))
-            campaignId = Is5CampaignId;
-        if (!campaignId.Equals(Is5CampaignId, StringComparison.Ordinal))
+        var campaign = EnsureIs5SpecialFromRun(run, candidate);
+        if (campaign is null)
             return false;
 
-        run["campaignId"] ??= Is5CampaignId;
-        var special = EnsureObject(run, "special");
-        var campaign = EnsureObject(special, Is5CampaignId);
         campaign["idea"] = Math.Min(999, value);
         applied.Add("idea");
         return true;
+    }
+
+    private static IReadOnlyCollection<int> ApplyThoughtCandidates(
+        JsonObject state,
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        ICollection<string> applied)
+    {
+        var valid = new List<(int Index, string ThoughtId)>();
+        for (var index = 0; index < candidates.Count; index++)
+        {
+            var candidate = candidates[index];
+            if (!candidate.Kind.Equals("thought", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var thoughtId = CandidateId(candidate.ThoughtId, candidate.Value);
+            if (string.IsNullOrWhiteSpace(thoughtId) || !CandidateCampaignIsIs5(candidate))
+                continue;
+
+            valid.Add((index, thoughtId));
+        }
+
+        if (valid.Count == 0)
+            return [];
+
+        var run = EnsureObject(state, "run");
+        var campaign = EnsureIs5SpecialFromRun(run, valid.Select(item => candidates[item.Index]));
+        if (campaign is null)
+            return [];
+
+        var ids = new List<string>();
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var item in valid)
+        {
+            if (!counts.ContainsKey(item.ThoughtId))
+                ids.Add(item.ThoughtId);
+            counts[item.ThoughtId] = counts.GetValueOrDefault(item.ThoughtId) + 1;
+        }
+
+        var thought = new JsonArray();
+        foreach (var thoughtId in ids)
+        {
+            thought.Add(new JsonObject
+            {
+                ["effectId"] = thoughtId,
+                ["count"] = counts[thoughtId],
+                ["stateId"] = null,
+            });
+        }
+        campaign["thought"] = thought;
+
+        var handled = new HashSet<int>();
+        foreach (var item in valid)
+        {
+            handled.Add(item.Index);
+            applied.Add($"thought:{item.ThoughtId}");
+        }
+        return handled;
+    }
+
+    private static IReadOnlyCollection<int> ApplyAgeCandidates(
+        JsonObject state,
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        ICollection<string> applied)
+    {
+        var valid = new List<(int Index, MaaCandidatePreview Candidate, string AgeId)>();
+        for (var index = 0; index < candidates.Count; index++)
+        {
+            var candidate = candidates[index];
+            if (!candidate.Kind.Equals("age", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var ageId = CandidateId(candidate.AgeId, candidate.Value);
+            if (string.IsNullOrWhiteSpace(ageId) || !CandidateCampaignIsIs5(candidate))
+                continue;
+
+            valid.Add((index, candidate, ageId));
+        }
+
+        if (valid.Count == 0)
+            return [];
+
+        var run = EnsureObject(state, "run");
+        var campaign = EnsureIs5SpecialFromRun(run, valid.Select(item => item.Candidate));
+        if (campaign is null)
+            return [];
+
+        var best = valid
+            .OrderByDescending(item => item.Candidate.Confidence ?? 0)
+            .ThenBy(item => item.Index)
+            .First();
+        campaign["age"] = best.AgeId;
+
+        var handled = new HashSet<int>();
+        foreach (var item in valid)
+        {
+            handled.Add(item.Index);
+            applied.Add($"age:{item.AgeId}");
+        }
+        return handled;
     }
 
     private static bool ApplyRelicCandidate(JsonObject state, MaaCandidatePreview candidate, ICollection<string> applied)
@@ -199,6 +312,40 @@ public static class RhodesRecognitionCandidateApplier
         var created = new JsonObject();
         parent[propertyName] = created;
         return created;
+    }
+
+    private static JsonObject? EnsureIs5SpecialFromRun(JsonObject run, MaaCandidatePreview candidate)
+    {
+        return EnsureIs5SpecialFromRun(run, [candidate]);
+    }
+
+    private static JsonObject? EnsureIs5SpecialFromRun(JsonObject run, IEnumerable<MaaCandidatePreview> candidates)
+    {
+        if (candidates.Any(candidate => !CandidateCampaignIsIs5(candidate)))
+            return null;
+
+        var currentCampaignId = JsonString(run, "campaignId");
+        if (!string.IsNullOrWhiteSpace(currentCampaignId)
+            && !currentCampaignId.Equals(Is5CampaignId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        run["campaignId"] ??= Is5CampaignId;
+        var special = EnsureObject(run, "special");
+        return EnsureObject(special, Is5CampaignId);
+    }
+
+    private static bool CandidateCampaignIsIs5(MaaCandidatePreview candidate)
+    {
+        return string.IsNullOrWhiteSpace(candidate.CampaignId)
+            || candidate.CampaignId.Equals(Is5CampaignId, StringComparison.Ordinal);
+    }
+
+    private static string CandidateId(string primaryValue, string fallbackValue)
+    {
+        var value = string.IsNullOrWhiteSpace(primaryValue) ? fallbackValue : primaryValue;
+        return value.Trim();
     }
 
     private static string JsonString(JsonObject parent, string propertyName)

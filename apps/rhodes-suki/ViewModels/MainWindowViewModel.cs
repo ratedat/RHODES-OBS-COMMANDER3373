@@ -1714,7 +1714,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 JsonString(candidate, "operatorId"),
                 JsonString(candidate, "relicId"),
                 JsonString(candidate, "campaignId"),
-                JsonString(candidate, "recognitionKey")));
+                JsonString(candidate, "recognitionKey"),
+                JsonString(candidate, "thoughtId"),
+                JsonString(candidate, "ageId")));
         }
         return previews;
     }

@@ -152,7 +152,9 @@ public sealed record MaaCandidatePreview(
     string OperatorId = "",
     string RelicId = "",
     string CampaignId = "",
-    string RecognitionKey = "");
+    string RecognitionKey = "",
+    string ThoughtId = "",
+    string AgeId = "");
 
 public sealed record SukiCandidateApplySummary(
     int AppliedCount,
