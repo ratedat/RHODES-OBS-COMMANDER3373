@@ -12,7 +12,7 @@ namespace RhodesSuki.ViewModels;
 public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly RhodesMaaSession _session;
-    private readonly IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
+    private IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private readonly IReadOnlyList<SukiChoiceItem> _allOperators = [];
     private readonly IReadOnlyList<SukiChoiceItem> _allRelics = [];
     private readonly IntegrationStatus _maaFrameworkStatus;
@@ -1940,6 +1940,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             var message = $"{MaaResourceGenerationResult.Message} / backup={MaaResourceGenerationResult.BackupPath}";
+            ReloadResourceCatalog();
             var reloadSnapshot = await ReloadMaaResourceSessionIfReadyAsync();
             StatusMessage = reloadSnapshot is null
                 ? $"{message} / 未接続のため次回接続時に反映"
@@ -2483,6 +2484,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ResourceTasks.Add(task);
         }
         RefreshInspectorRows();
+    }
+
+    private void ReloadResourceCatalog()
+    {
+        var selectedProfileId = SelectedResourceProfile?.Id;
+        _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
+        ReplaceCollection(ResourceProfiles, RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks));
+        SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => string.Equals(profile.Id, selectedProfileId, StringComparison.Ordinal))
+            ?? ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull")
+            ?? ResourceProfiles.FirstOrDefault();
+        RefreshResourceTasks();
+        RefreshInspectorRows();
+        OnPropertyChanged(nameof(MaaOcrStatusState));
+        OnPropertyChanged(nameof(MaaOcrStatusDetail));
     }
 
     private void RefreshChoiceLists()

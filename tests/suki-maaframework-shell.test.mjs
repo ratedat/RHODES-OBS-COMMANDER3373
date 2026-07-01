@@ -280,6 +280,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToSourceJson/);
   assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToSourceFileAsync/);
   assert.match(viewModel, /RhodesMaaGeneratedResourceBuilder\.RegenerateFileAsync/);
+  assert.match(viewModel, /ReloadResourceCatalog/);
+  assert.match(viewModel, /_allResourceTasks = RhodesMaaResourceCatalog\.DefaultTasks\(\)/);
   assert.match(viewModel, /ReloadMaaResourceSessionIfReadyAsync/);
   assert.match(viewModel, /_session\.InitializeAdbAsync\(BuildSessionOptions\(\)\)/);
   assert.match(viewModel, /Resource再読込済み/);
