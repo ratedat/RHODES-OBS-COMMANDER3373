@@ -43,6 +43,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private MaaResourceGenerationResult _maaResourceGenerationResult = MaaResourceGenerationResult.Failed("未実行");
     private string _rhodesApiUrl = "http://127.0.0.1:5173";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
+    private string _roiSessionRestoreNotice = "ROI調整セッション未読込";
     private string _lastCandidateApplySummary = "候補未反映";
     private SukiOptionalRuntimeStatus _rhodesApiStatus = new("RHODES API", "未確認", "状態同期または認識API実行で確認します。", false, false);
     private SukiOptionalRuntimeStatus _masterDataStatus = new("Master Data", "未確認", "/api/master未確認", false, false);
@@ -828,6 +829,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _statusMessage;
         private set => SetProperty(ref _statusMessage, value);
+    }
+
+    public string RoiSessionRestoreNotice
+    {
+        get => _roiSessionRestoreNotice;
+        private set => SetProperty(ref _roiSessionRestoreNotice, string.IsNullOrWhiteSpace(value) ? "ROI調整セッション未読込" : value);
     }
 
     public string LastCandidateApplySummary
@@ -1897,15 +1904,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 {
                     LoadRecognitionPayload(scanPayload, payload.ScanLogPath, "ROI調整セッションから読込");
                     restoredScan = true;
+                    RoiSessionRestoreNotice = $"復元済み: 元スキャン候補{CandidateResults.Count}件 / task{ResourceTaskResults.Count}件 / log{RecognitionScanLogRows.Count}件";
                 }
                 else
                 {
                     ClearRecognitionPayload(payload.ScanLogPath, "ROI調整セッションから読込");
+                    RoiSessionRestoreNotice = $"元スキャンログを復元できません: {scanPayload.Error} / 認識履歴を更新するか、同じ画面を再スキャンしてセッションを保存し直してください。";
                 }
             }
             else
             {
                 ClearRecognitionPayload("", "ROI調整セッションから読込");
+                RoiSessionRestoreNotice = "元スキャンログ未登録: 同じ画面を再スキャンしてからROI調整セッションを保存し直してください。";
             }
 
             if (!string.IsNullOrWhiteSpace(payload.CapturePath))
