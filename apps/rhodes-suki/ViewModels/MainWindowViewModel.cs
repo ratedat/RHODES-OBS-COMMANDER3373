@@ -180,6 +180,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RoiDetailRows = [];
         RoiPreviewRows = [];
         SelectedRoiPreviewRows = [];
+        RoiBatchDrafts = [];
         RecognitionScanHistory = [];
         RecognitionScanLogRows = [];
         BaseResolution = Services.RhodesMaaPaths.BaseResolution;
@@ -311,6 +312,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaRoiPreviewRow> RoiPreviewRows { get; }
 
     public ObservableCollection<MaaRoiPreviewRow> SelectedRoiPreviewRows { get; }
+
+    public ObservableCollection<MaaRoiBatchDraftPreview> RoiBatchDrafts { get; }
 
     public ObservableCollection<RhodesRecognitionScanHistoryItem> RecognitionScanHistory { get; }
 
@@ -2405,7 +2408,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(SelectedRoiPreviewRow));
         }
         RefreshSelectedRoiPreviewRows();
+        RefreshRoiBatchDrafts();
         OnPropertyChanged(nameof(RoiProjectionLabel));
+    }
+
+    private void RefreshRoiBatchDrafts()
+    {
+        var previous = RoiBatchDrafts.ToDictionary(item => item.Key, item => item.IsIncluded, StringComparer.Ordinal);
+        var drafts = RoiPreviewRows
+            .Where(row => row.IsResourceRoiCandidate)
+            .Select(row => MaaRoiEditDraft.FromPreview(row))
+            .Where(draft => draft.HasSelection && draft.IsResourceRoiCandidate)
+            .Select(draft => new MaaRoiBatchDraftPreview(
+                draft,
+                !previous.TryGetValue($"{draft.Entry}|{draft.Source}|{draft.RoiJson}", out var included) || included))
+            .ToArray();
+        ReplaceCollection(RoiBatchDrafts, drafts);
     }
 
     private void RefreshSelectedRoiPreviewRows()
@@ -2820,10 +2838,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private IReadOnlyList<MaaRoiEditDraft> VisibleResourceRoiDrafts()
     {
-        return RoiPreviewRows
-            .Where(row => row.IsResourceRoiCandidate)
-            .Select(MaaRoiEditDraft.FromPreview)
-            .Where(draft => draft.HasSelection && draft.IsResourceRoiCandidate)
+        return RoiBatchDrafts
+            .Where(item => item.IsIncluded)
+            .Select(item => item.Draft)
             .ToArray();
     }
 

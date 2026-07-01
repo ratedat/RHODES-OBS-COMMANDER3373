@@ -302,6 +302,27 @@ public sealed record MaaRoiEditDraft(
     }
 }
 
+public sealed class MaaRoiBatchDraftPreview
+{
+    public MaaRoiBatchDraftPreview(MaaRoiEditDraft draft, bool isIncluded = true)
+    {
+        Draft = draft;
+        IsIncluded = isIncluded;
+    }
+
+    public MaaRoiEditDraft Draft { get; }
+
+    public bool IsIncluded { get; set; }
+
+    public string Entry => Draft.Entry;
+
+    public string Detail => Draft.Detail;
+
+    public string RoiJson => Draft.RoiJson;
+
+    public string Key => $"{Draft.Entry}|{Draft.Source}|{Draft.RoiJson}";
+}
+
 public sealed record MaaRoiDraftApplyResult(
     bool Succeeded,
     string Message,
