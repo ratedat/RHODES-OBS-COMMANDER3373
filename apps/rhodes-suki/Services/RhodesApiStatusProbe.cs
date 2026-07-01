@@ -96,6 +96,62 @@ public static class RhodesApiStatusProbe
         return new SukiOptionalRuntimeStatus("RHODES API", "接続済み", detail, true, false);
     }
 
+    public static async Task<SukiOptionalRuntimeStatus> ProbeMasterAsync(
+        string baseUrl,
+        int localCampaigns,
+        int localOperators,
+        int localRelics,
+        TimeSpan? timeout = null,
+        HttpClient? client = null,
+        CancellationToken cancellationToken = default)
+    {
+        var ownsClient = client is null;
+        client ??= new HttpClient { Timeout = timeout ?? TimeSpan.FromSeconds(5) };
+        var normalized = NormalizeBaseUrl(baseUrl);
+        try
+        {
+            var response = await client.GetAsync($"{normalized}/api/master", cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return new SukiOptionalRuntimeStatus("Master Data", "HTTPエラー", $"{(int)response.StatusCode} {Shorten(json, 180)}", false, false);
+
+            return ParseMasterJson(json, localCampaigns, localOperators, localRelics);
+        }
+        catch (Exception ex)
+        {
+            return new SukiOptionalRuntimeStatus("Master Data", "接続失敗", Shorten(ex.Message, 180), false, false);
+        }
+        finally
+        {
+            if (ownsClient)
+                client.Dispose();
+        }
+    }
+
+    public static SukiOptionalRuntimeStatus ParseMasterJson(
+        string json,
+        int localCampaigns,
+        int localOperators,
+        int localRelics)
+    {
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+            return new SukiOptionalRuntimeStatus("Master Data", "応答異常", "master応答がobjectではありません。", false, false);
+
+        var campaigns = JsonArrayCount(root, "campaigns");
+        var operators = JsonArrayCount(root, "operators");
+        var relics = JsonArrayCount(root, "relics");
+        var matched = campaigns == localCampaigns && operators == localOperators && relics == localRelics;
+        var detail = string.Join(" / ", new[]
+        {
+            $"campaigns api={campaigns} local={localCampaigns}",
+            $"operators api={operators} local={localOperators}",
+            $"relics api={relics} local={localRelics}",
+        });
+        return new SukiOptionalRuntimeStatus("Master Data", matched ? "一致" : "差分あり", detail, true, false);
+    }
+
     private static async Task<SukiOptionalRuntimeStatus> ProbeStateFallbackAsync(
         HttpClient client,
         string normalizedBaseUrl,

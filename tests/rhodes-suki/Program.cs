@@ -890,6 +890,27 @@ static void RhodesApiStatusParsing()
     Equal(true, state.Detail.Contains("campaign=is6_sui", StringComparison.Ordinal), "state campaign detail");
     Equal(true, state.Detail.Contains("operators=2", StringComparison.Ordinal), "state operators detail");
     Equal(true, state.Detail.Contains("relics=1", StringComparison.Ordinal), "state relics detail");
+
+    var master = RhodesApiStatusProbe.ParseMasterJson(
+        """
+        {
+          "campaigns": [{ "id": "is5_sarkaz" }],
+          "operators": [{ "id": "gummy" }, { "id": "rain" }],
+          "relics": [{ "id": "relic_a" }]
+        }
+        """,
+        localCampaigns: 1,
+        localOperators: 2,
+        localRelics: 1);
+    Equal("一致", master.State, "master matched state");
+    Equal(true, master.Detail.Contains("operators api=2 local=2", StringComparison.Ordinal), "master operator detail");
+
+    var mismatchedMaster = RhodesApiStatusProbe.ParseMasterJson(
+        """{ "campaigns": [], "operators": [], "relics": [] }""",
+        localCampaigns: 1,
+        localOperators: 2,
+        localRelics: 1);
+    Equal("差分あり", mismatchedMaster.State, "master mismatch state");
 }
 
 static void HypervisorStatusParsing()

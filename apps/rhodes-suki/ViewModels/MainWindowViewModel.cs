@@ -40,6 +40,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _statusMessage = "MAAFramework の検証準備ができています。";
     private string _lastCandidateApplySummary = "候補未反映";
     private SukiOptionalRuntimeStatus _rhodesApiStatus = new("RHODES API", "未確認", "状態同期または認識API実行で確認します。", false, false);
+    private SukiOptionalRuntimeStatus _masterDataStatus = new("Master Data", "未確認", "/api/master未確認", false, false);
     private SukiOptionalRuntimeStatus _glmRuntimeStatus = new("GLM-OCR", "未確認", "状態確認を実行してください。", false, false);
     private SukiOptionalRuntimeStatus _ollamaRuntimeStatus = new("Ollama", "未確認", "状態確認を実行してください。", false, false);
     private SukiHypervisorStatus _hypervisorStatus = new("未確認", "Google Play Gamesや一部エミュレーターの前提確認", false, false, "info");
@@ -923,6 +924,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "状態同期",
             false);
         yield return new SukiRuntimeCapabilityPreview(
+            "master-data",
+            "Master Data",
+            "CORE",
+            _masterDataStatus.State,
+            _masterDataStatus.Detail,
+            "件数診断",
+            false);
+        yield return new SukiRuntimeCapabilityPreview(
             "maa",
             "MAAFramework",
             "CORE",
@@ -1106,6 +1115,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             yield return new SukiInspectorRow("ADB", AdbHeaderTitle, AdbHeaderDetail);
             yield return new SukiInspectorRow("RHODES API", _rhodesApiStatus.State, RhodesApiUrl);
+            yield return new SukiInspectorRow("Master Data", _masterDataStatus.State, _masterDataStatus.Detail);
             yield return new SukiInspectorRow("端末", $"{AdbDevices.Count}件", SessionState);
             yield return new SukiInspectorRow("Hyper-V", _hypervisorStatus.State, _hypervisorStatus.Detail);
             yield return new SukiInspectorRow("OCRエンジン", SelectedOcrEngine?.Label ?? "プロファイル既定", SelectedOcrEngine?.Id ?? "profile");
@@ -1440,17 +1450,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             StatusMessage = "ランタイム状態を確認しています。";
             var apiTask = RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
+            var masterTask = RhodesApiStatusProbe.ProbeMasterAsync(RhodesApiUrl, Campaigns.Count, _allOperators.Count, _allRelics.Count);
             var optionalTask = RhodesOptionalRuntimeProbe.ProbeAsync(RhodesApiUrl);
             var hypervisorTask = RhodesHypervisorProbe.ProbeAsync(RhodesApiUrl);
-            await Task.WhenAll(apiTask, optionalTask, hypervisorTask);
+            await Task.WhenAll(apiTask, masterTask, optionalTask, hypervisorTask);
             var snapshot = optionalTask.Result;
             _rhodesApiStatus = apiTask.Result;
+            _masterDataStatus = masterTask.Result;
             _glmRuntimeStatus = snapshot.Glm;
             _ollamaRuntimeStatus = snapshot.Ollama;
             _hypervisorStatus = hypervisorTask.Result;
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
-            StatusMessage = $"ランタイム状態: API={_rhodesApiStatus.State}, GLM={snapshot.Glm.State}, Ollama={snapshot.Ollama.State}, Hyper-V={_hypervisorStatus.State}";
+            StatusMessage = $"ランタイム状態: API={_rhodesApiStatus.State}, Master={_masterDataStatus.State}, GLM={snapshot.Glm.State}, Ollama={snapshot.Ollama.State}, Hyper-V={_hypervisorStatus.State}";
         });
     }
 
