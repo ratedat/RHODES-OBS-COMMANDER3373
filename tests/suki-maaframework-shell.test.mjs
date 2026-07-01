@@ -62,6 +62,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const runStateStore = await fs.readFile("apps/rhodes-suki/Services/RhodesRunStateStore.cs", "utf8");
   const candidateApplier = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionCandidateApplier.cs", "utf8");
   const candidateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaCandidateApiClient.cs", "utf8");
+  const scanApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanApiClient.cs", "utf8");
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
   const runModels = await fs.readFile("apps/rhodes-suki/Models/RunCatalogModels.cs", "utf8");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
@@ -185,7 +186,12 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesMaaLocalCandidateConverter\.FromTaskResults/);
   assert.match(candidateApiClient, /api\/recognition\/maa-resource/);
   assert.match(candidateApiClient, /ExtractCandidatePreviews/);
+  assert.match(scanApiClient, /api\/recognition\/scan/);
+  assert.match(scanApiClient, /ExtractResult/);
+  assert.match(scanApiClient, /RhodesMaaCandidateApiClient\.ExtractCandidatePreviews/);
   assert.match(viewModel, /CandidateApiProfileId/);
+  assert.match(viewModel, /RunSelectedProfileAdbScanCommand/);
+  assert.match(viewModel, /RhodesRecognitionScanApiClient\.RunAsync/);
   assert.doesNotMatch(viewModel, /SelectedResourceProfile\?\.Id == "all" \? "runStatusFull"/);
   assert.match(viewModel, /RhodesMaaResultPreview\.FromTaskResults/);
   assert.match(viewModel, /CandidateResults/);
@@ -281,6 +287,8 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RunResourceTaskCommand/);
   assert.match(xaml, /RunSelectedProfileRecognitionCommand/);
   assert.match(xaml, /RunSelectedProfileRecognitionAndApplyCommand/);
+  assert.match(xaml, /RunSelectedProfileAdbScanCommand/);
+  assert.match(xaml, /ADB API/);
   assert.match(xaml, /OpenRecognitionProfileCommand/);
   assert.match(xaml, /CommandParameter="\{Binding ProfileId\}"/);
   assert.match(xaml, /CommandParameter="runStatusFull"/);

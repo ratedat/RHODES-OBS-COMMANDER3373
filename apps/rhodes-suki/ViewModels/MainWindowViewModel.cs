@@ -170,6 +170,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunAllProbesCommand = new AsyncRelayCommand(RunAllProbesAsync);
         RunSelectedProfileRecognitionCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAsync);
         RunSelectedProfileRecognitionAndApplyCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAndApplyAsync);
+        RunSelectedProfileAdbScanCommand = new AsyncRelayCommand(RunSelectedProfileAdbScanAsync);
         RunAllResourceTasksCommand = new AsyncRelayCommand(RunAllResourceTasksAsync);
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
@@ -785,6 +786,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand RunSelectedProfileRecognitionAndApplyCommand { get; }
 
+    public ICommand RunSelectedProfileAdbScanCommand { get; }
+
     public ICommand RunAllResourceTasksCommand { get; }
 
     public ICommand ExportResourceTaskResultsCommand { get; }
@@ -1374,6 +1377,46 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await RunAllResourceTasksCoreAsync();
             await ConvertResourceTaskResultsCoreAsync();
             await ApplyCandidateResultsCoreAsync();
+        });
+    }
+
+    private async Task RunSelectedProfileAdbScanAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var profileId = CandidateApiProfileId();
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                StatusMessage = "allプロファイルでは既存ADBスキャンAPIを実行できません。";
+                return;
+            }
+
+            CandidateResults.Clear();
+            ResourceTaskResults.Clear();
+            LastCandidateApplySummary = "既存ADBスキャンAPI実行";
+            RefreshResourceTaskDiagnostics();
+            RefreshInspectorRows();
+            StatusMessage = $"既存ADBスキャンAPIを開始します: {profileId}";
+
+            var result = await RhodesRecognitionScanApiClient.RunAsync(RhodesApiUrl, profileId);
+            if (!result.Succeeded)
+            {
+                StatusMessage = $"既存ADBスキャンAPI失敗: {result.Error}";
+                RefreshInspectorRows();
+                return;
+            }
+
+            foreach (var candidate in result.Candidates)
+            {
+                CandidateResults.Add(candidate);
+            }
+
+            ReloadRunStateFromStore();
+            LastResourceTaskResultsPath = result.LogPath;
+            StatusMessage = result.HasCandidates
+                ? $"既存ADBスキャンAPI完了: {result.Candidates.Count}候補 / {result.Status}"
+                : $"既存ADBスキャンAPI完了: {result.Status} / 状態を再読み込みしました。";
+            RefreshInspectorRows();
         });
     }
 
