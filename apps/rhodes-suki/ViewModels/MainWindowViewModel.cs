@@ -1473,8 +1473,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private static void ReplaceCollection<T>(ObservableCollection<T> target, IEnumerable<T> source)
     {
+        var items = source as IReadOnlyList<T> ?? source.ToArray();
+        if (target.Count == items.Count && target.SequenceEqual(items))
+            return;
+
         target.Clear();
-        foreach (var item in source)
+        foreach (var item in items)
         {
             target.Add(item);
         }

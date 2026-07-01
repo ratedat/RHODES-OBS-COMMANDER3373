@@ -168,6 +168,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RefreshRelicSummaries/);
   assert.match(viewModel, /RefreshOperatorRows/);
   assert.match(viewModel, /RefreshRelicRows/);
+  assert.match(viewModel, /SequenceEqual\(items\)/);
   assert.match(resource, /RhodesRunStatusTopBarOcr/);
   assert.match(resource, /RhodesOperatorCodenameFlag/);
   assert.match(resource, /OperatorCardCodeNameFlag\.png/);
@@ -280,7 +281,9 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ListBox Grid\.Row="2" ItemsSource="\{Binding FilteredRelicRows\}"/);
   assert.match(xaml, /UniformGrid Columns="\{Binding Columns\}"/);
   assert.match(xaml, /RelativeSource=\{RelativeSource AncestorType=Window\}/);
-  assert.match(xaml, /<Button Command="\{Binding DataContext\.ToggleChoiceSelectedCommand, RelativeSource=\{RelativeSource AncestorType=Window\}\}"/);
+  assert.match(xaml, /Selector="Button\.choiceCard"/);
+  assert.match(xaml, /Classes="choiceCard"/);
+  assert.match(xaml, /<Button Classes="choiceCard" Command="\{Binding DataContext\.ToggleChoiceSelectedCommand, RelativeSource=\{RelativeSource AncestorType=Window\}\}"/);
   assert.doesNotMatch(xaml, /SelectionButtonLabel/);
   assert.doesNotMatch(xaml, /ExclusionButtonLabel/);
   assert.doesNotMatch(xaml, /ToggleChoiceExcludedCommand/);

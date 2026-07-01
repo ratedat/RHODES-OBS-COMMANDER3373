@@ -16,6 +16,24 @@
   <suki:SukiWindow.Resources>
     <services:RhodesBitmapPathConverter x:Key="BitmapPathConverter" />
   </suki:SukiWindow.Resources>
+  <suki:SukiWindow.Styles>
+    <Style Selector="Button.choiceCard">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.choiceCard:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.choiceCard:pressed">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+  </suki:SukiWindow.Styles>
   <Grid RowDefinitions="Auto,*,Auto" Margin="18" RowSpacing="12">
     <Border CornerRadius="10" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
@@ -245,7 +263,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                           <DataTemplate>
-                            <Button Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Margin="0,0,8,8">
+                            <Button Classes="choiceCard" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Margin="0,0,8,8">
                               <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="70">
                                 <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
                                   <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
@@ -293,7 +311,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                           <DataTemplate>
-                            <Button Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Margin="0,0,8,8">
+                            <Button Classes="choiceCard" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Margin="0,0,8,8">
                               <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" MinHeight="118">
                                 <Grid RowDefinitions="Auto,*" RowSpacing="7">
                                   <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
