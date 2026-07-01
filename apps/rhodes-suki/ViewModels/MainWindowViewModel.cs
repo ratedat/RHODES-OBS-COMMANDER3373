@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Windows.Input;
 using Avalonia.Media.Imaging;
 using RhodesSuki.Models;
@@ -217,6 +218,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ExportRoiAdjustmentSessionCommand = new AsyncRelayCommand(ExportRoiAdjustmentSessionAsync);
         RefreshRoiAdjustmentSessionsCommand = new AsyncRelayCommand(RefreshRoiAdjustmentSessionsAsync);
         LoadRoiAdjustmentSessionCommand = new AsyncRelayCommand(parameter => LoadRoiAdjustmentSessionAsync(parameter as MaaRoiAdjustmentSessionItem));
+        AdjustSelectedRoiDraftCommand = new AsyncRelayCommand(parameter => AdjustSelectedRoiDraftAsync(parameter as string));
         PreviewSelectedRoiDraftApplyCommand = new AsyncRelayCommand(PreviewSelectedRoiDraftApplyAsync);
         ApplySelectedRoiDraftCommand = new AsyncRelayCommand(ApplySelectedRoiDraftAsync);
         PreviewVisibleRoiDraftsApplyCommand = new AsyncRelayCommand(PreviewVisibleRoiDraftsApplyAsync);
@@ -1042,6 +1044,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RefreshRoiAdjustmentSessionsCommand { get; }
 
     public ICommand LoadRoiAdjustmentSessionCommand { get; }
+
+    public ICommand AdjustSelectedRoiDraftCommand { get; }
 
     public ICommand PreviewSelectedRoiDraftApplyCommand { get; }
 
@@ -1958,6 +1962,34 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private async Task AdjustSelectedRoiDraftAsync(string? operation)
+    {
+        await RunBusyAsync(() =>
+        {
+            if (!SelectedRoiEditDraft.HasSelection)
+            {
+                RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("ROI行を選択してください。");
+                StatusMessage = RoiDraftApplyResult.Message;
+                return Task.CompletedTask;
+            }
+
+            if (!TryParseDraftRoi(SelectedRoiEditDraft.RoiJson, out var roi))
+            {
+                RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("ROI座標JSONを解析できません。");
+                StatusMessage = RoiDraftApplyResult.Message;
+                return Task.CompletedTask;
+            }
+
+            var adjusted = AdjustRoi(roi, operation);
+            SelectedRoiEditDraft = SelectedRoiEditDraft with { RoiJson = RoiJson(adjusted) };
+            UpdateSelectedRoiOverlay(adjusted);
+            UpdateRoiBatchDraftForSelected();
+            RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
+            StatusMessage = $"ROIを調整しました: {SelectedRoiEditDraft.RoiJson}";
+            return Task.CompletedTask;
+        });
+    }
+
     private async Task ApplySelectedRoiDraftAsync()
     {
         await RunBusyAsync(async () =>
@@ -2643,6 +2675,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RoiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
     }
 
+    private void UpdateSelectedRoiOverlay(int[] roi)
+    {
+        var source = _selectedRoiPreviewRow;
+        if (source is null)
+            return;
+
+        ReplaceCollection(
+            SelectedRoiPreviewRows,
+            [source with
+            {
+                X = roi[0],
+                Y = roi[1],
+                Width = roi[2],
+                Height = roi[3],
+                Raw = SelectedRoiEditDraft.RoiJson,
+            }]);
+    }
+
+    private void UpdateRoiBatchDraftForSelected()
+    {
+        if (!SelectedRoiEditDraft.HasSelection || RoiBatchDrafts.Count == 0)
+            return;
+
+        var updated = RoiBatchDrafts
+            .Select(item => item.Entry.Equals(SelectedRoiEditDraft.Entry, StringComparison.Ordinal)
+                && item.Draft.Source.Equals(SelectedRoiEditDraft.Source, StringComparison.Ordinal)
+                    ? new MaaRoiBatchDraftPreview(SelectedRoiEditDraft, item.IsIncluded, "調整済み", item.StateDetail)
+                    : item)
+            .ToArray();
+        ReplaceCollection(RoiBatchDrafts, updated);
+    }
+
     private void SelectRoiForOcrDetail(MaaOcrDetailRow? row)
     {
         var selected = RhodesMaaRoiSelectionMatcher.MatchForOcrDetail(RoiPreviewRows, row);
@@ -2662,6 +2726,68 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var selected = RhodesMaaRoiSelectionMatcher.MatchForLogRow(RoiPreviewRows, row);
         if (selected is not null)
             SelectedRoiPreviewRow = selected;
+    }
+
+    private static bool TryParseDraftRoi(string value, out int[] roi)
+    {
+        roi = [];
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            if (document.RootElement.ValueKind != JsonValueKind.Array || document.RootElement.GetArrayLength() != 4)
+                return false;
+
+            roi = document.RootElement
+                .EnumerateArray()
+                .Select(item => item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out var number) ? number : (int?)null)
+                .Where(item => item.HasValue)
+                .Select(item => item!.Value)
+                .ToArray();
+            return roi.Length == 4 && roi[2] > 0 && roi[3] > 0;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static int[] AdjustRoi(int[] roi, string? operation)
+    {
+        var result = roi.ToArray();
+        switch (operation)
+        {
+            case "left":
+                result[0] = Math.Max(0, result[0] - 1);
+                break;
+            case "right":
+                result[0] += 1;
+                break;
+            case "up":
+                result[1] = Math.Max(0, result[1] - 1);
+                break;
+            case "down":
+                result[1] += 1;
+                break;
+            case "wider":
+                result[2] += 1;
+                break;
+            case "narrower":
+                result[2] = Math.Max(1, result[2] - 1);
+                break;
+            case "taller":
+                result[3] += 1;
+                break;
+            case "shorter":
+                result[3] = Math.Max(1, result[3] - 1);
+                break;
+        }
+
+        return result;
+    }
+
+    private static string RoiJson(int[] roi)
+    {
+        return $"[{roi[0]},{roi[1]},{roi[2]},{roi[3]}]";
     }
 
     private void RefreshResourceTasks()
