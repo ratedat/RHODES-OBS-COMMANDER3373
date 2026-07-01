@@ -161,6 +161,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /SaveSettingsCommand/);
   assert.match(viewModel, /LoadSettings/);
   assert.match(viewModel, /ResourceTaskDiagnostics/);
+  assert.match(viewModel, /MaaOcrStatusState/);
+  assert.match(viewModel, /Resource化済み/);
+  assert.doesNotMatch(viewModel, /"MAA-OCR",\s*"移行対象"/);
   assert.match(viewModel, /RunAllProbesCommand/);
   assert.match(viewModel, /RunSelectedProfileRecognitionCommand/);
   assert.match(viewModel, /RunSelectedProfileRecognitionAndApplyCommand/);

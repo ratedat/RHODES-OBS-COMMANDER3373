@@ -65,12 +65,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _session = session;
         _sessionState = sessionSnapshot.State;
         _sessionDetail = sessionSnapshot.Detail;
+        _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
 
         RuntimeStatuses =
         [
             maaStatus,
             new IntegrationStatus("MAA Resource", SessionState, SessionDetail, sessionSnapshot.IsReady),
-            new IntegrationStatus("MAA-OCR", "移行対象", "MAAFramework Resource/Tasker 経由へ統合予定", false),
+            new IntegrationStatus(
+                "MAA-OCR",
+                MaaOcrStatusState(),
+                MaaOcrStatusDetail(),
+                _allResourceTasks.Count > 0),
             new IntegrationStatus("GLM-OCR", "任意導入", "高精度検証用の別ランタイムとして維持", false),
         ];
 
@@ -144,7 +149,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _operatorPaneColumns = ClampPaneColumns(runCatalog.Current.OperatorGridColumns);
         _relicPaneColumns = ClampPaneColumns(runCatalog.Current.RelicGridColumns);
         _selectedCampaign = Campaigns.FirstOrDefault(campaign => campaign.Id == runCatalog.Current.CampaignId) ?? Campaigns.FirstOrDefault();
-        _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
         ResourceProfiles = new ObservableCollection<MaaResourceProfilePreview>(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks));
         ResourceTasks = [];
         ResourceTaskResults = [];
@@ -859,8 +863,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "maa-ocr",
             "MAA-OCR",
             "OCR",
-            "移行対象",
-            "MAA Resource/Tasker 経由の標準OCR",
+            MaaOcrStatusState(),
+            MaaOcrStatusDetail(),
             "認識",
             false);
         yield return new SukiRuntimeCapabilityPreview(
@@ -887,6 +891,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "Google Play Gamesや一部エミュレーターの前提確認",
             "診断",
             false);
+    }
+
+    private string MaaOcrStatusState()
+    {
+        return _allResourceTasks.Count > 0 ? "Resource化済み" : "未生成";
+    }
+
+    private string MaaOcrStatusDetail()
+    {
+        if (_allResourceTasks.Count <= 0)
+            return "tools/generate-maa-resource.mjs でResourceを生成してください。";
+
+        var profile = SelectedResourceProfile?.DisplayName ?? "プロファイル未選択";
+        return $"{_allResourceTasks.Count} task / {profile}";
     }
 
     private void RefreshRuntimeCapabilities()
