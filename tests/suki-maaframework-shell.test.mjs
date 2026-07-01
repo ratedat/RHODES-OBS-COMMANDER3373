@@ -292,6 +292,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /LoadRoiAdjustmentSessionAsync/);
   assert.match(viewModel, /LoadRecognitionPayload/);
   assert.match(viewModel, /ClearRecognitionPayload/);
+  assert.match(viewModel, /SelectRoiPreviewCommand/);
+  assert.match(viewModel, /SelectRoiPreviewAsync/);
   assert.match(viewModel, /AdjustSelectedRoiDraftCommand/);
   assert.match(viewModel, /AdjustSelectedRoiDraftAsync/);
   assert.match(viewModel, /UpdateSelectedRoiOverlay/);
@@ -479,6 +481,8 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectedRoiEditDraft\.StatusLabel/);
   assert.match(xaml, /SelectedRoiEditDraft\.RoiJson/);
   assert.match(xaml, /SelectedRoiEditDraft\.Detail/);
+  assert.match(xaml, /SelectRoiPreviewCommand/);
+  assert.match(xaml, /CommandParameter="\{Binding\}"/);
   assert.match(xaml, /ExportSelectedRoiDraftCommand/);
   assert.match(xaml, /AdjustSelectedRoiDraftCommand/);
   assert.match(xaml, /CommandParameter="left"/);

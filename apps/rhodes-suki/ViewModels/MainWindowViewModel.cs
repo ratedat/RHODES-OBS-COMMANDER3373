@@ -218,6 +218,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ExportRoiAdjustmentSessionCommand = new AsyncRelayCommand(ExportRoiAdjustmentSessionAsync);
         RefreshRoiAdjustmentSessionsCommand = new AsyncRelayCommand(RefreshRoiAdjustmentSessionsAsync);
         LoadRoiAdjustmentSessionCommand = new AsyncRelayCommand(parameter => LoadRoiAdjustmentSessionAsync(parameter as MaaRoiAdjustmentSessionItem));
+        SelectRoiPreviewCommand = new AsyncRelayCommand(parameter => SelectRoiPreviewAsync(parameter as MaaRoiPreviewRow));
         AdjustSelectedRoiDraftCommand = new AsyncRelayCommand(parameter => AdjustSelectedRoiDraftAsync(parameter as string));
         PreviewSelectedRoiDraftApplyCommand = new AsyncRelayCommand(PreviewSelectedRoiDraftApplyAsync);
         ApplySelectedRoiDraftCommand = new AsyncRelayCommand(ApplySelectedRoiDraftAsync);
@@ -1044,6 +1045,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RefreshRoiAdjustmentSessionsCommand { get; }
 
     public ICommand LoadRoiAdjustmentSessionCommand { get; }
+
+    public ICommand SelectRoiPreviewCommand { get; }
 
     public ICommand AdjustSelectedRoiDraftCommand { get; }
 
@@ -1959,6 +1962,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = result.Succeeded
                 ? $"ROI適用プレビュー: {result.TargetId} {result.PreviousRoi} -> {result.UpdatedRoi}"
                 : $"ROI適用プレビュー失敗: {result.Message}";
+        });
+    }
+
+    private async Task SelectRoiPreviewAsync(MaaRoiPreviewRow? row)
+    {
+        if (row is null)
+            return;
+
+        await RunBusyAsync(() =>
+        {
+            SelectedRoiPreviewRow = row;
+            StatusMessage = $"ROIを選択しました: {row.DisplayTitle} / {row.ProjectedRoiJson}";
+            return Task.CompletedTask;
         });
     }
 
