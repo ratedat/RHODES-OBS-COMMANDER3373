@@ -1327,16 +1327,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "API状態を読み込んでいます。";
-            var result = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
-            if (!result.Succeeded)
-            {
-                StatusMessage = $"API状態同期に失敗しました: {result.Error}";
-                return;
-            }
-
-            await RhodesRunStateStore.ReplaceStateJsonAsync(result.StateJson);
-            ReloadRunStateFromStore();
-            StatusMessage = "API状態をSuki表示へ同期しました。";
+            var error = await SyncRunStateFromApiCoreAsync();
+            StatusMessage = string.IsNullOrWhiteSpace(error)
+                ? "API状態をSuki表示へ同期しました。"
+                : $"API状態同期に失敗しました: {error}";
         });
     }
 
@@ -1435,13 +1429,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 CandidateResults.Add(candidate);
             }
 
-            ReloadRunStateFromStore();
+            var syncError = await SyncRunStateFromApiCoreAsync();
             LastResourceTaskResultsPath = result.LogPath;
+            var syncSummary = string.IsNullOrWhiteSpace(syncError)
+                ? "API状態同期済み"
+                : $"API状態同期失敗: {syncError}";
             StatusMessage = result.HasCandidates
-                ? $"既存ADBスキャンAPI完了: {result.Candidates.Count}候補 / {result.Status}"
-                : $"既存ADBスキャンAPI完了: {result.Status} / 状態を再読み込みしました。";
+                ? $"既存ADBスキャンAPI完了: {result.Candidates.Count}候補 / {result.Status} / {syncSummary}"
+                : $"既存ADBスキャンAPI完了: {result.Status} / {syncSummary}";
             RefreshInspectorRows();
         });
+    }
+
+    private async Task<string> SyncRunStateFromApiCoreAsync()
+    {
+        var result = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
+        if (!result.Succeeded)
+            return result.Error;
+
+        await RhodesRunStateStore.ReplaceStateJsonAsync(result.StateJson);
+        ReloadRunStateFromStore();
+        return "";
     }
 
     private async Task RunAllResourceTasksCoreAsync()
