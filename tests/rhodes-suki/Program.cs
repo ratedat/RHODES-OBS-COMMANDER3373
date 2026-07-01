@@ -14,6 +14,7 @@ var tests = new (string Name, Action Run)[]
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
+    ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
 
@@ -323,6 +324,52 @@ static void ChoiceRows()
     var highClampRows = RhodesChoiceRows.Build(items, 9).ToArray();
     Equal(4, highClampRows[0].Columns, "high column clamp");
     Equal(2, highClampRows.Length, "high clamp row count");
+}
+
+static void OperatorTaxonomyOrder()
+{
+    var classes = RhodesOperatorTaxonomy.SortClasses(
+    [
+        "医療",
+        "先鋒",
+        "特殊",
+        "術師",
+        "前衛",
+        "重装",
+        "補助",
+        "狙撃",
+    ]);
+    Equal("先鋒|前衛|重装|狙撃|術師|医療|補助|特殊", string.Join("|", classes), "class order");
+
+    var specialBranches = RhodesOperatorTaxonomy.SortBranches(
+    [
+        ("行商人", "特殊"),
+        ("罠師", "特殊"),
+        ("執行者", "特殊"),
+        ("潜伏者", "特殊"),
+        ("鬼才", "特殊"),
+        ("傀儡師", "特殊"),
+        ("推撃手", "特殊"),
+        ("鉤縄師", "特殊"),
+        ("錬金士", "特殊"),
+        ("巡空者", "特殊"),
+    ]);
+    Equal("執行者|推撃手|潜伏者|鉤縄師|鬼才|行商人|罠師|傀儡師|錬金士|巡空者", string.Join("|", specialBranches), "specialist branch order");
+
+    var mixedBranches = RhodesOperatorTaxonomy.SortBranches(
+    [
+        ("巡空者", "特殊"),
+        ("医師", "医療"),
+        ("先駆兵", "先鋒"),
+        ("行商人", "特殊"),
+        ("闘士", "前衛"),
+        ("重盾衛士", "重装"),
+        ("守望者", "医療"),
+        ("速射手", "狙撃"),
+        ("拡散術師", "術師"),
+        ("緩速師", "補助"),
+    ]);
+    Equal("先駆兵|闘士|重盾衛士|速射手|拡散術師|医師|守望者|緩速師|行商人|巡空者", string.Join("|", mixedBranches), "mixed branch order");
 }
 
 static void Equal<T>(T expected, T actual, string label)

@@ -14,9 +14,51 @@
     MinHeight="720"
     Title="{Binding Title}">
   <suki:SukiWindow.Resources>
+    <DataTemplate x:Key="PlainComboItemTemplate">
+      <TextBlock Text="{Binding}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="CampaignComboItemTemplate">
+      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="ResourceProfileComboItemTemplate">
+      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="AdbPresetComboItemTemplate">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding PathSummary}" Foreground="#AAB6B8" FontSize="11" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="AdbPresetSelectionTemplate">
+      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
     <services:RhodesBitmapPathConverter x:Key="BitmapPathConverter" />
   </suki:SukiWindow.Resources>
   <suki:SukiWindow.Styles>
+    <Style Selector="ComboBox">
+      <Setter Property="Foreground" Value="#E8EFEF" />
+      <Setter Property="Background" Value="#151D1E" />
+      <Setter Property="BorderBrush" Value="#344143" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="8,5" />
+      <Setter Property="MaxDropDownHeight" Value="360" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ComboBoxItem">
+      <Setter Property="Foreground" Value="#E8EFEF" />
+      <Setter Property="Background" Value="#101617" />
+      <Setter Property="Padding" Value="10,7" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover">
+      <Setter Property="Background" Value="#1D2A2C" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="ComboBoxItem:selected">
+      <Setter Property="Background" Value="#244145" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
     <Style Selector="ListBox.choicePane">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -92,13 +134,7 @@
               <TextBlock Text="{Binding CampaignHeaderTitle}" FontSize="16" FontWeight="SemiBold" />
               <TextBlock Text="{Binding CampaignHeaderDetail}" FontSize="12" Opacity="0.66" />
             </StackPanel>
-            <ComboBox Grid.Column="2" Width="280" ItemsSource="{Binding Campaigns}" SelectedItem="{Binding SelectedCampaign, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate>
-                  <TextBlock Text="{Binding DisplayName}" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+            <ComboBox Grid.Column="2" Width="280" ItemsSource="{Binding Campaigns}" SelectedItem="{Binding SelectedCampaign, Mode=TwoWay}" ItemTemplate="{StaticResource CampaignComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource CampaignComboItemTemplate}" />
           </Grid>
 
           <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
@@ -282,15 +318,15 @@
               <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsOperatorsPanelVisible}">
                 <Grid ColumnDefinitions="*,110,145,145" ColumnSpacing="8">
                   <TextBox Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分で検索" />
-                  <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" />
-                  <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" />
-                  <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
+                  <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
                 </Grid>
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,76,Auto,Auto,Auto" ColumnSpacing="14">
                   <TextBlock Text="{Binding OperatorListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
                   <TextBlock Grid.Column="1" Text="列" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-                  <ComboBox Grid.Column="2" ItemsSource="{Binding PaneColumnOptions}" SelectedItem="{Binding OperatorPaneColumns, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding PaneColumnOptions}" SelectedItem="{Binding OperatorPaneColumns, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
                   <CheckBox Grid.Column="3" Content="優先表示" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" />
                   <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" />
                   <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
@@ -332,13 +368,13 @@
               <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsRelicsPanelVisible}">
                 <Grid ColumnDefinitions="*,260" ColumnSpacing="8">
                   <TextBox Text="{Binding RelicSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="秘宝名、番号、効果で検索" />
-                  <ComboBox Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
                 </Grid>
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,76,Auto,Auto,Auto" ColumnSpacing="14">
                   <TextBlock Text="{Binding RelicListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
                   <TextBlock Grid.Column="1" Text="列" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-                  <ComboBox Grid.Column="2" ItemsSource="{Binding PaneColumnOptions}" SelectedItem="{Binding RelicPaneColumns, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding PaneColumnOptions}" SelectedItem="{Binding RelicPaneColumns, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
                   <CheckBox Grid.Column="3" Content="優先表示" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" />
                   <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" />
                   <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
@@ -397,13 +433,7 @@
 
             <Grid Grid.Row="1" ColumnDefinitions="Auto,260,*,Auto" ColumnSpacing="10">
               <TextBlock Text="プロファイル" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-              <ComboBox Grid.Column="1" ItemsSource="{Binding ResourceProfiles}" SelectedItem="{Binding SelectedResourceProfile, Mode=TwoWay}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding DisplayName}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
+              <ComboBox Grid.Column="1" ItemsSource="{Binding ResourceProfiles}" SelectedItem="{Binding SelectedResourceProfile, Mode=TwoWay}" ItemTemplate="{StaticResource ResourceProfileComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource ResourceProfileComboItemTemplate}" />
               <TextBox Grid.Column="2" Text="{Binding RhodesApiUrl, Mode=TwoWay}" />
               <Button Grid.Column="3" Content="候補化" Command="{Binding ConvertResourceTaskResultsCommand}" />
             </Grid>
@@ -500,16 +530,7 @@
 
             <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="92,*,Auto" RowSpacing="8" ColumnSpacing="8">
               <TextBlock Text="プリセット" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-              <ComboBox Grid.Column="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate>
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="{Binding DisplayName}" />
-                      <TextBlock Text="{Binding PathSummary}" FontSize="11" Opacity="0.58" />
-                    </StackPanel>
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
+              <ComboBox Grid.Column="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}" ItemTemplate="{StaticResource AdbPresetComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbPresetSelectionTemplate}" />
               <Button Grid.Column="2" Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
 
               <TextBlock Grid.Row="1" Text="ADB" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />

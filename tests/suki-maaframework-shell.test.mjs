@@ -55,9 +55,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const bitmapPathConverter = await fs.readFile("apps/rhodes-suki/Services/RhodesBitmapPathConverter.cs", "utf8");
   const choiceFilter = await fs.readFile("apps/rhodes-suki/Services/RhodesChoiceFilter.cs", "utf8");
   const choiceRows = await fs.readFile("apps/rhodes-suki/Services/RhodesChoiceRows.cs", "utf8");
+  const operatorTaxonomy = await fs.readFile("apps/rhodes-suki/Services/RhodesOperatorTaxonomy.cs", "utf8");
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
   const runModels = await fs.readFile("apps/rhodes-suki/Models/RunCatalogModels.cs", "utf8");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
+  const mainWindowCodeBehind = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml.cs", "utf8");
   const resource = await fs.readFile("apps/rhodes-suki/resource/base/pipeline/rhodes.json", "utf8");
   const generatedResource = await fs.readFile("apps/rhodes-suki/resource/base/pipeline/rhodes-generated.json", "utf8");
   const projectInterface = await fs.readFile("apps/rhodes-suki/interface.json", "utf8");
@@ -109,6 +111,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(choiceFilter, /Rarity/);
   assert.match(choiceRows, /Math\.Clamp\(columns, 1, 4\)/);
   assert.match(choiceRows, /new SukiChoiceRow/);
+  assert.match(operatorTaxonomy, /SortClasses/);
+  assert.match(operatorTaxonomy, /SortBranches/);
+  assert.match(operatorTaxonomy, /"先鋒"/);
+  assert.match(operatorTaxonomy, /"執行者"/);
   assert.match(models, /MaaTaskDetailSnapshot/);
   assert.match(models, /MaaResourceProfilePreview/);
   assert.match(models, /MaaCandidatePreview/);
@@ -168,7 +174,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RefreshRelicSummaries/);
   assert.match(viewModel, /RefreshOperatorRows/);
   assert.match(viewModel, /RefreshRelicRows/);
+  assert.match(viewModel, /RhodesOperatorTaxonomy\.SortClasses/);
+  assert.match(viewModel, /RhodesOperatorTaxonomy\.SortBranches/);
   assert.match(viewModel, /SequenceEqual\(items\)/);
+  assert.match(mainWindowCodeBehind, /CloseOpenComboBoxesOnOutsidePress/);
+  assert.match(mainWindowCodeBehind, /IsDropDownOpen = false/);
   assert.match(resource, /RhodesRunStatusTopBarOcr/);
   assert.match(resource, /RhodesOperatorCodenameFlag/);
   assert.match(resource, /OperatorCardCodeNameFlag\.png/);
@@ -267,6 +277,11 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /FilteredRelicRows/);
   assert.match(xaml, /RhodesBitmapPathConverter/);
   assert.match(xaml, /ImagePath, Converter=\{StaticResource BitmapPathConverter\}/);
+  assert.match(xaml, /PlainComboItemTemplate/);
+  assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource PlainComboItemTemplate\}"/);
+  assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource CampaignComboItemTemplate\}"/);
+  assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbPresetSelectionTemplate\}"/);
+  assert.match(xaml, /Selector="ComboBoxItem"/);
   assert.match(xaml, /Text="\{Binding Name\}"/);
   assert.match(xaml, /Text="\{Binding Heading\}"/);
   assert.match(xaml, /Text="\{Binding Detail\}"/);

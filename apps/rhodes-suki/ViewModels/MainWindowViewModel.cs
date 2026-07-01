@@ -1426,18 +1426,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         var classBase = _allOperators.Where(item => !item.HiddenByDefault && RarityMatches(item));
         ReplaceCollection(OperatorClassOptions, new[] { "すべて" }.Concat(
-            classBase.Select(item => item.OperatorClass)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct()
-                .Order(StringComparer.Ordinal)));
+            RhodesOperatorTaxonomy.SortClasses(classBase.Select(item => item.OperatorClass))));
         EnsureFilterValue(ref _operatorClassFilter, OperatorClassOptions, nameof(OperatorClassFilter));
 
         var branchBase = classBase.Where(item => OperatorClassFilter == "すべて" || item.OperatorClass == OperatorClassFilter);
         ReplaceCollection(OperatorBranchOptions, new[] { "すべて" }.Concat(
-            branchBase.Select(item => item.OperatorBranch)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct()
-                .Order(StringComparer.Ordinal)));
+            RhodesOperatorTaxonomy.SortBranches(branchBase.Select(item => (item.OperatorBranch, item.OperatorClass)))));
         EnsureFilterValue(ref _operatorBranchFilter, OperatorBranchOptions, nameof(OperatorBranchFilter));
     }
 
