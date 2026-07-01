@@ -1079,7 +1079,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             var profile = ResourceProfiles.FirstOrDefault(item => string.Equals(item.Id, profileId, StringComparison.Ordinal));
             if (profile is not null)
+            {
                 SelectedResourceProfile = profile;
+            }
+            else
+            {
+                ChoiceTab = "recognition";
+                WorkspaceTab = "recognition";
+                StatusMessage = $"認識プロファイルが未定義です: {profileId}";
+                return Task.CompletedTask;
+            }
         }
 
         ChoiceTab = "recognition";
