@@ -8,12 +8,21 @@ public static class RhodesRunCatalog
     public static RhodesRunCatalogSnapshot LoadDefault()
     {
         var dataRoot = ResolveDataRoot();
-        var state = LoadState(Path.Combine(dataRoot, "current-state.json"));
         var campaigns = LoadCampaigns(Path.Combine(dataRoot, "campaigns.json"));
+        var selectableEffects = LoadSelectableEffects(ResolveDataPath(dataRoot, "selectable-effects.json"));
+        var state = LoadState(ResolveStatePath(dataRoot), campaigns, selectableEffects);
         var operators = LoadOperators(Path.Combine(dataRoot, "operators.json"), state);
         var relics = LoadRelics(Path.Combine(dataRoot, "relics.json"), state);
         return new RhodesRunCatalogSnapshot(campaigns, operators, relics, state);
     }
+
+    private sealed record SelectableEffectPreview(
+        string Id,
+        string CampaignId,
+        string Slot,
+        string SlotLabel,
+        string GroupLabel,
+        string Name);
 
     private static IReadOnlyList<SukiCampaignPreview> LoadCampaigns(string path)
     {
@@ -23,9 +32,48 @@ public static class RhodesRunCatalog
                 JsonString(item, "id"),
                 JsonInt(item, "number"),
                 JsonString(item, "title"),
-                JsonString(item, "fullTitle")))
+                JsonString(item, "fullTitle"),
+                ReadSpecialFields(item)))
             .Where(item => !string.IsNullOrWhiteSpace(item.Id))
             .OrderBy(item => item.Number)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<SukiCampaignSpecialField> ReadSpecialFields(JsonElement campaign)
+    {
+        if (!campaign.TryGetProperty("specialFields", out var fields) || fields.ValueKind != JsonValueKind.Array)
+            return [];
+
+        return fields.EnumerateArray()
+            .Select(field => new SukiCampaignSpecialField(
+                JsonString(field, "id"),
+                JsonString(field, "label"),
+                JsonString(field, "type"),
+                JsonString(field, "effectSlot"),
+                JsonString(field, "unitLabel")))
+            .Where(field => !string.IsNullOrWhiteSpace(field.Id) && !string.IsNullOrWhiteSpace(field.Label))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<SelectableEffectPreview> LoadSelectableEffects(string path)
+    {
+        if (!File.Exists(path))
+            return [];
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        if (!root.TryGetProperty("selectableEffects", out var effects) || effects.ValueKind != JsonValueKind.Array)
+            return [];
+
+        return effects.EnumerateArray()
+            .Select(item => new SelectableEffectPreview(
+                JsonString(item, "id"),
+                JsonString(item, "campaignId"),
+                JsonString(item, "slot"),
+                JsonString(item, "slotLabel"),
+                JsonString(item, "groupLabel"),
+                JsonString(item, "name")))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id))
             .ToArray();
     }
 
@@ -110,12 +158,18 @@ public static class RhodesRunCatalog
             .ToArray();
     }
 
-    private static SukiRunStateSnapshot LoadState(string path)
+    private static SukiRunStateSnapshot LoadState(
+        string path,
+        IReadOnlyList<SukiCampaignPreview> campaigns,
+        IReadOnlyList<SelectableEffectPreview> selectableEffects)
     {
         if (!File.Exists(path))
         {
+            var fallbackCampaignId = campaigns.FirstOrDefault(campaign => campaign.Id == "is5_sarkaz")?.Id
+                ?? campaigns.FirstOrDefault()?.Id
+                ?? "is5_sarkaz";
             return new SukiRunStateSnapshot(
-                "is5_sarkaz",
+                fallbackCampaignId,
                 new HashSet<string>(StringComparer.Ordinal),
                 new HashSet<string>(StringComparer.Ordinal),
                 new HashSet<string>(StringComparer.Ordinal),
@@ -125,15 +179,17 @@ public static class RhodesRunCatalog
                 false,
                 false,
                 false,
-                false);
+                false,
+                SpecialFields: BuildSpecialFieldStates(default, campaigns, selectableEffects));
         }
 
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         var root = document.RootElement;
         var run = root.TryGetProperty("run", out var runElement) ? runElement : default;
         var preferences = root.TryGetProperty("preferences", out var prefElement) ? prefElement : default;
+        var campaignId = JsonString(run, "campaignId", "is5_sarkaz");
         return new SukiRunStateSnapshot(
-            JsonString(run, "campaignId", "is5_sarkaz"),
+            campaignId,
             ReadStringSet(root, "operators"),
             ReadStringSet(root, "relics"),
             ReadStringSet(preferences, "operatorExcludedIds"),
@@ -152,7 +208,221 @@ public static class RhodesRunCatalog
             JsonInt(run, "lifePoints"),
             JsonInt(run, "shield"),
             JsonInt(run, "commandLevel"),
-            ReadIs5Idea(run));
+            ReadSpecialInt(run, campaignId, "idea"),
+            BuildSpecialFieldStates(run, campaigns, selectableEffects));
+    }
+
+    private static IReadOnlyList<SukiSpecialFieldState> BuildSpecialFieldStates(
+        JsonElement run,
+        IReadOnlyList<SukiCampaignPreview> campaigns,
+        IReadOnlyList<SelectableEffectPreview> selectableEffects)
+    {
+        var result = new List<SukiSpecialFieldState>();
+        var effectsById = selectableEffects
+            .GroupBy(effect => effect.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+        JsonElement special = default;
+        if (run.ValueKind == JsonValueKind.Object
+            && run.TryGetProperty("special", out var specialElement)
+            && specialElement.ValueKind == JsonValueKind.Object)
+        {
+            special = specialElement;
+        }
+
+        foreach (var campaign in campaigns)
+        {
+            JsonElement campaignState = default;
+            if (special.ValueKind == JsonValueKind.Object
+                && special.TryGetProperty(campaign.Id, out var stateElement)
+                && stateElement.ValueKind == JsonValueKind.Object)
+            {
+                campaignState = stateElement;
+            }
+
+            foreach (var field in campaign.SpecialFields)
+            {
+                result.Add(BuildSpecialFieldState(campaign.Id, field, campaignState, effectsById));
+            }
+        }
+
+        return result;
+    }
+
+    private static SukiSpecialFieldState BuildSpecialFieldState(
+        string campaignId,
+        SukiCampaignSpecialField field,
+        JsonElement campaignState,
+        IReadOnlyDictionary<string, SelectableEffectPreview> effectsById)
+    {
+        campaignState.TryGetProperty(field.Id, out var value);
+        var kind = FieldKindLabel(field.Type);
+        var profileId = SpecialProfileId(campaignId, field.Id);
+        return field.Type switch
+        {
+            "number" => new SukiSpecialFieldState(
+                campaignId,
+                field.Id,
+                field.Label,
+                field.Type,
+                JsonElementNullableInt(value)?.ToString() ?? "未入力",
+                kind,
+                profileId,
+                $"{field.Label}の数値"),
+            "effectSelect" => BuildEffectSelectState(campaignId, field, value, kind, profileId, effectsById),
+            "effectStackLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, true),
+            "effectMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
+            "effectRankedMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
+            "revelationBoardLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
+            "coinLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
+            _ => new SukiSpecialFieldState(
+                campaignId,
+                field.Id,
+                field.Label,
+                field.Type,
+                IsJsonValueEmpty(value) ? "未入力" : "設定あり",
+                kind,
+                profileId,
+                field.Type)
+        };
+    }
+
+    private static SukiSpecialFieldState BuildEffectSelectState(
+        string campaignId,
+        SukiCampaignSpecialField field,
+        JsonElement value,
+        string kind,
+        string profileId,
+        IReadOnlyDictionary<string, SelectableEffectPreview> effectsById)
+    {
+        var effectId = JsonElementString(value);
+        var effectLabel = ResolveEffectLabel(effectId, effectsById);
+        return new SukiSpecialFieldState(
+            campaignId,
+            field.Id,
+            field.Label,
+            field.Type,
+            string.IsNullOrWhiteSpace(effectLabel) ? "未選択" : effectLabel,
+            kind,
+            profileId,
+            string.IsNullOrWhiteSpace(effectId) ? "取得値なし" : effectId);
+    }
+
+    private static SukiSpecialFieldState BuildEffectListState(
+        string campaignId,
+        SukiCampaignSpecialField field,
+        JsonElement value,
+        string kind,
+        string profileId,
+        IReadOnlyDictionary<string, SelectableEffectPreview> effectsById,
+        bool sumCounts)
+    {
+        var entries = ReadEffectEntries(value, effectsById, sumCounts);
+        var unit = string.IsNullOrWhiteSpace(field.UnitLabel) ? "件" : field.UnitLabel;
+        return new SukiSpecialFieldState(
+            campaignId,
+            field.Id,
+            field.Label,
+            field.Type,
+            $"{entries.Total}{unit}",
+            kind,
+            profileId,
+            entries.Labels.Count == 0 ? "取得値なし" : string.Join(" / ", entries.Labels));
+    }
+
+    private static (int Total, IReadOnlyList<string> Labels) ReadEffectEntries(
+        JsonElement value,
+        IReadOnlyDictionary<string, SelectableEffectPreview> effectsById,
+        bool sumCounts)
+    {
+        var total = 0;
+        var labels = new List<string>();
+
+        void AddEntry(string id, int count)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return;
+
+            count = Math.Max(1, count);
+            total += sumCounts ? count : 1;
+            var name = ResolveEffectLabel(id, effectsById);
+            labels.Add(sumCounts && count > 1 ? $"{name} x{count}" : name);
+        }
+
+        if (value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in value.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String)
+                {
+                    AddEntry(JsonElementString(item), 1);
+                    continue;
+                }
+
+                if (item.ValueKind == JsonValueKind.Object)
+                {
+                    var id = JsonString(item, "effectId");
+                    if (string.IsNullOrWhiteSpace(id))
+                        id = JsonString(item, "id");
+                    AddEntry(id, JsonNullableInt(item, "count") ?? 1);
+                }
+            }
+        }
+        else if (value.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in value.EnumerateObject())
+            {
+                var count = property.Value.ValueKind == JsonValueKind.Number
+                    ? JsonElementNullableInt(property.Value) ?? 1
+                    : JsonNullableInt(property.Value, "count") ?? 1;
+                AddEntry(property.Name, count);
+            }
+        }
+
+        return (total, labels);
+    }
+
+    private static string ResolveEffectLabel(string effectId, IReadOnlyDictionary<string, SelectableEffectPreview> effectsById)
+    {
+        if (string.IsNullOrWhiteSpace(effectId))
+            return "";
+
+        return effectsById.TryGetValue(effectId, out var effect) && !string.IsNullOrWhiteSpace(effect.Name)
+            ? effect.Name
+            : effectId;
+    }
+
+    private static string FieldKindLabel(string type)
+    {
+        return type switch
+        {
+            "number" => "数値",
+            "effectSelect" => "候補選択",
+            "effectStackLoadout" => "個数入力",
+            "effectMultiSelect" => "複数選択",
+            "effectRankedMultiSelect" => "状態",
+            "revelationBoardLoadout" => "啓示板",
+            "coinLoadout" => "複数選択",
+            _ => string.IsNullOrWhiteSpace(type) ? "固有値" : type
+        };
+    }
+
+    private static string SpecialProfileId(string campaignId, string fieldId)
+    {
+        return (campaignId, fieldId) switch
+        {
+            ("is5_sarkaz", "thought") => "is5ThoughtFull",
+            ("is5_sarkaz", "idea") => "run.idea.current",
+            ("is5_sarkaz", "age") => "is5AgeFull",
+            ("is3_mizuki", "rejectionReaction") => "is3RejectionReaction",
+            ("is3_mizuki", "revelations") => "is3RevelationFull",
+            ("is4_sami", "collapseValue") => "is4CollapseValue",
+            ("is4_sami", "paradigmLost") => "is4ParadigmLost",
+            ("is4_sami", "revelation") => "is4RevelationFull",
+            ("is6_sui", "coins") => "is6CoinFull",
+            ("is6_sui", "seasonalHours") => "is6SeasonalHours",
+            _ => $"{campaignId}.{fieldId}"
+        };
     }
 
     private static string ResolveDataRoot()
@@ -169,6 +439,55 @@ public static class RhodesRunCatalog
         }
 
         throw new DirectoryNotFoundException("RHODES data directory was not found.");
+    }
+
+    private static string ResolveDataPath(string preferredDataRoot, string fileName)
+    {
+        var preferred = Path.Combine(preferredDataRoot, fileName);
+        if (File.Exists(preferred))
+            return preferred;
+
+        return CandidateRoots()
+            .Select(root => Path.Combine(root, "data", fileName))
+            .Where(File.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault() ?? preferred;
+    }
+
+    private static string ResolveStatePath(string dataRoot)
+    {
+        var preferred = Path.Combine(dataRoot, "current-state.json");
+        var candidates = new[] { preferred }
+            .Concat(CandidateRoots().Select(root => Path.Combine(root, "data", "current-state.json")))
+            .Where(File.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var projectState = candidates
+            .Where(path => IsProjectRootStatePath(path))
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(projectState))
+            return projectState;
+
+        return candidates
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .ThenBy(path => IsBuildOutputDataPath(path) ? 1 : 0)
+            .FirstOrDefault() ?? preferred;
+    }
+
+    private static bool IsBuildOutputDataPath(string path)
+    {
+        return path.Replace('/', '\\').Contains("\\bin\\", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsProjectRootStatePath(string path)
+    {
+        var dataDirectory = Directory.GetParent(path);
+        var projectRoot = dataDirectory?.Parent;
+        return projectRoot is not null
+            && File.Exists(Path.Combine(projectRoot.FullName, "package.json"))
+            && File.Exists(Path.Combine(projectRoot.FullName, "data", "campaigns.json"));
     }
 
     private static IEnumerable<string> CandidateRoots()
@@ -218,28 +537,59 @@ public static class RhodesRunCatalog
         return JsonNullableInt(element, propertyName) ?? 0;
     }
 
-    private static int ReadIs5Idea(JsonElement run)
+    private static int ReadSpecialInt(JsonElement run, string campaignId, string fieldId)
     {
+        return TryGetSpecialValue(run, campaignId, fieldId, out var value)
+            ? JsonElementNullableInt(value) ?? 0
+            : 0;
+    }
+
+    private static bool TryGetSpecialValue(JsonElement run, string campaignId, string fieldId, out JsonElement value)
+    {
+        value = default;
         if (run.ValueKind != JsonValueKind.Object
             || !run.TryGetProperty("special", out var special)
             || special.ValueKind != JsonValueKind.Object
-            || !special.TryGetProperty("is5_sarkaz", out var is5)
-            || is5.ValueKind != JsonValueKind.Object)
+            || !special.TryGetProperty(campaignId, out var campaign)
+            || campaign.ValueKind != JsonValueKind.Object
+            || !campaign.TryGetProperty(fieldId, out value))
         {
-            return 0;
+            return false;
         }
 
-        return JsonInt(is5, "idea");
+        return true;
     }
 
     private static int? JsonNullableInt(JsonElement element, string propertyName)
     {
         return element.ValueKind == JsonValueKind.Object
             && element.TryGetProperty(propertyName, out var property)
-            && property.ValueKind == JsonValueKind.Number
-            && property.TryGetInt32(out var value)
-            ? value
+            ? JsonElementNullableInt(property)
             : null;
+    }
+
+    private static int? JsonElementNullableInt(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var value))
+            return value;
+
+        if (element.ValueKind == JsonValueKind.String
+            && int.TryParse(element.GetString(), out var stringValue))
+        {
+            return stringValue;
+        }
+
+        return null;
+    }
+
+    private static string JsonElementString(JsonElement element)
+    {
+        return element.ValueKind == JsonValueKind.String ? element.GetString() ?? "" : "";
+    }
+
+    private static bool IsJsonValueEmpty(JsonElement element)
+    {
+        return element.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null;
     }
 
     private static bool JsonBool(JsonElement element, string propertyName)

@@ -40,5 +40,8 @@
     <Content Include="..\..\data\relics.json" Link="data\relics.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\data\selectable-effects.json" Link="data\selectable-effects.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

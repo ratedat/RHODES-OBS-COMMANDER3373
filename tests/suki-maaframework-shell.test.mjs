@@ -17,6 +17,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(csproj, /data\\operators\.json/);
   assert.match(csproj, /data\\relics\.json/);
   assert.match(csproj, /data\\current-state\.json/);
+  assert.match(csproj, /data\\selectable-effects\.json/);
   assert.match(packageJson, /"maa:resource:generate": "node tools\/generate-maa-resource\.mjs"/);
   assert.match(packageJson, /"maa:resource:check": "node tools\/generate-maa-resource\.mjs --check"/);
   assert.match(packageJson, /"suki:test": "dotnet run --project tests\/rhodes-suki\/RhodesSuki\.ServiceTests\.csproj"/);
@@ -88,6 +89,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runCatalog, /operators\.json/);
   assert.match(runCatalog, /relics\.json/);
   assert.match(runCatalog, /current-state\.json/);
+  assert.match(runCatalog, /selectable-effects\.json/);
+  assert.match(runCatalog, /ResolveStatePath/);
+  assert.match(runCatalog, /IsProjectRootStatePath/);
   assert.match(runCatalog, /SukiRunStateSnapshot/);
   assert.match(choiceFilter, /ShowSelectedFirst/);
   assert.match(choiceFilter, /HideExcluded/);
@@ -99,6 +103,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(models, /SourceSummary/);
   assert.match(models, /RecognitionDetailJson/);
   assert.match(runModels, /SukiCampaignPreview/);
+  assert.match(runModels, /SukiSpecialFieldState/);
   assert.match(runModels, /SukiChoiceItem/);
   assert.match(runModels, /SelectionButtonLabel/);
   assert.match(runModels, /ExclusionButtonLabel/);
@@ -131,6 +136,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /JsonSerializer\.Serialize/);
   assert.match(viewModel, /Campaigns/);
   assert.match(viewModel, /SelectedCampaign/);
+  assert.match(viewModel, /構想/);
+  assert.doesNotMatch(viewModel, /想念/);
   assert.match(viewModel, /FilteredOperators/);
   assert.match(viewModel, /FilteredRelics/);
   assert.match(viewModel, /ToggleChoiceSelectedCommand/);

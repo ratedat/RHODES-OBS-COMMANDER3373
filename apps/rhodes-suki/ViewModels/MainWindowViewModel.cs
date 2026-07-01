@@ -735,7 +735,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var maxHope = _runState.MaxHope is null ? "-" : _runState.MaxHope.Value.ToString();
         yield return new SukiStatusChip("希望", $"{_runState.Hope}/{maxHope}", "run.hope");
         yield return new SukiStatusChip("源石錐", _runState.Ingot.ToString(), "run.ingot");
-        yield return new SukiStatusChip("想念", _runState.Idea.ToString(), "is5.idea");
+        yield return new SukiStatusChip("構想", _runState.Idea.ToString(), "is5.idea");
         yield return new SukiStatusChip("シールド", _runState.Shield.ToString(), "run.shield");
         yield return new SukiStatusChip("耐久", _runState.LifePoints.ToString(), "run.hp");
         yield return new SukiStatusChip("指揮", $"Lv{_runState.CommandLevel}", "run.commandLevel");
@@ -748,7 +748,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var maxHope = state.MaxHope is null ? "-" : state.MaxHope.Value.ToString();
         yield return new SukiRunFieldPreview("希望", $"{state.Hope}/{maxHope}", "OCR / MAAFramework", "run.hope.current + run.hope.max", "現在値と上限値を分離して読む");
         yield return new SukiRunFieldPreview("源石錐", state.Ingot.ToString(), "OCR / Template anchor", "run.ingot", "右上の源石錐アイコンを基準に取得");
-        yield return new SukiRunFieldPreview("想念", state.Idea.ToString(), "Template / OCR", "run.idea.current", "IS#5では想念アイコン直下の数値");
+        yield return new SukiRunFieldPreview("構想", state.Idea.ToString(), "Template / OCR", "run.idea.current", "IS#5では構想アイコン直下の数値");
         yield return new SukiRunFieldPreview("シールド", state.Shield.ToString(), "Template / OCR", "run.shield", "耐久値右側の盾アイコン基準");
         yield return new SukiRunFieldPreview("耐久", state.LifePoints.ToString(), "OCR / Manual review", "run.life", "左上の耐久値");
         yield return new SukiRunFieldPreview("指揮Lv", $"Lv{state.CommandLevel}", "OCR", "run.command_level", "指揮Lvパネル");
@@ -838,34 +838,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private IEnumerable<SukiSpecialValuePreview> BuildSpecialValuePreviews()
     {
         var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
-        if (campaignId == "is5_sarkaz")
+        var specialFields = (_runState.SpecialFields ?? Array.Empty<SukiSpecialFieldState>())
+            .Where(field => string.Equals(field.CampaignId, campaignId, StringComparison.Ordinal))
+            .ToArray();
+        if (specialFields.Length > 0)
         {
-            yield return new SukiSpecialValuePreview("想念", _runState.Idea.ToString(), "数値", "run.idea.current", "想念アイコン直下の値。重複する思案とは別管理");
-            yield return new SukiSpecialValuePreview("思案", "0件", "個数入力", "is5ThoughtFull", "同一思案の重複所持を許可");
-            yield return new SukiSpecialValuePreview("時代", "未選択", "候補選択", "is5AgeFull", "時代スキャン結果をレビューして確定");
-            yield return new SukiSpecialValuePreview("思考負荷", "未入力", "補助値", "run.thought_burden", "必要な画面のみで扱い、思考不可は保存対象外");
-            yield break;
-        }
-
-        if (campaignId == "is3_mizuki")
-        {
-            yield return new SukiSpecialValuePreview("啓示", "0件", "複数選択", "is3RevelationFull", "啓示候補を重複なしで管理");
-            yield return new SukiSpecialValuePreview("拒絶反応", "未選択", "単一選択", "is3RejectionReaction", "現在反応をラン状態へ反映");
-            yield break;
-        }
-
-        if (campaignId == "is4_sami")
-        {
-            yield return new SukiSpecialValuePreview("啓示", "0件", "複数選択", "is4RevelationFull", "啓示板と手動入力を統合");
-            yield return new SukiSpecialValuePreview("崩壊値", "未入力", "数値", "is4CollapseValue", "OCRまたは手入力で管理");
-            yield return new SukiSpecialValuePreview("失いしパラダイム", "未選択", "状態", "is4ParadigmLost", "状態付き特殊値として扱う");
-            yield break;
-        }
-
-        if (campaignId == "is6_sui")
-        {
-            yield return new SukiSpecialValuePreview("歳時貨幣", "0件", "複数選択", "is6CoinFull", "表裏や状態差分を別スロットで保持");
-            yield return new SukiSpecialValuePreview("時刻", "未入力", "状態", "is6SeasonalHours", "季節時刻を個別状態で管理");
+            foreach (var field in specialFields)
+            {
+                yield return new SukiSpecialValuePreview(field.Label, field.Value, field.Kind, field.ProfileId, field.Detail);
+            }
             yield break;
         }
 

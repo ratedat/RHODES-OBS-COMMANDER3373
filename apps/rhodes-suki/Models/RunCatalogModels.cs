@@ -7,10 +7,18 @@ public sealed record SukiCampaignPreview(
     string Id,
     int Number,
     string Title,
-    string FullTitle)
+    string FullTitle,
+    IReadOnlyList<SukiCampaignSpecialField> SpecialFields)
 {
     public string DisplayName => $"IS#{Number} {Title}";
 }
+
+public sealed record SukiCampaignSpecialField(
+    string Id,
+    string Label,
+    string Type,
+    string EffectSlot,
+    string UnitLabel);
 
 public sealed record SukiWorkspaceNavItem(
     string Id,
@@ -32,6 +40,16 @@ public sealed record SukiRunFieldPreview(
 
 public sealed record SukiSpecialValuePreview(
     string Label,
+    string Value,
+    string Kind,
+    string ProfileId,
+    string Detail);
+
+public sealed record SukiSpecialFieldState(
+    string CampaignId,
+    string FieldId,
+    string Label,
+    string Type,
     string Value,
     string Kind,
     string ProfileId,
@@ -196,7 +214,8 @@ public sealed record SukiRunStateSnapshot(
     int LifePoints = 0,
     int Shield = 0,
     int CommandLevel = 1,
-    int Idea = 0);
+    int Idea = 0,
+    IReadOnlyList<SukiSpecialFieldState>? SpecialFields = null);
 
 public sealed record RhodesRunCatalogSnapshot(
     IReadOnlyList<SukiCampaignPreview> Campaigns,

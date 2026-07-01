@@ -241,6 +241,17 @@ static void RunCatalogLoadsChoices()
     Equal(296, is5Relics.Length, "is5 relic count");
     Equal(true, catalog.Current.SelectedRelicIds.Contains("is5_sarkaz_relic_254"), "current relic selection");
     Equal("is5_sarkaz", catalog.Current.CampaignId, "current campaign");
+    Equal(0, catalog.Current.Idea, "current idea");
+
+    var is5SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is5_sarkaz").ToArray();
+    Equal(3, is5SpecialFields.Length, "is5 special field count");
+    Equal("構想", is5SpecialFields.Single(field => field.FieldId == "idea").Label, "idea label");
+    Equal("0", is5SpecialFields.Single(field => field.FieldId == "idea").Value, "idea value");
+    Equal("思案", is5SpecialFields.Single(field => field.FieldId == "thought").Label, "thought label");
+    Equal("0個", is5SpecialFields.Single(field => field.FieldId == "thought").Value, "thought value");
+    Equal("時代", is5SpecialFields.Single(field => field.FieldId == "age").Label, "age label");
+    Equal("未選択", is5SpecialFields.Single(field => field.FieldId == "age").Value, "age value");
+    Equal(false, is5SpecialFields.Any(field => field.Label == "想念"), "obsolete idea label");
 }
 
 static void ChoiceFilters()
