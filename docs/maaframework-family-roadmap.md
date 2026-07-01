@@ -55,14 +55,15 @@ flowchart LR
 
 ## Current Suki Bridge Status
 - 接続済み: `GET /api/health` による RHODES API 状態、`/api/state` からの状態同期、`/api/recognition/scan` による既存ADBスキャン実行。
+- 接続済み: `/api/master` による master data 件数診断。Suki ローカルカタログとの差分をランタイム診断に表示する。
 - 接続済み: `/api/adb/detect` による MAA 風ADB候補/端末検出、`/api/adb/test` による解像度/スクリーンショット確認。
 - 接続済み: `/api/ocr/glm/status`、`/api/ocr/glm/install`、`/api/ocr/glm/uninstall`、`/api/ocr/glm/ollama/*` による任意 GLM-OCR/Ollama 管理。
 - 接続済み: `/api/recognition/scan/status` による実行中/直近スキャン進捗確認。
 - 接続済み: Suki 側の保存操作から ADB path/serial/preset を `current-state.json` の既存 `adb` スキーマへ同期する。
-- 接続済み: Suki 側の保存操作から表示列、選択/除外フィルター、overlay scroll speed、Suki出力部品設定を `preferences` へ同期する。
-- 残作業: Suki 側から OCR engine の選択UIとOBS/sidecarプレビュー起動を既存設定スキーマへ接続する。
+- 接続済み: Suki 側の保存操作からオペレーター/秘宝の選択、表示列、選択/除外フィルター、overlay scroll speed、Suki出力部品設定、OCR engine を既存 state/preference スキーマへ同期する。
+- 接続済み: Suki 側の現在ランIS切替と認識候補適用を API 優先で同期し、API不可時はローカル state へfallbackする。
 - 残作業: MAAFramework native `Tasker` 実行と Node API 経由の候補化を、同一のスキャン履歴/証跡モデルへ統合する。
-- 残作業: OBS/sidecar 出力設定を Suki 側の設定保存とプレビュー確認に接続する。
+- 残作業: OBS/sidecar 出力設定のプレビュー起動を Suki 側へ接続する。
 
 ## First Milestone
 - SukiUI shell が起動する
