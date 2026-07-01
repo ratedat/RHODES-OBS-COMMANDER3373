@@ -1004,7 +1004,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public MaaCandidatePreview? SelectedCandidateResult
     {
         get => _selectedCandidateResult;
-        set => SetProperty(ref _selectedCandidateResult, value);
+        set
+        {
+            if (!SetProperty(ref _selectedCandidateResult, value))
+                return;
+            SelectEvidenceNodeForCandidate(value);
+        }
     }
 
     public MaaRoiDraftApplyResult RoiDraftApplyResult
@@ -1065,6 +1070,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _selectedResourceTaskResult = value;
             OnPropertyChanged();
             SelectRoiForTaskResult(value);
+            SelectEvidenceNodeForTaskEntry(value?.Entry ?? "");
         }
     }
 
@@ -1079,6 +1085,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _selectedRecognitionScanLogRow = value;
             OnPropertyChanged();
             SelectRoiForLogRow(value);
+            SelectEvidenceNodeForTaskEntry(value?.Entry ?? "");
         }
     }
 
@@ -3952,6 +3959,49 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         if (selectedParts.Count > 0)
             StatusMessage = $"証跡ノードを選択しました: {string.Join(" / ", selectedParts)}";
+    }
+
+    private void SelectEvidenceNodeForCandidate(MaaCandidatePreview? candidate)
+    {
+        if (candidate is null || RoiRescanEvidencePreviewNodes.Count == 0)
+            return;
+
+        var key = CandidateComparisonKey(candidate);
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        var node = FindEvidenceNode(RoiRescanEvidencePreviewNodes, item =>
+            item.CandidateKey.Equals(key, StringComparison.Ordinal));
+        if (node is not null)
+            SelectedRoiRescanEvidencePreviewNode = node;
+    }
+
+    private void SelectEvidenceNodeForTaskEntry(string entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry) || RoiRescanEvidencePreviewNodes.Count == 0)
+            return;
+
+        var node = FindEvidenceNode(RoiRescanEvidencePreviewNodes, item =>
+            item.TaskEntry.Equals(entry, StringComparison.Ordinal));
+        if (node is not null)
+            SelectedRoiRescanEvidencePreviewNode = node;
+    }
+
+    private static MaaEvidencePreviewNode? FindEvidenceNode(
+        IEnumerable<MaaEvidencePreviewNode> nodes,
+        Func<MaaEvidencePreviewNode, bool> predicate)
+    {
+        foreach (var node in nodes)
+        {
+            if (predicate(node))
+                return node;
+
+            var child = FindEvidenceNode(node.SafeChildren, predicate);
+            if (child is not null)
+                return child;
+        }
+
+        return null;
     }
 
     private static string BuildRoiRescanComparisonSummary(
