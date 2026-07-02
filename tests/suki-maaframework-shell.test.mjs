@@ -619,6 +619,15 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectedAdbInputMethod/);
   assert.match(xaml, /AdbMethodSummary/);
   assert.match(xaml, /AdbMethodDetail/);
+  const runtimeWorkspaceVisible = xaml.indexOf('IsVisible="{Binding IsRuntimeWorkspaceVisible}"');
+  const runtimeWorkspaceStart = xaml.lastIndexOf("<ScrollViewer", runtimeWorkspaceVisible);
+  const runtimeWorkspaceEnd = xaml.indexOf('IsVisible="{Binding IsDebugWorkspaceVisible}"');
+  assert.ok(runtimeWorkspaceStart >= 0);
+  assert.ok(runtimeWorkspaceEnd > runtimeWorkspaceStart);
+  const runtimeWorkspace = xaml.slice(runtimeWorkspaceStart, runtimeWorkspaceEnd);
+  assert.match(runtimeWorkspace, /<ScrollViewer[^>]+VerticalScrollBarVisibility="Auto"[^>]+HorizontalScrollBarVisibility="Disabled"/);
+  assert.match(runtimeWorkspace, /WrapPanel[^>]+Classes="runtimeActions"/);
+  assert.doesNotMatch(runtimeWorkspace, /ColumnDefinitions="128,\*,Auto,Auto"/);
   assert.match(xaml, /ApplyAdbPresetCommand/);
   assert.match(xaml, /RefreshAdbDevicesCommand/);
   assert.match(xaml, /RunAdbConnectionTestCommand/);
