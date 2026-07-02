@@ -45,6 +45,14 @@ test("ADB scan profile taps stay inside the 1280x720 base screen", async () => {
   }
 });
 
+test("ADB scan profiles use 1280x720 as the single 16:9 base resolution", async () => {
+  const profiles = await profilesById();
+
+  for (const profile of profiles.values()) {
+    assert.deepEqual(profile.baseResolution, { width: 1280, height: 720 }, `${profile.id} baseResolution`);
+  }
+});
+
 test("scan profiles own the server-side OCR engine routing", async () => {
   const profiles = await profilesById();
   const profileList = [...profiles.values()];
