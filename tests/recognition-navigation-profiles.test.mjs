@@ -64,6 +64,25 @@ test("scan profiles own the server-side OCR engine routing", async () => {
   }
 });
 
+test("run status profile is scoped to retained base and IS-specific values only", async () => {
+  const profiles = await profilesById();
+  const profile = profiles.get("runStatusFull");
+
+  assert.equal(profile.candidateKind, "runStatus");
+  assert.deepEqual(profile.ocrRegionIds, [
+    "run.ingot",
+    "run.squad_card",
+    "run.squad_name",
+    "run.difficulty_grade",
+    "run.difficulty_block",
+  ]);
+  assert.deepEqual(profile.templateOcrRegions.map((region) => region.idPrefix), [
+    "run.idea.current",
+    "run.ingot",
+  ]);
+  assert.match(profile.navigationNote, /希望、耐久値、シールド、指揮Lvは取得対象外/);
+});
+
 test("scan profile defaults never restore with Android Back", () => {
   const [profile] = normalizeScanProfiles({
     profiles: [
