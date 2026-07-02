@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 
 import { normalizeOcrEngine, normalizePreferences, ocrEngineOptions } from "../app/lib/preferences.js";
 
-test("OCR engine preference defaults to profile routing", () => {
-  assert.equal(normalizeOcrEngine(""), "profile");
-  assert.equal(normalizeOcrEngine("unknown"), "profile");
-  assert.equal(normalizePreferences({}).ocrEngine, "profile");
+test("OCR engine preference defaults to MAA-OCR", () => {
+  assert.equal(normalizeOcrEngine(""), "maa-ocr");
+  assert.equal(normalizeOcrEngine("unknown"), "maa-ocr");
+  assert.equal(normalizeOcrEngine("profile"), "maa-ocr");
+  assert.equal(normalizePreferences({}).ocrEngine, "maa-ocr");
 });
 
 test("OCR engine preference accepts GLM verification engines", () => {
@@ -18,9 +19,9 @@ test("OCR engine preference accepts GLM verification engines", () => {
 test("OCR engine preference exposes only MAA-OCR plus optional GLM", () => {
   assert.equal(normalizeOcrEngine("maa-ocr"), "maa-ocr");
   assert.equal(normalizeOcrEngine("maa-onnx"), "maa-ocr");
-  assert.equal(normalizeOcrEngine("hybrid"), "profile");
-  assert.equal(normalizeOcrEngine("paddle"), "profile");
-  assert.deepEqual(ocrEngineOptions.map((option) => option.id), ["profile", "maa-ocr", "glm-ocr"]);
+  assert.equal(normalizeOcrEngine("hybrid"), "maa-ocr");
+  assert.equal(normalizeOcrEngine("paddle"), "maa-ocr");
+  assert.deepEqual(ocrEngineOptions.map((option) => option.id), ["maa-ocr", "glm-ocr"]);
 });
 
 test("choice list filter preferences are normalized", () => {

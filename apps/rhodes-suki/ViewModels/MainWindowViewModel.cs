@@ -1342,7 +1342,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "MAA-OCR",
             "OCR",
             SelectedOcrEngine?.Label ?? MaaOcrStatusState(),
-            $"{SelectedOcrEngine?.Id ?? "profile"} / {MaaOcrStatusDetail()}",
+            $"{SelectedOcrEngine?.Id ?? SukiOcrEngineCatalog.DefaultId} / {MaaOcrStatusDetail()}",
             "認識",
             false);
         yield return new SukiRuntimeCapabilityPreview(
@@ -1530,7 +1530,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             yield return new SukiInspectorRow("Master Data", _masterDataStatus.State, _masterDataStatus.Detail);
             yield return new SukiInspectorRow("端末", $"{AdbDevices.Count}件", SessionState);
             yield return new SukiInspectorRow("Hyper-V", _hypervisorStatus.State, _hypervisorStatus.Detail);
-            yield return new SukiInspectorRow("OCRエンジン", SelectedOcrEngine?.Label ?? "プロファイル既定", SelectedOcrEngine?.Id ?? "profile");
+            yield return new SukiInspectorRow("OCRエンジン", SelectedOcrEngine?.Label ?? "MAA-OCR", SelectedOcrEngine?.Id ?? SukiOcrEngineCatalog.DefaultId);
             yield return new SukiInspectorRow("任意OCR", $"GLM={_glmRuntimeStatus.State} / Ollama={_ollamaRuntimeStatus.State}", RhodesApiUrl);
             yield break;
         }

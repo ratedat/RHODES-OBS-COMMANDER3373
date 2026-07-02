@@ -218,7 +218,7 @@ public sealed record SukiRunStateSnapshot(
     int Ingot = 0,
     int Idea = 0,
     IReadOnlyList<SukiSpecialFieldState>? SpecialFields = null,
-    string OcrEngine = "profile");
+    string OcrEngine = "maa-ocr");
 
 public sealed record RhodesRunCatalogSnapshot(
     IReadOnlyList<SukiCampaignPreview> Campaigns,

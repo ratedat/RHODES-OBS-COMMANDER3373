@@ -212,7 +212,7 @@ public static class RhodesRunCatalog
             JsonInt(run, "ingot"),
             ReadSpecialInt(run, campaignId, "idea"),
             BuildSpecialFieldStates(run, campaigns, selectableEffects),
-            SukiOcrEngineCatalog.Normalize(JsonString(preferences, "ocrEngine", "profile")));
+            SukiOcrEngineCatalog.Normalize(JsonString(preferences, "ocrEngine", SukiOcrEngineCatalog.DefaultId)));
     }
 
     private static string ResolveSquadDisplayName(string dataRoot, string campaignId, JsonElement run)

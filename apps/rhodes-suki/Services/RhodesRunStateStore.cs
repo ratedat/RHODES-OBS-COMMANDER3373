@@ -99,6 +99,7 @@ public static class RhodesRunStateStore
         {
             node["version"] ??= 1;
             PruneAbandonedRunValues(node);
+            NormalizeOcrEnginePreference(node);
             await WriteJsonAtomicAsync(path, node);
         }
         finally
@@ -116,6 +117,7 @@ public static class RhodesRunStateStore
     {
         state["version"] ??= 1;
         PruneAbandonedRunValues(state);
+        NormalizeOcrEnginePreference(state);
         state["operators"] = ToJsonArray(operators.Where(item => item.IsSelected).Select(item => item.Id));
         state["relics"] = ToJsonArray(relics.Where(item => item.IsSelected).Select(item => item.Id));
         state["updatedAt"] = now.UtcDateTime.ToString("O");
@@ -142,6 +144,7 @@ public static class RhodesRunStateStore
 
         state["version"] ??= 1;
         state["updatedAt"] = now.UtcDateTime.ToString("O");
+        NormalizeOcrEnginePreference(state);
 
         var run = EnsureObject(state, "run");
         var previousCampaignId = JsonString(run, "campaignId");
@@ -170,6 +173,15 @@ public static class RhodesRunStateStore
             removed |= run.Remove(propertyName);
         }
         return removed;
+    }
+
+    public static bool NormalizeOcrEnginePreference(JsonObject state)
+    {
+        var preferences = EnsureObject(state, "preferences");
+        var previous = JsonString(preferences, "ocrEngine");
+        var normalized = SukiOcrEngineCatalog.Normalize(previous);
+        preferences["ocrEngine"] = normalized;
+        return !string.Equals(previous, normalized, StringComparison.Ordinal);
     }
 
     private static async Task<JsonObject> LoadStateNodeAsync(string path)

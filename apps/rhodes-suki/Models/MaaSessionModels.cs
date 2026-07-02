@@ -64,9 +64,10 @@ public sealed record SukiOcrEngineOption(
 
 public static class SukiOcrEngineCatalog
 {
+    public const string DefaultId = "maa-ocr";
+
     private static readonly SukiOcrEngineOption[] BuiltInOptions =
     [
-        new("profile", "プロファイル既定", "認識プロファイル側の既定エンジンを使います。"),
         new("maa-ocr", "MAA-OCR", "MAAFramework系OCRを使います。"),
         new("glm-ocr", "GLM-OCR 任意検証", "任意導入GLM-OCRを使います。"),
     ];
@@ -79,15 +80,15 @@ public static class SukiOcrEngineCatalog
 
     public static string Normalize(string? value)
     {
-        var normalized = string.IsNullOrWhiteSpace(value) ? "profile" : value.Trim().ToLowerInvariant();
+        var normalized = string.IsNullOrWhiteSpace(value) ? DefaultId : value.Trim().ToLowerInvariant();
         normalized = normalized switch
         {
-            "maa" or "maa-onnx" or "onnx" => "maa-ocr",
+            "auto" or "profile" or "maa" or "maa-onnx" or "onnx" => "maa-ocr",
             "glm" or "windows-glm" or "glm-windows" or "glm-hybrid" or "hybrid-glm" => "glm-ocr",
-            "hybrid" or "maa-hybrid" or "onnx-hybrid" or "paddle" or "windows" or "windows-paddle" or "paddle-windows" => "profile",
+            "hybrid" or "maa-hybrid" or "onnx-hybrid" or "paddle" or "windows" or "windows-paddle" or "paddle-windows" => "maa-ocr",
             _ => normalized
         };
-        return ValidIds.Contains(normalized) ? normalized : "profile";
+        return ValidIds.Contains(normalized) ? normalized : DefaultId;
     }
 }
 

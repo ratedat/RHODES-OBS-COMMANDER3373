@@ -34,6 +34,7 @@ var tests = new (string Name, Action Run)[]
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
+    ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
     ("MAA recognition probe payloads target retained fields", RecognitionProbePayloadsTargetRetainedFields),
@@ -916,6 +917,15 @@ static void RhodesApiStatusParsing()
         localOperators: 2,
         localRelics: 1);
     Equal("差分あり", mismatchedMaster.State, "master mismatch state");
+}
+
+static void OcrEngineCatalog()
+{
+    Equal("maa-ocr|glm-ocr", string.Join("|", SukiOcrEngineCatalog.Options.Select(option => option.Id)), "ocr options");
+    Equal("maa-ocr", SukiOcrEngineCatalog.Normalize(""), "blank ocr engine");
+    Equal("maa-ocr", SukiOcrEngineCatalog.Normalize("profile"), "legacy profile ocr engine");
+    Equal("maa-ocr", SukiOcrEngineCatalog.Normalize("paddle"), "legacy paddle ocr engine");
+    Equal("glm-ocr", SukiOcrEngineCatalog.Normalize("windows-glm"), "glm alias");
 }
 
 static void HypervisorStatusParsing()
@@ -1958,7 +1968,7 @@ static void RunCatalogLoadsChoices()
     Equal(true, catalog.Current.SelectedRelicIds.Contains("is5_sarkaz_relic_254"), "current relic selection");
     Equal("is5_sarkaz", catalog.Current.CampaignId, "current campaign");
     Equal(0, catalog.Current.Idea, "current idea");
-    Equal("profile", catalog.Current.OcrEngine, "current ocr engine");
+    Equal("maa-ocr", catalog.Current.OcrEngine, "current ocr engine");
 
     var tempDirectory = Path.Combine(Path.GetTempPath(), "rhodes-suki-tests", Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(tempDirectory);
@@ -2168,6 +2178,7 @@ static void ChoicePersistence()
     Equal(true, preferences["relicSelectedOnly"]!.GetValue<bool>(), "relic selected only preference");
     Equal(4, preferences["operatorGridColumns"]!.GetValue<int>(), "operator grid columns");
     Equal(3, preferences["relicGridColumns"]!.GetValue<int>(), "relic grid columns");
+    Equal("maa-ocr", preferences["ocrEngine"]!.GetValue<string>(), "legacy ocr preference normalized");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "updatedAt");
     Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "abandoned run value pruned");
 }

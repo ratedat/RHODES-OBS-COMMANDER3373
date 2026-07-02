@@ -4,24 +4,25 @@ import { normalizeChoiceFilterIds } from "../domain/choice-filters.js";
 export const gridColumnOptions = [1, 2, 3, 4, 5, 6];
 
 export const ocrEngineOptions = Object.freeze([
-  { id: "profile", label: "プロファイル既定" },
   { id: "maa-ocr", label: "MAA-OCR" },
   { id: "glm-ocr", label: "GLM-OCR 任意検証" },
 ]);
 
 const validOcrEngines = new Set(ocrEngineOptions.map((item) => item.id));
 const ocrEngineAliases = new Map([
+  ["auto", "maa-ocr"],
+  ["profile", "maa-ocr"],
   ["maa", "maa-ocr"],
   ["maa-onnx", "maa-ocr"],
   ["onnx", "maa-ocr"],
   ["glm", "glm-ocr"],
-  ["hybrid", "profile"],
-  ["maa-hybrid", "profile"],
-  ["onnx-hybrid", "profile"],
-  ["paddle", "profile"],
-  ["windows", "profile"],
-  ["windows-paddle", "profile"],
-  ["paddle-windows", "profile"],
+  ["hybrid", "maa-ocr"],
+  ["maa-hybrid", "maa-ocr"],
+  ["onnx-hybrid", "maa-ocr"],
+  ["paddle", "maa-ocr"],
+  ["windows", "maa-ocr"],
+  ["windows-paddle", "maa-ocr"],
+  ["paddle-windows", "maa-ocr"],
   ["windows-glm", "glm-ocr"],
   ["glm-windows", "glm-ocr"],
   ["glm-hybrid", "glm-ocr"],
@@ -43,9 +44,9 @@ export function clampGridColumns(value) {
 }
 
 export function normalizeOcrEngine(value) {
-  const normalized = String(value || "profile").toLowerCase();
+  const normalized = String(value || "maa-ocr").toLowerCase();
   if (ocrEngineAliases.has(normalized)) return ocrEngineAliases.get(normalized);
-  return validOcrEngines.has(normalized) ? normalized : "profile";
+  return validOcrEngines.has(normalized) ? normalized : "maa-ocr";
 }
 
 function normalizeBoolean(value) {

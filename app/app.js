@@ -28,7 +28,7 @@ import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
-import { clampGridColumns, gridColumnOptions, normalizePreferences, ocrEngineOptions } from "./lib/preferences.js";
+import { clampGridColumns, gridColumnOptions, normalizeOcrEngine, normalizePreferences, ocrEngineOptions } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
 import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
 import { RUN_STAT_FIELDS, formatRunStatValue, normalizeRunStats, runStatDisplayItems } from "./domain/run-stats.js";
@@ -1014,7 +1014,7 @@ function renderControlV2SpecialScreen() {
 
 function renderAdbSettingPanel() {
   const adb = normalizeAdbSettings(state.adb);
-  const ocrEngine = state.preferences?.ocrEngine || "profile";
+  const ocrEngine = normalizeOcrEngine(state.preferences?.ocrEngine);
   const detection = ui.adbDetection;
   const testResult = ui.adbTestResult;
   const hypervisorStatus = ui.hypervisorStatus;

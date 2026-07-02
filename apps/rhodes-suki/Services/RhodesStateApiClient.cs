@@ -94,6 +94,7 @@ public static class RhodesStateApiClient
         adb["reconnectAttempts"] = 5;
         adb["reconnectDelayMs"] = 1000;
         RhodesRunStateStore.PruneAbandonedRunValues(root);
+        RhodesRunStateStore.NormalizeOcrEnginePreference(root);
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }
@@ -134,7 +135,7 @@ public static class RhodesStateApiClient
         string stateJson,
         SukiChoicePersistenceOptions choiceOptions,
         SukiOutputPreferences outputPreferences,
-        string ocrEngine = "profile")
+        string ocrEngine = SukiOcrEngineCatalog.DefaultId)
     {
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson)?.AsObject() ?? [];
         var preferences = root["preferences"] as JsonObject;
