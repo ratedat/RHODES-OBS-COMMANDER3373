@@ -55,11 +55,11 @@ flowchart LR
 - 基準点切り出しが必要になった時は、1280x720 の切り出し対象を明示してユーザーへ依頼する
 
 ## Current Suki Bridge Status
-- 接続済み: `GET /api/health` による RHODES API 状態、`/api/state` からの状態同期、`/api/recognition/scan` による既存ADBスキャン実行。
+- 接続済み: `GET /api/health` による RHODES API 状態、`/api/state` からの状態同期。
 - 接続済み: `/api/master` による master data 件数診断。Suki ローカルカタログとの差分をランタイム診断に表示する。
 - 接続済み: `/api/adb/detect` による MAA 風ADB候補/端末検出、`/api/adb/test` による解像度/スクリーンショット確認。
 - 接続済み: `/api/ocr/glm/status`、`/api/ocr/glm/install`、`/api/ocr/glm/uninstall`、`/api/ocr/glm/ollama/*` による任意 GLM-OCR/Ollama 管理。
-- 接続済み: `/api/recognition/scan/status` による実行中/直近スキャン進捗確認。
+- 接続済み: `/api/recognition/scan/status` による実行中/直近スキャン進捗確認。Suki通常導線から旧 `/api/recognition/scan` 実行は削除し、MAAFramework native `Tasker` 実行を主経路にする。
 - 接続済み: Suki 側の保存操作から ADB path/serial/preset を `current-state.json` の既存 `adb` スキーマへ同期する。
 - 接続済み: Suki 側の保存操作からオペレーター/秘宝の選択、表示列、選択/除外フィルター、overlay scroll speed、Suki出力部品設定、OCR engine を既存 state/preference スキーマへ同期する。
 - 接続済み: Suki 側の現在ランIS切替と認識候補適用を API 優先で同期し、API不可時はローカル state へfallbackする。
@@ -67,7 +67,7 @@ flowchart LR
 - 接続済み: MAAFramework native `Tasker` 結果を既存 recognition scan 形状の証跡JSONとして保存し、候補化後の candidate も同じ証跡へ含める。
 - 接続済み: MAAFramework native `Tasker` 実行前に cached screenshot を保存し、証跡JSONの `capture` log/event と `evidence.capture` へ紐付ける。
 - 接続済み: MAAFramework native `Tasker` の単発/一括実行は実行直前のfresh captureを使い、単発実行でも証跡JSONを保存する。
-- 接続済み: MAAFramework native `Tasker` 実行履歴と Node API 経由スキャン履歴を、UI上の同一スキャン履歴ビューへ統合し、候補/task結果を再読込できる。
+- 接続済み: MAAFramework native `Tasker` 実行履歴と過去のNode API経由スキャン履歴を、UI上の同一スキャン履歴ビューへ統合し、候補/task結果を再読込できる。
 - 接続済み: スキャン履歴の `log[]` イベントを詳細パネルへ復元し、capture/recognize/tap等のイベント、スクリーンショットパス、OCR詳細を追える。
 - 接続済み: スキャン履歴の `log[].path` がPNG/JPGの場合、読込時に右側プレビューへスクリーンショットを復元する。
 - 接続済み: MAA `RecognitionDetailJson` の `filtered_results` / `best_result` / `all_results` をOCR detail行として整形表示する。
