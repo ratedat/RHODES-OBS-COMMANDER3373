@@ -2975,10 +2975,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "選択プロファイルの認識を開始します。";
-            var capture = await CaptureCoreAsync();
-            if (capture?.Succeeded != true)
-                return;
-
             await RunAllResourceTasksCoreAsync();
             await ConvertResourceTaskResultsCoreAsync();
         });
@@ -2989,10 +2985,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "選択プロファイルの認識と反映を開始します。";
-            var capture = await CaptureCoreAsync();
-            if (capture?.Succeeded != true)
-                return;
-
             await RunAllResourceTasksCoreAsync();
             await ConvertResourceTaskResultsCoreAsync();
             await ApplyCandidateResultsCoreAsync();
@@ -3219,7 +3211,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = "選択プロファイルにResource taskがありません。";
             return;
         }
-        if (!await EnsureCaptureAsync())
+        if (!await ForceCaptureAsync())
             return;
 
         foreach (var task in ResourceTasks)
@@ -3352,14 +3344,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             ClearRoiRescanComparison();
-            if (!await EnsureCaptureAsync())
+            if (!await ForceCaptureAsync())
                 return;
 
             var result = await _session.RunResourceTaskAsync(task.Entry);
             ResourceTaskResults.Add(result);
             RefreshResourceTaskDiagnostics();
             RefreshInspectorRows();
-            StatusMessage = $"{task.Entry}: {result.Status}";
+            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
+                ResourceTaskResults,
+                SelectedResourceProfile?.Id,
+                RhodesMaaLocalCandidateConverter.FromTaskResults(CandidateApiProfileId(), ResourceTaskResults));
+            StatusMessage = $"{task.Entry}: {result.Status} / 証跡保存: {LastResourceTaskResultsPath}";
         });
     }
 
@@ -4219,6 +4215,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_lastCapture.Length > 0)
             return true;
 
+        var capture = await CaptureCoreAsync();
+        return capture?.Succeeded == true;
+    }
+
+    private async Task<bool> ForceCaptureAsync()
+    {
         var capture = await CaptureCoreAsync();
         return capture?.Succeeded == true;
     }
