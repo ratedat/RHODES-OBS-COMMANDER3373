@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 
 import { runScanProfile } from "../app/domain/recognition/scan-runner.js";
 import { createMaaStyleRecognizer } from "../app/domain/recognition/maa-style-recognizer.js";
+import { createMetadataRecognizer } from "../app/domain/recognition/placeholder-recognizer.js";
 import { normalizeRecognitionText } from "../app/domain/recognition/text-normalize.js";
 
 function createAdapter(frames) {
@@ -110,6 +111,42 @@ test("MAA-style screen tasks can require all expected OCR terms across split res
   assert.equal(partial.known, false);
   assert.equal(split.known, true);
   assert.equal(split.screenId, "is5-sarkaz-map-select");
+});
+
+test("MAA-style recognizer ignores metadata-only frames by default", async () => {
+  const recognizer = createMaaStyleRecognizer({ tasks: { screens: [], candidates: [] } });
+  const metadataFrame = {
+    known: true,
+    knownScreenId: "run-home",
+    candidates: [{ kind: "relic", relicId: "debug-relic", name: "デバッグ秘宝", confidence: 1 }],
+  };
+
+  const classification = await recognizer.classify(metadataFrame, { profile: { id: "relicsFull", knownScreenIds: ["run-home"] } });
+  const candidates = await recognizer.recognize(metadataFrame, { profile: { id: "relicsFull" } });
+
+  assert.equal(classification.known, false);
+  assert.equal(classification.screenId, null);
+  assert.equal(classification.engine, "maa-style");
+  assert.deepEqual(candidates, []);
+});
+
+test("MAA-style recognizer can use metadata fallback when explicitly requested", async () => {
+  const recognizer = createMaaStyleRecognizer({
+    tasks: { screens: [], candidates: [] },
+    fallback: createMetadataRecognizer(),
+  });
+  const metadataFrame = {
+    knownScreenId: "run-home",
+    candidates: [{ kind: "relic", relicId: "debug-relic", name: "デバッグ秘宝", confidence: 1 }],
+  };
+
+  const classification = await recognizer.classify(metadataFrame, { profile: { id: "relicsFull", knownScreenIds: ["run-home"] } });
+  const candidates = await recognizer.recognize(metadataFrame, { profile: { id: "relicsFull" } });
+
+  assert.equal(classification.known, true);
+  assert.equal(classification.screenId, "run-home");
+  assert.equal(classification.engine, "metadata");
+  assert.deepEqual(candidates.map((candidate) => candidate.relicId), ["debug-relic"]);
 });
 
 test("scan runner can use MAA-style tasks without changing the scan interface", async () => {

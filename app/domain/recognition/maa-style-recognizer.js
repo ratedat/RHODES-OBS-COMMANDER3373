@@ -1,6 +1,5 @@
 import { fingerprintFrame } from "./fingerprint.js";
 import { scaleRect } from "./geometry.js";
-import { createMetadataRecognizer } from "./placeholder-recognizer.js";
 import { applyOcrReplace, normalizeRecognitionText, textMatchesExpected } from "./text-normalize.js";
 
 function asArray(value) {
@@ -194,13 +193,22 @@ async function enrichFrameWithText(frame, context = {}, textExtractor, tasks) {
   }
 }
 
-export function createMaaStyleRecognizer({ tasks = {}, fallback = createMetadataRecognizer(), textExtractor = null, classificationTextExtractor = null, candidateExtractors = [] } = {}) {
+function unknownClassification() {
+  return {
+    known: false,
+    screenId: null,
+    confidence: 0,
+    engine: "maa-style",
+  };
+}
+
+export function createMaaStyleRecognizer({ tasks = {}, fallback = null, textExtractor = null, classificationTextExtractor = null, candidateExtractors = [] } = {}) {
   const normalizedTasks = normalizeMaaStyleTasks(tasks);
 
   return {
     async classify(frame, context = {}) {
       const enrichedFrame = await enrichFrameWithText(frame, context, classificationTextExtractor || textExtractor, normalizedTasks);
-      const fallbackResult = await fallback.classify(enrichedFrame, context);
+      const fallbackResult = fallback ? await fallback.classify(enrichedFrame, context) : null;
       if (fallbackResult?.known) return { ...fallbackResult, engine: "metadata" };
 
       for (const task of normalizedTasks.screens) {
@@ -222,12 +230,12 @@ export function createMaaStyleRecognizer({ tasks = {}, fallback = createMetadata
       const candidateClassification = await inferClassificationFromCandidates(enrichedFrame, context, candidateExtractors);
       if (candidateClassification?.known) return candidateClassification;
 
-      return { ...fallbackResult, engine: fallbackResult?.engine || "metadata" };
+      return fallbackResult ? { ...fallbackResult, engine: fallbackResult?.engine || "metadata" } : unknownClassification();
     },
 
     async recognize(frame, context = {}) {
       const enrichedFrame = await enrichFrameWithText(frame, context, textExtractor, normalizedTasks);
-      const fallbackCandidates = await fallback.recognize(enrichedFrame, context);
+      const fallbackCandidates = fallback ? await fallback.recognize(enrichedFrame, context) : [];
       const candidates = Array.isArray(fallbackCandidates) ? [...fallbackCandidates] : [];
       for (const task of normalizedTasks.candidates) {
         if (!taskAppliesToProfile(task, context.profile)) continue;
