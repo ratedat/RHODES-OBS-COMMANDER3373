@@ -34,11 +34,7 @@
     "squadRandomEffectOptionId": null,
     "difficultyTierId": null,
     "performanceId": null,
-    "hope": null,
-    "ingot": null,
-    "lifePoints": null,
-    "shield": null,
-    "commandLevel": null
+    "ingot": null
   },
   "relics": [],
   "operators": [],

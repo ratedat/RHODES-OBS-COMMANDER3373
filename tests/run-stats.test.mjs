@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { updateRunField } from "../app/control-actions.js";
 import { formatRunStatValue, normalizeRunStatValue, normalizeRunStats, runStatDisplayItems } from "../app/domain/run-stats.js";
 
@@ -39,4 +40,12 @@ test("updateRunField writes only retained numeric run stat fields", () => {
   assert.deepEqual(runStatDisplayItems(state.run).map((item) => [item.id, item.value]), [
     ["ingot", "20"],
   ]);
+});
+
+test("overlay state example omits abandoned run stat fields", async () => {
+  const example = JSON.parse(await readFile(new URL("../data/overlay-state.example.json", import.meta.url), "utf8"));
+  for (const field of ["hope", "maxHope", "lifePoints", "shield", "commandLevel"]) {
+    assert.equal(Object.hasOwn(example.run, field), false, `${field} should not be part of the base state example`);
+  }
+  assert.equal(Object.hasOwn(example.run, "ingot"), true);
 });
