@@ -1,8 +1,8 @@
 import { createMaaOnnxOcrTextExtractor } from "./maa-onnx-ocr-adapter.js";
 import { createGlmOcrTextExtractor } from "./glm-ocr-adapter.js";
 
-export function createDefaultOcrTextExtractor({ engine = process.env.RHODES_OCR_ENGINE || "auto", glmOcrPythonPath, glmOcrEnv } = {}) {
-  const normalized = String(engine || "auto").toLowerCase();
+export function createDefaultOcrTextExtractor({ engine = process.env.RHODES_OCR_ENGINE || "maa-ocr", glmOcrPythonPath, glmOcrEnv } = {}) {
+  const normalized = String(engine || "maa-ocr").toLowerCase();
   const glmOcrOptions = { pythonPath: glmOcrPythonPath, extraEnv: glmOcrEnv };
   if (["auto", "profile", "maa-ocr", "maa-onnx", "maa", "onnx"].includes(normalized)) {
     return createMaaOnnxOcrTextExtractor({ required: true });
@@ -22,10 +22,10 @@ export function createProfileAwareTextExtractor({ defaultExtractor, profileExtra
   };
 }
 
-export function createProfileAwareOcrTextExtractor({ defaultEngine = process.env.RHODES_OCR_ENGINE || "auto", profileEngines = {}, glmOcrPythonPath, glmOcrEnv } = {}) {
+export function createProfileAwareOcrTextExtractor({ defaultEngine = process.env.RHODES_OCR_ENGINE || "maa-ocr", profileEngines = {}, glmOcrPythonPath, glmOcrEnv } = {}) {
   const byEngine = new Map();
   const extractorFor = (engine) => {
-    const key = String(engine || "auto").toLowerCase();
+    const key = String(engine || "maa-ocr").toLowerCase();
     if (!byEngine.has(key)) byEngine.set(key, createDefaultOcrTextExtractor({ engine: key, glmOcrPythonPath, glmOcrEnv }));
     return byEngine.get(key);
   };
