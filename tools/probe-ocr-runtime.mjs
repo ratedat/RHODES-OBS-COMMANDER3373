@@ -3,11 +3,11 @@ import nodeFs from "node:fs";
 import path from "node:path";
 
 import { buildMaaOcrAssetManifest } from "../app/domain/recognition/maa-ocr-assets.js";
-import { resolvePaddlePythonExecutable } from "../app/recognition/adapters/paddle-ocr-adapter.js";
+import { resolveOcrPythonExecutable } from "../app/recognition/adapters/ocr-python-resolver.js";
 
 const root = process.cwd();
 const strict = process.argv.includes("--strict");
-const pythonPath = process.env.RHODES_PYTHON || resolvePaddlePythonExecutable(process.env, process.env.USERPROFILE || process.env.HOME || "");
+const pythonPath = resolveOcrPythonExecutable(process.env, process.env.USERPROFILE || process.env.HOME || "", root);
 
 const probeScript = String.raw`
 import importlib.util
@@ -15,10 +15,10 @@ import json
 import sys
 
 modules = {}
-for name in ["onnxruntime", "numpy", "PIL", "cv2", "paddleocr", "fastdeploy", "glmocr"]:
+for name in ["onnxruntime", "numpy", "PIL", "glmocr"]:
     modules[name] = importlib.util.find_spec(name) is not None
 versions = {}
-for name in ["onnxruntime", "numpy", "PIL", "cv2", "paddleocr", "fastdeploy", "glmocr"]:
+for name in ["onnxruntime", "numpy", "PIL", "glmocr"]:
     if not modules[name]:
         continue
     try:
@@ -56,7 +56,7 @@ const summary = {
   glmOcr: {
     present: Boolean(python.modules?.glmocr),
     version: python.versions?.glmocr || null,
-    engineValues: ["glm-ocr", "windows-glm"],
+    engineValues: ["glm-ocr"],
   },
   maaAssets: maaAssets.assets.map(({ id, role, locale, localPath, present, model }) => ({ id, role, locale, localPath, present, model: Boolean(model) })),
 };

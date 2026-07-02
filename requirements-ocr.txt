@@ -1,9 +1,5 @@
 # Optional OCR runtime for ADB recognition.
-# PaddleOCR official docs use paddleocr with paddlepaddle 3.x for local inference.
-paddlepaddle>=3.0.0
-paddleocr>=3.0.0
-Pillow>=10.0.0
-# ONNXRuntime path for MAA-style FastDeploy-compatible model experiments.
-# FastDeploy is intentionally not a default Windows dependency; see docs/onnxruntime-fastdeploy-setup.md.
+# Active local OCR routes are MAA-OCR by default and GLM-OCR as an optional runtime.
 onnxruntime>=1.20.0
 numpy>=1.26.0
+Pillow>=10.0.0
