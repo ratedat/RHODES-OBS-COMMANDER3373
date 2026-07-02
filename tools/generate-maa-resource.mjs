@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
 const maaTasksPath = path.join(root, "data", "recognition", "maa-tasks.json");
@@ -23,6 +24,26 @@ function nodeName(prefix, id) {
     .replace(/[^A-Za-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
   return `${prefix}_${safe}`;
+}
+
+const ABANDONED_RUN_FIELDS = new Set(["hope", "maxHope", "lifePoints", "shield", "commandLevel"]);
+const ABANDONED_RUN_ID_TOKENS = new Set(["hope", "maxhope", "life", "lifepoints", "shield", "command", "commandlevel"]);
+
+function idTokens(id) {
+  return String(id || "")
+    .replace(/([a-z])([A-Z])/g, "$1.$2")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/g)
+    .filter(Boolean);
+}
+
+function isAbandonedRunRecognitionId(id) {
+  const tokens = idTokens(id);
+  return tokens[0] === "run" && tokens.slice(1).some((token) => ABANDONED_RUN_ID_TOKENS.has(token));
+}
+
+function isRetainedRecognitionSource({ id, candidateField } = {}) {
+  return !isAbandonedRunRecognitionId(id) && !ABANDONED_RUN_FIELDS.has(candidateField);
 }
 
 function ocrNode(recognition, attach) {
@@ -55,9 +76,7 @@ function templateNode(config, attach) {
   };
 }
 
-function generate() {
-  const maaTasks = readJson(maaTasksPath);
-  const scanProfiles = readJson(scanProfilesPath);
+export function generatePipeline({ maaTasks, scanProfiles }) {
   const pipeline = {
     RhodesGeneratedEmpty: {
       recognition: "DirectHit",
@@ -70,6 +89,7 @@ function generate() {
 
   for (const screen of maaTasks.screens ?? []) {
     if (screen.recognition?.type !== "OCR") continue;
+    if (!isRetainedRecognitionSource({ id: screen.id })) continue;
     pipeline[nodeName("RhodesScreen", screen.id)] = ocrNode(screen.recognition, {
       generated: true,
       source: "maa-tasks.screens",
@@ -82,6 +102,7 @@ function generate() {
 
   for (const candidate of maaTasks.candidates ?? []) {
     if (candidate.recognition?.type !== "OCR") continue;
+    if (!isRetainedRecognitionSource({ id: candidate.id, candidateField: candidate.candidate?.field })) continue;
     pipeline[nodeName("RhodesCandidate", candidate.id)] = ocrNode(candidate.recognition, {
       generated: true,
       source: "maa-tasks.candidates",
@@ -93,6 +114,7 @@ function generate() {
   }
 
   for (const region of maaTasks.ocrRegions ?? []) {
+    if (!isRetainedRecognitionSource({ id: region.id })) continue;
     pipeline[nodeName("RhodesOcrRegion", region.id)] = ocrNode(
       {
         roi: region.roi,
@@ -114,6 +136,7 @@ function generate() {
   for (const profile of scanProfiles.profiles ?? []) {
     for (const [index, config] of (profile.templateOcrRegions ?? []).entries()) {
       if (!config.templatePath || !config.searchRoi) continue;
+      if (!isRetainedRecognitionSource({ id: config.idPrefix ?? "" })) continue;
       pipeline[nodeName("RhodesTemplate", `${profile.id}.${config.idPrefix ?? index}`)] = templateNode(config, {
         generated: true,
         source: "scan-profiles.templateOcrRegions",
@@ -127,6 +150,13 @@ function generate() {
   }
 
   return pipeline;
+}
+
+function generate() {
+  return generatePipeline({
+    maaTasks: readJson(maaTasksPath),
+    scanProfiles: readJson(scanProfilesPath),
+  });
 }
 
 function serializedPipeline(pipeline) {
@@ -151,9 +181,11 @@ function checkGenerated(pipeline) {
   process.exitCode = 1;
 }
 
-const pipeline = generate();
-if (process.argv.includes("--check")) {
-  checkGenerated(pipeline);
-} else {
-  writeGenerated(pipeline);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const pipeline = generate();
+  if (process.argv.includes("--check")) {
+    checkGenerated(pipeline);
+  } else {
+    writeGenerated(pipeline);
+  }
 }
