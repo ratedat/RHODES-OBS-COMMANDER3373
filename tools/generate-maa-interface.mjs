@@ -11,15 +11,27 @@ const CONTROLLER = "android_adb";
 const RESOURCE = "base";
 const ABANDONED_RUN_ID_TOKENS = new Set(["hope", "maxhope", "life", "lifepoints", "shield", "command", "commandlevel"]);
 
+const PROFILE_METADATA = [
+  ["runStatusFull", "基礎情報", "源石錐、等級、分隊、ISごとの特殊値を取得します。"],
+  ["operatorsFull", "オペレーター", "招集済みオペレーターを取得します。"],
+  ["relicsFull", "秘宝", "所持秘宝を取得します。"],
+  ["is4RevelationFull", "啓示", "IS#4の啓示を取得します。"],
+  ["is5ThoughtFull", "思案", "IS#5の思案を取得します。"],
+  ["is5AgeFull", "時代", "IS#5の時代を取得します。"],
+  ["is6CoinsFull", "通宝", "IS#6の通宝を取得します。"],
+];
+
+const PROFILE_ORDER = new Map(PROFILE_METADATA.map(([id], index) => [id, index]));
+
 const MANUAL_LABELS = new Map([
   ["RhodesProbe", ["Probe", "MAAFramework接続確認用のDirectHitタスクです。"]],
-  ["RhodesRunStatusIdeaIcon", ["基本情報: 構想アイコン", "構想値の基準点になるアイコンTemplateMatchです。"]],
-  ["RhodesRunStatusIngotIcon", ["基本情報: 源石錐アイコン", "源石錐の基準点になるアイコンTemplateMatchです。"]],
-  ["RhodesOperatorCodenameFlag", ["オペレーター: CODENAME", "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。"]],
-  ["RhodesOperatorNameOcr", ["オペレーター: 名前OCR", "招集カード領域をMAA-OCRで読ませます。"]],
-  ["RhodesRelicButton", ["画面判定: 秘宝ボタン", "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。"]],
-  ["RhodesOperatorButton", ["画面判定: 隊員ボタン", "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。"]],
-  ["RhodesThoughtButton", ["画面判定: 思案ボタン", "マップ下部の思案ボタンをMAA TemplateMatchで検出します。"]],
+  ["RhodesRunStatusIdeaIcon", ["基本情報: 構想アイコン", "構想値の基準点になるアイコンTemplateMatchです。", ["runStatusFull"]]],
+  ["RhodesRunStatusIngotIcon", ["基本情報: 源石錐アイコン", "源石錐の基準点になるアイコンTemplateMatchです。", ["runStatusFull"]]],
+  ["RhodesOperatorCodenameFlag", ["オペレーター: CODENAME", "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。", ["operatorsFull"]]],
+  ["RhodesOperatorNameOcr", ["オペレーター: 名前OCR", "招集カード領域をMAA-OCRで読ませます。", ["operatorsFull"]]],
+  ["RhodesRelicButton", ["画面判定: 秘宝ボタン", "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。", ["relicsFull"]]],
+  ["RhodesOperatorButton", ["画面判定: 隊員ボタン", "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。", ["operatorsFull"]]],
+  ["RhodesThoughtButton", ["画面判定: 思案ボタン", "マップ下部の思案ボタンをMAA TemplateMatchで検出します。", ["is5ThoughtFull"]]],
 ]);
 
 function readJson(filePath) {
@@ -50,6 +62,21 @@ function stringArray(value) {
   return [...new Set(value.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean))];
 }
 
+function orderedProfileIds(profileIds) {
+  return [...new Set(profileIds.filter((id) => PROFILE_ORDER.has(id)))]
+    .sort((left, right) => PROFILE_ORDER.get(left) - PROFILE_ORDER.get(right));
+}
+
+function withGroups(task, profileIds) {
+  const groups = orderedProfileIds(profileIds);
+  if (!groups.length) return task;
+  return { ...task, group: groups };
+}
+
+function taskProfileIds(task) {
+  return Array.isArray(task.group) ? task.group : [];
+}
+
 function generatedTask(entry, node) {
   const attach = node?.attach ?? {};
   const recognition = typeof node?.recognition === "string" ? node.recognition : "";
@@ -58,27 +85,27 @@ function generatedTask(entry, node) {
   const profileIds = stringArray(attach.profileIds);
   if (attach.profileId && !profileIds.includes(attach.profileId)) profileIds.push(attach.profileId);
   if (profileIds.length) sourceParts.push(`profiles: ${profileIds.join(", ")}`);
-  return {
+  return withGroups({
     name: taskName(entry),
     label: `生成: ${label}`,
     entry,
     controller: [CONTROLLER],
     resource: [RESOURCE],
     description: sourceParts.length ? sourceParts.join(" / ") : "生成済みMAA Resourceノードです。",
-  };
+  }, profileIds);
 }
 
 function manualTask(entry, node) {
-  const [label, description] = MANUAL_LABELS.get(entry) ?? [entry, "RHODES手動定義のMAA Resourceタスクです。"];
+  const [label, description, profileIds = []] = MANUAL_LABELS.get(entry) ?? [entry, "RHODES手動定義のMAA Resourceタスクです。", []];
   const recognition = typeof node?.recognition === "string" ? node.recognition : "";
-  return {
+  return withGroups({
     name: taskName(entry),
     label,
     entry,
     controller: [CONTROLLER],
     resource: [RESOURCE],
     description: [description, recognition].filter(Boolean).join(" / "),
-  };
+  }, profileIds);
 }
 
 function buildTasks(manualPipeline, generatedPipeline) {
@@ -97,7 +124,32 @@ function buildTasks(manualPipeline, generatedPipeline) {
   return tasks;
 }
 
+function buildGroups(tasks) {
+  const usedProfileIds = new Set(tasks.flatMap(taskProfileIds));
+  return PROFILE_METADATA
+    .filter(([id]) => usedProfileIds.has(id))
+    .map(([name, label, description], index) => ({
+      name,
+      label,
+      description,
+      default_expand: index < 3,
+    }));
+}
+
+function buildPresets(groups, tasks) {
+  return groups.map((group) => ({
+    name: group.name,
+    label: group.label,
+    description: `${group.label}プロファイルのResource taskだけを選択します。`,
+    task: tasks
+      .filter((task) => taskProfileIds(task).includes(group.name))
+      .map((task) => ({ name: task.name, option: { enabled: true } })),
+  }));
+}
+
 export function generateInterface({ manualPipeline, generatedPipeline }) {
+  const tasks = buildTasks(manualPipeline, generatedPipeline);
+  const groups = buildGroups(tasks);
   return {
     interface_version: 2,
     name: "rhodes_obs_commander3373",
@@ -124,7 +176,9 @@ export function generateInterface({ manualPipeline, generatedPipeline }) {
         controller: [CONTROLLER],
       },
     ],
-    task: buildTasks(manualPipeline, generatedPipeline),
+    group: groups,
+    task: tasks,
+    preset: buildPresets(groups, tasks),
   };
 }
 

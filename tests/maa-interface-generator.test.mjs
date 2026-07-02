@@ -63,6 +63,53 @@ test("MAA interface generator never publishes abandoned run value nodes", () => 
   assert.equal(taskEntries.has("RhodesOcrRegion_run_ingot"), true);
 });
 
+test("MAA interface generator groups tasks and presets by RHODES recognition profile", () => {
+  const manualPipeline = readJson("apps/rhodes-suki/resource/base/pipeline/rhodes.json");
+  const generatedPipeline = readJson("apps/rhodes-suki/resource/base/pipeline/rhodes-generated.json");
+  const projectInterface = generateInterface({ manualPipeline, generatedPipeline });
+  const groups = new Map(projectInterface.group.map((group) => [group.name, group]));
+  const presets = new Map(projectInterface.preset.map((preset) => [preset.name, preset]));
+  const tasks = new Map(projectInterface.task.map((task) => [task.entry, task]));
+
+  assert.deepEqual([...groups.keys()], [
+    "runStatusFull",
+    "operatorsFull",
+    "relicsFull",
+    "is4RevelationFull",
+    "is5ThoughtFull",
+    "is5AgeFull",
+    "is6CoinsFull",
+  ]);
+  assert.equal(groups.get("runStatusFull").label, "基礎情報");
+  assert.match(groups.get("runStatusFull").description, /源石錐/);
+  assert.equal(groups.get("operatorsFull").label, "オペレーター");
+  assert.equal(groups.get("is5ThoughtFull").default_expand, false);
+
+  assert.deepEqual(tasks.get("RhodesRunStatusIngotIcon").group, ["runStatusFull"]);
+  assert.deepEqual(tasks.get("RhodesOcrRegion_run_ingot").group, ["runStatusFull"]);
+  assert.deepEqual(tasks.get("RhodesOperatorNameOcr").group, ["operatorsFull"]);
+  assert.deepEqual(tasks.get("RhodesScreen_run_map_footer").group, [
+    "runStatusFull",
+    "operatorsFull",
+    "relicsFull",
+    "is4RevelationFull",
+    "is5ThoughtFull",
+    "is5AgeFull",
+    "is6CoinsFull",
+  ]);
+  assert.equal(Object.hasOwn(tasks.get("RhodesProbe"), "group"), false);
+
+  assert.deepEqual([...presets.keys()], [...groups.keys()]);
+  assert.equal(presets.get("runStatusFull").label, "基礎情報");
+  assert.match(presets.get("operatorsFull").description, /オペレーター/);
+  const runStatusPresetTasks = new Set(presets.get("runStatusFull").task.map((task) => task.name));
+  const operatorPresetTasks = new Set(presets.get("operatorsFull").task.map((task) => task.name));
+  assert.equal(runStatusPresetTasks.has("rhodes_ocr_region_run_ingot"), true);
+  assert.equal(runStatusPresetTasks.has("rhodes_operator_name_ocr"), false);
+  assert.equal(operatorPresetTasks.has("rhodes_operator_name_ocr"), true);
+  assert.equal(operatorPresetTasks.has("rhodes_ocr_region_run_ingot"), false);
+});
+
 test("checked-in MAA interface stays synchronized with generated task metadata", () => {
   const manualPipeline = readJson("apps/rhodes-suki/resource/base/pipeline/rhodes.json");
   const generatedPipeline = readJson("apps/rhodes-suki/resource/base/pipeline/rhodes-generated.json");

@@ -28,6 +28,50 @@
       ]
     }
   ],
+  "group": [
+    {
+      "name": "runStatusFull",
+      "label": "基礎情報",
+      "description": "源石錐、等級、分隊、ISごとの特殊値を取得します。",
+      "default_expand": true
+    },
+    {
+      "name": "operatorsFull",
+      "label": "オペレーター",
+      "description": "招集済みオペレーターを取得します。",
+      "default_expand": true
+    },
+    {
+      "name": "relicsFull",
+      "label": "秘宝",
+      "description": "所持秘宝を取得します。",
+      "default_expand": true
+    },
+    {
+      "name": "is4RevelationFull",
+      "label": "啓示",
+      "description": "IS#4の啓示を取得します。",
+      "default_expand": false
+    },
+    {
+      "name": "is5ThoughtFull",
+      "label": "思案",
+      "description": "IS#5の思案を取得します。",
+      "default_expand": false
+    },
+    {
+      "name": "is5AgeFull",
+      "label": "時代",
+      "description": "IS#5の時代を取得します。",
+      "default_expand": false
+    },
+    {
+      "name": "is6CoinsFull",
+      "label": "通宝",
+      "description": "IS#6の通宝を取得します。",
+      "default_expand": false
+    }
+  ],
   "task": [
     {
       "name": "rhodes_probe",
@@ -51,7 +95,10 @@
       "resource": [
         "base"
       ],
-      "description": "構想値の基準点になるアイコンTemplateMatchです。 / TemplateMatch"
+      "description": "構想値の基準点になるアイコンTemplateMatchです。 / TemplateMatch",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_run_status_ingot_icon",
@@ -63,7 +110,10 @@
       "resource": [
         "base"
       ],
-      "description": "源石錐の基準点になるアイコンTemplateMatchです。 / TemplateMatch"
+      "description": "源石錐の基準点になるアイコンTemplateMatchです。 / TemplateMatch",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_operator_codename_flag",
@@ -75,7 +125,10 @@
       "resource": [
         "base"
       ],
-      "description": "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。 / TemplateMatch"
+      "description": "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。 / TemplateMatch",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_operator_name_ocr",
@@ -87,7 +140,10 @@
       "resource": [
         "base"
       ],
-      "description": "招集カード領域をMAA-OCRで読ませます。 / OCR"
+      "description": "招集カード領域をMAA-OCRで読ませます。 / OCR",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_relic_button",
@@ -99,7 +155,10 @@
       "resource": [
         "base"
       ],
-      "description": "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。 / TemplateMatch"
+      "description": "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。 / TemplateMatch",
+      "group": [
+        "relicsFull"
+      ]
     },
     {
       "name": "rhodes_operator_button",
@@ -111,7 +170,10 @@
       "resource": [
         "base"
       ],
-      "description": "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。 / TemplateMatch"
+      "description": "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。 / TemplateMatch",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_thought_button",
@@ -123,7 +185,10 @@
       "resource": [
         "base"
       ],
-      "description": "マップ下部の思案ボタンをMAA TemplateMatchで検出します。 / TemplateMatch"
+      "description": "マップ下部の思案ボタンをMAA TemplateMatchで検出します。 / TemplateMatch",
+      "group": [
+        "is5ThoughtFull"
+      ]
     },
     {
       "name": "rhodes_screen_run_squad_info_panel",
@@ -135,7 +200,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.squad_info_panel / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.screens / run.squad_info_panel / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_screen_run_operator_list",
@@ -147,7 +215,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.operator_list / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.screens / run.operator_list / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_screen_run_sarkaz_age_detail",
@@ -159,7 +230,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.sarkaz_age_detail / profiles: is5AgeFull"
+      "description": "OCR / maa-tasks.screens / run.sarkaz_age_detail / profiles: is5AgeFull",
+      "group": [
+        "is5AgeFull"
+      ]
     },
     {
       "name": "rhodes_screen_run_map_footer",
@@ -171,7 +245,16 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is5ThoughtFull, is5AgeFull, is6CoinsFull"
+      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is5ThoughtFull, is5AgeFull, is6CoinsFull",
+      "group": [
+        "runStatusFull",
+        "operatorsFull",
+        "relicsFull",
+        "is4RevelationFull",
+        "is5ThoughtFull",
+        "is5AgeFull",
+        "is6CoinsFull"
+      ]
     },
     {
       "name": "rhodes_screen_run_map_footer_relic",
@@ -183,7 +266,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.map_footer.relic / profiles: relicsFull"
+      "description": "OCR / maa-tasks.screens / run.map_footer.relic / profiles: relicsFull",
+      "group": [
+        "relicsFull"
+      ]
     },
     {
       "name": "rhodes_candidate_is5_sarkaz_map_select_campaign",
@@ -195,7 +281,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.candidates / is5.sarkaz.map_select.campaign / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.candidates / is5.sarkaz.map_select.campaign / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_run_ingot",
@@ -207,7 +296,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.ingot / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.ocrRegions / run.ingot / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_run_idea",
@@ -219,7 +311,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.idea / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.ocrRegions / run.idea / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_run_idea_current",
@@ -231,7 +326,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.idea.current / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.ocrRegions / run.idea.current / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_run_squad_card",
@@ -243,7 +341,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.squad_card / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.ocrRegions / run.squad_card / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_run_squad_name",
@@ -255,7 +356,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.squad_name / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.ocrRegions / run.squad_name / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_run_difficulty_grade",
@@ -267,7 +371,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_grade / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_grade / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_run_difficulty_block",
@@ -279,7 +386,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_block / profiles: runStatusFull"
+      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_block / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_relic_list_text",
@@ -291,7 +401,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / relic.list_text / profiles: relicsFull"
+      "description": "OCR / maa-tasks.ocrRegions / relic.list_text / profiles: relicsFull",
+      "group": [
+        "relicsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_is4_revelation_list_text",
@@ -303,7 +416,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is4.revelation_list_text / profiles: is4RevelationFull"
+      "description": "OCR / maa-tasks.ocrRegions / is4.revelation_list_text / profiles: is4RevelationFull",
+      "group": [
+        "is4RevelationFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_is5_thought_list_text",
@@ -315,7 +431,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is5.thought_list_text / profiles: is5ThoughtFull"
+      "description": "OCR / maa-tasks.ocrRegions / is5.thought_list_text / profiles: is5ThoughtFull",
+      "group": [
+        "is5ThoughtFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_is6_coin_list_text",
@@ -327,7 +446,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is6.coin_list_text / profiles: is6CoinsFull"
+      "description": "OCR / maa-tasks.ocrRegions / is6.coin_list_text / profiles: is6CoinsFull",
+      "group": [
+        "is6CoinsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_list_text",
@@ -339,7 +461,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.list_text / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.list_text / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_left_1",
@@ -351,7 +476,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.1 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.1 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_center_1",
@@ -363,7 +491,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.1 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.1 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_right_1",
@@ -375,7 +506,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.1 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.1 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_left_2",
@@ -387,7 +521,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.2 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.2 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_center_2",
@@ -399,7 +536,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.2 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.2 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_right_2",
@@ -411,7 +551,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.2 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.2 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_left_3",
@@ -423,7 +566,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.3 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.3 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_center_3",
@@ -435,7 +581,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.3 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.3 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_right_3",
@@ -447,7 +596,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.3 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.3 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_left_4",
@@ -459,7 +611,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.4 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.4 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_center_4",
@@ -471,7 +626,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.4 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.4 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_right_4",
@@ -483,7 +641,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.4 / profiles: operatorsFull"
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.4 / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_is5_age_detail_text",
@@ -495,7 +656,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is5.age_detail_text / profiles: is5AgeFull"
+      "description": "OCR / maa-tasks.ocrRegions / is5.age_detail_text / profiles: is5AgeFull",
+      "group": [
+        "is5AgeFull"
+      ]
     },
     {
       "name": "rhodes_template_run_status_full_run_idea_current",
@@ -507,7 +671,10 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull"
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_template_run_status_full_run_ingot",
@@ -519,7 +686,10 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull"
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_template_operators_full_operator_recruit_name",
@@ -531,7 +701,10 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: operatorsFull"
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
     },
     {
       "name": "rhodes_template_operators_full_operator_card_name",
@@ -543,7 +716,349 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: operatorsFull"
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
+    }
+  ],
+  "preset": [
+    {
+      "name": "runStatusFull",
+      "label": "基礎情報",
+      "description": "基礎情報プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_run_status_idea_icon",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_run_status_ingot_icon",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_screen_run_squad_info_panel",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_candidate_is5_sarkaz_map_select_campaign",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_ingot",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_idea",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_idea_current",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_squad_card",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_squad_name",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_difficulty_grade",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_difficulty_block",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_template_run_status_full_run_idea_current",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_template_run_status_full_run_ingot",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "operatorsFull",
+      "label": "オペレーター",
+      "description": "オペレータープロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_operator_codename_flag",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_operator_name_ocr",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_operator_button",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_screen_run_operator_list",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_list_text",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_left_1",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_center_1",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_right_1",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_left_2",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_center_2",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_right_2",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_left_3",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_center_3",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_right_3",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_left_4",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_center_4",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_operator_name_right_4",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_template_operators_full_operator_recruit_name",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_template_operators_full_operator_card_name",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "relicsFull",
+      "label": "秘宝",
+      "description": "秘宝プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_relic_button",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_screen_run_map_footer_relic",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_relic_list_text",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "is4RevelationFull",
+      "label": "啓示",
+      "description": "啓示プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is4_revelation_list_text",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "is5ThoughtFull",
+      "label": "思案",
+      "description": "思案プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_thought_button",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is5_thought_list_text",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "is5AgeFull",
+      "label": "時代",
+      "description": "時代プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_screen_run_sarkaz_age_detail",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is5_age_detail_text",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "is6CoinsFull",
+      "label": "通宝",
+      "description": "通宝プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is6_coin_list_text",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
     }
   ]
 }
