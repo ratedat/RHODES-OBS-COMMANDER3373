@@ -59,7 +59,7 @@ flowchart LR
 - 接続済み: `/api/master` による master data 件数診断。Suki ローカルカタログとの差分をランタイム診断に表示する。
 - 接続済み: `/api/adb/detect` による MAA 風ADB候補/端末検出、`/api/adb/test` による解像度/スクリーンショット確認。
 - 接続済み: `/api/ocr/glm/status`、`/api/ocr/glm/install`、`/api/ocr/glm/uninstall`、`/api/ocr/glm/ollama/*` による任意 GLM-OCR/Ollama 管理。
-- 接続済み: `/api/recognition/scan/status` は互換の進捗確認口として残す。旧 `/api/recognition/scan`、`/api/recognition/scan/cancel`、`/trigger/scan/*` は 410 Gone とし、実行経路は MAAFramework native `Tasker` と `/api/recognition/maa-resource` に限定する。
+- 接続済み: 旧 `/api/recognition/scan`、`/api/recognition/scan/status`、`/api/recognition/scan/cancel`、`/trigger/scan/*` は 410 Gone とし、実行経路は MAAFramework native `Tasker` と `/api/recognition/maa-resource`、状態確認はSukiのMAA履歴/証跡に限定する。
 - 接続済み: Suki 側の保存操作から ADB path/serial/preset を `current-state.json` の既存 `adb` スキーマへ同期する。
 - 接続済み: Suki 側の保存操作からオペレーター/秘宝の選択、表示列、選択/除外フィルター、overlay scroll speed、Suki出力部品設定、OCR engine を既存 state/preference スキーマへ同期する。
 - 接続済み: Suki 側の現在ランIS切替と認識候補適用を API 優先で同期し、API不可時はローカル state へfallbackする。

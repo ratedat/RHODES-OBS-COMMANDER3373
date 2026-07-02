@@ -18,7 +18,7 @@ import { getRelicCategories, getRelicListView as buildRelicListView } from "./do
 import { buildStartTemplateSummary, getEffectiveRelicIds, mergeEffectiveSpecial, phaseLabel } from "./domain/start-templates.js";
 import { controlModeOptions, getControlMode, normalizeControlMode } from "./domain/ui-modes.js";
 import { controlV2ScreenOptions, getControlV2ScreenMeta, normalizeControlV2Screen } from "./domain/control-v2-screens.js";
-import { apiJson, masterUrl, recognitionScanStatusUrl, resetStateUrl, stateUrl } from "./lib/api.js";
+import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
 import { createSaveRequestTracker } from "./lib/save-request-tracker.js";
 import { readTauriStorageTarget } from "./lib/tauri-bridge.js";
 import { asCoinEntries, asSpecialArray, asSpecialObject, clampSpecialNumber } from "./domain/special-values.js";
@@ -65,8 +65,6 @@ const ui = {
   ollamaStatusTimer: null,
   tauriStorageTarget: null,
   tauriStorageError: "",
-  recognitionScanStatus: null,
-  recognitionScanStatusError: "",
 };
 
 let master = null;
@@ -74,7 +72,6 @@ let state = null;
 let maps = null;
 let saveTimer = null;
 let lastStateJson = "";
-let lastRecognitionScanStatusJson = "";
 const saveRequestTracker = createSaveRequestTracker();
 
 
@@ -1172,69 +1169,6 @@ function renderRecognitionScanControls() {
 }
 
 
-function recognitionScanStatusLabel(status) {
-  const labels = { running: "実行中", starting: "開始中", cancelling: "停止要求", completed: "完了", aborted: "中止", failed: "失敗", cancelled: "停止" };
-  return labels[status] || status || "待機";
-}
-
-function recognitionScanEventLabel(entry = {}) {
-  const labels = { capture: "スクショ", classify: "画面確認", tap: "タップ", swipe: "スワイプ", wait: "待機", open: "画面展開", fingerprint: "終端判定", recognize: "認識", scroll: "スクロール", restore: "復帰", cancel_requested: "停止要求" };
-  return labels[entry.event] || entry.event || "event";
-}
-
-function formatRecognitionScanTime(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleTimeString("ja-JP", { hour12: false });
-}
-
-function recognitionScanLogDetail(entry = {}) {
-  return [
-    entry.stage,
-    entry.label,
-    entry.iteration != null ? `#${entry.iteration}` : "",
-    entry.count != null ? `${entry.count}件` : "",
-    entry.status,
-    entry.reason,
-    entry.axis && entry.direction ? `${entry.axis}/${entry.direction}` : "",
-    entry.error,
-  ].filter(Boolean).join(" / ");
-}
-
-function renderRecognitionScanStatus() {
-  const payload = ui.recognitionScanStatus || {};
-  const active = payload.active;
-  const last = payload.lastScan;
-  const current = active || last;
-  const error = ui.recognitionScanStatusError;
-  if (!current && !error) {
-    return `<div class="recognition-status-card idle"><div><strong>MAAFramework取得ログ</strong><span>Suki / MAAFrameworkの認識ワークフローを実行すると進行と結果がここに残ります。</span></div></div>`;
-  }
-  const isActive = Boolean(active);
-  const logRows = (current?.log || []).slice(-8).reverse();
-  const counts = current?.counts || {};
-  const logPath = last?.logPath || current?.logPath || "";
-  return `
-    <div class="recognition-status-card ${isActive ? "active" : "complete"}">
-      <div class="recognition-status-head">
-        <div><strong>${html(isActive ? "MAAFramework取得中" : "直近のMAAFramework取得")}</strong><span>${html(current?.profileLabel || current?.profileId || "profile未取得")}</span></div>
-        <em>${html(recognitionScanStatusLabel(current?.status))}</em>
-      </div>
-      <div class="recognition-status-grid">
-        <div><span>Stage</span><strong>${html(current?.stage || current?.reason || "-")}</strong></div>
-        <div><span>候補</span><strong>${html(counts.suggestions ?? "-")}</strong></div>
-        <div><span>認識</span><strong>${html(counts.candidates ?? "-")}</strong></div>
-        <div><span>更新</span><strong>${html(formatRecognitionScanTime(current?.updatedAt || current?.completedAt || current?.startedAt))}</strong></div>
-      </div>
-      ${error ? `<div class="recognition-status-error">${html(error)}</div>` : ""}
-      <div class="recognition-log-list">
-        ${logRows.length ? logRows.map((entry) => `<div class="recognition-log-row"><span>${html(formatRecognitionScanTime(entry.at))}</span><strong>${html(recognitionScanEventLabel(entry))}</strong><em>${html(recognitionScanLogDetail(entry))}</em></div>`).join("") : `<div class="empty-state">まだログイベントはありません。</div>`}
-      </div>
-      ${logPath ? `<div class="recognition-log-path"><span>保存ログ</span><code title="${html(logPath)}">${html(logPath)}</code></div>` : ""}
-    </div>
-  `;
-}
 function renderRecognitionSuggestionList(limit = Infinity) {
   const suggestions = state.pendingSuggestions || [];
   const visible = suggestions.slice(0, limit);
@@ -1251,10 +1185,9 @@ function renderControlV2RecognitionPanel() {
     <section class="control-v2-panel control-v2-recognition-panel">
       <div class="control-v2-panel-head"><h2>MAAFramework取得</h2><span>候補 ${suggestions.length}</span></div>
       <div class="control-v2-panel-body control-v2-effect-stack">
-        <div class="control-v2-subsection">
-          <div class="control-v2-subhead"><strong>取得導線</strong><span>候補承認までOverlayには反映しません</span></div>
-          ${renderRecognitionScanControls()}
-          ${renderRecognitionScanStatus()}
+          <div class="control-v2-subsection">
+            <div class="control-v2-subhead"><strong>取得導線</strong><span>候補承認までOverlayには反映しません</span></div>
+            ${renderRecognitionScanControls()}
         </div>
         <div class="control-v2-subsection">
           <div class="control-v2-subhead"><strong>レビュー待ち</strong><span>削除のみ / 反映UIは次段階</span></div>
@@ -1435,7 +1368,6 @@ function renderControlV2SidecarScreen() {
         <div class="control-v2-panel-head"><div><h2>MAAFramework / OCR取得</h2><p>取得結果は候補扱い。承認までOverlayへ反映しません</p></div><span>scan</span></div>
         <div class="control-v2-panel-body control-v2-sidecar-stack">
           ${renderRecognitionScanControls()}
-          ${renderRecognitionScanStatus()}
           <div class="control-v2-subsection">
             <div class="control-v2-subhead"><strong>レビュー待ち</strong><span>${html(suggestions.length)}件</span></div>
             ${renderRecognitionSuggestionList(8)}
@@ -1888,13 +1820,6 @@ function getControlEventContext() {
 }
 
 registerControlEvents(app, getControlEventContext());
-function shouldRenderRecognitionScanStatusUpdate() {
-  if (view === "sidecar") return true;
-  if (view !== "control-v2") return false;
-  const screen = getControlV2Screen();
-  return screen === "common" || screen === "sidecar";
-}
-
 function shouldRenderTauriStorageUpdate() {
   return view === "control-v2" && getControlV2Screen() === "obs";
 }
@@ -1912,22 +1837,6 @@ async function refreshTauriStorageTarget({ render = true } = {}) {
   if (render && shouldRenderTauriStorageUpdate()) renderInteractive();
 }
 
-async function pollRecognitionScanStatus() {
-  try {
-    const next = await apiJson(recognitionScanStatusUrl);
-    const json = JSON.stringify(next);
-    if (json !== lastRecognitionScanStatusJson) {
-      lastRecognitionScanStatusJson = json;
-      ui.recognitionScanStatus = next;
-      ui.recognitionScanStatusError = "";
-      if (shouldRenderRecognitionScanStatusUpdate()) renderInteractive();
-    }
-    setTimeout(pollRecognitionScanStatus, next?.active ? 700 : 2000);
-  } catch (error) {
-    ui.recognitionScanStatusError = error.message;
-    setTimeout(pollRecognitionScanStatus, 2500);
-  }
-}
 async function pollOverlay() {
   try {
     const next = await apiJson(stateUrl);
@@ -1960,7 +1869,6 @@ async function boot() {
       ui.saveStatus = "保存済み";
       renderInteractive();
       refreshTauriStorageTarget().catch(() => {});
-      if (view === "control-v2" || view === "sidecar") pollRecognitionScanStatus();
     }
   } catch (error) {
     app.dataset.loading = "false";

@@ -2,7 +2,6 @@ export const stateUrl = "/api/state";
 export const masterUrl = "/api/master";
 export const healthUrl = "/api/health";
 export const resetStateUrl = "/api/state/reset";
-export const recognitionScanStatusUrl = "/api/recognition/scan/status";
 export const adbDetectUrl = "/api/adb/detect";
 export const adbTestUrl = "/api/adb/test";
 export const adbSelectPathUrl = "/api/adb/select-path";

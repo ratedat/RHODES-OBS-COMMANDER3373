@@ -62,7 +62,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private SukiOptionalRuntimeStatus _glmRuntimeStatus = new("GLM-OCR", "未確認", "状態確認を実行してください。", false, false);
     private SukiOptionalRuntimeStatus _ollamaRuntimeStatus = new("Ollama", "未確認", "状態確認を実行してください。", false, false);
     private SukiHypervisorStatus _hypervisorStatus = new("未確認", "Google Play Gamesや一部エミュレーターの前提確認", false, false, "info");
-    private RhodesRecognitionScanStatusPreview _recognitionScanStatus = RhodesRecognitionScanStatusPreview.Empty;
     private Bitmap? _lastCaptureImage;
     private int _capturePixelWidth;
     private int _capturePixelHeight;
@@ -230,7 +229,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunAllProbesCommand = new AsyncRelayCommand(RunAllProbesAsync);
         RunSelectedProfileRecognitionCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAsync);
         RunSelectedProfileRecognitionAndApplyCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAndApplyAsync);
-        RefreshRecognitionScanStatusCommand = new AsyncRelayCommand(RefreshRecognitionScanStatusAsync);
         RefreshRecognitionScanHistoryCommand = new AsyncRelayCommand(RefreshRecognitionScanHistoryAsync);
         LoadRecognitionScanHistoryCommand = new AsyncRelayCommand(parameter => LoadRecognitionScanHistoryAsync(parameter as RhodesRecognitionScanHistoryItem));
         OpenPreviewUrlCommand = new AsyncRelayCommand(OpenPreviewUrlAsync);
@@ -1163,8 +1161,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand RunSelectedProfileRecognitionAndApplyCommand { get; }
 
-    public ICommand RefreshRecognitionScanStatusCommand { get; }
-
     public ICommand RefreshRecognitionScanHistoryCommand { get; }
 
     public ICommand LoadRecognitionScanHistoryCommand { get; }
@@ -1220,17 +1216,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RunProbeCommand { get; }
 
     public ICommand RunResourceTaskCommand { get; }
-
-    public RhodesRecognitionScanStatusPreview RecognitionScanStatus
-    {
-        get => _recognitionScanStatus;
-        private set
-        {
-            if (!SetProperty(ref _recognitionScanStatus, value))
-                return;
-            RefreshInspectorRows();
-        }
-    }
 
     public ICommand SetWorkspaceCommand { get; }
 
@@ -1492,7 +1477,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (WorkspaceTab == "recognition")
         {
             yield return new SukiInspectorRow("認識プロファイル", SelectedResourceProfile?.DisplayName ?? "-", SelectedResourceProfile?.ProfileSummary ?? "");
-            yield return new SukiInspectorRow("API進捗", RecognitionScanStatus.Summary, RecognitionScanStatus.Detail);
             yield return new SukiInspectorRow(
                 "履歴",
                 $"{RecognitionScanHistory.Count}件",
@@ -3021,27 +3005,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await RunAllResourceTasksCoreAsync();
             await ConvertResourceTaskResultsCoreAsync();
             await ApplyCandidateResultsCoreAsync();
-        });
-    }
-
-    private async Task RefreshRecognitionScanStatusAsync()
-    {
-        await RunBusyAsync(async () =>
-        {
-            StatusMessage = "認識スキャン進捗を確認しています。";
-            RecognitionScanStatus = await RhodesRecognitionScanStatusClient.FetchAsync(RhodesApiUrl);
-            _rhodesApiStatus = RecognitionScanStatus.Succeeded
-                ? new SukiOptionalRuntimeStatus("RHODES API", "接続済み", "scan status取得済み", true, false)
-                : new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", RecognitionScanStatus.Error, false, false);
-            RefreshRuntimeCapabilities();
-            if (!string.IsNullOrWhiteSpace(RecognitionScanStatus.LastLogPath))
-                LastResourceTaskResultsPath = RecognitionScanStatus.LastLogPath;
-            else
-                RefreshRecognitionScanHistory();
-            RefreshInspectorRows();
-            StatusMessage = RecognitionScanStatus.Succeeded
-                ? $"認識スキャン進捗: {RecognitionScanStatus.Summary}"
-                : $"認識スキャン進捗取得失敗: {RecognitionScanStatus.Error}";
         });
     }
 

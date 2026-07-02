@@ -39,6 +39,7 @@ test("health API exposes app, state, and runtime endpoint summary", async () => 
     assert.equal(payload.recognition.active, false);
     assert.equal(payload.endpoints.state, "/api/state");
     assert.equal(payload.endpoints.recognitionScan, undefined);
+    assert.equal(payload.endpoints.recognitionScanStatus, undefined);
     assert.equal(payload.endpoints.recognitionMaaResource, "/api/recognition/maa-resource");
     assert.equal(payload.endpoints.glmOcr, "/api/ocr/glm/status");
   } finally {
@@ -56,12 +57,14 @@ test("legacy recognition scan routes are retired in favor of MAA Resource recogn
     });
     const scanPayload = await scanResponse.json();
     const cancelResponse = await fetch(`http://127.0.0.1:${port}/api/recognition/scan/cancel`, { method: "POST" });
+    const statusResponse = await fetch(`http://127.0.0.1:${port}/api/recognition/scan/status`);
     const triggerResponse = await fetch(`http://127.0.0.1:${port}/trigger/scan/sarkaz/age`);
 
     assert.equal(scanResponse.status, 410);
     assert.equal(scanPayload.details.replacement, "/api/recognition/maa-resource");
     assert.match(scanPayload.error, /MAAFramework/);
     assert.equal(cancelResponse.status, 410);
+    assert.equal(statusResponse.status, 410);
     assert.equal(triggerResponse.status, 410);
   } finally {
     await closeServer(server);
@@ -363,18 +366,4 @@ test("saveRecognitionAdbCaptureFrame writes scan screenshots to a readable debug
   assert.match(screenshot.path, /is5AgeFull/);
   assert.match(screenshot.path, /scan_with_unsafe_chars/);
   assert.deepEqual([...await fs.readFile(screenshot.path)], [0x89, 0x50, 0x4e, 0x47]);
-});
-
-test("recognition scan status API remains available as a passive MAAFramework bridge", async () => {
-  const { server, port } = await startServer({ port: 0 });
-  try {
-    const statusResponse = await fetch(`http://127.0.0.1:${port}/api/recognition/scan/status`);
-    const statusPayload = await statusResponse.json();
-
-    assert.equal(statusResponse.status, 200);
-    assert.equal(statusPayload.active, null);
-    assert.equal(statusPayload.lastScan, null);
-  } finally {
-    await closeServer(server);
-  }
 });

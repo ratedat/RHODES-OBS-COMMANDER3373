@@ -166,7 +166,6 @@ async function buildHealthPayload() {
       state: "/api/state",
       master: "/api/master",
       recognitionMaaResource: "/api/recognition/maa-resource",
-      recognitionScanStatus: "/api/recognition/scan/status",
       hypervisor: "/api/system/hypervisor",
       glmOcr: "/api/ocr/glm/status",
       ollama: "/api/ocr/glm/ollama/status",
@@ -619,7 +618,7 @@ export function createAppServer({
     }
 
     if (req.method === "GET" && url.pathname === "/api/recognition/scan/status") {
-      return sendJson(res, 200, { active: null, lastScan: null });
+      throw legacyRecognitionScanError();
     }
 
     if (req.method === "POST" && url.pathname === "/api/recognition/scan") {

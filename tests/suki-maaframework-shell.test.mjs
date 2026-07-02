@@ -266,6 +266,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RecognitionScanLogRows/);
   assert.match(viewModel, /RefreshRecognitionScanHistoryCommand/);
   assert.match(viewModel, /LoadRecognitionScanHistoryCommand/);
+  assert.doesNotMatch(viewModel, /RefreshRecognitionScanStatusCommand/);
+  assert.doesNotMatch(viewModel, /RhodesRecognitionScanStatusClient/);
   assert.match(viewModel, /RhodesRecognitionScanHistory\.LoadRecent/);
   assert.match(viewModel, /RhodesRecognitionScanHistory\.LoadPayload/);
   assert.match(viewModel, /TryLoadCapturePreviewFromPath/);
@@ -536,6 +538,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /SequenceEqual\(items\)/);
   assert.match(mainWindowCodeBehind, /CloseOpenComboBoxesOnOutsidePress/);
   assert.match(mainWindowCodeBehind, /IsDropDownOpen = false/);
+  assert.doesNotMatch(mainWindowAxaml, /API進捗/);
+  assert.doesNotMatch(mainWindowAxaml, /RefreshRecognitionScanStatusCommand/);
   assert.doesNotMatch(resource, /RhodesRunStatusTopBarOcr/);
   assert.match(resource, /RhodesOperatorCodenameFlag/);
   assert.match(resource, /OperatorCardCodeNameFlag\.png/);
