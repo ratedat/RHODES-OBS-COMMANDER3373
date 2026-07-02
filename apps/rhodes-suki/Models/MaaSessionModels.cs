@@ -582,6 +582,7 @@ public sealed record RhodesRecognitionScanHistoryItem(
     int CandidateCount,
     int LogCount,
     int ResourceTaskCount,
+    int PresetTaskCount,
     string LogPath,
     string Error,
     DateTimeOffset SortTimestamp)
@@ -597,7 +598,7 @@ public sealed record RhodesRecognitionScanHistoryItem(
     public string TimestampLabel => SortTimestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
     public string Summary => ResourceTaskCount > 0
-        ? $"{SourceLabel} / candidates={CandidateCount} / tasks={ResourceTaskCount} / log={LogCount}"
+        ? $"{SourceLabel} / candidates={CandidateCount} / tasks={ResourceTaskCount} / preset={PresetTaskCount} / log={LogCount}"
         : $"{SourceLabel} / candidates={CandidateCount} / log={LogCount}";
 
     public string Detail => string.IsNullOrWhiteSpace(Error)

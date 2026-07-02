@@ -21,13 +21,22 @@ public static class RhodesMaaRecognitionEvidenceLog
         string? requestId = null,
         string? scanId = null,
         string? capturePath = null,
-        long captureBytes = 0)
+        long captureBytes = 0,
+        string? profileLabel = null,
+        IEnumerable<string>? presetTaskEntries = null)
     {
         var resultList = taskResults.ToArray();
         var candidateList = candidates.ToArray();
+        var presetEntries = presetTaskEntries?
+            .Where(entry => !string.IsNullOrWhiteSpace(entry))
+            .Select(entry => entry.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray()
+            ?? [];
         var id = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("D") : requestId.Trim();
         var effectiveScanId = string.IsNullOrWhiteSpace(scanId) ? id : scanId.Trim();
         var normalizedProfile = NormalizeProfile(profileId);
+        var normalizedProfileLabel = string.IsNullOrWhiteSpace(profileLabel) ? normalizedProfile : profileLabel.Trim();
         var normalizedCapturePath = string.IsNullOrWhiteSpace(capturePath) ? "" : capturePath.Trim();
         var log = new List<object>();
         if (!string.IsNullOrWhiteSpace(normalizedCapturePath))
@@ -62,7 +71,7 @@ public static class RhodesMaaRecognitionEvidenceLog
             requestId = id,
             scanId = effectiveScanId,
             profileId = normalizedProfile,
-            profileLabel = normalizedProfile,
+            profileLabel = normalizedProfileLabel,
             source = Source,
             status = "completed",
             reason = (string?)null,
@@ -75,6 +84,7 @@ public static class RhodesMaaRecognitionEvidenceLog
                 autoApplied = 0,
                 log = log.Count,
                 resourceTasks = resultList.Length,
+                presetTasks = presetEntries.Length,
                 failedResourceTasks = resultList.Count(result => !result.Succeeded),
             },
             candidates = candidateList,
@@ -84,6 +94,12 @@ public static class RhodesMaaRecognitionEvidenceLog
             evidence = new
             {
                 kind = "maa-resource-task-results",
+                profile = new
+                {
+                    id = normalizedProfile,
+                    label = normalizedProfileLabel,
+                    presetTaskEntries = presetEntries,
+                },
                 capture = new
                 {
                     path = normalizedCapturePath,
@@ -106,7 +122,9 @@ public static class RhodesMaaRecognitionEvidenceLog
         DateTimeOffset? startedAt = null,
         DateTimeOffset? completedAt = null,
         string? capturePath = null,
-        long captureBytes = 0)
+        long captureBytes = 0,
+        string? profileLabel = null,
+        IEnumerable<string>? presetTaskEntries = null)
     {
         Directory.CreateDirectory(directory);
         var completed = completedAt ?? DateTimeOffset.UtcNow;
@@ -114,7 +132,7 @@ public static class RhodesMaaRecognitionEvidenceLog
         var requestId = Guid.NewGuid().ToString("D");
         var normalizedProfile = NormalizeProfile(profileId) ?? "all";
         var file = Path.Combine(directory, $"recognition-{TimestampForFile(started)}-{SanitizeFilePart(normalizedProfile)}-{SanitizeFilePart(requestId)}.json");
-        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes);
+        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes, profileLabel, presetTaskEntries);
         await File.WriteAllTextAsync(file, $"{json}{Environment.NewLine}");
         return file;
     }

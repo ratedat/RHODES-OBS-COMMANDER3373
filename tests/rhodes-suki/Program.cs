@@ -1588,15 +1588,19 @@ static void MaaNativeEvidenceLog()
         "request-a",
         "scan-a",
         "O:/debug/native-capture.png",
-        12345);
+        12345,
+        "オペレーター",
+        ["RhodesOperatorNameOcr", "RhodesOcrRegion_operator_name"]);
 
     var root = JsonNode.Parse(json)!.AsObject();
     Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
     Equal("operatorsFull", root["profileId"]!.GetValue<string>(), "evidence profile");
+    Equal("オペレーター", root["profileLabel"]!.GetValue<string>(), "evidence profile label");
     Equal("suki-maa-native", root["source"]!.GetValue<string>(), "evidence source");
     var counts = root["counts"]!.AsObject();
     Equal(1, counts["candidates"]!.GetValue<int>(), "evidence candidate count");
     Equal(2, counts["resourceTasks"]!.GetValue<int>(), "evidence task count");
+    Equal(2, counts["presetTasks"]!.GetValue<int>(), "evidence preset task count");
     Equal(1, counts["failedResourceTasks"]!.GetValue<int>(), "evidence failed count");
     Equal(3, counts["log"]!.GetValue<int>(), "evidence log count includes capture");
     Equal("capture", root["log"]!.AsArray()[0]!.AsObject()["event"]!.GetValue<string>(), "evidence capture log event");
@@ -1604,6 +1608,9 @@ static void MaaNativeEvidenceLog()
     Equal("maa-task", root["log"]!.AsArray()[1]!.AsObject()["event"]!.GetValue<string>(), "evidence task log event");
     var evidence = root["evidence"]!.AsObject();
     Equal("maa-resource-task-results", evidence["kind"]!.GetValue<string>(), "evidence kind");
+    Equal("operatorsFull", evidence["profile"]!.AsObject()["id"]!.GetValue<string>(), "evidence profile object id");
+    Equal("オペレーター", evidence["profile"]!.AsObject()["label"]!.GetValue<string>(), "evidence profile object label");
+    Equal(2, evidence["profile"]!.AsObject()["presetTaskEntries"]!.AsArray().Count, "evidence preset entries");
     Equal("O:/debug/native-capture.png", evidence["capture"]!.AsObject()["path"]!.GetValue<string>(), "evidence capture path");
     Equal(2, evidence["diagnostics"]!.AsObject()["total"]!.GetValue<int>(), "evidence diagnostics");
 }
@@ -1652,16 +1659,20 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
                 "native-request",
                 "native-scan",
                 "O:/debug/native-shot.png",
-                54321));
+                54321,
+                "オペレーター",
+                ["RhodesOperatorNameOcr"]));
         File.WriteAllText(Path.Combine(directory, "recognition-broken.json"), "{");
 
         var history = RhodesRecognitionScanHistory.LoadRecent(directory, limit: 8);
 
         Equal(2, history.Count, "history count");
         Equal("operatorsFull", history[0].ProfileId, "newest profile");
+        Equal("オペレーター", history[0].ProfileLabel, "newest profile label");
         Equal("suki-maa-native", history[0].Source, "native source");
         Equal(1, history[0].CandidateCount, "native candidate count");
         Equal(1, history[0].ResourceTaskCount, "native task count");
+        Equal(1, history[0].PresetTaskCount, "native preset task count");
         Equal("秘宝スキャン", history[1].DisplayProfile, "api profile label");
         Equal(1, history[1].CandidateCount, "api candidate count");
         Equal(4, history[1].LogCount, "api log count");

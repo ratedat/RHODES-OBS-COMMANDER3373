@@ -97,6 +97,7 @@ public static class RhodesRecognitionScanHistory
                 CandidateCount: candidateCount,
                 LogCount: logCount,
                 ResourceTaskCount: JsonInt(counts, "resourceTasks"),
+                PresetTaskCount: PresetTaskCount(root, counts),
                 LogPath: path,
                 Error: JsonError(root),
                 SortTimestamp: observedAt);
@@ -142,6 +143,17 @@ public static class RhodesRecognitionScanHistory
             && value.ValueKind == JsonValueKind.Array
             ? value.GetArrayLength()
             : 0;
+    }
+
+    private static int PresetTaskCount(JsonElement root, JsonElement counts)
+    {
+        var count = JsonInt(counts, "presetTasks");
+        if (count > 0)
+            return count;
+
+        var evidence = ObjectProperty(root, "evidence");
+        var profile = ObjectProperty(evidence, "profile");
+        return JsonArrayCount(profile, "presetTaskEntries");
     }
 
     private static string JsonError(JsonElement root)

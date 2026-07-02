@@ -4236,7 +4236,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             profileId,
             RhodesSukiDebugPaths.RecognitionScansDirectory,
             capturePath: LastCapturePath,
-            captureBytes: _lastCapture.Length);
+            captureBytes: _lastCapture.Length,
+            profileLabel: string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal) ? SelectedResourceProfile?.Label : null,
+            presetTaskEntries: string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal) ? SelectedResourceProfile?.TaskEntries : null);
     }
 
     private static string ResolveMaaTasksSourcePath()
