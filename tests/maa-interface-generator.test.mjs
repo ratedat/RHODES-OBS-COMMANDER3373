@@ -88,8 +88,8 @@ test("MAA interface generator groups tasks and presets by RHODES recognition pro
   assert.equal(groups.get("runStatusFull").label, "基礎情報");
   assert.equal(groups.get("runStatusFull").label, runStatusSource.interfaceLabel);
   assert.match(groups.get("runStatusFull").description, /源石錐/);
-  assert.match(runStatusSource.interfaceDescription, /希望、耐久値、シールド、指揮Lvは取得対象外/);
-  assert.match(groups.get("runStatusFull").description, /希望、耐久値、シールド、指揮Lvは取得対象外/);
+  assert.doesNotMatch(runStatusSource.interfaceDescription, /希望|耐久値|シールド|指揮Lv/);
+  assert.doesNotMatch(groups.get("runStatusFull").description, /希望|耐久値|シールド|指揮Lv/);
   assert.match(groups.get("runStatusFull").description, /maa-recognition-target-policy\.json/);
   assert.equal(groups.get("operatorsFull").label, "オペレーター");
   assert.equal(groups.get("is5ThoughtFull").default_expand, false);

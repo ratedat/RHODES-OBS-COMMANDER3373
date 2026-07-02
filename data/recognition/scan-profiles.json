@@ -6,7 +6,7 @@
       "id": "runStatusFull",
       "label": "基本情報スキャン",
       "interfaceLabel": "基礎情報",
-      "interfaceDescription": "源石錐、等級、分隊、ISごとの特殊値を取得します。希望、耐久値、シールド、指揮Lvは取得対象外です。",
+      "interfaceDescription": "源石錐、等級、分隊、ISごとの特殊値を取得します。",
       "candidateKind": "runStatus",
       "ocrEngine": "maa-ocr",
       "ocrRegionIds": [
@@ -125,7 +125,7 @@
       "endFingerprintStableCount": 1,
       "captureDelayMs": 180,
       "inferredScreenId": "run-squad-info-panel",
-      "navigationNote": "分隊は左下をクリックすると等級と同時に表示される。構想は下部中央の家型アイコン下、源石錐は右上の源石錐アイコンを基準に取得する。希望、耐久値、シールド、指揮Lvは取得対象外。",
+      "navigationNote": "分隊は左下をクリックすると等級と同時に表示される。構想は下部中央の家型アイコン下、源石錐は右上の源石錐アイコンを基準に取得する。",
       "targetScreenIds": [
         "run-squad-info-panel"
       ]

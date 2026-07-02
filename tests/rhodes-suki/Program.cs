@@ -1893,7 +1893,10 @@ static void ResourceProfilesUseInterfaceGroups()
 
     Equal("基礎情報", runStatus.Label, "run status interface label");
     Equal(true, runStatus.Description.Contains("源石錐", StringComparison.Ordinal), "run status interface description");
-    Equal(true, runStatus.Description.Contains("希望、耐久値、シールド、指揮Lvは取得対象外", StringComparison.Ordinal), "run status excluded target description");
+    Equal(false, runStatus.Description.Contains("希望", StringComparison.Ordinal), "run status omits abandoned target names");
+    Equal(false, runStatus.Description.Contains("耐久値", StringComparison.Ordinal), "run status omits abandoned target names");
+    Equal(false, runStatus.Description.Contains("シールド", StringComparison.Ordinal), "run status omits abandoned target names");
+    Equal(false, runStatus.Description.Contains("指揮Lv", StringComparison.Ordinal), "run status omits abandoned target names");
     Equal(true, runStatus.Description.Contains("maa-recognition-target-policy.json", StringComparison.Ordinal), "run status target policy source");
     Equal("source: interface.json group/preset", runStatus.SourceSummary, "run status interface source");
     Equal(true, (runStatus.TaskEntries ?? []).Contains("RhodesOcrRegion_run_ingot"), "run status preset includes ingot");
