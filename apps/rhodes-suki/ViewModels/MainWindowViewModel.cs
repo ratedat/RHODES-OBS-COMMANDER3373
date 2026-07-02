@@ -3219,6 +3219,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = "選択プロファイルにResource taskがありません。";
             return;
         }
+        if (!await EnsureCaptureAsync())
+            return;
 
         foreach (var task in ResourceTasks)
         {
@@ -3350,6 +3352,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             ClearRoiRescanComparison();
+            if (!await EnsureCaptureAsync())
+                return;
+
             var result = await _session.RunResourceTaskAsync(task.Entry);
             ResourceTaskResults.Add(result);
             RefreshResourceTaskDiagnostics();
@@ -4278,7 +4283,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return path;
     }
 
-    private static async Task<string> SaveResourceTaskResultsAsync(
+    private async Task<string> SaveResourceTaskResultsAsync(
         IEnumerable<MaaTaskRunResult> taskResults,
         string? profileId,
         IEnumerable<MaaCandidatePreview>? candidates = null)
@@ -4287,7 +4292,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             taskResults,
             candidates ?? [],
             profileId,
-            RhodesSukiDebugPaths.RecognitionScansDirectory);
+            RhodesSukiDebugPaths.RecognitionScansDirectory,
+            capturePath: LastCapturePath,
+            captureBytes: _lastCapture.Length);
     }
 
     private static string ResolveMaaTasksSourcePath()

@@ -1555,7 +1555,9 @@ static void MaaNativeEvidenceLog()
         DateTimeOffset.Parse("2026-07-01T00:00:00Z"),
         DateTimeOffset.Parse("2026-07-01T00:00:02Z"),
         "request-a",
-        "scan-a");
+        "scan-a",
+        "O:/debug/native-capture.png",
+        12345);
 
     var root = JsonNode.Parse(json)!.AsObject();
     Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
@@ -1565,9 +1567,13 @@ static void MaaNativeEvidenceLog()
     Equal(1, counts["candidates"]!.GetValue<int>(), "evidence candidate count");
     Equal(2, counts["resourceTasks"]!.GetValue<int>(), "evidence task count");
     Equal(1, counts["failedResourceTasks"]!.GetValue<int>(), "evidence failed count");
-    Equal("maa-task", root["log"]!.AsArray()[0]!.AsObject()["event"]!.GetValue<string>(), "evidence log event");
+    Equal(3, counts["log"]!.GetValue<int>(), "evidence log count includes capture");
+    Equal("capture", root["log"]!.AsArray()[0]!.AsObject()["event"]!.GetValue<string>(), "evidence capture log event");
+    Equal("O:/debug/native-capture.png", root["log"]!.AsArray()[0]!.AsObject()["path"]!.GetValue<string>(), "evidence capture log path");
+    Equal("maa-task", root["log"]!.AsArray()[1]!.AsObject()["event"]!.GetValue<string>(), "evidence task log event");
     var evidence = root["evidence"]!.AsObject();
     Equal("maa-resource-task-results", evidence["kind"]!.GetValue<string>(), "evidence kind");
+    Equal("O:/debug/native-capture.png", evidence["capture"]!.AsObject()["path"]!.GetValue<string>(), "evidence capture path");
     Equal(2, evidence["diagnostics"]!.AsObject()["total"]!.GetValue<int>(), "evidence diagnostics");
 }
 
@@ -1613,7 +1619,9 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
                 DateTimeOffset.Parse("2026-07-01T00:00:02Z"),
                 DateTimeOffset.Parse("2026-07-01T00:00:03Z"),
                 "native-request",
-                "native-scan"));
+                "native-scan",
+                "O:/debug/native-shot.png",
+                54321));
         File.WriteAllText(Path.Combine(directory, "recognition-broken.json"), "{");
 
         var history = RhodesRecognitionScanHistory.LoadRecent(directory, limit: 8);
@@ -1631,10 +1639,14 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
         Equal(true, nativePayload.Succeeded, "native payload succeeded");
         Equal(1, nativePayload.Candidates.Count, "native payload candidates");
         Equal(1, nativePayload.TaskResults.Count, "native payload task results");
-        Equal(1, nativePayload.LogRows.Count, "native payload log rows");
-        Equal("maa-task", nativePayload.LogRows[0].DisplayName, "native payload log event");
-        Equal("RhodesOcrRegion_operator_name", nativePayload.LogRows[0].Entry, "native payload log entry");
+        Equal(2, nativePayload.LogRows.Count, "native payload log rows");
+        Equal("capture", nativePayload.LogRows[0].DisplayName, "native payload capture event");
+        Equal("O:/debug/native-shot.png", nativePayload.LogRows[0].Path, "native payload capture path");
+        Equal(true, nativePayload.LogRows[0].HasImagePath, "native payload capture image path");
+        Equal("maa-task", nativePayload.LogRows[1].DisplayName, "native payload log event");
+        Equal("RhodesOcrRegion_operator_name", nativePayload.LogRows[1].Entry, "native payload log entry");
         Equal("グム", nativePayload.Candidates[0].Label, "native payload candidate label");
+        Equal("O:/debug/native-shot.png", nativePayload.FirstImagePath, "native payload first image path");
 
         var apiPayload = RhodesRecognitionScanHistory.LoadPayload(history[1].LogPath);
         Equal(true, apiPayload.Succeeded, "api payload succeeded");
