@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { isRetainedRecognitionSource } from "./maa-recognition-policy.mjs";
 
 const root = process.cwd();
 const maaTasksPath = path.join(root, "data", "recognition", "maa-tasks.json");
@@ -24,26 +25,6 @@ function nodeName(prefix, id) {
     .replace(/[^A-Za-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
   return `${prefix}_${safe}`;
-}
-
-const ABANDONED_RUN_FIELDS = new Set(["hope", "maxHope", "lifePoints", "shield", "commandLevel"]);
-const ABANDONED_RUN_ID_TOKENS = new Set(["hope", "maxhope", "life", "lifepoints", "shield", "command", "commandlevel"]);
-
-function idTokens(id) {
-  return String(id || "")
-    .replace(/([a-z])([A-Z])/g, "$1.$2")
-    .toLowerCase()
-    .split(/[^a-z0-9]+/g)
-    .filter(Boolean);
-}
-
-function isAbandonedRunRecognitionId(id) {
-  const tokens = idTokens(id);
-  return tokens[0] === "run" && tokens.slice(1).some((token) => ABANDONED_RUN_ID_TOKENS.has(token));
-}
-
-function isRetainedRecognitionSource({ id, candidateField } = {}) {
-  return !isAbandonedRunRecognitionId(id) && !ABANDONED_RUN_FIELDS.has(candidateField);
 }
 
 function ocrNode(recognition, attach) {

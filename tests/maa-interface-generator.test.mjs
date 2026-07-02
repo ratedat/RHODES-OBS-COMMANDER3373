@@ -163,6 +163,14 @@ test("MAA interface contract catches broken task, group, resource, and preset re
   const duplicated = structuredClone(valid);
   duplicated.task.push({ ...duplicated.task[0] });
   assert.match(validateInterfaceContract(duplicated, { pipelineEntries }).errors.join("\n"), /duplicate task name/);
+
+  const abandoned = structuredClone(valid);
+  abandoned.task[0].entry = "RhodesOcrRegion_run_hope_current";
+  const abandonedErrors = validateInterfaceContract(abandoned, {
+    pipelineEntries: new Set(["RhodesOcrRegion_run_hope_current"]),
+  }).errors.join("\n");
+  assert.match(abandonedErrors, /pipeline contains abandoned run target RhodesOcrRegion_run_hope_current/);
+  assert.match(abandonedErrors, /publishes private or abandoned pipeline entry RhodesOcrRegion_run_hope_current/);
 });
 
 test("package scripts check MAA resource and interface before Suki publish", () => {

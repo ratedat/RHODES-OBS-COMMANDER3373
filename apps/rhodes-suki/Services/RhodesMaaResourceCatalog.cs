@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using RhodesSuki.Models;
 
@@ -20,17 +19,6 @@ public static class RhodesMaaResourceCatalog
         ["RhodesRelicButton"] = new("画面判定: 秘宝ボタン", "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。", ["relicsFull"]),
         ["RhodesOperatorButton"] = new("画面判定: 隊員ボタン", "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。", ["operatorsFull"]),
         ["RhodesThoughtButton"] = new("画面判定: 思案ボタン", "マップ下部の思案ボタンをMAA TemplateMatchで検出します。", ["is5ThoughtFull"]),
-    };
-
-    private static readonly HashSet<string> AbandonedRunIdTokens = new(StringComparer.Ordinal)
-    {
-        "hope",
-        "maxhope",
-        "life",
-        "lifepoints",
-        "shield",
-        "command",
-        "commandlevel",
     };
 
     private static readonly IReadOnlyDictionary<string, string> ProfileLabels = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -125,6 +113,8 @@ public static class RhodesMaaResourceCatalog
             using var document = JsonDocument.Parse(File.ReadAllText(interfacePath));
             var root = document.RootElement;
             var pipelineEntries = PipelineEntries(errors);
+            foreach (var entry in pipelineEntries.Where(RhodesMaaRecognitionPolicy.IsAbandonedRunEntry))
+                errors.Add($"pipeline contains abandoned run target {entry}");
             var controllers = NamedSet(root, "controller");
             var resources = NamedSet(root, "resource");
             var groups = NamedSet(root, "group");
@@ -166,6 +156,8 @@ public static class RhodesMaaResourceCatalog
                     errors.Add("task is missing name");
                 if (string.IsNullOrWhiteSpace(entry))
                     errors.Add($"task {DisplayName(taskName)} is missing entry");
+                else if (!RhodesMaaRecognitionPolicy.IsPublishableEntry(entry))
+                    errors.Add($"task {DisplayName(taskName)} publishes private or abandoned pipeline entry {entry}");
                 else if (!pipelineEntries.Contains(entry))
                     errors.Add($"task {DisplayName(taskName)} references unknown pipeline entry {entry}");
 
@@ -348,7 +340,7 @@ public static class RhodesMaaResourceCatalog
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             foreach (var node in document.RootElement.EnumerateObject())
             {
-                if (!IsPublishableEntry(node.Name))
+                if (!RhodesMaaRecognitionPolicy.IsPublishableEntry(node.Name))
                     continue;
 
                 var attach = node.Value.TryGetProperty("attach", out var attachValue) ? attachValue : default;
@@ -394,22 +386,6 @@ public static class RhodesMaaResourceCatalog
         }
 
         return tasks;
-    }
-
-    private static bool IsPublishableEntry(string entry)
-    {
-        if (string.IsNullOrWhiteSpace(entry) || entry.EndsWith("Empty", StringComparison.Ordinal))
-            return false;
-        var normalized = new StringBuilder(entry.Length + 8);
-        for (var index = 0; index < entry.Length; index++)
-        {
-            var character = entry[index];
-            if (index > 0 && char.IsUpper(character) && char.IsLower(entry[index - 1]))
-                normalized.Append('_');
-            normalized.Append(char.ToLowerInvariant(character));
-        }
-        var tokens = normalized.ToString().Split(['_', '.', '-'], StringSplitOptions.RemoveEmptyEntries);
-        return !tokens.Any(token => AbandonedRunIdTokens.Contains(token));
     }
 
     private static HashSet<string> PipelineEntries(ICollection<string> errors)

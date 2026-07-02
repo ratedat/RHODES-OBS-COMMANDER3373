@@ -1542,6 +1542,9 @@ static void MaaGeneratedResourceBuilder()
     Equal(false, guardedRoot.ContainsKey("RhodesTemplate_runStatusFull_run_top_hope"), "guarded hope template omitted");
     Equal("OCR", guardedRoot["RhodesOcrRegion_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "guarded ingot retained");
     Equal("TemplateMatch", guardedRoot["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "guarded ingot template retained");
+    Equal(false, RhodesMaaRecognitionPolicy.IsRetainedRecognitionSource("run.safe", "commandLevel"), "policy rejects discarded candidate fields");
+    Equal(false, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_shield"), "policy rejects discarded resource entries");
+    Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_ingot"), "policy retains ingot resource entries");
 
     var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-generated-resource-{Guid.NewGuid():N}");
     Directory.CreateDirectory(directory);

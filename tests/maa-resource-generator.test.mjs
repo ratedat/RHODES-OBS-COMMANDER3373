@@ -2,6 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { generatePipeline } from "../tools/generate-maa-resource.mjs";
+import {
+  isAbandonedRunField,
+  isAbandonedRunMaaEntry,
+  isRetainedRecognitionSource,
+  maaRecognitionIdTokens,
+} from "../tools/maa-recognition-policy.mjs";
 
 const ocrRecognition = {
   type: "OCR",
@@ -12,6 +18,23 @@ const templateRegion = (idPrefix) => ({
   idPrefix,
   templatePath: "assets/recognition/templates/run/IngotIcon.png",
   searchRoi: { x: 1, y: 2, width: 3, height: 4 },
+});
+
+test("MAA recognition policy defines the retained run target boundary once", () => {
+  assert.deepEqual(maaRecognitionIdTokens("RhodesOcrRegion_run_command_level"), [
+    "rhodes",
+    "ocr",
+    "region",
+    "run",
+    "command",
+    "level",
+  ]);
+  assert.equal(isAbandonedRunField("hope"), true);
+  assert.equal(isRetainedRecognitionSource({ id: "run.hope.current" }), false);
+  assert.equal(isRetainedRecognitionSource({ id: "run.ingot" }), true);
+  assert.equal(isRetainedRecognitionSource({ id: "run.safe", candidateField: "commandLevel" }), false);
+  assert.equal(isAbandonedRunMaaEntry("RhodesOcrRegion_run_shield"), true);
+  assert.equal(isAbandonedRunMaaEntry("RhodesOcrRegion_run_ingot"), false);
 });
 
 test("MAA resource generator refuses abandoned run value targets even if source JSON contains them", () => {

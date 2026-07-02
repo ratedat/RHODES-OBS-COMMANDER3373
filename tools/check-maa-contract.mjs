@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { isAbandonedRunMaaEntry, isPublishableMaaEntry } from "./maa-recognition-policy.mjs";
 
 const root = process.cwd();
 const appRoot = path.join(root, "apps", "rhodes-suki");
@@ -42,6 +43,10 @@ export function validateInterfaceContract(projectInterface, { pipelineEntries = 
   const presets = Array.isArray(projectInterface.preset) ? projectInterface.preset : [];
   const taskNames = new Set(tasks.map((task) => task?.name).filter(Boolean));
 
+  for (const entry of pipelineEntries) {
+    if (isAbandonedRunMaaEntry(entry)) errors.push(`pipeline contains abandoned run target ${entry}`);
+  }
+
   addDuplicateErrors(errors, (projectInterface.controller ?? []).map((item) => item?.name), "controller");
   addDuplicateErrors(errors, (projectInterface.resource ?? []).map((item) => item?.name), "resource");
   addDuplicateErrors(errors, (projectInterface.group ?? []).map((item) => item?.name), "group");
@@ -62,6 +67,9 @@ export function validateInterfaceContract(projectInterface, { pipelineEntries = 
   for (const task of tasks) {
     if (!task?.name) errors.push("task is missing name");
     if (!task?.entry) errors.push(`task ${task?.name ?? "<unknown>"} is missing entry`);
+    if (task?.entry && !isPublishableMaaEntry(task.entry)) {
+      errors.push(`task ${task.name ?? "<unknown>"} publishes private or abandoned pipeline entry ${task.entry}`);
+    }
     if (task?.entry && pipelineEntries.size > 0 && !pipelineEntries.has(task.entry)) {
       errors.push(`task ${task.name} references unknown pipeline entry ${task.entry}`);
     }

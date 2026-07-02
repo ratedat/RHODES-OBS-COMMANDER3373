@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { isPublishableMaaEntry } from "./maa-recognition-policy.mjs";
 
 const root = process.cwd();
 const manualPipelinePath = path.join(root, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes.json");
@@ -9,8 +10,6 @@ const outputPath = path.join(root, "apps", "rhodes-suki", "interface.json");
 
 const CONTROLLER = "android_adb";
 const RESOURCE = "base";
-const ABANDONED_RUN_ID_TOKENS = new Set(["hope", "maxhope", "life", "lifepoints", "shield", "command", "commandlevel"]);
-
 const PROFILE_METADATA = [
   ["runStatusFull", "基礎情報", "源石錐、等級、分隊、ISごとの特殊値を取得します。"],
   ["operatorsFull", "オペレーター", "招集済みオペレーターを取得します。"],
@@ -44,16 +43,6 @@ function taskName(entry) {
     .replace(/[^A-Za-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .toLowerCase();
-}
-
-function isPublishableEntry(entry) {
-  if (!entry || /Empty$/.test(entry)) return false;
-  const tokens = String(entry)
-    .replace(/([a-z])([A-Z])/g, "$1_$2")
-    .toLowerCase()
-    .split(/[^a-z0-9]+/g)
-    .filter(Boolean);
-  return !tokens.some((token) => ABANDONED_RUN_ID_TOKENS.has(token));
 }
 
 function stringArray(value) {
@@ -112,12 +101,12 @@ function buildTasks(manualPipeline, generatedPipeline) {
   const tasks = [];
   const seen = new Set();
   for (const [entry, node] of Object.entries(manualPipeline ?? {})) {
-    if (!isPublishableEntry(entry) || seen.has(entry)) continue;
+    if (!isPublishableMaaEntry(entry) || seen.has(entry)) continue;
     seen.add(entry);
     tasks.push(manualTask(entry, node));
   }
   for (const [entry, node] of Object.entries(generatedPipeline ?? {})) {
-    if (!isPublishableEntry(entry) || seen.has(entry)) continue;
+    if (!isPublishableMaaEntry(entry) || seen.has(entry)) continue;
     seen.add(entry);
     tasks.push(generatedTask(entry, node));
   }
