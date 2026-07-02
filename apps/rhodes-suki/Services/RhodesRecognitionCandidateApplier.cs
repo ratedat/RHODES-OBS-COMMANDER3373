@@ -40,6 +40,7 @@ public static class RhodesRecognitionCandidateApplier
         DateTimeOffset now,
         bool runStatusOnly)
     {
+        var pruned = RhodesRunStateStore.PruneAbandonedRunValues(state);
         var candidateList = NormalizeCandidatesForApply(candidates);
         var applied = new List<string>();
         var handledIndexes = ApplyCampaignCandidates(state, candidateList, applied);
@@ -58,7 +59,7 @@ public static class RhodesRecognitionCandidateApplier
             }
         }
 
-        if (applied.Count > 0)
+        if (applied.Count > 0 || pruned)
             state["updatedAt"] = now.UtcDateTime.ToString("O");
 
         return new SukiCandidateApplySummary(applied.Count, ignored, applied);
@@ -158,6 +159,7 @@ public static class RhodesRecognitionCandidateApplier
     private static bool ApplyRunStatusCandidate(JsonObject state, MaaCandidatePreview candidate, ICollection<string> applied)
     {
         var run = EnsureObject(state, "run");
+        RhodesRunStateStore.PruneAbandonedRunValuesFromRun(run);
         var field = candidate.Field.Trim();
         switch (field)
         {

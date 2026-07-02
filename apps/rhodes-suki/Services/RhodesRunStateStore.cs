@@ -7,6 +7,14 @@ namespace RhodesSuki.Services;
 public static class RhodesRunStateStore
 {
     private static readonly SemaphoreSlim WriteLock = new(1, 1);
+    private static readonly string[] AbandonedRunValuePropertyNames =
+    [
+        "hope",
+        "maxHope",
+        "lifePoints",
+        "shield",
+        "commandLevel",
+    ];
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
         WriteIndented = true,
@@ -68,8 +76,9 @@ public static class RhodesRunStateStore
         try
         {
             var state = await LoadStateNodeAsync(path);
+            var before = state.ToJsonString();
             var summary = RhodesRecognitionCandidateApplier.Apply(state, candidates, now ?? DateTimeOffset.UtcNow);
-            if (summary.AppliedCount > 0)
+            if (summary.AppliedCount > 0 || !string.Equals(before, state.ToJsonString(), StringComparison.Ordinal))
                 await WriteJsonAtomicAsync(path, state);
             return summary;
         }
@@ -89,6 +98,7 @@ public static class RhodesRunStateStore
         try
         {
             node["version"] ??= 1;
+            PruneAbandonedRunValues(node);
             await WriteJsonAtomicAsync(path, node);
         }
         finally
@@ -105,6 +115,7 @@ public static class RhodesRunStateStore
         DateTimeOffset now)
     {
         state["version"] ??= 1;
+        PruneAbandonedRunValues(state);
         state["operators"] = ToJsonArray(operators.Where(item => item.IsSelected).Select(item => item.Id));
         state["relics"] = ToJsonArray(relics.Where(item => item.IsSelected).Select(item => item.Id));
         state["updatedAt"] = now.UtcDateTime.ToString("O");
@@ -138,8 +149,27 @@ public static class RhodesRunStateStore
         run["campaignId"] = normalizedCampaignId;
         if (!string.Equals(previousCampaignId, normalizedCampaignId, StringComparison.Ordinal))
             ResetRunValues(run);
+        else
+            PruneAbandonedRunValuesFromRun(run);
 
         return state;
+    }
+
+    public static bool PruneAbandonedRunValues(JsonObject state)
+    {
+        if (state["run"] is JsonObject run)
+            return PruneAbandonedRunValuesFromRun(run);
+        return false;
+    }
+
+    public static bool PruneAbandonedRunValuesFromRun(JsonObject run)
+    {
+        var removed = false;
+        foreach (var propertyName in AbandonedRunValuePropertyNames)
+        {
+            removed |= run.Remove(propertyName);
+        }
+        return removed;
     }
 
     private static async Task<JsonObject> LoadStateNodeAsync(string path)

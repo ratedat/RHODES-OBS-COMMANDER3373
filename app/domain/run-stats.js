@@ -1,13 +1,9 @@
 export const RUN_STAT_FIELDS = Object.freeze([
-  { id: "hope", label: "希望", min: 0, max: 999 },
-  { id: "maxHope", label: "希望上限", min: 0, max: 999 },
   { id: "ingot", label: "源石錐", min: 0, max: 9999 },
-  { id: "lifePoints", label: "耐久値", min: 0, max: 999 },
-  { id: "shield", label: "シールド", min: 0, max: 999 },
-  { id: "commandLevel", label: "指揮Lv", min: 1, max: 99 },
 ]);
 
 export const RUN_STAT_FIELD_IDS = new Set(RUN_STAT_FIELDS.map((field) => field.id));
+const ABANDONED_RUN_STAT_FIELD_IDS = Object.freeze(["hope", "maxHope", "lifePoints", "shield", "commandLevel"]);
 
 function getRunStatField(fieldId) {
   return RUN_STAT_FIELDS.find((field) => field.id === fieldId) || null;
@@ -24,6 +20,7 @@ export function normalizeRunStatValue(fieldId, value) {
 
 export function normalizeRunStats(run) {
   if (!run || typeof run !== "object") return run;
+  for (const fieldId of ABANDONED_RUN_STAT_FIELD_IDS) delete run[fieldId];
   for (const field of RUN_STAT_FIELDS) {
     run[field.id] = normalizeRunStatValue(field.id, run[field.id]);
   }

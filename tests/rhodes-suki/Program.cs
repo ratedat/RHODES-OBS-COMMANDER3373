@@ -2004,7 +2004,7 @@ static void ChoicePersistence()
     Equal(4, preferences["operatorGridColumns"]!.GetValue<int>(), "operator grid columns");
     Equal(3, preferences["relicGridColumns"]!.GetValue<int>(), "relic grid columns");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "updatedAt");
-    Equal(3, updated["run"]!.AsObject()["hope"]!.GetValue<int>(), "existing run state preserved");
+    Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "abandoned run value pruned");
 }
 
 static void StateApiReplacement()
@@ -2037,6 +2037,9 @@ static void StateApiReplacement()
         Equal(null, typeof(SukiRunStateSnapshot).GetProperty("CommandLevel"), "command level snapshot property removed");
         Equal(4, catalog.Current.Idea, "api idea");
         Equal(true, catalog.Current.SelectedOperatorIds.Contains("gummy"), "api selected operator");
+        var saved = JsonNode.Parse(File.ReadAllText(statePath))!.AsObject()["run"]!.AsObject();
+        Equal(false, saved.ContainsKey("hope"), "replacement prunes stale hope");
+        Equal(false, saved.ContainsKey("maxHope"), "replacement prunes stale max hope");
     }
     finally
     {
@@ -2068,6 +2071,7 @@ static void StateApiAdbSettingsApply()
     Equal(true, adb["restartServerOnFailure"]!.GetValue<bool>(), "adb restart server");
     Equal(5, adb["reconnectAttempts"]!.GetValue<int>(), "adb reconnect attempts");
     Equal("is5_sarkaz", updated["run"]!.AsObject()["campaignId"]!.GetValue<string>(), "run preserved");
+    Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "adb settings prune abandoned run value");
     Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "operators preserved");
 }
 
@@ -2158,7 +2162,7 @@ static void StateApiChoicesApply()
     Equal("rain", preferences["operatorExcludedIds"]!.AsArray()[0]!.GetValue<string>(), "api operator exclusion");
     Equal("is5_sarkaz_relic_002", preferences["relicExcludedIds"]!.AsArray()[0]!.GetValue<string>(), "api relic exclusion");
     Equal("glm-ocr", preferences["ocrEngine"]!.GetValue<string>(), "api ocr preserved");
-    Equal(3, updated["run"]!.AsObject()["hope"]!.GetValue<int>(), "api run preserved");
+    Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "api choices prune abandoned run value");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "api choices updatedAt");
 }
 
@@ -2204,7 +2208,7 @@ static void RunContextPersistence()
 
     var sameCampaign = JsonNode.Parse("""{ "run": { "campaignId": "is5_sarkaz", "hope": 3 } }""")!.AsObject();
     RhodesRunStateStore.ApplyRunContext(sameCampaign, "is5_sarkaz", DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
-    Equal(3, sameCampaign["run"]!.AsObject()["hope"]!.GetValue<int>(), "same campaign keeps run values");
+    Equal(false, sameCampaign["run"]!.AsObject().ContainsKey("hope"), "same campaign prunes abandoned run values");
 }
 
 static void StateApiRunContextApply()
@@ -2260,7 +2264,7 @@ static void StateApiCandidatesApply()
 
     var updated = JsonNode.Parse(result.StateJson)!.AsObject();
     Equal(2, result.Summary.AppliedCount, "api candidates applied count");
-    Equal(0, updated["run"]!.AsObject()["hope"]!.GetValue<int>(), "discarded api candidate hope ignored");
+    Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "discarded api candidate hope pruned");
     Equal(20, updated["run"]!.AsObject()["ingot"]!.GetValue<int>(), "api candidate ingot");
     Equal(3, updated["run"]!.AsObject()["special"]!.AsObject()["is5_sarkaz"]!.AsObject()["idea"]!.GetValue<int>(), "api candidate idea");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "api candidate updatedAt");
@@ -2301,7 +2305,7 @@ static void CandidateRunStatusApply()
     Equal("ingot|difficulty|idea", string.Join("|", summary.AppliedFields), "applied fields");
     var run = state["run"]!.AsObject();
     Equal(20, run["ingot"]!.GetValue<int>(), "ingot");
-    Equal(0, run["hope"]!.GetValue<int>(), "discarded hope preserved");
+    Equal(false, run.ContainsKey("hope"), "discarded hope pruned");
     Equal(false, run.ContainsKey("maxHope"), "discarded max hope not written");
     Equal(false, run.ContainsKey("commandLevel"), "discarded command level not written");
     Equal(18, run["difficulty"]!.GetValue<int>(), "difficulty");

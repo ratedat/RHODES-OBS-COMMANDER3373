@@ -5,27 +5,24 @@ import { formatRunStatValue, normalizeRunStatValue, normalizeRunStats, runStatDi
 
 test("normalizeRunStatValue accepts blank values as unset", () => {
   assert.equal(normalizeRunStatValue("hope", ""), null);
-  assert.equal(normalizeRunStatValue("lifePoints", null), null);
-  assert.equal(formatRunStatValue({}, "shield"), "-");
   assert.equal(formatRunStatValue({}, "ingot"), "-");
 });
 
-test("normalizeRunStatValue clamps numeric run resources", () => {
-  assert.equal(normalizeRunStatValue("hope", "12.9"), 12);
-  assert.equal(normalizeRunStatValue("maxHope", "11"), 11);
-  assert.equal(normalizeRunStatValue("lifePoints", "-4"), 0);
-  assert.equal(normalizeRunStatValue("shield", "1200"), 999);
+test("normalizeRunStatValue clamps retained numeric run resources", () => {
+  assert.equal(normalizeRunStatValue("hope", "12.9"), null);
+  assert.equal(normalizeRunStatValue("maxHope", "11"), null);
+  assert.equal(normalizeRunStatValue("lifePoints", "-4"), null);
+  assert.equal(normalizeRunStatValue("shield", "1200"), null);
   assert.equal(normalizeRunStatValue("ingot", "20"), 20);
-  assert.equal(normalizeRunStatValue("commandLevel", "0"), 1);
-  assert.equal(normalizeRunStatValue("commandLevel", "120"), 99);
+  assert.equal(normalizeRunStatValue("commandLevel", "120"), null);
 });
 
-test("normalizeRunStats fills all run stat fields", () => {
+test("normalizeRunStats keeps only retained run stat fields", () => {
   const run = normalizeRunStats({ hope: "8", maxHope: "11", ingot: "20", lifePoints: undefined, shield: "bad", commandLevel: "4" });
-  assert.deepEqual(run, { hope: 8, maxHope: 11, ingot: 20, lifePoints: null, shield: null, commandLevel: 4 });
+  assert.deepEqual(run, { ingot: 20 });
 });
 
-test("updateRunField writes numeric run stat fields", () => {
+test("updateRunField writes only retained numeric run stat fields", () => {
   const state = { run: {}, preferences: {} };
   updateRunField(state, "hope", "18");
   updateRunField(state, "maxHope", "11");
@@ -33,18 +30,13 @@ test("updateRunField writes numeric run stat fields", () => {
   updateRunField(state, "ingot", "20");
   updateRunField(state, "shield", "");
   updateRunField(state, "commandLevel", "3");
-  assert.equal(state.run.hope, 18);
-  assert.equal(state.run.maxHope, 11);
-  assert.equal(state.run.lifePoints, 5);
+  assert.equal(state.run.hope, undefined);
+  assert.equal(state.run.maxHope, undefined);
+  assert.equal(state.run.lifePoints, undefined);
   assert.equal(state.run.ingot, 20);
-  assert.equal(state.run.shield, null);
-  assert.equal(state.run.commandLevel, 3);
+  assert.equal(state.run.shield, undefined);
+  assert.equal(state.run.commandLevel, undefined);
   assert.deepEqual(runStatDisplayItems(state.run).map((item) => [item.id, item.value]), [
-    ["hope", "18"],
-    ["maxHope", "11"],
     ["ingot", "20"],
-    ["lifePoints", "5"],
-    ["shield", "-"],
-    ["commandLevel", "3"],
   ]);
 });

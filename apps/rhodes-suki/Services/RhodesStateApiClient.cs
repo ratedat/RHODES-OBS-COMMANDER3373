@@ -93,6 +93,7 @@ public static class RhodesStateApiClient
         adb["restartProcessOnFailure"] = true;
         adb["reconnectAttempts"] = 5;
         adb["reconnectDelayMs"] = 1000;
+        RhodesRunStateStore.PruneAbandonedRunValues(root);
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }
@@ -176,6 +177,7 @@ public static class RhodesStateApiClient
         else if (string.Equals(currentMode, "tournament", StringComparison.OrdinalIgnoreCase))
             root["mode"] = "casual";
 
+        RhodesRunStateStore.PruneAbandonedRunValues(root);
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }
