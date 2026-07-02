@@ -78,19 +78,20 @@ function applyRunStatusCandidate(state, candidate) {
   return false;
 }
 
-function isAutoAppliedIs5RelicId(relicId) {
-  return typeof relicId === "string" && relicId.startsWith(IS5_AUTO_APPLY_CAMPAIGN_ID + "_relic_");
+function isCampaignRelicId(relicId, campaignId) {
+  return typeof relicId === "string" && Boolean(campaignId) && relicId.startsWith(campaignId + "_relic_");
 }
 
-function relicIdFromCandidate(candidate = {}) {
+function relicIdFromCandidate(state, candidate = {}) {
   const relicId = candidate.relicId || candidate.value;
   if (!relicId || typeof relicId !== "string") return null;
-  if (candidate.campaignId && candidate.campaignId !== IS5_AUTO_APPLY_CAMPAIGN_ID) return null;
-  return isAutoAppliedIs5RelicId(relicId) ? relicId : null;
+  const campaignId = currentCampaignId(state);
+  if (candidate.campaignId && candidate.campaignId !== campaignId) return null;
+  return isCampaignRelicId(relicId, campaignId) ? relicId : null;
 }
 
 function applyRelicCandidate(state, candidate) {
-  const relicId = relicIdFromCandidate(candidate);
+  const relicId = relicIdFromCandidate(state, candidate);
   if (!relicId) return false;
   const relics = new Set(Array.isArray(state.relics) ? state.relics : []);
   relics.add(relicId);
@@ -124,14 +125,15 @@ function syncRelicFullScanCandidates(state, suggestions = []) {
     const candidate = candidateFromSuggestion(suggestion);
     if (!canAutoApplySuggestion(state, suggestion, candidate)) continue;
     if (suggestion.profileId !== "relicsFull" || candidate.kind !== "relic") continue;
-    const relicId = relicIdFromCandidate(candidate);
+    const relicId = relicIdFromCandidate(state, candidate);
     if (!relicId) continue;
     relicSuggestions.push(suggestion);
     relicIds.add(relicId);
   }
   if (!relicSuggestions.length) return { applied: [], keys: new Set() };
 
-  const preserved = (Array.isArray(state.relics) ? state.relics : []).filter((relicId) => !isAutoAppliedIs5RelicId(relicId));
+  const campaignId = currentCampaignId(state);
+  const preserved = (Array.isArray(state.relics) ? state.relics : []).filter((relicId) => !isCampaignRelicId(relicId, campaignId));
   state.relics = [...preserved, ...relicIds];
   return {
     applied: relicSuggestions,
@@ -210,11 +212,10 @@ function canAutoApplySuggestion(state, suggestion, candidate) {
   if (!autoApplyProfiles.has(suggestion.profileId)) return false;
   if (candidate.kind === "operator") return suggestion.profileId === "operatorsFull";
   if (candidate.kind === "runStatus") {
-    return isIs5State(state)
-      && suggestion.profileId === "runStatusFull"
+    return suggestion.profileId === "runStatusFull"
       && candidateCampaignMatchesState(state, candidate);
   }
-  if (candidate.kind === "relic") return isIs5State(state) && suggestion.profileId === "relicsFull";
+  if (candidate.kind === "relic") return suggestion.profileId === "relicsFull" && candidateCampaignMatchesState(state, candidate);
   if (candidate.kind === "thought") {
     return isIs5State(state)
       && suggestion.profileId === "is5ThoughtFull"
