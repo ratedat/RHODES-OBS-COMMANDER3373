@@ -86,6 +86,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const bitmapPathConverter = await fs.readFile("apps/rhodes-suki/Services/RhodesBitmapPathConverter.cs", "utf8");
   const choiceFilter = await fs.readFile("apps/rhodes-suki/Services/RhodesChoiceFilter.cs", "utf8");
   const choiceRows = await fs.readFile("apps/rhodes-suki/Services/RhodesChoiceRows.cs", "utf8");
+  const choiceCatalogRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesChoiceCatalogRegistry.cs", "utf8");
   const operatorTaxonomy = await fs.readFile("apps/rhodes-suki/Services/RhodesOperatorTaxonomy.cs", "utf8");
   const runStateStore = await fs.readFile("apps/rhodes-suki/Services/RhodesRunStateStore.cs", "utf8");
   const candidateApplier = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionCandidateApplier.cs", "utf8");
@@ -160,6 +161,13 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(choiceFilter, /Rarity/);
   assert.match(choiceRows, /Math\.Clamp\(columns, 1, 4\)/);
   assert.match(choiceRows, /new SukiChoiceRow/);
+  assert.match(choiceCatalogRegistry, /RhodesChoiceCatalogRegistry/);
+  assert.match(choiceCatalogRegistry, /SukiChoiceCatalogDescriptor/);
+  assert.match(choiceCatalogRegistry, /SukiChoiceCatalogFilterState/);
+  assert.match(choiceCatalogRegistry, /SukiChoiceCatalogView/);
+  assert.match(choiceCatalogRegistry, /BuildView/);
+  assert.match(choiceCatalogRegistry, /RhodesChoiceFilter\.Apply/);
+  assert.match(choiceCatalogRegistry, /RhodesChoiceRows\.Build/);
   assert.match(operatorTaxonomy, /SortClasses/);
   assert.match(operatorTaxonomy, /SortBranches/);
   assert.match(operatorTaxonomy, /"先鋒"/);
@@ -577,6 +585,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RefreshRelicSummaries/);
   assert.match(viewModel, /RefreshOperatorRows/);
   assert.match(viewModel, /RefreshRelicRows/);
+  assert.match(viewModel, /RhodesChoiceCatalogRegistry\.BuildView/);
+  assert.match(viewModel, /OperatorChoiceFilterState/);
+  assert.match(viewModel, /RelicChoiceFilterState/);
   assert.match(viewModel, /RhodesOperatorTaxonomy\.SortClasses/);
   assert.match(viewModel, /RhodesOperatorTaxonomy\.SortBranches/);
   assert.match(viewModel, /RhodesRunStateStore\.SaveChoicesAsync/);

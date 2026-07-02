@@ -65,6 +65,7 @@ var tests = new (string Name, Action Run)[]
     ("Resource profile task filtering follows interface presets", ResourceProfileTaskFilteringFollowsInterfacePresets),
     ("Run field registry exposes retained base and campaign-specific fields", RunFieldRegistryRetainedFields),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
+    ("Choice catalog registry builds operator and relic workspace models", ChoiceCatalogRegistryBuildsWorkspaceModels),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
@@ -2246,6 +2247,69 @@ static void RunCatalogLoadsChoices()
     {
         Directory.Delete(stableDirectory, true);
     }
+}
+
+static void ChoiceCatalogRegistryBuildsWorkspaceModels()
+{
+    var operators = new[]
+    {
+        new SukiChoiceItem("operator", "texas", "テキサス", "★5 先鋒 / 先駆兵", "先鋒", "先駆兵", "", "", 5, 0, false),
+        new SukiChoiceItem("operator", "gummy", "グム", "★4 重装 / 庇護衛士", "重装", "庇護衛士", "", "", 4, 1, false),
+        new SukiChoiceItem("operator", "tulip", "チューリップ", "★5 先鋒 / 先駆兵", "先鋒", "先駆兵", "", "", 5, 2, true)
+    };
+    operators[1].IsSelected = true;
+
+    var operatorView = RhodesChoiceCatalogRegistry.BuildView(
+        "operator",
+        operators,
+        new SukiChoiceCatalogFilterState(
+            SearchText: "",
+            Category: "",
+            OperatorClass: "先鋒",
+            OperatorBranch: "すべて",
+            Rarity: "すべて",
+            CampaignId: "",
+            ShowSelectedFirst: false,
+            HideExcluded: false,
+            SelectedOnly: false,
+            PaneColumns: 4));
+
+    Equal("operators", operatorView.Descriptor.Id, "operator descriptor id");
+    Equal("operator", operatorView.Descriptor.Kind, "operator descriptor kind");
+    Equal("オペレーター", operatorView.Descriptor.Label, "operator descriptor label");
+    Equal("テキサス", operatorView.FilteredItems.Single().Name, "operator view applies filters");
+    Equal("1件 / 招集1名", operatorView.Summary, "operator view summary");
+    Equal(4, operatorView.Rows.Single().Columns, "operator view rows use pane columns");
+
+    var relics = new[]
+    {
+        new SukiChoiceItem("relic", "is5_a", "秘宝A", "No.001 食品", "", "", "is5_sarkaz", "食品", 0, 0, false),
+        new SukiChoiceItem("relic", "is5_b", "秘宝B", "No.002 書物", "", "", "is5_sarkaz", "書物", 0, 1, false),
+        new SukiChoiceItem("relic", "is4_a", "秘宝C", "No.001 食品", "", "", "is4_sami", "食品", 0, 2, false)
+    };
+    relics[0].IsSelected = true;
+
+    var relicView = RhodesChoiceCatalogRegistry.BuildView(
+        "relic",
+        relics,
+        new SukiChoiceCatalogFilterState(
+            SearchText: "",
+            Category: "食品",
+            OperatorClass: "",
+            OperatorBranch: "",
+            Rarity: "",
+            CampaignId: "is5_sarkaz",
+            ShowSelectedFirst: true,
+            HideExcluded: false,
+            SelectedOnly: false,
+            PaneColumns: 2));
+
+    Equal("relics", relicView.Descriptor.Id, "relic descriptor id");
+    Equal(true, relicView.Descriptor.IsCampaignScoped, "relic descriptor is campaign scoped");
+    Equal("秘宝A", relicView.FilteredItems.Single().Name, "relic view applies campaign and category filters");
+    Equal("1件 / 所持1件 / IS内2件", relicView.Summary, "relic view summary");
+    Equal(2, relicView.Rows.Single().Columns, "relic view rows use pane columns");
+    Equal(true, RhodesChoiceCatalogRegistry.RequiresFullRefreshAfterSelectionMutation(relicView.FilterState), "registry selection refresh policy");
 }
 
 static void ChoiceFilters()

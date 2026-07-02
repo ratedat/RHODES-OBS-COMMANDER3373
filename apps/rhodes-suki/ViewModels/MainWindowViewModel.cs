@@ -599,17 +599,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string OperatorListSummary => $"{FilteredOperators.Count}件 / 招集{_allOperators.Count(item => item.IsSelected)}名";
+    public string OperatorListSummary => RhodesChoiceCatalogRegistry.BuildSummary(
+        "operator",
+        _allOperators,
+        FilteredOperators,
+        OperatorChoiceFilterState());
 
-    public string RelicListSummary
-    {
-        get
-        {
-            var selected = _allRelics.Count(item => item.CampaignId == SelectedCampaign?.Id && item.IsSelected);
-            var total = _allRelics.Count(item => item.CampaignId == SelectedCampaign?.Id);
-            return $"{FilteredRelics.Count}件 / 所持{selected}件 / IS内{total}件";
-        }
-    }
+    public string RelicListSummary => RhodesChoiceCatalogRegistry.BuildSummary(
+        "relic",
+        _allRelics,
+        FilteredRelics,
+        RelicChoiceFilterState());
 
     public string OperatorSearch
     {
@@ -3737,22 +3737,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         if (kind == "relic")
         {
-            var options = new SukiChoiceFilterOptions(
-                ShowSelectedFirst: RelicShowSelectedFirst,
-                HideExcluded: RelicHideExcluded,
-                SelectedOnly: RelicSelectedOnly);
-            if (RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(options))
+            if (RhodesChoiceCatalogRegistry.RequiresFullRefreshAfterSelectionMutation(RelicChoiceFilterState()))
                 RefreshRelicChoices();
             else
                 RefreshRelicSummaries();
             return;
         }
 
-        var operatorOptions = new SukiChoiceFilterOptions(
-            ShowSelectedFirst: OperatorShowSelectedFirst,
-            HideExcluded: OperatorHideExcluded,
-            SelectedOnly: OperatorSelectedOnly);
-        if (RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(operatorOptions))
+        if (RhodesChoiceCatalogRegistry.RequiresFullRefreshAfterSelectionMutation(OperatorChoiceFilterState()))
             RefreshOperatorChoices();
         else
             RefreshOperatorSummaries();
@@ -3762,22 +3754,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         if (kind == "relic")
         {
-            var options = new SukiChoiceFilterOptions(
-                ShowSelectedFirst: RelicShowSelectedFirst,
-                HideExcluded: RelicHideExcluded,
-                SelectedOnly: RelicSelectedOnly);
-            if (RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(options))
+            if (RhodesChoiceCatalogRegistry.RequiresFullRefreshAfterExclusionMutation(RelicChoiceFilterState()))
                 RefreshRelicChoices();
             else
                 RefreshRelicSummaries();
             return;
         }
 
-        var operatorOptions = new SukiChoiceFilterOptions(
-            ShowSelectedFirst: OperatorShowSelectedFirst,
-            HideExcluded: OperatorHideExcluded,
-            SelectedOnly: OperatorSelectedOnly);
-        if (RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(operatorOptions))
+        if (RhodesChoiceCatalogRegistry.RequiresFullRefreshAfterExclusionMutation(OperatorChoiceFilterState()))
             RefreshOperatorChoices();
         else
             RefreshOperatorSummaries();
@@ -3832,6 +3816,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RelicPaneColumns);
     }
 
+    private SukiChoiceCatalogFilterState OperatorChoiceFilterState()
+    {
+        return new SukiChoiceCatalogFilterState(
+            SearchText: OperatorSearch,
+            OperatorClass: OperatorClassFilter,
+            OperatorBranch: OperatorBranchFilter,
+            Rarity: OperatorRarityFilter,
+            ShowSelectedFirst: OperatorShowSelectedFirst,
+            HideExcluded: OperatorHideExcluded,
+            SelectedOnly: OperatorSelectedOnly,
+            PaneColumns: OperatorPaneColumns);
+    }
+
+    private SukiChoiceCatalogFilterState RelicChoiceFilterState()
+    {
+        return new SukiChoiceCatalogFilterState(
+            SearchText: RelicSearch,
+            Category: RelicCategoryFilter,
+            CampaignId: SelectedCampaign?.Id ?? "",
+            ShowSelectedFirst: RelicShowSelectedFirst,
+            HideExcluded: RelicHideExcluded,
+            SelectedOnly: RelicSelectedOnly,
+            PaneColumns: RelicPaneColumns);
+    }
+
     private void RefreshOperatorSummaries()
     {
         OnPropertyChanged(nameof(OperatorListSummary));
@@ -3851,18 +3860,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshOperatorChoices()
     {
-        var filtered = RhodesChoiceFilter.Apply(
-            _allOperators,
-            new SukiChoiceFilterOptions(
-                SearchText: OperatorSearch,
-                OperatorClass: OperatorClassFilter,
-                OperatorBranch: OperatorBranchFilter,
-                Rarity: OperatorRarityFilter,
-                ShowSelectedFirst: OperatorShowSelectedFirst,
-                HideExcluded: OperatorHideExcluded,
-                SelectedOnly: OperatorSelectedOnly));
-        ReplaceCollection(FilteredOperators, filtered);
-        RefreshOperatorRows();
+        var view = RhodesChoiceCatalogRegistry.BuildView("operator", _allOperators, OperatorChoiceFilterState());
+        ReplaceCollection(FilteredOperators, view.FilteredItems);
+        ReplaceCollection(FilteredOperatorRows, view.Rows);
         OnPropertyChanged(nameof(OperatorListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
         OnPropertyChanged(nameof(CampaignHeaderDetail));
@@ -3871,17 +3871,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshRelicChoices()
     {
-        var filtered = RhodesChoiceFilter.Apply(
-            _allRelics,
-            new SukiChoiceFilterOptions(
-                SearchText: RelicSearch,
-                Category: RelicCategoryFilter,
-                CampaignId: SelectedCampaign?.Id ?? "",
-                ShowSelectedFirst: RelicShowSelectedFirst,
-                HideExcluded: RelicHideExcluded,
-                SelectedOnly: RelicSelectedOnly));
-        ReplaceCollection(FilteredRelics, filtered);
-        RefreshRelicRows();
+        var view = RhodesChoiceCatalogRegistry.BuildView("relic", _allRelics, RelicChoiceFilterState());
+        ReplaceCollection(FilteredRelics, view.FilteredItems);
+        ReplaceCollection(FilteredRelicRows, view.Rows);
         OnPropertyChanged(nameof(RelicListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
         OnPropertyChanged(nameof(CampaignHeaderDetail));
@@ -3891,12 +3883,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshOperatorRows()
     {
-        ReplaceCollection(FilteredOperatorRows, RhodesChoiceRows.Build(FilteredOperators, OperatorPaneColumns));
+        ReplaceCollection(FilteredOperatorRows, RhodesChoiceCatalogRegistry.BuildRows(FilteredOperators, OperatorChoiceFilterState()));
     }
 
     private void RefreshRelicRows()
     {
-        ReplaceCollection(FilteredRelicRows, RhodesChoiceRows.Build(FilteredRelics, RelicPaneColumns));
+        ReplaceCollection(FilteredRelicRows, RhodesChoiceCatalogRegistry.BuildRows(FilteredRelics, RelicChoiceFilterState()));
     }
 
     private void RefreshOperatorFilterOptions()

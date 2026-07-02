@@ -252,6 +252,33 @@ public sealed record SukiChoiceRow(
     int Columns,
     IReadOnlyList<SukiChoiceItem> Items);
 
+public sealed record SukiChoiceCatalogDescriptor(
+    string Id,
+    string Kind,
+    string Label,
+    bool IsCampaignScoped,
+    string SelectedSummaryLabel,
+    string TotalSummaryLabel);
+
+public sealed record SukiChoiceCatalogFilterState(
+    string SearchText = "",
+    string Category = "",
+    string OperatorClass = "",
+    string OperatorBranch = "",
+    string Rarity = "",
+    string CampaignId = "",
+    bool ShowSelectedFirst = false,
+    bool HideExcluded = false,
+    bool SelectedOnly = false,
+    int PaneColumns = 2);
+
+public sealed record SukiChoiceCatalogView(
+    SukiChoiceCatalogDescriptor Descriptor,
+    SukiChoiceCatalogFilterState FilterState,
+    IReadOnlyList<SukiChoiceItem> FilteredItems,
+    IReadOnlyList<SukiChoiceRow> Rows,
+    string Summary);
+
 public sealed class SukiChoiceItem : INotifyPropertyChanged
 {
     private bool _isSelected;
