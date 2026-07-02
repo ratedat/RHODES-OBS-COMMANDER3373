@@ -24,31 +24,35 @@ public static class RhodesMaaLocalCandidateConverter
         string? profileId,
         IEnumerable<MaaTaskRunResult> taskResults)
     {
+        IEnumerable<MaaCandidatePreview> candidates;
         if (string.IsNullOrWhiteSpace(profileId) || string.Equals(profileId, "all", StringComparison.Ordinal))
-            return AllProfileCandidates(taskResults).ToArray();
+            candidates = AllProfileCandidates(taskResults);
 
-        if (string.Equals(profileId, "runStatusFull", StringComparison.Ordinal))
-            return BestRunStatusCandidates(RunStatusCandidates(taskResults));
+        else if (string.Equals(profileId, "runStatusFull", StringComparison.Ordinal))
+            candidates = BestRunStatusCandidates(RunStatusCandidates(taskResults));
 
-        if (string.Equals(profileId, "operatorsFull", StringComparison.Ordinal))
-            return OperatorCandidates(taskResults).ToArray();
+        else if (string.Equals(profileId, "operatorsFull", StringComparison.Ordinal))
+            candidates = OperatorCandidates(taskResults);
 
-        if (string.Equals(profileId, "relicsFull", StringComparison.Ordinal))
-            return RelicCandidates(taskResults).ToArray();
+        else if (string.Equals(profileId, "relicsFull", StringComparison.Ordinal))
+            candidates = RelicCandidates(taskResults);
 
-        if (string.Equals(profileId, "is5ThoughtFull", StringComparison.Ordinal))
-            return ThoughtCandidates(taskResults).ToArray();
+        else if (string.Equals(profileId, "is5ThoughtFull", StringComparison.Ordinal))
+            candidates = ThoughtCandidates(taskResults);
 
-        if (string.Equals(profileId, "is5AgeFull", StringComparison.Ordinal))
-            return AgeCandidates(taskResults).ToArray();
+        else if (string.Equals(profileId, "is5AgeFull", StringComparison.Ordinal))
+            candidates = AgeCandidates(taskResults);
 
-        if (string.Equals(profileId, "is4RevelationFull", StringComparison.Ordinal))
-            return RevelationCandidates(taskResults).ToArray();
+        else if (string.Equals(profileId, "is4RevelationFull", StringComparison.Ordinal))
+            candidates = RevelationCandidates(taskResults);
 
-        if (string.Equals(profileId, "is6CoinsFull", StringComparison.Ordinal))
-            return CoinCandidates(taskResults).ToArray();
+        else if (string.Equals(profileId, "is6CoinsFull", StringComparison.Ordinal))
+            candidates = CoinCandidates(taskResults);
 
-        return [];
+        else
+            candidates = [];
+
+        return candidates.Where(RhodesMaaRecognitionPolicy.IsRetainedCandidate).ToArray();
     }
 
     private static IReadOnlyList<MaaCandidatePreview> AllProfileCandidates(IEnumerable<MaaTaskRunResult> taskResults)

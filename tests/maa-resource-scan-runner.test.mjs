@@ -58,7 +58,11 @@ test("runMaaResourceRecognition drops abandoned run status candidates from extra
     candidateExtractors: [
       async () => [
         { kind: "runStatus", field: "hope", label: "希望", value: 3, rawText: "3", confidence: 0.99 },
+        { kind: "runStatus", field: "lifePoints", label: "耐久値", value: 4, rawText: "4", confidence: 0.99 },
+        { kind: "runStatus", field: "shield", label: "シールド", value: 2, rawText: "2", confidence: 0.99 },
+        { kind: "runStatus", field: "commandLevel", label: "指揮Lv", value: 1, rawText: "1", confidence: 0.99 },
         { kind: "runStatus", field: "ingot", label: "源石錐", value: 20, rawText: "20", confidence: 0.96 },
+        { kind: "debug", label: "不要", value: "noise", rawText: "noise", confidence: 1 },
       ],
     ],
     recognitionContext: { campaignId: "is5_sarkaz" },

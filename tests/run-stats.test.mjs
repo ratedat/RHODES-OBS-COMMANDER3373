@@ -14,8 +14,10 @@ import {
 test("run stat abandoned field policy stays synchronized with MAA target manifest", async () => {
   const manifest = JSON.parse(await readFile(new URL("../data/recognition/maa-recognition-target-policy.json", import.meta.url), "utf8"));
   const abandonedFields = manifest.runRecognition.abandonedFields;
+  const retainedRunStatusFields = manifest.runRecognition.retainedFields;
 
   assert.deepEqual(ABANDONED_RUN_STAT_FIELD_IDS, abandonedFields);
+  assert.deepEqual(runStatDisplayItems({ ingot: 1 }).map((item) => item.id), retainedRunStatusFields.filter((field) => field === "ingot"));
   for (const field of abandonedFields) {
     assert.equal(isAbandonedRunStatField(field), true, `${field} should be abandoned in runtime filtering`);
   }

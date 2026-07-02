@@ -1,7 +1,25 @@
 {
   "schemaVersion": 1,
-  "description": "Authoritative RHODES MAA recognition target boundary. Run status values are intentionally limited to originium ingots, difficulty, squad, and IS-specific values. Hope, life points, shield, and command level are not recognition targets.",
+  "description": "Authoritative RHODES MAA recognition target boundary. Recognition is intentionally limited to originium ingots, difficulty, squad, IS-specific values, operators, and relics. Hope, life points, shield, and command level are not recognition targets.",
+  "recognitionTargets": {
+    "retainedCandidateKinds": [
+      "runStatus",
+      "operator",
+      "relic",
+      "thought",
+      "age",
+      "revelation",
+      "coin"
+    ]
+  },
   "runRecognition": {
+    "retainedFields": [
+      "ingot",
+      "difficulty",
+      "squadId",
+      "squadRandomEffectOptionId",
+      "idea"
+    ],
     "retainedIds": [
       "run.squad.info.panel",
       "run.status.idea.icon",

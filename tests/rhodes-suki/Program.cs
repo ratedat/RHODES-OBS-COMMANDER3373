@@ -382,11 +382,11 @@ static void LocalCandidateConverterRunStatus()
             M("RhodesOcrRegion_operator_name", "グム", 0.99),
         ]);
 
-    Equal("campaignId|ingot|idea|difficulty|squadId", string.Join("|", candidates.Select(item => item.Field)), "local run fields");
-    Equal("is5_sarkaz|20|7|18|is5_sarkaz_squad_04", string.Join("|", candidates.Select(item => item.Value)), "local run values");
+    Equal("ingot|idea|difficulty|squadId", string.Join("|", candidates.Select(item => item.Field)), "local run fields");
+    Equal("20|7|18|is5_sarkaz_squad_04", string.Join("|", candidates.Select(item => item.Value)), "local run values");
     Equal("is5_sarkaz", candidates.Single(item => item.Field == "idea").CampaignId, "idea campaign id");
     Equal("is5_sarkaz", candidates.Single(item => item.Field == "squadId").CampaignId, "squad campaign id");
-    Equal("maa-local:static:is5.sarkaz.map_select.campaign", candidates.Single(item => item.Field == "campaignId").RecognitionKey, "campaign recognition key");
+    Equal(false, candidates.Any(item => item.Field == "campaignId"), "campaign id is context only, not a retained candidate");
     Equal("maa-local:ingot:run.ingot", candidates.Single(item => item.Field == "ingot").RecognitionKey, "local recognition key");
 
     static MaaTaskRunResult M(string entry, string text, double score)
@@ -437,8 +437,8 @@ static void LocalCandidateConverterRunStatusSquadRandomEffect()
             M("RhodesOcrRegion_run_squad_card", "★4以上の【術師】を招集時に消費する希望-2、昇進時に消費する希望-1、【術師】を初めて招集する際、昇進済の状態で招集できる。初めから「生還者の契約」を所持", 0.90),
         ]);
 
-    Equal("campaignId|squadId|squadRandomEffectOptionId", string.Join("|", candidates.Select(item => item.Field)), "local squad random fields");
-    Equal("is5_sarkaz|is5_sarkaz_squad_16|is5_sarkaz_mimic_02", string.Join("|", candidates.Select(item => item.Value)), "local squad random values");
+    Equal("squadId|squadRandomEffectOptionId", string.Join("|", candidates.Select(item => item.Field)), "local squad random fields");
+    Equal("is5_sarkaz_squad_16|is5_sarkaz_mimic_02", string.Join("|", candidates.Select(item => item.Value)), "local squad random values");
 
     static MaaTaskRunResult M(string entry, string text, double score)
     {
@@ -1574,6 +1574,39 @@ static void MaaGeneratedResourceBuilder()
         string.Join("|", manifestAbandonedFields),
         string.Join("|", RhodesMaaRecognitionPolicy.AbandonedRunFields.OrderBy(item => item, StringComparer.Ordinal)),
         "policy abandoned fields from manifest");
+    var manifestCandidateKinds = targetPolicyDocument.RootElement
+        .GetProperty("recognitionTargets")
+        .GetProperty("retainedCandidateKinds")
+        .EnumerateArray()
+        .Select(item => item.GetString() ?? "")
+        .Where(item => !string.IsNullOrWhiteSpace(item));
+    Equal(
+        "age|coin|operator|relic|revelation|runStatus|thought",
+        string.Join("|", manifestCandidateKinds.OrderBy(item => item, StringComparer.Ordinal)),
+        "manifest candidate kinds encode retained recognition targets");
+    Equal(
+        string.Join("|", manifestCandidateKinds.OrderBy(item => item, StringComparer.Ordinal)),
+        string.Join("|", RhodesMaaRecognitionPolicy.RetainedCandidateKinds.OrderBy(item => item, StringComparer.Ordinal)),
+        "policy candidate kinds from manifest");
+    var manifestRetainedRunStatusFields = targetPolicyDocument.RootElement
+        .GetProperty("runRecognition")
+        .GetProperty("retainedFields")
+        .EnumerateArray()
+        .Select(item => item.GetString() ?? "")
+        .Where(item => !string.IsNullOrWhiteSpace(item));
+    Equal(
+        "difficulty|idea|ingot|squadId|squadRandomEffectOptionId",
+        string.Join("|", manifestRetainedRunStatusFields.OrderBy(item => item, StringComparer.Ordinal)),
+        "manifest run status fields encode retained run recognition targets");
+    Equal(
+        string.Join("|", manifestRetainedRunStatusFields.OrderBy(item => item, StringComparer.Ordinal)),
+        string.Join("|", RhodesMaaRecognitionPolicy.RetainedRunStatusFields.OrderBy(item => item, StringComparer.Ordinal)),
+        "policy run status fields from manifest");
+    Equal(true, RhodesMaaRecognitionPolicy.IsRetainedCandidate(new MaaCandidatePreview("operator", "グム", "gum", "グム", 0.9, OperatorId: "gum")), "policy retains operator candidates");
+    Equal(true, RhodesMaaRecognitionPolicy.IsRetainedCandidate(new MaaCandidatePreview("relic", "秘宝", "relic", "秘宝", 0.9, RelicId: "relic")), "policy retains relic candidates");
+    Equal(true, RhodesMaaRecognitionPolicy.IsRetainedCandidate(new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.9, Field: "ingot")), "policy retains ingot candidates");
+    Equal(false, RhodesMaaRecognitionPolicy.IsRetainedCandidate(new MaaCandidatePreview("runStatus", "希望", "3", "3", 0.9, Field: "hope")), "policy rejects abandoned hope candidates");
+    Equal(false, RhodesMaaRecognitionPolicy.IsRetainedCandidate(new MaaCandidatePreview("status", "耐久値", "4", "4", 0.9, Field: "lifePoints")), "policy rejects unknown candidate kinds");
     Equal(true, RhodesMaaRecognitionPolicy.RetainedRunRecognitionIds.Contains("run.ingot"), "policy retained fields from manifest");
     Equal(true, File.Exists(targetPolicyPath),
         "target policy manifest exists");

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using System.Text.Json;
+using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
 
@@ -9,6 +10,10 @@ public static class RhodesMaaRecognitionPolicy
     private static readonly Lazy<TargetPolicy> Policy = new(LoadTargetPolicy);
 
     public static IReadOnlyCollection<string> RetainedRunRecognitionIds => Policy.Value.RetainedRunRecognitionIds;
+
+    public static IReadOnlyCollection<string> RetainedCandidateKinds => Policy.Value.RetainedCandidateKinds;
+
+    public static IReadOnlyCollection<string> RetainedRunStatusFields => Policy.Value.RetainedRunStatusFields;
 
     public static IReadOnlyCollection<string> AbandonedRunFields => Policy.Value.AbandonedRunFields;
 
@@ -23,6 +28,21 @@ public static class RhodesMaaRecognitionPolicy
         return !string.IsNullOrWhiteSpace(entry)
             && !entry.EndsWith("Empty", StringComparison.Ordinal)
             && !IsAbandonedRunEntry(entry);
+    }
+
+    public static bool IsRetainedCandidate(MaaCandidatePreview? candidate)
+    {
+        if (candidate is null || string.IsNullOrWhiteSpace(candidate.Kind))
+            return false;
+
+        if (!Policy.Value.RetainedCandidateKinds.Contains(candidate.Kind))
+            return false;
+
+        if (!candidate.Kind.Equals("runStatus", StringComparison.Ordinal))
+            return true;
+
+        return Policy.Value.RetainedRunStatusFields.Contains(candidate.Field)
+            && !Policy.Value.AbandonedRunFields.Contains(candidate.Field);
     }
 
     public static bool IsAbandonedRunEntry(string? entry)
@@ -63,8 +83,11 @@ public static class RhodesMaaRecognitionPolicy
         var path = ResolveTargetPolicyPath();
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         var root = document.RootElement;
+        var recognitionTargets = root.TryGetProperty("recognitionTargets", out var targetsValue) ? targetsValue : default;
         var runRecognition = root.TryGetProperty("runRecognition", out var value) ? value : default;
         return new TargetPolicy(
+            ReadStringSet(recognitionTargets, "retainedCandidateKinds"),
+            ReadStringSet(runRecognition, "retainedFields"),
             ReadStringSet(runRecognition, "retainedIds"),
             ReadStringSet(runRecognition, "abandonedFields"));
     }
@@ -100,6 +123,8 @@ public static class RhodesMaaRecognitionPolicy
     }
 
     private sealed record TargetPolicy(
+        HashSet<string> RetainedCandidateKinds,
+        HashSet<string> RetainedRunStatusFields,
         HashSet<string> RetainedRunRecognitionIds,
         HashSet<string> AbandonedRunFields);
 }

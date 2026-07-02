@@ -8,8 +8,11 @@ import {
   isAbandonedRunField,
   isAbandonedRunMaaEntry,
   isRetainedRecognitionSource,
+  isRetainedRecognitionCandidate,
   maaRecognitionIdTokens,
+  retainedCandidateKinds,
   retainedRunRecognitionIds,
+  retainedRunStatusFields,
   targetPolicyPath,
 } from "../tools/maa-recognition-policy.mjs";
 
@@ -27,8 +30,12 @@ const templateRegion = (idPrefix) => ({
 test("MAA recognition policy defines the retained run target boundary once", () => {
   const manifest = JSON.parse(fs.readFileSync(targetPolicyPath, "utf8"));
   assert.equal(manifest.schemaVersion, 1);
+  assert.deepEqual(retainedCandidateKinds, manifest.recognitionTargets.retainedCandidateKinds);
+  assert.deepEqual(retainedRunStatusFields, manifest.runRecognition.retainedFields);
   assert.deepEqual(retainedRunRecognitionIds, manifest.runRecognition.retainedIds);
   assert.deepEqual(abandonedRunFieldIds, manifest.runRecognition.abandonedFields);
+  assert.deepEqual(retainedCandidateKinds, ["runStatus", "operator", "relic", "thought", "age", "revelation", "coin"]);
+  assert.deepEqual(retainedRunStatusFields, ["ingot", "difficulty", "squadId", "squadRandomEffectOptionId", "idea"]);
   assert.deepEqual(maaRecognitionIdTokens("RhodesOcrRegion_run_command_level"), [
     "rhodes",
     "ocr",
@@ -48,6 +55,12 @@ test("MAA recognition policy defines the retained run target boundary once", () 
   assert.equal(isAbandonedRunMaaEntry("RhodesOcrRegion_run_ingot"), false);
   assert.equal(isAbandonedRunMaaEntry("RhodesRunStatusIdeaIcon"), false);
   assert.equal(isAbandonedRunMaaEntry("RhodesTemplate_runStatusFull_run_ingot"), false);
+  assert.equal(isRetainedRecognitionCandidate({ kind: "operator", operatorId: "char_002_amiya" }), true);
+  assert.equal(isRetainedRecognitionCandidate({ kind: "relic", relicId: "is5_sarkaz_relic_001" }), true);
+  assert.equal(isRetainedRecognitionCandidate({ kind: "thought", thoughtId: "thought_001" }), true);
+  assert.equal(isRetainedRecognitionCandidate({ kind: "runStatus", field: "ingot" }), true);
+  assert.equal(isRetainedRecognitionCandidate({ kind: "runStatus", field: "hope" }), false);
+  assert.equal(isRetainedRecognitionCandidate({ kind: "status", field: "lifePoints" }), false);
 });
 
 test("MAA resource generator refuses abandoned run value targets even if source JSON contains them", () => {
