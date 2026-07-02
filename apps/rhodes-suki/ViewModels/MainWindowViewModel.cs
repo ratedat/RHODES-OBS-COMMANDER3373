@@ -1255,7 +1255,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private IEnumerable<SukiStatusChip> BuildHeaderStatusChips()
     {
         yield return new SukiStatusChip("源石錐", _runState.Ingot.ToString(), "run.ingot");
-        yield return new SukiStatusChip("構想", _runState.Idea.ToString(), "is5.idea");
+        yield return new SukiStatusChip("IS特殊値", BuildSpecialStatusValue(_runState), "run.special");
         yield return new SukiStatusChip("等級", string.IsNullOrWhiteSpace(_runState.Difficulty) ? "-" : _runState.Difficulty, "run.difficulty");
         yield return new SukiStatusChip("分隊", string.IsNullOrWhiteSpace(_runState.Squad) ? "-" : _runState.Squad, "run.squad");
     }
@@ -1263,10 +1263,46 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static IEnumerable<SukiRunFieldPreview> BuildRunFieldPreviews(SukiRunStateSnapshot state)
     {
         yield return new SukiRunFieldPreview("源石錐", state.Ingot.ToString(), "MAA-OCR / Template anchor", "run.ingot", "右上の源石錐アイコンを基準に取得");
-        yield return new SukiRunFieldPreview("構想", state.Idea.ToString(), "Template / OCR", "run.idea.current", "IS#5では構想アイコン直下の数値");
         yield return new SukiRunFieldPreview("等級", string.IsNullOrWhiteSpace(state.Difficulty) ? "-" : state.Difficulty, "MAA-OCR / squad panel", "run.difficulty_grade", "分隊情報パネルから確定");
         yield return new SukiRunFieldPreview("分隊", string.IsNullOrWhiteSpace(state.Squad) ? "-" : state.Squad, "MAA-OCR", "run.squad_name", "分隊カードまたは情報パネル");
-        yield return new SukiRunFieldPreview("IS特殊値", string.IsNullOrWhiteSpace(state.SquadRandomEffect) ? "-" : state.SquadRandomEffect, "MAA-OCR / campaign-specific", "run.squad_card", "構想、分隊効果、啓示、通宝などISごとの値だけを扱う");
+        yield return new SukiRunFieldPreview("IS特殊値", BuildSpecialStatusValue(state), "MAA-OCR / campaign-specific", "run.special", BuildSpecialStatusDetail(state));
+    }
+
+    private static string BuildSpecialStatusValue(SukiRunStateSnapshot state)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(state.SquadRandomEffect))
+            parts.Add($"分隊効果={state.SquadRandomEffect.Trim()}");
+
+        foreach (var field in CurrentCampaignSpecialFields(state))
+        {
+            var value = field.Value.Trim();
+            if (string.IsNullOrWhiteSpace(value) || value.Equals("未入力", StringComparison.Ordinal))
+                continue;
+            parts.Add($"{field.Label}={value}");
+        }
+
+        return parts.Count == 0 ? "-" : string.Join(" / ", parts);
+    }
+
+    private static string BuildSpecialStatusDetail(SukiRunStateSnapshot state)
+    {
+        var labels = CurrentCampaignSpecialFields(state)
+            .Select(field => field.Label)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (labels.Length == 0)
+            return "このISの固有値定義を追加してください";
+
+        return $"{string.Join("、", labels)}など、ISごとの値だけを扱う";
+    }
+
+    private static IReadOnlyList<SukiSpecialFieldState> CurrentCampaignSpecialFields(SukiRunStateSnapshot state)
+    {
+        return (state.SpecialFields ?? Array.Empty<SukiSpecialFieldState>())
+            .Where(field => string.Equals(field.CampaignId, state.CampaignId, StringComparison.Ordinal))
+            .ToArray();
     }
 
     private IEnumerable<SukiRuntimeCapabilityPreview> BuildRuntimeCapabilities()

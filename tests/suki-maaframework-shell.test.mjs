@@ -505,7 +505,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(generatedResourceBuilder, /RegenerateFileAsync/);
   assert.match(viewModel, /Campaigns/);
   assert.match(viewModel, /SelectedCampaign/);
-  assert.match(viewModel, /構想/);
+  assert.match(viewModel, /new SukiStatusChip\("IS特殊値", BuildSpecialStatusValue\(_runState\), "run\.special"\)/);
+  assert.match(viewModel, /new SukiRunFieldPreview\("IS特殊値", BuildSpecialStatusValue\(state\), "MAA-OCR \/ campaign-specific", "run\.special"/);
+  assert.match(viewModel, /CurrentCampaignSpecialFields/);
+  assert.doesNotMatch(viewModel, /new SukiStatusChip\("構想"/);
+  assert.doesNotMatch(viewModel, /new SukiRunFieldPreview\("構想"/);
   assert.doesNotMatch(viewModel, /想念/);
   assert.match(viewModel, /FilteredOperators/);
   assert.match(viewModel, /FilteredRelics/);
