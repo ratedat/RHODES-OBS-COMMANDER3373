@@ -110,6 +110,7 @@ export function generatePipeline({ maaTasks, scanProfiles }) {
         id: region.id,
         profileIds: region.profileIds ?? [],
         scale: region.scale ?? null,
+        ...(region.numericFallback == null ? {} : { numericFallback: region.numericFallback }),
       },
     );
   }

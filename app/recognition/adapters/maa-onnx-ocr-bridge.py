@@ -47,6 +47,15 @@ def region_rect(region):
     }
 
 
+def region_bool(region, key, default=False):
+    value = region.get(key, default) if isinstance(region, dict) else default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def clamp_rect(rect, width, height):
     x = min(max(0, int(float(rect.get("x", 0)))), max(0, width - 1))
     y = min(max(0, int(float(rect.get("y", 0)))), max(0, height - 1))
@@ -149,8 +158,16 @@ def dynamic_template_ocr_regions(image_path, configs, regions):
                     "height": int(float(region_value(ocr_offset, "height", max(1, match["height"])))),
                     "scale": int(float(region_value(config, "scale", 1))),
                     "templateScore": match["score"],
+                    "numericFallback": region_bool(config, "numericFallback", False),
+                    "numericStartYRatio": float(region_value(config, "numericStartYRatio", 0)),
                 }
-                dynamic.append(clamp_rect(region, image.width, image.height) | {"id": region["id"], "scale": region["scale"], "templateScore": region["templateScore"]})
+                dynamic.append(clamp_rect(region, image.width, image.height) | {
+                    "id": region["id"],
+                    "scale": region["scale"],
+                    "templateScore": region["templateScore"],
+                    "numericFallback": region["numericFallback"],
+                    "numericStartYRatio": region["numericStartYRatio"],
+                })
         return dynamic + next_regions
     finally:
         image.close()
@@ -195,6 +212,174 @@ def apply_equivalence_classes(value, classes):
         replacement = group[0]
         for variant in group[1:]:
             text = text.replace(variant, replacement)
+    return text
+
+
+def digit_chars_from_text(value):
+    table = str.maketrans({
+        "０": "0",
+        "１": "1",
+        "２": "2",
+        "３": "3",
+        "４": "4",
+        "５": "5",
+        "６": "6",
+        "７": "7",
+        "８": "8",
+        "９": "9",
+        "O": "0",
+        "o": "0",
+        "U": "0",
+        "u": "0",
+        "○": "0",
+        "〇": "0",
+        "I": "1",
+        "l": "1",
+        "L": "1",
+        "丨": "1",
+        "一": "1",
+        "イ": "1",
+        "ィ": "1",
+        "図": "2",
+    })
+    return [char for char in str(value or "").translate(table) if char.isdigit()]
+
+
+def numeric_mask_from_crop(crop):
+    arr = np.asarray(crop.convert("RGB"))
+    gray = arr.mean(axis=2)
+    chroma = arr.max(axis=2) - arr.min(axis=2)
+    # Retained run-status numbers are bright UI glyphs on dark panels.
+    return (gray > 145) & (chroma < 90)
+
+
+def connected_components(mask):
+    height, width = mask.shape
+    seen = np.zeros(mask.shape, dtype=bool)
+    components = []
+    for y in range(height):
+        for x in range(width):
+            if not mask[y, x] or seen[y, x]:
+                continue
+            stack = [(y, x)]
+            seen[y, x] = True
+            xs = []
+            ys = []
+            while stack:
+                cy, cx = stack.pop()
+                xs.append(cx)
+                ys.append(cy)
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        if dy == 0 and dx == 0:
+                            continue
+                        ny = cy + dy
+                        nx = cx + dx
+                        if 0 <= ny < height and 0 <= nx < width and mask[ny, nx] and not seen[ny, nx]:
+                            seen[ny, nx] = True
+                            stack.append((ny, nx))
+            area = len(xs)
+            if area >= 10:
+                x1 = min(xs)
+                y1 = min(ys)
+                x2 = max(xs) + 1
+                y2 = max(ys) + 1
+                components.append({
+                    "x": x1,
+                    "y": y1,
+                    "width": x2 - x1,
+                    "height": y2 - y1,
+                    "area": area,
+                    "mask": mask[y1:y2, x1:x2],
+                })
+    if not components:
+        return []
+    largest = max(component["area"] for component in components)
+    min_area = max(20, largest * 0.25)
+    return sorted(
+        [component for component in components if component["area"] >= min_area],
+        key=lambda item: item["x"],
+    )
+
+
+def hole_count(mask):
+    inv = ~mask
+    height, width = inv.shape
+    seen = np.zeros(inv.shape, dtype=bool)
+    holes = 0
+    for y in range(height):
+        for x in range(width):
+            if not inv[y, x] or seen[y, x]:
+                continue
+            stack = [(y, x)]
+            seen[y, x] = True
+            touches_edge = False
+            while stack:
+                cy, cx = stack.pop()
+                if cy in (0, height - 1) or cx in (0, width - 1):
+                    touches_edge = True
+                for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    ny = cy + dy
+                    nx = cx + dx
+                    if 0 <= ny < height and 0 <= nx < width and inv[ny, nx] and not seen[ny, nx]:
+                        seen[ny, nx] = True
+                        stack.append((ny, nx))
+            if not touches_edge:
+                holes += 1
+    return holes
+
+
+def numeric_text_from_image_region(source_path, region, raw_text):
+    if not region_bool(region, "numericFallback", False):
+        return None
+    region_id = str(region_value(region, "id", ""))
+    with Image.open(source_path).convert("RGB") as image:
+        rect = clamp_rect(region, image.width, image.height)
+        crop = image.crop((
+            rect["x"],
+            rect["y"],
+            rect["x"] + rect["width"],
+            rect["y"] + rect["height"],
+        ))
+    start_y_ratio = max(0.0, min(0.9, float(region_value(region, "numericStartYRatio", 0) or 0)))
+    if start_y_ratio:
+        start_y = int(crop.height * start_y_ratio)
+        crop = crop.crop((0, start_y, crop.width, crop.height))
+    components = connected_components(numeric_mask_from_crop(crop))
+    if not components:
+        return None
+
+    raw_digits = digit_chars_from_text(raw_text)
+    remaining_components = len(components)
+    digit_index = 0
+    resolved = []
+    for component in components:
+        remaining_components -= 1
+        ratio = component["width"] / max(1, component["height"])
+        holes = hole_count(component["mask"])
+        is_narrow_one = ratio <= 0.48 and holes == 0
+        if is_narrow_one:
+            resolved.append("1")
+            if digit_index < len(raw_digits) and (
+                raw_digits[digit_index] == "1" or len(raw_digits) - digit_index >= remaining_components + 1
+            ):
+                digit_index += 1
+            continue
+        if digit_index < len(raw_digits):
+            resolved.append(raw_digits[digit_index])
+            digit_index += 1
+            continue
+        if "ingot" in region_id and holes >= 1:
+            resolved.append("0")
+            continue
+        if "difficulty" in region_id and holes >= 2:
+            resolved.append("8")
+            continue
+        return None
+
+    text = "".join(resolved).lstrip("0") or "0"
+    if not text.isdigit():
+        return None
     return text
 
 
@@ -278,15 +463,22 @@ def main():
             output = session.run([output_name], {input_name: tensor})[0]
             raw_text, confidence = ctc_decode(output, keys)
             text = apply_equivalence_classes(raw_text, equivalence_classes)
+            numeric_text = numeric_text_from_image_region(image_path, region, raw_text)
+            if numeric_text is not None:
+                text = numeric_text
+                confidence = max(confidence, 0.86)
             if not text.strip():
                 continue
-            all_results.append({
+            result = {
                 "text": text,
                 "rawText": raw_text,
                 "regionId": region_id,
                 "roi": region_rect(region),
                 "confidence": confidence,
-            })
+            }
+            if numeric_text is not None:
+                result["numericFallback"] = True
+            all_results.append(result)
 
     payload = {
         "text": " ".join(item["text"] for item in all_results if item.get("text")),

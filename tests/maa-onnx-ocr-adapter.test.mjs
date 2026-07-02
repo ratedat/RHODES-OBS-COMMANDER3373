@@ -64,6 +64,8 @@ test("MAA ONNX OCR extractor can use an injected runner and returns OCR text", a
       assert.equal(regions[0].id, "run.ingot");
       assert.equal(templateOcrRegions[0].idPrefix, "operator.card.name");
       assert.deepEqual(templateOcrRegions[0].searchRoi, { x: 20, y: 40, width: 60, height: 80 });
+      assert.equal(templateOcrRegions[0].numericFallback, true);
+      assert.equal(templateOcrRegions[0].numericStartYRatio, 0.25);
       return encoded;
     },
   });
@@ -78,6 +80,8 @@ test("MAA ONNX OCR extractor can use an injected runner and returns OCR text", a
           templatePath: "assets/recognition/templates/run/OperatorCardCodeNameFlag.png",
           searchRoi: { x: 10, y: 20, width: 30, height: 40 },
           ocrOffset: { x: 1, y: 2, width: 3, height: 4 },
+          numericFallback: true,
+          numericStartYRatio: 0.25,
         }],
       },
     });

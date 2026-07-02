@@ -195,7 +195,8 @@
         90,
         52
       ],
-      "scale": 8
+      "scale": 8,
+      "numericFallback": true
     },
     {
       "id": "run.idea",
@@ -261,6 +262,7 @@
         85
       ],
       "scale": 6,
+      "numericFallback": true,
       "note": "Opened squad panel difficulty grade. Do not use the closed map footer badge."
     },
     {

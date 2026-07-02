@@ -35,6 +35,12 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+const squadOcrAliases = {
+  is5_sarkaz: [
+    { name: "博学多識分隊", aliases: ["多狙分隊"] },
+  ],
+};
+
 function digitText(value, { allowRoman = false } = {}) {
   let text = normalizeRecognitionText(value, ["remove_spaces"])
     .replace(/[０-９]/g, (char) => String(char.charCodeAt(0) - 0xff10))
@@ -61,9 +67,21 @@ function numericValuesFromText(text, options = {}) {
 }
 
 function findSquadByText(text, { campaignId, squads = [] } = {}) {
-  return squads
-    .filter((item) => item.campaignId === campaignId)
+  const campaignSquads = squads
+    .filter((item) => item.campaignId === campaignId);
+  const exact = campaignSquads
     .find((item) => text.includes(normalizeRecognitionText(item.name, ["remove_spaces"])));
+  if (exact) return exact;
+  for (const aliasGroup of squadOcrAliases[campaignId] ?? []) {
+    const matched = aliasGroup.aliases
+      .map((alias) => normalizeRecognitionText(alias, ["remove_spaces"]))
+      .some((alias) => alias && text.includes(alias));
+    if (!matched) continue;
+    const canonicalName = normalizeRecognitionText(aliasGroup.name, ["remove_spaces"]);
+    const squad = campaignSquads.find((item) => normalizeRecognitionText(item.name, ["remove_spaces"]) === canonicalName);
+    if (squad) return squad;
+  }
+  return null;
 }
 
 function findSquadCandidate(text, { campaignId, squads = [] } = {}) {

@@ -207,7 +207,8 @@
       "profileIds": [
         "runStatusFull"
       ],
-      "scale": 8
+      "scale": 8,
+      "numericFallback": true
     }
   },
   "RhodesOcrRegion_run_idea": {
@@ -312,7 +313,8 @@
       "profileIds": [
         "runStatusFull"
       ],
-      "scale": 6
+      "scale": 6,
+      "numericFallback": true
     }
   },
   "RhodesOcrRegion_run_difficulty_block": {

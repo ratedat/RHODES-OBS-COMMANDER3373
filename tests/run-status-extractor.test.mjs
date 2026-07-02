@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { extractRunStatusCandidates } from "../app/domain/recognition/run-status-extractor.js";
 
 const squads = [
+  { id: "is5_sarkaz_squad_02", campaignId: "is5_sarkaz", name: "博学多識分隊" },
   { id: "is5_sarkaz_squad_03", campaignId: "is5_sarkaz", name: "位置測定分隊" },
   { id: "is5_sarkaz_squad_04", campaignId: "is5_sarkaz", name: "指揮分隊" },
   {
@@ -80,6 +81,18 @@ test("run status extractor maps OCR squad text and difficulty grade to current c
   assert.deepEqual(fields(candidates), [
     ["squadId", "is5_sarkaz_squad_03"],
     ["difficulty", 18],
+  ]);
+});
+
+test("run status extractor maps known Sarkaz squad OCR drift", () => {
+  const candidates = extractRunStatusCandidates({
+    ocrResults: [
+      { text: "多 狙 分 隊", regionId: "run.squad_name" },
+    ],
+  }, { campaignId: "is5_sarkaz", squads, difficultyGrades });
+
+  assert.deepEqual(fields(candidates), [
+    ["squadId", "is5_sarkaz_squad_02"],
   ]);
 });
 

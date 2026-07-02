@@ -146,6 +146,7 @@ test("difficulty grade ROI targets the opened squad panel, not the closed footer
   const difficultyRegion = tasks.ocrRegions.find((region) => region.id === "run.difficulty_grade");
 
   assert.deepEqual(difficultyRegion.roi, [125, 530, 110, 85]);
+  assert.equal(difficultyRegion.numericFallback, true);
 });
 
 test("run status profile reads conception through the icon template, not thought burden OCR", async () => {
@@ -184,6 +185,7 @@ test("run status profile no longer carries discarded base-value OCR regions", as
     assert.equal(rois.has(removed), false);
   }
   assert.deepEqual(rois.get("run.ingot"), [1190, 10, 90, 52]);
+  assert.equal(tasks.ocrRegions.find((region) => region.id === "run.ingot")?.numericFallback, true);
 });
 
 test("run status profile includes template anchors for map resources", async () => {
