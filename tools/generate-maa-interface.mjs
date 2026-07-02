@@ -6,22 +6,15 @@ import { isPublishableMaaEntry, targetPolicyPath } from "./maa-recognition-polic
 const root = process.cwd();
 const manualPipelinePath = path.join(root, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes.json");
 const generatedPipelinePath = path.join(root, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json");
+const scanProfilesPath = path.join(root, "data", "recognition", "scan-profiles.json");
 const outputPath = path.join(root, "apps", "rhodes-suki", "interface.json");
 
 const CONTROLLER = "android_adb";
 const RESOURCE = "base";
 const TARGET_POLICY_SOURCE = path.relative(root, targetPolicyPath).replace(/\\/g, "/");
-const PROFILE_METADATA = [
-  ["runStatusFull", "基礎情報", `源石錐、等級、分隊、ISごとの特殊値を取得します。希望、耐久値、シールド、指揮Lvは取得対象外です。target policy: ${TARGET_POLICY_SOURCE}`],
-  ["operatorsFull", "オペレーター", "招集済みオペレーターを取得します。"],
-  ["relicsFull", "秘宝", "所持秘宝を取得します。"],
-  ["is4RevelationFull", "啓示", "IS#4の啓示を取得します。"],
-  ["is5ThoughtFull", "思案", "IS#5の思案を取得します。"],
-  ["is5AgeFull", "時代", "IS#5の時代を取得します。"],
-  ["is6CoinsFull", "通宝", "IS#6の通宝を取得します。"],
-];
 
-const PROFILE_ORDER = new Map(PROFILE_METADATA.map(([id], index) => [id, index]));
+const PROFILE_METADATA = profileMetadataFromScanProfiles(readJson(scanProfilesPath));
+const PROFILE_ORDER = new Map(PROFILE_METADATA.map((profile, index) => [profile.id, index]));
 
 const MANUAL_LABELS = new Map([
   ["RhodesProbe", ["Probe", "MAAFramework接続確認用のDirectHitタスクです。"]],
@@ -55,6 +48,20 @@ function stringArray(value) {
 function orderedProfileIds(profileIds) {
   return [...new Set(profileIds.filter((id) => PROFILE_ORDER.has(id)))]
     .sort((left, right) => PROFILE_ORDER.get(left) - PROFILE_ORDER.get(right));
+}
+
+function profileMetadataFromScanProfiles(scanProfiles) {
+  return (scanProfiles?.profiles ?? [])
+    .map((profile) => {
+      const id = String(profile?.id ?? "").trim();
+      const label = String(profile?.interfaceLabel ?? profile?.label ?? id).trim();
+      const baseDescription = String(profile?.interfaceDescription ?? profile?.navigationNote ?? "").trim();
+      const description = id === "runStatusFull" && !baseDescription.includes(TARGET_POLICY_SOURCE)
+        ? `${baseDescription} target policy: ${TARGET_POLICY_SOURCE}`
+        : baseDescription;
+      return { id, label: label || id, description: description || "RHODES認識プロファイルです。" };
+    })
+    .filter((profile) => profile.id);
 }
 
 function withGroups(task, profileIds) {
@@ -117,11 +124,11 @@ function buildTasks(manualPipeline, generatedPipeline) {
 function buildGroups(tasks) {
   const usedProfileIds = new Set(tasks.flatMap(taskProfileIds));
   return PROFILE_METADATA
-    .filter(([id]) => usedProfileIds.has(id))
-    .map(([name, label, description], index) => ({
-      name,
-      label,
-      description,
+    .filter((profile) => usedProfileIds.has(profile.id))
+    .map((profile, index) => ({
+      name: profile.id,
+      label: profile.label,
+      description: profile.description,
       default_expand: index < 3,
     }));
 }

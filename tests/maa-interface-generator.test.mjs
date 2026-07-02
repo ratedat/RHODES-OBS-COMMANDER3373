@@ -69,10 +69,12 @@ test("MAA interface generator never publishes abandoned run value nodes", () => 
 test("MAA interface generator groups tasks and presets by RHODES recognition profile", () => {
   const manualPipeline = readJson("apps/rhodes-suki/resource/base/pipeline/rhodes.json");
   const generatedPipeline = readJson("apps/rhodes-suki/resource/base/pipeline/rhodes-generated.json");
+  const scanProfiles = readJson("data/recognition/scan-profiles.json");
   const projectInterface = generateInterface({ manualPipeline, generatedPipeline });
   const groups = new Map(projectInterface.group.map((group) => [group.name, group]));
   const presets = new Map(projectInterface.preset.map((preset) => [preset.name, preset]));
   const tasks = new Map(projectInterface.task.map((task) => [task.entry, task]));
+  const runStatusSource = scanProfiles.profiles.find((profile) => profile.id === "runStatusFull");
 
   assert.deepEqual([...groups.keys()], [
     "runStatusFull",
@@ -84,7 +86,9 @@ test("MAA interface generator groups tasks and presets by RHODES recognition pro
     "is6CoinsFull",
   ]);
   assert.equal(groups.get("runStatusFull").label, "基礎情報");
+  assert.equal(groups.get("runStatusFull").label, runStatusSource.interfaceLabel);
   assert.match(groups.get("runStatusFull").description, /源石錐/);
+  assert.match(runStatusSource.interfaceDescription, /希望、耐久値、シールド、指揮Lvは取得対象外/);
   assert.match(groups.get("runStatusFull").description, /希望、耐久値、シールド、指揮Lvは取得対象外/);
   assert.match(groups.get("runStatusFull").description, /maa-recognition-target-policy\.json/);
   assert.equal(groups.get("operatorsFull").label, "オペレーター");

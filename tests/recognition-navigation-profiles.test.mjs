@@ -64,6 +64,18 @@ test("scan profiles own the server-side OCR engine routing", async () => {
   }
 });
 
+test("scan profiles own MAA interface group labels and descriptions", async () => {
+  const profiles = await profilesById();
+  const runStatus = profiles.get("runStatusFull");
+
+  assert.equal(runStatus.label, "基本情報スキャン");
+  assert.equal(runStatus.interfaceLabel, "基礎情報");
+  assert.match(runStatus.interfaceDescription, /源石錐、等級、分隊、ISごとの特殊値/);
+  assert.match(runStatus.interfaceDescription, /希望、耐久値、シールド、指揮Lvは取得対象外/);
+  assert.equal(profiles.get("operatorsFull").interfaceLabel, "オペレーター");
+  assert.equal(profiles.get("relicsFull").interfaceLabel, "秘宝");
+});
+
 test("scan profiles do not carry retired external trigger URLs", async () => {
   const profiles = await profilesById();
 

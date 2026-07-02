@@ -5,6 +5,8 @@
     {
       "id": "runStatusFull",
       "label": "基本情報スキャン",
+      "interfaceLabel": "基礎情報",
+      "interfaceDescription": "源石錐、等級、分隊、ISごとの特殊値を取得します。希望、耐久値、シールド、指揮Lvは取得対象外です。",
       "candidateKind": "runStatus",
       "ocrEngine": "maa-ocr",
       "ocrRegionIds": [
@@ -131,6 +133,8 @@
     {
       "id": "operatorsFull",
       "label": "オペレーターフルスキャン",
+      "interfaceLabel": "オペレーター",
+      "interfaceDescription": "招集済みオペレーターを取得します。",
       "candidateKind": "operator",
       "ocrEngine": "maa-ocr",
       "ocrFullFrame": false,
@@ -333,6 +337,8 @@
     {
       "id": "relicsFull",
       "label": "秘宝フルスキャン",
+      "interfaceLabel": "秘宝",
+      "interfaceDescription": "所持秘宝を取得します。",
       "candidateKind": "relic",
       "ocrEngine": "maa-ocr",
       "baseResolution": {
@@ -472,6 +478,8 @@
     {
       "id": "is4RevelationFull",
       "label": "啓示フルスキャン",
+      "interfaceLabel": "啓示",
+      "interfaceDescription": "IS#4の啓示を取得します。",
       "campaignId": "is4_sami",
       "candidateKind": "revelation",
       "ocrEngine": "maa-ocr",
@@ -564,6 +572,8 @@
     {
       "id": "is5ThoughtFull",
       "label": "思案フルスキャン",
+      "interfaceLabel": "思案",
+      "interfaceDescription": "IS#5の思案を取得します。",
       "campaignId": "is5_sarkaz",
       "candidateKind": "thought",
       "ocrEngine": "maa-ocr",
@@ -705,6 +715,8 @@
     {
       "id": "is5AgeFull",
       "label": "時代スキャン",
+      "interfaceLabel": "時代",
+      "interfaceDescription": "IS#5の時代を取得します。",
       "campaignId": "is5_sarkaz",
       "candidateKind": "age",
       "ocrEngine": "maa-ocr",
@@ -778,6 +790,8 @@
     {
       "id": "is6CoinsFull",
       "label": "通宝フルスキャン",
+      "interfaceLabel": "通宝",
+      "interfaceDescription": "IS#6の通宝を取得します。",
       "campaignId": "is6_sui",
       "candidateKind": "coin",
       "ocrEngine": "maa-ocr",
