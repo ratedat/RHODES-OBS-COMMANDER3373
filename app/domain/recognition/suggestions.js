@@ -4,7 +4,7 @@ function compactParts(parts) {
 
 export function recognitionCandidateKey(candidate = {}) {
   const kind = candidate.kind || candidate.type || "unknown";
-  if (kind === "runStatus") return compactParts([kind, candidate.field || candidate.name || candidate.rawText, candidate.value]);
+  if (kind === "runStatus") return compactParts([kind, candidate.campaignId, candidate.field || candidate.name || candidate.rawText, candidate.value]);
   if (kind === "operator") return compactParts([kind, candidate.operatorId || candidate.name || candidate.rawText]);
   if (kind === "relic") return compactParts([kind, candidate.relicId || candidate.name || candidate.rawText]);
   if (kind === "revelation") return compactParts([kind, candidate.campaignId, candidate.fieldId, candidate.slotKind, candidate.effectId || candidate.name, candidate.stateId]);

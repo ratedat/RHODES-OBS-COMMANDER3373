@@ -9,7 +9,8 @@ import {
 } from "../app/domain/recognition/suggestions.js";
 
 test("run status, operator, relic, revelation, thought, age, and coin candidates use stable dedupe keys", () => {
-  assert.equal(recognitionCandidateKey({ kind: "runStatus", field: "hope", value: 8 }), "runStatus:hope:8");
+  assert.equal(recognitionCandidateKey({ kind: "runStatus", field: "ingot", value: 8 }), "runStatus:_:ingot:8");
+  assert.equal(recognitionCandidateKey({ kind: "runStatus", campaignId: "is5_sarkaz", field: "difficulty", value: 18 }), "runStatus:is5_sarkaz:difficulty:18");
   assert.equal(recognitionCandidateKey({ kind: "operator", operatorId: "char_002_amiya" }), "operator:char_002_amiya");
   assert.equal(recognitionCandidateKey({ kind: "relic", relicId: "r1" }), "relic:r1");
   assert.equal(recognitionCandidateKey({ kind: "revelation", campaignId: "is4_sami", fieldId: "revelationBoard", slotKind: "rhetoric", effectId: "x" }), "revelation:is4_sami:revelationBoard:rhetoric:x:_");
@@ -40,7 +41,7 @@ test("recognition suggestions append to pendingSuggestions without mutating acti
     pendingSuggestions: [],
   };
   const suggestions = buildRecognitionSuggestions([
-    { kind: "runStatus", field: "hope", label: "希望", value: 8, rawText: "希望 8", confidence: 0.8 },
+    { kind: "runStatus", field: "ingot", label: "源石錐", value: 8, rawText: "源石錐 8", confidence: 0.8 },
     { kind: "operator", operatorId: "char_002_amiya", name: "アーミヤ", rawText: "アーミヤ", confidence: 0.8 },
     { kind: "relic", relicId: "r1", name: "秘宝A", rawText: "秘宝A", confidence: 0.8 },
     { kind: "coin", campaignId: "is6_sui", coinId: "coin-a", name: "通宝A", statusId: "status-a", face: "front", count: 2 },

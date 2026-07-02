@@ -25,6 +25,10 @@ function isIs5State(state) {
   return currentCampaignId(state) === IS5_AUTO_APPLY_CAMPAIGN_ID;
 }
 
+function candidateCampaignMatchesState(state, candidate = {}) {
+  return !candidate.campaignId || candidate.campaignId === currentCampaignId(state);
+}
+
 function ensureIs5Special(run) {
   run.special ||= {};
   run.special[IS5_AUTO_APPLY_CAMPAIGN_ID] ||= {};
@@ -205,7 +209,11 @@ function syncIs5AgeFullScanCandidates(state, suggestions = []) {
 function canAutoApplySuggestion(state, suggestion, candidate) {
   if (!autoApplyProfiles.has(suggestion.profileId)) return false;
   if (candidate.kind === "operator") return suggestion.profileId === "operatorsFull";
-  if (candidate.kind === "runStatus") return isIs5State(state) && suggestion.profileId === "runStatusFull";
+  if (candidate.kind === "runStatus") {
+    return isIs5State(state)
+      && suggestion.profileId === "runStatusFull"
+      && candidateCampaignMatchesState(state, candidate);
+  }
   if (candidate.kind === "relic") return isIs5State(state) && suggestion.profileId === "relicsFull";
   if (candidate.kind === "thought") {
     return isIs5State(state)

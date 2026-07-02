@@ -68,7 +68,7 @@ public static class RhodesRecognitionCandidateApplier
     private static List<MaaCandidatePreview> NormalizeCandidatesForApply(IEnumerable<MaaCandidatePreview> candidates)
     {
         var normalized = new List<MaaCandidatePreview>();
-        var bestRunStatusByField = new Dictionary<string, int>(StringComparer.Ordinal);
+        var bestRunStatusByKey = new Dictionary<string, int>(StringComparer.Ordinal);
 
         foreach (var candidate in candidates)
         {
@@ -78,16 +78,16 @@ public static class RhodesRecognitionCandidateApplier
                 continue;
             }
 
-            var field = CandidateId(candidate.Field, candidate.Value);
-            if (string.IsNullOrWhiteSpace(field))
+            var key = RunStatusApplyKey(candidate);
+            if (string.IsNullOrWhiteSpace(key))
             {
                 normalized.Add(candidate);
                 continue;
             }
 
-            if (!bestRunStatusByField.TryGetValue(field, out var existingIndex))
+            if (!bestRunStatusByKey.TryGetValue(key, out var existingIndex))
             {
-                bestRunStatusByField[field] = normalized.Count;
+                bestRunStatusByKey[key] = normalized.Count;
                 normalized.Add(candidate);
                 continue;
             }
@@ -521,6 +521,15 @@ public static class RhodesRecognitionCandidateApplier
     {
         var value = string.IsNullOrWhiteSpace(primaryValue) ? fallbackValue : primaryValue;
         return value.Trim();
+    }
+
+    private static string RunStatusApplyKey(MaaCandidatePreview candidate)
+    {
+        var field = CandidateId(candidate.Field, candidate.Value);
+        if (string.IsNullOrWhiteSpace(field))
+            return "";
+
+        return string.Join("\u001f", [candidate.CampaignId.Trim(), field]);
     }
 
     private static string NormalizeRevelationFieldId(string fieldId)

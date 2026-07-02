@@ -65,6 +65,7 @@ var tests = new (string Name, Action Run)[]
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
     ("Recognition candidate applier rejects run status candidates from other campaigns", CandidateRunStatusRejectsOtherCampaign),
+    ("Recognition candidate applier keeps current campaign run status duplicates", CandidateRunStatusKeepsCurrentCampaignDuplicate),
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
     ("Recognition candidate applier keeps the best duplicate run status candidate", CandidateRunStatusApplyBestDuplicate),
     ("Recognition candidate applier can select operator and relic candidates", CandidateChoiceApply),
@@ -2369,6 +2370,30 @@ static void CandidateRunStatusRejectsOtherCampaign()
     Equal("is5_sarkaz_squad_01", run["squadId"]!.GetValue<string>(), "squad preserved");
     Equal("is5_sarkaz_mimic_01", run["squadRandomEffectOptionId"]!.GetValue<string>(), "squad option preserved");
     Equal(20, run["ingot"]!.GetValue<int>(), "neutral ingot applied");
+}
+
+static void CandidateRunStatusKeepsCurrentCampaignDuplicate()
+{
+    var state = JsonNode.Parse("""{ "run": { "campaignId": "is5_sarkaz" } }""")!.AsObject();
+    var candidates = new[]
+    {
+        new MaaCandidatePreview("runStatus", "別IS等級", "14", "14", 0.99, Field: "difficulty", CampaignId: "is4_sami"),
+        new MaaCandidatePreview("runStatus", "サルカズ等級", "18", "18", 0.80, Field: "difficulty", CampaignId: "is5_sarkaz"),
+        new MaaCandidatePreview("runStatus", "別IS分隊", "is4_sami_squad_01", "別IS分隊", 0.99, Field: "squadId", CampaignId: "is4_sami"),
+        new MaaCandidatePreview("runStatus", "サルカズ分隊", "is5_sarkaz_squad_01", "サルカズ分隊", 0.80, Field: "squadId", CampaignId: "is5_sarkaz"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.ApplyRunStatus(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+
+    Equal(2, summary.AppliedCount, "current campaign values applied");
+    Equal(2, summary.IgnoredCount, "other campaign values ignored");
+    Equal("difficulty|squadId", string.Join("|", summary.AppliedFields), "applied current campaign fields");
+    var run = state["run"]!.AsObject();
+    Equal(18, run["difficulty"]!.GetValue<int>(), "current difficulty");
+    Equal("is5_sarkaz_squad_01", run["squadId"]!.GetValue<string>(), "current squad");
 }
 
 static void CandidateCampaignApplyFirst()

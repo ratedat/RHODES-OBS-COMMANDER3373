@@ -29,3 +29,30 @@ test("thought full scan auto-apply aggregates duplicate thought instances into c
   assert.equal(result.autoApplied.length, 2);
   assert.equal(result.remainingSuggestions.length, 0);
 });
+
+test("run status auto-apply ignores candidates from other campaigns", () => {
+  const state = {
+    run: {
+      campaignId: "is5_sarkaz",
+      difficulty: 1,
+    },
+  };
+  const suggestions = [
+    {
+      profileId: "runStatusFull",
+      recognitionKey: "runStatus:is5_sarkaz:difficulty:18",
+      candidate: { kind: "runStatus", field: "difficulty", value: 18, campaignId: "is5_sarkaz" },
+    },
+    {
+      profileId: "runStatusFull",
+      recognitionKey: "runStatus:is4_sami:difficulty:14",
+      candidate: { kind: "runStatus", field: "difficulty", value: 14, campaignId: "is4_sami" },
+    },
+  ];
+
+  const result = applyRecognitionScanCompletionToState(state, { profileId: "runStatusFull", suggestions });
+
+  assert.equal(result.state.run.difficulty, 18);
+  assert.deepEqual(result.autoApplied.map((item) => item.recognitionKey), ["runStatus:is5_sarkaz:difficulty:18"]);
+  assert.deepEqual(result.remainingSuggestions.map((item) => item.recognitionKey), ["runStatus:is4_sami:difficulty:14"]);
+});
