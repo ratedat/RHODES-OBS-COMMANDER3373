@@ -32,6 +32,7 @@ flowchart LR
 
 ### 3. RHODES MAA Resource
 - 基本情報、オペレーター、秘宝、特殊値を MAA Resource の pipeline/task に分割する
+- 基本情報の取得対象は、源石錐、等級、分隊、ISごとの特殊値に限定する。希望、耐久値、シールド、指揮Lvは取得対象外とし、MAA Resource / Suki候補化から外す
 - 自前テンプレート検出は MAAFramework task へ移す
 - Custom Recognition は RHODES 固有の候補化に必要な最小単位だけ実装する
 - `data/recognition/maa-tasks.json` と `data/recognition/scan-profiles.json` を生成元にし、`tools/generate-maa-resource.mjs` で `resource/base/pipeline/rhodes-generated.json` を更新する
@@ -113,6 +114,7 @@ flowchart LR
 - 接続済み: 証跡ツリー上で候補/Resource task/logの表示対象を切り替える小型フィルターを追加した。
 - 接続済み: 証跡ツリーのcandidate/task/logノードから対応する候補、Resource task、ログ一覧の選択状態へ連動できる。
 - 接続済み: 既存の候補、Resource task、ログ一覧側の選択から証跡ツリー側の該当ノードを選択できる。
+- 接続済み: 基礎情報スキャンの取得対象を源石錐、等級、分隊、IS特殊値に絞り、希望、耐久値、シールド、指揮LvをMAA Resource生成元、Suki候補化、候補適用から外した。
 - 残作業: 証跡ツリーのノード種別ごとに表示密度と詳細欄の既定表示を調整する。
 
 ## First Milestone

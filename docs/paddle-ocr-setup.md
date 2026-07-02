@@ -1,10 +1,10 @@
-# PaddleOCR optional setup
+# PaddleOCR legacy notes
 
-RHODES OBS COMMANDER3373 can use PaddleOCR for ADB screenshot OCR and falls back to Windows OCR when PaddleOCR is unavailable. The app auto-detects project `.venv-ocr`, `%USERPROFILE%\.paddleocr-mcp-venv\Scripts\python.exe`, and `%USERPROFILE%\.venv-ocr\Scripts\python.exe` before falling back to `python`.
+PaddleOCR and Windows OCR are no longer active recognition routes for RHODES OBS COMMANDER3373. The active OCR policy is **MAA-OCR by profile default, with GLM-OCR as an optional verification engine**. This file is retained only for historical setup notes while the old adapters remain in the tree.
 
 ## Why PaddleOCR
 
-MAA-style recognition works best when OCR is run on fixed ROIs and then normalized. PaddleOCR is a better fit than Windows OCR for small UI numerals such as life points, shield, and command level.
+MAA-style recognition works best when OCR is run on fixed ROIs and then normalized. The active MAAFramework direction keeps base recognition to originium ingots, difficulty, squad, and campaign-specific values. Hope, life points, shield, and command level are no longer recognition targets.
 
 ## Install in a local virtual environment
 
@@ -15,11 +15,11 @@ py -3.11 -m venv .venv-ocr
 .\.venv-ocr\Scripts\python.exe -m pip install -r requirements-ocr.txt
 ```
 
-## Use PaddleOCR from the app
+## Legacy manual PaddleOCR run
 
 ```powershell
-# RHODES_PYTHON is optional when PaddleOCR is installed in %USERPROFILE%\.paddleocr-mcp-venv or .venv-ocr.
-$env:RHODES_OCR_ENGINE = 'paddle'
+# This route is no longer exposed in the app UI.
+$env:RHODES_OCR_ENGINE = 'maa-ocr'
 $env:RHODES_PADDLE_DEVICE = 'cpu'
 npm run app:debug
 ```
@@ -30,15 +30,13 @@ Use `RHODES_PYTHON` only when PaddleOCR is installed somewhere else:
 $env:RHODES_PYTHON = 'O:\Arknights_Rogue_OBSTool\.venv-ocr\Scripts\python.exe'
 ```
 
-`RHODES_OCR_ENGINE` values:
+Active `RHODES_OCR_ENGINE` values:
 
-- `auto`: try PaddleOCR, then Windows OCR fallback.
-- `paddle`: require PaddleOCR and report OCR setup errors.
-- `windows`: use Windows.Media.Ocr only.
-- `maa-onnx`: use the MAA YoStarJP ONNX recognizer through ONNXRuntime. This is an explicit experimental engine for fixed ROI recognition.
-- `hybrid`: merge MAA ONNX and PaddleOCR fixed-ROI results into one candidate frame. Prefer this for local experiments.
-- `windows-glm`: merge Windows OCR and optional GLM-OCR fixed-ROI results. This is verification-only and requires the setup in [GLM-OCR optional verification setup](glm-ocr-setup.md).
-- `glm-ocr`: require GLM-OCR directly. This is verification-only and should not be used as the general default.
+- `profile`: use each scan profile's default. Current profiles route to `maa-ocr`.
+- `maa-ocr`: use the MAA YoStarJP ONNX recognizer through ONNXRuntime.
+- `glm-ocr`: require GLM-OCR directly. This is optional verification and should not be the general user default.
+
+Old values such as `hybrid`, `paddle`, `windows`, `windows-paddle`, and `windows-glm` are normalized away by the app and are not shown in the UI.
 
 Optional Paddle settings:
 
@@ -50,20 +48,18 @@ Optional Paddle settings:
 
 ## Current status ROI
 
-The squad-select status band uses fixed 1280x720 base ROIs and scales to the actual screenshot size, matching MAA-style task data. The relevant fields are:
+The squad-select status band uses fixed 1280x720 base ROIs and scales to the actual screenshot size, matching MAA-style task data. The active fields are:
 
-- `run.life_points`: current life value before slash.
-- `run.shield`: shield value beside the shield icon.
-- `run.command_level`: command level numeral.
+- `run.ingot`: originium ingots.
+- `run.idea.current`: IS#5 conception value.
 - `run.squad_name`: selected squad name.
 - `run.difficulty_grade`: selected difficulty grade numeral.
-- `run.status_band`: fallback OCR band for Windows OCR.
 
 OCR candidates still go to review first and do not directly mutate the overlay state.
 
 ## ONNXRuntime path
 
-For MAA ONNXRuntime/FastDeploy-compatible assets, see [ONNXRuntime / FastDeploy OCR setup](onnxruntime-fastdeploy-setup.md). The current app still defaults to PaddleOCR fixed-ROI recognition until the ONNX recognizer is promoted from setup to active OCR engine.
+For MAA ONNXRuntime/FastDeploy-compatible assets, see [ONNXRuntime / FastDeploy OCR setup](onnxruntime-fastdeploy-setup.md). The current app defaults to MAA-OCR for active scan profiles.
 
 ## Sources
 

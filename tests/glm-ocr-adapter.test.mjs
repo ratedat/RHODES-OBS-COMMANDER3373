@@ -61,5 +61,4 @@ test("GLM OCR extractor can use an injected runner and returns OCR text", async 
 
 test("default OCR selector exposes GLM OCR engines for opt-in verification", () => {
   assert.equal(typeof createDefaultOcrTextExtractor({ engine: "glm-ocr" }).extract, "function");
-  assert.equal(typeof createDefaultOcrTextExtractor({ engine: "windows-glm" }).extract, "function");
 });

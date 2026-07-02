@@ -27,5 +27,5 @@ test("preserveLocalConfigOnReset keeps adb and UI/OBS preferences", () => {
   assert.equal(next.preferences.operatorGridColumns, 4);
   assert.equal(next.preferences.compactRelicScrollSpeed, 21);
   assert.equal(next.preferences.horizontalOperatorScrollSpeed, 6);
-  assert.equal(next.preferences.ocrEngine, "windows-glm");
+  assert.equal(next.preferences.ocrEngine, "glm-ocr");
 });

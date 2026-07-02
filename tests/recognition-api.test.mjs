@@ -125,21 +125,9 @@ test("MAA Resource recognition API converts task detail JSON into RHODES candida
       body: JSON.stringify({
         profile: "runStatusFull",
         pipeline: {
-          RhodesOcrRegion_run_hope_current: { attach: { id: "run.hope.current" } },
-          RhodesOcrRegion_run_hope_max: { attach: { id: "run.hope.max" } },
           RhodesOcrRegion_run_ingot: { attach: { id: "run.ingot" } },
         },
         taskResults: [
-          {
-            entry: "RhodesOcrRegion_run_hope_current",
-            algorithm: "OCR",
-            recognitionDetailJson: JSON.stringify({ best: { text: "3", score: 0.94, box: [941, 17, 32, 35] } }),
-          },
-          {
-            entry: "RhodesOcrRegion_run_hope_max",
-            algorithm: "OCR",
-            recognitionDetailJson: JSON.stringify({ best: { text: "8", score: 0.95, box: [965, 17, 64, 35] } }),
-          },
           {
             entry: "RhodesOcrRegion_run_ingot",
             algorithm: "OCR",
@@ -153,10 +141,9 @@ test("MAA Resource recognition API converts task detail JSON into RHODES candida
 
     assert.equal(response.status, 200);
     assert.equal(payload.result.source, "maa-framework");
-    assert.equal(candidates.find((candidate) => candidate.field === "hope")?.value, 3);
-    assert.equal(candidates.find((candidate) => candidate.field === "maxHope")?.value, 8);
     assert.equal(candidates.find((candidate) => candidate.field === "ingot")?.value, 20);
-    assert.equal(payload.result.suggestions.length, 3);
+    assert.equal(candidates.some((candidate) => ["hope", "maxHope"].includes(candidate.field)), false);
+    assert.equal(payload.result.suggestions.length, 1);
   } finally {
     await closeServer(server);
   }

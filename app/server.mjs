@@ -350,7 +350,7 @@ function recognitionOcrRoutingFromState(state, profiles) {
 }
 
 function recognitionClassificationOcrEngine(defaultEngine) {
-  return normalizeOcrEngine(defaultEngine) === "glm-ocr" ? "windows-glm" : null;
+  return normalizeOcrEngine(defaultEngine) === "glm-ocr" ? "glm-ocr" : null;
 }
 
 function recognitionContextFromScanBody(body = {}) {

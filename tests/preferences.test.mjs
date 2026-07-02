@@ -11,16 +11,16 @@ test("OCR engine preference defaults to profile routing", () => {
 
 test("OCR engine preference accepts GLM verification engines", () => {
   assert.equal(normalizeOcrEngine("glm-ocr"), "glm-ocr");
-  assert.equal(normalizeOcrEngine("windows-glm"), "windows-glm");
-  assert.ok(ocrEngineOptions.some((option) => option.id === "windows-glm"));
+  assert.equal(normalizeOcrEngine("windows-glm"), "glm-ocr");
+  assert.ok(ocrEngineOptions.some((option) => option.id === "glm-ocr"));
 });
 
-test("OCR engine preference exposes MAA-first engines", () => {
-  assert.equal(normalizeOcrEngine("hybrid"), "hybrid");
-  assert.equal(normalizeOcrEngine("maa-onnx"), "maa-onnx");
-  assert.equal(normalizeOcrEngine("paddle"), "paddle");
-  assert.ok(ocrEngineOptions.some((option) => option.id === "maa-onnx"));
-  assert.ok(ocrEngineOptions.some((option) => option.id === "paddle"));
+test("OCR engine preference exposes only MAA-OCR plus optional GLM", () => {
+  assert.equal(normalizeOcrEngine("maa-ocr"), "maa-ocr");
+  assert.equal(normalizeOcrEngine("maa-onnx"), "maa-ocr");
+  assert.equal(normalizeOcrEngine("hybrid"), "profile");
+  assert.equal(normalizeOcrEngine("paddle"), "profile");
+  assert.deepEqual(ocrEngineOptions.map((option) => option.id), ["profile", "maa-ocr", "glm-ocr"]);
 });
 
 test("choice list filter preferences are normalized", () => {

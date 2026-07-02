@@ -5,12 +5,6 @@ import { runMaaResourceRecognition } from "../app/domain/recognition/maa-resourc
 import { extractRunStatusCandidates } from "../app/domain/recognition/run-status-extractor.js";
 
 const pipeline = {
-  RhodesOcrRegion_run_hope_current: {
-    attach: { id: "run.hope.current" },
-  },
-  RhodesOcrRegion_run_hope_max: {
-    attach: { id: "run.hope.max" },
-  },
   RhodesOcrRegion_run_ingot: {
     attach: { id: "run.ingot" },
   },
@@ -21,16 +15,6 @@ test("runMaaResourceRecognition feeds MAA Resource OCR results into existing can
     profile: { id: "runStatusFull", label: "基礎情報" },
     pipeline,
     taskResults: [
-      {
-        entry: "RhodesOcrRegion_run_hope_current",
-        algorithm: "OCR",
-        recognitionDetailJson: JSON.stringify({ best: { text: "3", score: 0.94, box: [941, 17, 32, 35] } }),
-      },
-      {
-        entry: "RhodesOcrRegion_run_hope_max",
-        algorithm: "OCR",
-        recognitionDetailJson: JSON.stringify({ best: { text: "8", score: 0.95, box: [965, 17, 64, 35] } }),
-      },
       {
         entry: "RhodesOcrRegion_run_ingot",
         algorithm: "OCR",
@@ -49,15 +33,13 @@ test("runMaaResourceRecognition feeds MAA Resource OCR results into existing can
 
   assert.equal(result.status, "completed");
   assert.deepEqual(result.counts, {
-    taskResults: 3,
-    ocrResults: 3,
+    taskResults: 1,
+    ocrResults: 1,
     templateResults: 0,
-    candidates: 3,
-    suggestions: 3,
+    candidates: 1,
+    suggestions: 1,
   });
   assert.equal(result.frame.source, "maa-framework");
-  assert.equal(result.candidates.find((candidate) => candidate.field === "hope")?.value, 3);
-  assert.equal(result.candidates.find((candidate) => candidate.field === "maxHope")?.value, 8);
   assert.equal(result.candidates.find((candidate) => candidate.field === "ingot")?.value, 20);
-  assert.deepEqual(result.suggestions.map((suggestion) => suggestion.profileId), ["runStatusFull", "runStatusFull", "runStatusFull"]);
+  assert.deepEqual(result.suggestions.map((suggestion) => suggestion.profileId), ["runStatusFull"]);
 });

@@ -55,13 +55,13 @@ test("MAA ONNX OCR extractor can use an injected runner and returns OCR text", a
   await fs.writeFile(keys, "fake");
   const encoded = Buffer.from(JSON.stringify({
     engine: "maa-onnx-recognition",
-    text: "4/4",
-    ocrResults: [{ text: "4/4", rawText: "4/4", regionId: "run.life_points", confidence: 0.9 }],
+    text: "20",
+    ocrResults: [{ text: "20", rawText: "20", regionId: "run.ingot", confidence: 0.9 }],
   }), "utf8").toString("base64");
   const extractor = createMaaOnnxOcrTextExtractor({
     paths: { recModel: model, recKeys: keys, ocrConfig: path.join(dir, "ocr_config.json") },
     runOcr: async ({ regions, templateOcrRegions }) => {
-      assert.equal(regions[0].id, "run.life_points");
+      assert.equal(regions[0].id, "run.ingot");
       assert.equal(templateOcrRegions[0].idPrefix, "operator.card.name");
       assert.deepEqual(templateOcrRegions[0].searchRoi, { x: 20, y: 40, width: 60, height: 80 });
       return encoded;
@@ -70,7 +70,7 @@ test("MAA ONNX OCR extractor can use an injected runner and returns OCR text", a
 
   try {
     const frame = await extractor.extract({ bytes: Buffer.from("image") }, {
-      regions: [{ id: "run.life_points" }],
+      regions: [{ id: "run.ingot" }],
       scale: { scaleX: 2, scaleY: 2 },
       profile: {
         templateOcrRegions: [{
@@ -82,15 +82,15 @@ test("MAA ONNX OCR extractor can use an injected runner and returns OCR text", a
       },
     });
     assert.equal(frame.ocrEngine, "maa-onnx-recognition");
-    assert.equal(frame.text, "4/4");
-    assert.equal(frame.ocrResults[0].rawText, "4/4");
+    assert.equal(frame.text, "20");
+    assert.equal(frame.ocrResults[0].rawText, "20");
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
 
-test("default OCR selector exposes maa-onnx as an explicit engine", () => {
-  const extractor = createDefaultOcrTextExtractor({ engine: "maa-onnx" });
+test("default OCR selector exposes MAA-OCR as the active engine", () => {
+  const extractor = createDefaultOcrTextExtractor({ engine: "maa-ocr" });
 
   assert.equal(typeof extractor.extract, "function");
 });

@@ -60,18 +60,6 @@ function numericValuesFromText(text, options = {}) {
     .filter((value) => Number.isFinite(value));
 }
 
-function looseNumericValuesFromText(text, options = {}) {
-  const normalized = normalizeRecognitionText(text);
-  return [...normalized.matchAll(/[0-9０-９Oo図IiLl一丨イィ]+/g)]
-    .map((match) => digitValue(match[0], options))
-    .filter((value) => Number.isFinite(value));
-}
-
-function confidenceForField(base, frame, field) {
-  const regionBoost = asTextResults(frame).some((item) => String(item.regionId || "").includes(field)) ? 0.05 : 0;
-  return Math.min(0.98, base + regionBoost);
-}
-
 function findSquadByText(text, { campaignId, squads = [] } = {}) {
   return squads
     .filter((item) => item.campaignId === campaignId)
@@ -197,33 +185,6 @@ function findDifficultyCandidate(text, { campaignId, difficultyGrades = {}, fram
 }
 
 
-function findCommandLevelCandidate(text, frame) {
-  const patterns = [
-    /指揮(?:Lv|LV|レベル)([0-9０-９IiLl一丨]{1,2})(?!\/)/gi,
-  ];
-  let value = null;
-  for (const pattern of patterns) {
-    for (const match of text.matchAll(pattern)) {
-      const parsed = digitValue(match[1], { allowRoman: true });
-      if (parsed >= 1 && parsed <= 99) {
-        value = parsed;
-        break;
-      }
-    }
-    if (value != null) break;
-  }
-  if (!Number.isFinite(value)) return null;
-  return {
-    kind: "runStatus",
-    field: "commandLevel",
-    label: "指揮Lv",
-    value,
-    rawText: `指揮Lv ${value}`,
-    confidence: confidenceForField(0.68, frame, "status"),
-    needsReview: true,
-  };
-}
-
 function findRegionNumberCandidate(frame, { field, label, regionIdPart, min = 0, max = 999, confidence = 0.7, prefer = "last", allowRoman = false }) {
   const entry = asTextResults(frame)
     .filter((item) => String(item.regionId || "").includes(regionIdPart))
@@ -283,237 +244,13 @@ function candidateFromNumber({ field, label, value, confidence = 0.75 }) {
   };
 }
 
-function splitCompactHopeDigits(digits) {
-  if (!digits || digits.length < 3 || digits.length > 4) return null;
-  const splitAt = digits.length <= 3 ? 1 : 2;
-  const current = Number(digits.slice(0, splitAt));
-  const max = Number(digits.slice(splitAt));
-  if (!Number.isFinite(current) || !Number.isFinite(max)) return null;
-  if (max < current) return null;
-  return [current, max];
-}
-
-function hopePairFromText(text) {
-  const compact = normalizeRecognitionText(text, ["remove_spaces"]);
-  const matches = [...compact.matchAll(/[0-9０-９Oo図IiLl一丨イィ]+/g)];
-  const values = matches
-    .map((match) => digitValue(match[0]))
-    .filter((value) => Number.isFinite(value));
-  if (values.length >= 2) return [values[0], values[1]];
-  if (matches.length !== 1) return null;
-  return splitCompactHopeDigits(digitText(matches[0][0]));
-}
-
-function isValidHopePair(pair) {
-  if (!Array.isArray(pair) || pair.length < 2) return false;
-  const [current, max] = pair;
-  return Number.isFinite(current) && Number.isFinite(max) && current >= 0 && max >= current && max <= 50;
-}
-
-function hopeCandidatesFromPair(pair) {
-  if (!isValidHopePair(pair)) return [];
-  const [current, max] = pair;
-  return [
-    candidateFromNumber({ field: "hope", label: "希望", value: current, confidence: 0.75 }),
-    candidateFromNumber({ field: "maxHope", label: "希望上限", value: max, confidence: 0.72 }),
-  ].filter(Boolean);
-}
-
-function splitCompactResourceDigits(digits) {
-  if (!digits || digits.length < 3 || digits.length > 8) return null;
-  const candidates = [];
-  for (let hopeLength = 1; hopeLength <= 2; hopeLength += 1) {
-    for (let maxLength = 1; maxLength <= 2; maxLength += 1) {
-      const ingotLength = digits.length - hopeLength - maxLength;
-      if (ingotLength < 1 || ingotLength > 4) continue;
-      const hope = Number(digits.slice(0, hopeLength));
-      const maxHope = Number(digits.slice(hopeLength, hopeLength + maxLength));
-      const ingot = Number(digits.slice(hopeLength + maxLength));
-      if (!isValidHopePair([hope, maxHope])) continue;
-      if (maxHope < 3 || maxHope > 50 || ingot > 9999) continue;
-      candidates.push({ hope, maxHope, ingot, score: (maxLength * 10) - ingotLength });
-    }
-  }
-  const best = candidates.toSorted((a, b) => b.score - a.score || b.maxHope - a.maxHope)[0];
-  return best ? [best.hope, best.maxHope, best.ingot] : null;
-}
-
-function resourceTripleFromText(text) {
-  const values = looseNumericValuesFromText(text).filter((value) => value >= 0 && value <= 9999);
-  if (values.length >= 3) {
-    for (let index = values.length - 3; index >= 0; index -= 1) {
-      const [hope, maxHope, ingot] = values.slice(index, index + 3);
-      if (!isValidHopePair([hope, maxHope])) continue;
-      if (maxHope > 99 || ingot > 9999) continue;
-      return [hope, maxHope, ingot];
-    }
-  }
-  const compactDigits = digitText(text);
-  return splitCompactResourceDigits(compactDigits);
-}
-
-function resourceCandidatesFromTriple(triple) {
-  if (!Array.isArray(triple) || triple.length < 3) return [];
-  const [hope, maxHope, ingot] = triple;
-  return [
-    candidateFromNumber({ field: "hope", label: "希望", value: hope, confidence: 0.82 }),
-    candidateFromNumber({ field: "maxHope", label: "希望上限", value: maxHope, confidence: 0.8 }),
-    candidateFromNumber({ field: "ingot", label: "源石錐", value: ingot, confidence: 0.84 }),
-  ].filter(Boolean);
-}
-
-function findResourceNumberCandidates(frame) {
-  for (const entry of asTextResults(frame).filter((item) => String(item.regionId || "").includes("resource_numbers"))) {
-    const triple = resourceTripleFromText(entry.text);
-    const candidates = resourceCandidatesFromTriple(triple);
-    if (candidates.length === 3) return candidates;
-  }
-  return [];
-}
-
-function isWholeHopeEntry(entry) {
-  const regionId = String(entry?.regionId || "");
-  return regionId.includes("hope") && !/hope[._-](current|max)/.test(regionId);
-}
-
-function firstNumericValue(entry) {
-  return numericValuesFromText(entry?.text).find((value) => Number.isFinite(value));
-}
-
 function firstNumericValueInRange(entry, { min = 0, max = 999 } = {}) {
   return numericValuesFromText(entry?.text).find((value) => Number.isFinite(value) && value >= min && value <= max);
-}
-
-function suffixNumericValueInRange(entry, { min = 0, max = 999, maxLength = 2 } = {}) {
-  const digits = digitText(entry?.text);
-  if (!digits || digits.length < 2) return null;
-  const longest = Math.min(maxLength, digits.length);
-  for (let length = longest; length >= 1; length -= 1) {
-    const value = Number(digits.slice(-length));
-    if (Number.isFinite(value) && value >= min && value <= max) return value;
-  }
-  return null;
-}
-
-function hopeCurrentValueInRange(entry, { max } = {}) {
-  const first = firstNumericValueInRange(entry, { min: 0, max: 99 });
-  if (Number.isFinite(first) && (!Number.isFinite(max) || first <= max)) return first;
-  if (Number.isFinite(max)) {
-    const suffix = suffixNumericValueInRange(entry, { min: 0, max: Math.min(99, max), maxLength: 2 });
-    if (Number.isFinite(suffix)) return suffix;
-  }
-  return first;
-}
-
-function hopePairFromTopRightStatus(frame) {
-  for (const entry of asTextResults(frame).filter((item) => String(item.regionId || "").includes("top_right_status"))) {
-    const values = looseNumericValuesFromText(entry.text).filter((value) => value >= 0 && value <= 9999);
-    if (values.length < 2) continue;
-    for (let index = values.length - 1; index >= 1; index -= 1) {
-      const max = values[index];
-      const current = values[index - 1];
-      if (max < 10 || max > 99) continue;
-      if (current > 9) continue;
-      if (isValidHopePair([current, max])) return [current, max];
-    }
-  }
-  return null;
-}
-
-function findTopLayoutNumberCandidate(frame, { field, label, regionIdPattern, max = 9999 }) {
-  return findBestRegionNumberCandidate(frame, {
-    field,
-    label,
-    regionIdPattern,
-    min: 0,
-    max,
-    confidence: 0.86,
-    prefer: "first",
-  });
 }
 
 function isRegionId(regionId, baseId) {
   const value = String(regionId || "");
   return value === baseId || value.startsWith(`${baseId}.`) || value.startsWith(`${baseId}-`) || value.startsWith(`${baseId}_`);
-}
-
-function findTopResourceLayout(frame) {
-  const compact = {
-    ingot: findTopLayoutNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPattern: /^run\.top_ingot$/ }),
-    hope: findTopLayoutNumberCandidate(frame, { field: "hope", label: "希望", regionIdPattern: /^run\.top_hope$/, max: 999 }),
-  };
-  if (compact.ingot && compact.hope) return compact;
-
-  const wide = {
-    ingot: findTopLayoutNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPattern: /^run\.top_ingot\.wide$/ }),
-    hope: findTopLayoutNumberCandidate(frame, { field: "hope", label: "希望", regionIdPattern: /^run\.top_hope\.wide$/, max: 999 }),
-  };
-  if (wide.ingot && wide.hope) return wide;
-
-  return {
-    ingot: compact.ingot || wide.ingot,
-    hope: compact.hope || wide.hope,
-  };
-}
-
-function findTopHopeCandidate(frame) {
-  return findTopResourceLayout(frame).hope;
-}
-
-function findTopHopePairCandidates(frame) {
-  const current = findTopLayoutNumberCandidate(frame, { field: "hope", label: "希望", regionIdPattern: /^run\.top_hope$/, max: 50 });
-  const max = findTopLayoutNumberCandidate(frame, { field: "maxHope", label: "希望上限", regionIdPattern: /^run\.top_hope\.wide$/, max: 50 })
-    || findTopLayoutNumberCandidate(frame, { field: "maxHope", label: "希望上限", regionIdPattern: /^run\.top_ingot\.wide$/, max: 50 });
-  if (!current || !max || !isValidHopePair([current.value, max.value])) return [];
-  return hopeCandidatesFromPair([current.value, max.value]);
-}
-
-function findHopeCandidates(frame) {
-  const entries = asTextResults(frame).filter((item) => String(item.regionId || "").includes("hope"));
-  if (!entries.length) return [];
-  const topHope = findTopHopeCandidate(frame);
-
-  const wholeEntries = entries.filter(isWholeHopeEntry);
-  const isFullTemplateRegion = (item) => /[._-]full(?:[._-]|$)/.test(String(item.regionId || ""));
-  const currentEntries = entries.filter((item) => /hope[._-]current/.test(String(item.regionId || "")));
-  const maxEntries = entries.filter((item) => /hope[._-]max/.test(String(item.regionId || "")));
-  const currentEntry = currentEntries.find((item) => !isFullTemplateRegion(item));
-  const fullCurrentEntry = currentEntries.find(isFullTemplateRegion);
-  const maxEntry = maxEntries.find((item) => !isFullTemplateRegion(item));
-  const fullMaxEntry = maxEntries.find(isFullTemplateRegion);
-  const hopePairEntries = [
-    [currentEntry, maxEntry],
-    [fullCurrentEntry, fullMaxEntry],
-    [currentEntry, fullMaxEntry],
-    [fullCurrentEntry, maxEntry],
-  ];
-  for (const [currentCandidate, maxCandidate] of hopePairEntries) {
-    const max = firstNumericValueInRange(maxCandidate, { min: 0, max: 50 });
-    const current = hopeCurrentValueInRange(currentCandidate, { max });
-    if (isValidHopePair([current, max])) return hopeCandidatesFromPair([current, max]);
-  }
-
-  const topRightPair = hopePairFromTopRightStatus(frame);
-  if (isValidHopePair(topRightPair)) return hopeCandidatesFromPair(topRightPair);
-
-  for (const entry of wholeEntries) {
-    const pair = hopePairFromText(entry.text);
-    if (isValidHopePair(pair)) return hopeCandidatesFromPair(pair);
-  }
-
-  const combinedWholePair = hopePairFromText(wholeEntries.map((entry) => entry.text).join(" "));
-  if (isValidHopePair(combinedWholePair)) return hopeCandidatesFromPair(combinedWholePair);
-
-  const topPair = findTopHopePairCandidates(frame);
-  if (topPair.length === 2) return topPair;
-
-  if (topHope) return [topHope];
-
-  return [findRegionNumberCandidate(frame, { field: "hope", label: "希望", regionIdPart: "hope", min: 0, max: 999, prefer: "first" })].filter(Boolean);
-}
-
-function findTopIngotCandidate(frame) {
-  return findTopResourceLayout(frame).ingot;
 }
 
 function findTemplateIngotCandidate(frame) {
@@ -534,8 +271,6 @@ function findIngotCandidate(frame) {
   if (templateIngot) return templateIngot;
   const direct = findBestRegionNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPattern: /^run\.ingot$/, min: 0, max: 9999, confidence: 0.86, prefer: "first" });
   if (direct) return direct;
-  const topIngot = findTopIngotCandidate(frame);
-  if (topIngot) return topIngot;
   return findRegionNumberCandidate(frame, { field: "ingot", label: "源石錐", regionIdPart: "ingot", min: 0, max: 9999, prefer: "first" });
 }
 
@@ -592,81 +327,16 @@ function findIdeaCandidate(frame, { campaignId } = {}) {
   return null;
 }
 
-function findLifeFractionCandidate(frame) {
-  for (const item of asTextResults(frame).filter((entry) => isRegionId(entry.regionId, "run.life_points"))) {
-    const match = normalizeRecognitionText(item.text, ["remove_spaces"]).match(/([0-9０-９Oo図]+)\/([0-9０-９Oo図]+)/);
-    if (!match) continue;
-    const current = digitValue(match[1]);
-    const max = digitValue(match[2]);
-    if (!Number.isFinite(current) || !Number.isFinite(max)) continue;
-    if (current === 0 && max === 10) continue;
-    return candidateFromNumber({ field: "lifePoints", label: "耐久値", value: current, confidence: 0.73 });
-  }
-  return null;
-}
-
-function findLifePointsCandidate(frame) {
-  const fraction = findLifeFractionCandidate(frame);
-  if (fraction) return fraction;
-  const direct = findRegionNumberCandidate(frame, { field: "lifePoints", label: "耐久値", regionIdPart: "life_points", min: 0, prefer: "first" });
-  if (direct) return direct;
-  for (const item of asTextResults(frame).filter((entry) => String(entry.regionId || "").includes("status_band"))) {
-    const match = normalizeRecognitionText(item.text, ["remove_spaces"]).match(/([0-9０-９Oo図]+)\/([0-9０-９Oo図]+)/);
-    if (!match) continue;
-    const current = digitValue(match[1]);
-    const max = digitValue(match[2]);
-    if (!Number.isFinite(current) || !Number.isFinite(max)) continue;
-    if (current === 0 && max === 10) continue;
-    return candidateFromNumber({ field: "lifePoints", label: "耐久値", value: current, confidence: 0.73 });
-  }
-  return null;
-}
-
-function findCommandLevelFromStatusRoi(frame) {
-  const rows = asTextResults(frame).filter((item) => {
-    const regionId = String(item.regionId || "");
-    return regionId.includes("status_top") || regionId.includes("status_band");
-  });
-  const labelRows = rows.filter((item) => normalizeRecognitionText(item.text, ["remove_spaces"]).includes("指揮Lv"));
-  const labelX = Math.min(...labelRows.map((item) => Number(item.roi?.x)).filter(Number.isFinite));
-  if (!Number.isFinite(labelX)) return null;
-  const numericRows = rows
-    .map((item) => ({ item, value: digitValue(item.text, { allowRoman: true }) }))
-    .filter(({ item, value }) => Number.isFinite(value)
-      && value >= 1
-      && value <= 99
-      && !String(item.text || "").includes("/")
-      && Number.isFinite(Number(item.roi?.x))
-      && Number(item.roi.x) < labelX
-      && Number(item.roi.x) > labelX - 220);
-  const row = numericRows.toSorted((a, b) => Number(b.item.roi.x) - Number(a.item.roi.x))[0];
-  return row ? candidateFromNumber({ field: "commandLevel", label: "指揮Lv", value: row.value, confidence: 0.75 }) : null;
-}
-
 export function extractRunStatusCandidates(frame, { campaignId, squads = [], difficultyGrades = {} } = {}) {
   if (!campaignId) return [];
   const compactText = combinedText(frame, ["remove_spaces"]);
   const numericText = normalizeRecognitionText(compactText, ["jp_numeric"]);
-  const commandLevel = findRegionNumberCandidate(frame, { field: "commandLevel", label: "指揮Lv", regionIdPart: "command_level", min: 1, max: 99, confidence: 0.75, prefer: "first", allowRoman: true })
-    || findCommandLevelFromStatusRoi(frame)
-    || findCommandLevelCandidate(compactText, frame);
-  const resourceCandidates = findResourceNumberCandidates(frame);
-  const directResourceCandidates = [...findHopeCandidates(frame), findIngotCandidate(frame)].filter(Boolean);
-  const directResourceFields = new Set(directResourceCandidates.map((item) => item.field));
-  const runResourceCandidates = ["hope", "maxHope", "ingot"].every((field) => directResourceFields.has(field))
-    ? directResourceCandidates
-    : resourceCandidates.length === 3
-      ? resourceCandidates
-      : directResourceCandidates;
   const candidates = [
     findSquadCandidate(numericText, { campaignId, squads }),
     findSquadRandomEffectCandidate(compactText, { campaignId, squads }),
     findDifficultyCandidate(compactText, { campaignId, difficultyGrades, frame }),
-    commandLevel,
-    ...runResourceCandidates,
+    findIngotCandidate(frame),
     findIdeaCandidate(frame, { campaignId }),
-    findLifePointsCandidate(frame),
-    findRegionNumberCandidate(frame, { field: "shield", label: "シールド", regionIdPart: "shield", min: 0, prefer: "first" }),
   ].filter(Boolean);
   return candidates;
 }

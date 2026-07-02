@@ -14,14 +14,7 @@ public static class RhodesMaaLocalCandidateConverter
     private static readonly IReadOnlyDictionary<string, (string Field, string Label, int Min, int Max, double Confidence)> RunStatusFields =
         new Dictionary<string, (string Field, string Label, int Min, int Max, double Confidence)>(StringComparer.Ordinal)
         {
-            ["run.hope.current"] = ("hope", "希望", 0, 999, 0.74),
-            ["run.hope.max"] = ("maxHope", "希望上限", 0, 999, 0.72),
             ["run.ingot"] = ("ingot", "源石錐", 0, 9999, 0.84),
-            ["run.top_ingot"] = ("ingot", "源石錐", 0, 9999, 0.80),
-            ["run.top_ingot.wide"] = ("ingot", "源石錐", 0, 9999, 0.76),
-            ["run.life_points"] = ("lifePoints", "耐久値", 0, 999, 0.73),
-            ["run.shield"] = ("shield", "シールド", 0, 999, 0.70),
-            ["run.command_level"] = ("commandLevel", "指揮Lv", 1, 99, 0.75),
             ["run.idea"] = ("idea", "構想", 0, 999, 0.70),
             ["run.idea.current"] = ("idea", "構想", 0, 999, 0.82),
             ["run.difficulty_grade"] = ("difficulty", "等級", 1, 99, 0.78),
@@ -175,14 +168,7 @@ public static class RhodesMaaLocalCandidateConverter
     {
         return entry switch
         {
-            "RhodesOcrRegion_run_hope_current" or "RhodesTemplate_runStatusFull_run_hope_current" or "RhodesTemplate_runStatusFull_run_hope_current_full" => "run.hope.current",
-            "RhodesOcrRegion_run_hope_max" or "RhodesTemplate_runStatusFull_run_hope_max" or "RhodesTemplate_runStatusFull_run_hope_max_full" => "run.hope.max",
             "RhodesOcrRegion_run_ingot" or "RhodesTemplate_runStatusFull_run_ingot" => "run.ingot",
-            "RhodesOcrRegion_run_top_ingot" => "run.top_ingot",
-            "RhodesOcrRegion_run_top_ingot_wide" => "run.top_ingot.wide",
-            "RhodesOcrRegion_run_life_points" or "RhodesTemplate_runStatusFull_run_life_points" => "run.life_points",
-            "RhodesOcrRegion_run_shield" or "RhodesTemplate_runStatusFull_run_shield" => "run.shield",
-            "RhodesOcrRegion_run_command_level" => "run.command_level",
             "RhodesOcrRegion_run_idea" => "run.idea",
             "RhodesOcrRegion_run_idea_current" or "RhodesTemplate_runStatusFull_run_idea_current" => "run.idea.current",
             "RhodesOcrRegion_run_difficulty_grade" => "run.difficulty_grade",

@@ -1,4 +1,4 @@
-import { RUN_STAT_FIELD_IDS, normalizeRunStatValue } from "../run-stats.js";
+import { normalizeRunStatValue } from "../run-stats.js";
 
 export const IS5_AUTO_APPLY_CAMPAIGN_ID = "is5_sarkaz";
 
@@ -35,8 +35,8 @@ function applyRunStatusCandidate(state, candidate) {
   const run = state.run ||= {};
   const field = candidate.field;
 
-  if (RUN_STAT_FIELD_IDS.has(field)) {
-    const value = normalizeRunStatValue(field, candidate.value);
+  if (field === "ingot") {
+    const value = normalizeRunStatValue("ingot", candidate.value);
     if (value === null) return false;
     run[field] = value;
     return true;

@@ -153,7 +153,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         [
             new SukiOutputPartPreview("operators", "招集オペレーター", "choices.operators", "選択中オペレーターをOBSへ表示", true, false, true, 420, 132),
             new SukiOutputPartPreview("relics", "秘宝一覧", "choices.relics", "所持秘宝と表示除外を反映", true, true, true, 420, 170),
-            new SukiOutputPartPreview("run", "ラン基本値", "run.status", "希望、源石錐、シールド、指揮Lvなど", true, false, false, 260, 116),
+            new SukiOutputPartPreview("run", "ラン基本値", "run.status", "源石錐、等級、分隊、IS特殊値", true, false, false, 260, 116),
             new SukiOutputPartPreview("special", "IS固有値", "run.special", "思案、啓示、灯火などキャンペーン別の値", true, true, false, 300, 126),
             new SukiOutputPartPreview("recognition", "認識ステータス", "recognition.status", "デバッグ配布時のみ候補/信頼度を表示", false, true, false, 360, 92),
         ];
@@ -1257,29 +1257,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private IEnumerable<SukiStatusChip> BuildHeaderStatusChips()
     {
-        var maxHope = _runState.MaxHope is null ? "-" : _runState.MaxHope.Value.ToString();
-        yield return new SukiStatusChip("希望", $"{_runState.Hope}/{maxHope}", "run.hope");
         yield return new SukiStatusChip("源石錐", _runState.Ingot.ToString(), "run.ingot");
         yield return new SukiStatusChip("構想", _runState.Idea.ToString(), "is5.idea");
-        yield return new SukiStatusChip("シールド", _runState.Shield.ToString(), "run.shield");
-        yield return new SukiStatusChip("耐久", _runState.LifePoints.ToString(), "run.hp");
-        yield return new SukiStatusChip("指揮", $"Lv{_runState.CommandLevel}", "run.commandLevel");
         yield return new SukiStatusChip("等級", string.IsNullOrWhiteSpace(_runState.Difficulty) ? "-" : _runState.Difficulty, "run.difficulty");
         yield return new SukiStatusChip("分隊", string.IsNullOrWhiteSpace(_runState.Squad) ? "-" : _runState.Squad, "run.squad");
     }
 
     private static IEnumerable<SukiRunFieldPreview> BuildRunFieldPreviews(SukiRunStateSnapshot state)
     {
-        var maxHope = state.MaxHope is null ? "-" : state.MaxHope.Value.ToString();
-        yield return new SukiRunFieldPreview("希望", $"{state.Hope}/{maxHope}", "OCR / MAAFramework", "run.hope.current + run.hope.max", "現在値と上限値を分離して読む");
-        yield return new SukiRunFieldPreview("源石錐", state.Ingot.ToString(), "OCR / Template anchor", "run.ingot", "右上の源石錐アイコンを基準に取得");
+        yield return new SukiRunFieldPreview("源石錐", state.Ingot.ToString(), "MAA-OCR / Template anchor", "run.ingot", "右上の源石錐アイコンを基準に取得");
         yield return new SukiRunFieldPreview("構想", state.Idea.ToString(), "Template / OCR", "run.idea.current", "IS#5では構想アイコン直下の数値");
-        yield return new SukiRunFieldPreview("シールド", state.Shield.ToString(), "Template / OCR", "run.shield", "耐久値右側の盾アイコン基準");
-        yield return new SukiRunFieldPreview("耐久", state.LifePoints.ToString(), "OCR / Manual review", "run.life", "左上の耐久値");
-        yield return new SukiRunFieldPreview("指揮Lv", $"Lv{state.CommandLevel}", "OCR", "run.command_level", "指揮Lvパネル");
-        yield return new SukiRunFieldPreview("等級", string.IsNullOrWhiteSpace(state.Difficulty) ? "-" : state.Difficulty, "Manual / squad panel", "run.difficulty_grade", "閉じたマップ上のバッジではなく分隊情報から確定");
-        yield return new SukiRunFieldPreview("分隊", string.IsNullOrWhiteSpace(state.Squad) ? "-" : state.Squad, "Manual / OCR", "run.squad_name", "分隊カードまたは情報パネル");
-        yield return new SukiRunFieldPreview("分隊効果", string.IsNullOrWhiteSpace(state.SquadRandomEffect) ? "-" : state.SquadRandomEffect, "OCR / effect match", "run.squad_card", "ランダム分隊効果がある場合の確定候補");
+        yield return new SukiRunFieldPreview("等級", string.IsNullOrWhiteSpace(state.Difficulty) ? "-" : state.Difficulty, "MAA-OCR / squad panel", "run.difficulty_grade", "分隊情報パネルから確定");
+        yield return new SukiRunFieldPreview("分隊", string.IsNullOrWhiteSpace(state.Squad) ? "-" : state.Squad, "MAA-OCR", "run.squad_name", "分隊カードまたは情報パネル");
+        yield return new SukiRunFieldPreview("IS特殊値", string.IsNullOrWhiteSpace(state.SquadRandomEffect) ? "-" : state.SquadRandomEffect, "MAA-OCR / campaign-specific", "run.squad_card", "構想、分隊効果、啓示、通宝などISごとの値だけを扱う");
     }
 
     private IEnumerable<SukiRuntimeCapabilityPreview> BuildRuntimeCapabilities()

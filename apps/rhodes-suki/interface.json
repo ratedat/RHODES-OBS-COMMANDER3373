@@ -26,13 +26,6 @@
   ],
   "task": [
     {
-      "name": "run_status_top_bar",
-      "label": "Run status top bar OCR",
-      "entry": "RhodesRunStatusTopBarOcr",
-      "controller": ["android_adb"],
-      "resource": ["base"]
-    },
-    {
       "name": "operator_name_ocr",
       "label": "Operator name OCR",
       "entry": "RhodesOperatorNameOcr",
@@ -48,11 +41,11 @@
     },
     {
       "name": "run_status_template_set",
-      "label": "Run status icon templates",
-      "entry": "RhodesRunStatusHopeIcon",
+      "label": "Run status retained icon templates",
+      "entry": "RhodesRunStatusIngotIcon",
       "controller": ["android_adb"],
       "resource": ["base"],
-      "description": "First MAAFramework template entry for hope icon; sibling entries cover idea, ingot, life, and shield."
+      "description": "MAAFramework template entry for retained run status values: originium ingots and campaign-specific values such as IS#5 conception."
     }
   ]
 }

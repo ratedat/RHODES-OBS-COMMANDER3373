@@ -206,7 +206,7 @@ test("MAA-style recognizer forwards OCR region numeric fallback options", async 
   const recognizer = createMaaStyleRecognizer({
     tasks: {
       ocrRegions: [
-        { id: "run.command_level", profileIds: ["runStatusFull"], roi: [310, 15, 55, 50], scale: 8, numericFallback: true, numericStartYRatio: 0 },
+        { id: "run.ingot", profileIds: ["runStatusFull"], roi: [1190, 10, 90, 52], scale: 8, numericFallback: true, numericStartYRatio: 0 },
       ],
     },
     textExtractor: {
@@ -219,10 +219,10 @@ test("MAA-style recognizer forwards OCR region numeric fallback options", async 
 
   await recognizer.classify(
     { bytes: Buffer.from("fake screenshot") },
-    { profile: { id: "runStatusFull", ocrRegionIds: ["run.command_level"] }, scale: { scaleX: 2, scaleY: 2 } },
+    { profile: { id: "runStatusFull", ocrRegionIds: ["run.ingot"] }, scale: { scaleX: 2, scaleY: 2 } },
   );
 
-  assert.equal(regions[0].id, "run.command_level");
+  assert.equal(regions[0].id, "run.ingot");
   assert.equal(regions[0].numericFallback, true);
   assert.equal(regions[0].numericStartYRatio, 0);
 });
@@ -264,11 +264,11 @@ test("MAA-style recognizer applies MAA ocrReplace rules before matching OCR text
 test("MAA-style recognizer can classify fixed-ROI screens from extracted candidates", async () => {
   const recognizer = createMaaStyleRecognizer({
     tasks: { screens: [] },
-    candidateExtractors: [async () => [{ kind: "runStatus", field: "shield", value: 2, rawText: "シールド 2", confidence: 0.91 }]],
+    candidateExtractors: [async () => [{ kind: "runStatus", field: "ingot", value: 20, rawText: "源石錐 20", confidence: 0.91 }]],
   });
 
   const result = await recognizer.classify({
-    ocrResults: [{ text: "02", regionId: "run.shield", confidence: 0.93 }],
+    ocrResults: [{ text: "20", regionId: "run.ingot", confidence: 0.93 }],
   }, { profile: { id: "runStatusFull", inferredScreenId: "run-squad-info-panel" } });
 
   assert.equal(result.known, true);
@@ -277,14 +277,16 @@ test("MAA-style recognizer can classify fixed-ROI screens from extracted candida
 });
 
 
-test("recognition task data exposes separated hope current and max OCR regions", async () => {
+test("recognition task data exposes retained run status OCR regions", async () => {
   const rawTasks = JSON.parse(await fs.readFile(new URL("../data/recognition/maa-tasks.json", import.meta.url), "utf8"));
   const regions = rawTasks.ocrRegions.filter((region) => region.profileIds?.includes("runStatusFull"));
 
-  assert.ok(regions.some((region) => region.id === "run.resource_numbers"));
-  assert.ok(regions.some((region) => region.id === "run.hope"));
-  assert.ok(regions.some((region) => region.id === "run.hope.current"));
-  assert.ok(regions.some((region) => region.id === "run.hope.max"));
+  assert.ok(regions.some((region) => region.id === "run.ingot"));
+  assert.ok(regions.some((region) => region.id === "run.idea"));
+  assert.ok(regions.some((region) => region.id === "run.idea.current"));
+  assert.equal(regions.some((region) => region.id === "run.hope"), false);
+  assert.equal(regions.some((region) => region.id === "run.life_points"), false);
+  assert.equal(regions.some((region) => region.id === "run.shield"), false);
 });
 
 test("recognition task data exposes a dedicated relic footer OCR region", async () => {

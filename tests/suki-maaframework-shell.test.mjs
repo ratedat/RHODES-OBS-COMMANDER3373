@@ -148,7 +148,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runStateStore, /operatorGridColumns/);
   assert.match(candidateApplier, /ApplyRunStatus/);
   assert.match(candidateApplier, /ApplyStringSetCandidate/);
-  assert.match(candidateApplier, /commandLevel/);
+  assert.doesNotMatch(candidateApplier, /case "commandLevel"/);
   assert.match(candidateApplier, /squadId/);
   assert.match(candidateApplier, /idea/);
   assert.match(candidateApplier, /operator/);
@@ -529,10 +529,12 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /SequenceEqual\(items\)/);
   assert.match(mainWindowCodeBehind, /CloseOpenComboBoxesOnOutsidePress/);
   assert.match(mainWindowCodeBehind, /IsDropDownOpen = false/);
-  assert.match(resource, /RhodesRunStatusTopBarOcr/);
+  assert.doesNotMatch(resource, /RhodesRunStatusTopBarOcr/);
   assert.match(resource, /RhodesOperatorCodenameFlag/);
   assert.match(resource, /OperatorCardCodeNameFlag\.png/);
-  assert.match(generatedResource, /RhodesOcrRegion_run_hope_current/);
+  assert.doesNotMatch(generatedResource, /RhodesOcrRegion_run_hope_current/);
+  assert.doesNotMatch(generatedResource, /RhodesOcrRegion_run_life_points/);
+  assert.doesNotMatch(generatedResource, /RhodesOcrRegion_run_shield/);
   assert.match(generatedResource, /RhodesTemplate_runStatusFull_run_ingot/);
   assert.match(generatedResource, /scan-profiles\.templateOcrRegions/);
   assert.match(projectInterface, /"interface_version": 2/);
@@ -559,8 +561,9 @@ test("MAA resource generator converts RHODES recognition definitions into pipeli
 
   assert.match(generator, /data.*recognition.*maa-tasks\.json/s);
   assert.match(generator, /scan-profiles\.json/);
-  assert.equal(generated.RhodesOcrRegion_run_hope_current.recognition, "OCR");
-  assert.deepEqual(generated.RhodesOcrRegion_run_hope_current.roi, [941, 17, 32, 35]);
+  assert.equal(generated.RhodesOcrRegion_run_ingot.recognition, "OCR");
+  assert.deepEqual(generated.RhodesOcrRegion_run_ingot.roi, [1190, 10, 90, 52]);
+  assert.equal(generated.RhodesOcrRegion_run_hope_current, undefined);
   assert.equal(generated.RhodesTemplate_runStatusFull_run_ingot.recognition, "TemplateMatch");
   assert.equal(generated.RhodesTemplate_runStatusFull_run_ingot.template, "run/IngotIcon.png");
 });

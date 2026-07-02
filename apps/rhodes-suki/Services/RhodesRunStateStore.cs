@@ -184,14 +184,13 @@ public static class RhodesRunStateStore
             "ingot",
             "lifePoints",
             "shield",
+            "commandLevel",
             "idea",
             "special",
         })
         {
             run.Remove(propertyName);
         }
-
-        run["commandLevel"] = 1;
     }
 
     private static string JsonString(JsonObject parent, string propertyName)

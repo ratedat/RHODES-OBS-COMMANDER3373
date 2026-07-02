@@ -161,18 +161,8 @@ public static class RhodesRecognitionCandidateApplier
         var field = candidate.Field.Trim();
         switch (field)
         {
-            case "hope":
-                return ApplyInt(run, field, candidate.Value, 0, 999, applied);
-            case "maxHope":
-                return ApplyInt(run, field, candidate.Value, 0, 999, applied);
             case "ingot":
                 return ApplyInt(run, field, candidate.Value, 0, 9999, applied);
-            case "lifePoints":
-                return ApplyInt(run, field, candidate.Value, 0, 999, applied);
-            case "shield":
-                return ApplyInt(run, field, candidate.Value, 0, 999, applied);
-            case "commandLevel":
-                return ApplyInt(run, field, candidate.Value, 1, 99, applied);
             case "difficulty":
                 return ApplyInt(run, field, candidate.Value, 1, 99, applied);
             case "squadId":
@@ -617,14 +607,13 @@ public static class RhodesRecognitionCandidateApplier
             "ingot",
             "lifePoints",
             "shield",
+            "commandLevel",
             "idea",
             "special",
         })
         {
             run.Remove(propertyName);
         }
-
-        run["commandLevel"] = 1;
     }
 
     private static int JsonInt(JsonObject parent, string propertyName)

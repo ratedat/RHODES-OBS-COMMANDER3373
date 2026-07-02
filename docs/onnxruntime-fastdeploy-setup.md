@@ -1,6 +1,6 @@
 # ONNXRuntime / FastDeploy OCR setup
 
-RHODES OBS COMMANDER3373 keeps the current PaddleOCR fixed-ROI path as the default OCR engine. MAA-compatible ONNXRuntime support is prepared as a separate path for later relic, thought, revelation, and coin recognition work.
+RHODES OBS COMMANDER3373 uses the MAA-compatible ONNXRuntime recognizer as the active MAA-OCR path. GLM-OCR remains an optional verification engine.
 
 ## Windows app policy
 
@@ -10,11 +10,11 @@ If we later need full PPOCR detection/parsing behavior, treat FastDeploy as a se
 
 ## Why this is separate
 
-MaaAssistantArknights loads its OCR assets as `inference.onnx` plus `keys.txt` through FastDeploy PPOCRv3, with ONNXRuntime selected as the backend. The current Python `paddleocr` package path in RHODES does not directly load those MAA ONNX files, so the integration is staged:
+MaaAssistantArknights loads its OCR assets as `inference.onnx` plus `keys.txt` through FastDeploy PPOCRv3, with ONNXRuntime selected as the backend. RHODES uses those MAA-compatible OCR assets directly for fixed-ROI recognition:
 
 1. Sync MAA OCR configs, dictionaries, and optional ONNX model files.
 2. Verify the local Python OCR runtime has `onnxruntime`, `numpy`, and `Pillow`.
-3. Keep current PaddleOCR recognition active until the ONNX recognizer/decoder is implemented and tested against real MuMu captures.
+3. Route active scan profiles through `maa-ocr`; use `glm-ocr` only when explicitly selected for verification.
 
 ## Install runtime dependencies
 
@@ -27,7 +27,7 @@ $env:RHODES_PYTHON = 'O:\Arknights_Rogue_OBSTool\.venv-ocr\Scripts\python.exe'
 npm run ocr:probe
 ```
 
-`requirements-ocr.txt` includes PaddleOCR plus `onnxruntime`, `numpy`, and `Pillow` so one environment can run both the current OCR path and the future ONNX path.
+`requirements-ocr.txt` includes `onnxruntime`, `numpy`, and `Pillow` for the MAA-OCR bridge. Legacy PaddleOCR packages may still be present in older environments, but they are not part of the active OCR route.
 
 ## Sync MAA OCR assets
 
@@ -57,17 +57,17 @@ The optional model files are ignored by Git via `third_party/maa/**/inference.on
 
 ## Use the MAA ONNX recognizer
 
-The recognizer is available as an explicit OCR engine:
+The recognizer is available as the explicit `maa-ocr` engine:
 
 ```powershell
-$env:RHODES_OCR_ENGINE = 'maa-onnx'
+$env:RHODES_OCR_ENGINE = 'maa-ocr'
 $env:RHODES_PYTHON = 'O:\Arknights_Rogue_OBSTool\.venv-ocr\Scripts\python.exe'
 npm run app:debug
 ```
 
-Aliases accepted by the app are `maa-onnx`, `maa`, and `onnx`.
+Aliases accepted by the app are `maa-onnx`, `maa`, and `onnx`; they normalize to `maa-ocr`.
 
-This path currently uses the MAA YoStarJP recognition ONNX model and `keys.txt` for fixed ROI recognition only. It does not yet run the MAA detector model or FastDeploy PPOCR pipeline. In the first real screenshot check, it read squad name, life, and shield candidates, while command level and difficulty grade still need ROI/preprocessing tuning. Keep it as a review-candidate engine until those fields are stable.
+This path currently uses the MAA YoStarJP recognition ONNX model and `keys.txt` for fixed ROI recognition only. It does not yet run the MAA detector model or FastDeploy PPOCR pipeline. The active MAAFramework migration targets originium ingots, difficulty, squad, IS-specific values, operators, and relics. Hope, life, shield, and command level are not recognition targets.
 
 Optional environment variables:
 
@@ -79,18 +79,6 @@ Optional environment variables:
 - `RHODES_MAA_ONNX_REC_HEIGHT`: recognizer input height. Default `48`.
 - `RHODES_MAA_ONNX_WIDTH_MULTIPLE`: width rounding multiple. Default `32`.
 
-
-## Use the hybrid OCR engine
-
-For local experiments, prefer the hybrid engine over pure `maa-onnx`:
-
-```powershell
-$env:RHODES_OCR_ENGINE = 'hybrid'
-$env:RHODES_PYTHON = 'O:\Arknights_Rogue_OBSTool\.venv-ocr\Scripts\python.exe'
-npm run app:debug
-```
-
-`hybrid` runs MAA ONNX recognition and PaddleOCR fixed-ROI recognition, then merges non-empty OCR results into the same frame. It intentionally keeps both engines' candidates so the existing review and run-status extraction code can choose useful values while suspicious OCR remains reviewable. Explicit confidence values below `RHODES_HYBRID_OCR_MIN_CONFIDENCE` are dropped; the default is `0.2`.
 
 ## Runtime checks
 

@@ -69,16 +69,6 @@ public static class RhodesMaaResourceCatalog
         return
         [
             new MaaResourceTaskPreview(
-                "RhodesRunStatusTopBarOcr",
-                "基本情報: 上部OCR",
-                "希望、源石錐、階層タイトル周辺をMAA-OCRで確認します。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesRunStatusHopeIcon",
-                "基本情報: 希望アイコン",
-                "1280x720基準の希望アイコンTemplateMatchをMAAで実行します。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
                 "RhodesRunStatusIdeaIcon",
                 "基本情報: 構想アイコン",
                 "構想値の基準点になるアイコンTemplateMatchをMAAで実行します。",
@@ -87,16 +77,6 @@ public static class RhodesMaaResourceCatalog
                 "RhodesRunStatusIngotIcon",
                 "基本情報: 源石錐アイコン",
                 "源石錐の基準点になるアイコンTemplateMatchをMAAで実行します。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesRunStatusLifeIcon",
-                "基本情報: 耐久値アイコン",
-                "耐久値の基準点になるアイコンTemplateMatchをMAAで実行します。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesRunStatusShieldIcon",
-                "基本情報: シールドアイコン",
-                "シールドの基準点になるアイコンTemplateMatchをMAAで実行します。",
                 ["runStatusFull"]),
             new MaaResourceTaskPreview(
                 "RhodesOperatorCodenameFlag",
@@ -128,21 +108,6 @@ public static class RhodesMaaResourceCatalog
                 "生成: マップ下部OCR",
                 "data/recognition/maa-tasks.json から生成したマップフッター判定です。",
                 ["runStatusFull", "operatorsFull", "relicsFull", "is4RevelationFull", "is5ThoughtFull", "is5AgeFull", "is6CoinsFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesOcrRegion_run_hope_current",
-                "生成: 現在希望OCR",
-                "既存ROI定義から生成した現在希望OCRです。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesOcrRegion_run_hope_max",
-                "生成: 最大希望OCR",
-                "既存ROI定義から生成した最大希望OCRです。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesTemplate_runStatusFull_run_hope_current",
-                "生成: 希望アイコン基準点",
-                "scan-profiles.json の templateOcrRegions から生成したTemplateMatchです。",
-                ["runStatusFull"]),
             new MaaResourceTaskPreview(
                 "RhodesTemplate_runStatusFull_run_ingot",
                 "生成: 源石錐基準点",

@@ -67,13 +67,8 @@ public static class SukiOcrEngineCatalog
     private static readonly SukiOcrEngineOption[] BuiltInOptions =
     [
         new("profile", "プロファイル既定", "認識プロファイル側の既定エンジンを使います。"),
-        new("hybrid", "MAA ONNX + PaddleOCR + Windows保険", "MAA OCRを主軸に複数OCRで補完します。"),
-        new("maa-onnx", "MAA ONNX OCR", "MAAFramework系OCRを優先します。"),
-        new("paddle", "PaddleOCR", "PaddleOCRを直接使う旧互換ルートです。"),
-        new("windows-paddle", "Windows + PaddleOCR 旧互換", "Windows OCRとPaddleOCRを併用します。"),
-        new("windows", "Windows OCR 旧互換", "Windows OCRのみを使う保険ルートです。"),
-        new("windows-glm", "Windows + GLM-OCR 検証", "Windows OCRと任意導入GLM-OCRを併用します。"),
-        new("glm-ocr", "GLM-OCR 検証", "任意導入GLM-OCRを優先します。"),
+        new("maa-ocr", "MAA-OCR", "MAAFramework系OCRを使います。"),
+        new("glm-ocr", "GLM-OCR 任意検証", "任意導入GLM-OCRを使います。"),
     ];
 
     private static readonly HashSet<string> ValidIds = BuiltInOptions
@@ -85,6 +80,13 @@ public static class SukiOcrEngineCatalog
     public static string Normalize(string? value)
     {
         var normalized = string.IsNullOrWhiteSpace(value) ? "profile" : value.Trim().ToLowerInvariant();
+        normalized = normalized switch
+        {
+            "maa" or "maa-onnx" or "onnx" => "maa-ocr",
+            "glm" or "windows-glm" or "glm-windows" or "glm-hybrid" or "hybrid-glm" => "glm-ocr",
+            "hybrid" or "maa-hybrid" or "onnx-hybrid" or "paddle" or "windows" or "windows-paddle" or "paddle-windows" => "profile",
+            _ => normalized
+        };
         return ValidIds.Contains(normalized) ? normalized : "profile";
     }
 }

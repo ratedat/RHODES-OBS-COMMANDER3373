@@ -7,21 +7,6 @@
     "recognition": "DirectHit",
     "action": "DoNothing"
   },
-  "RhodesRunStatusTopBarOcr": {
-    "recognition": "OCR",
-    "roi": [820, 0, 440, 92],
-    "only_rec": false,
-    "threshold": 0.3,
-    "action": "DoNothing"
-  },
-  "RhodesRunStatusHopeIcon": {
-    "recognition": "TemplateMatch",
-    "roi": [820, 0, 190, 72],
-    "template": "run/HopeIcon.png",
-    "threshold": 0.74,
-    "method": 5,
-    "action": "DoNothing"
-  },
   "RhodesRunStatusIdeaIcon": {
     "recognition": "TemplateMatch",
     "roi": [820, 620, 100, 90],
@@ -35,22 +20,6 @@
     "roi": [1040, 0, 160, 60],
     "template": "run/IngotIcon.png",
     "threshold": 0.86,
-    "method": 5,
-    "action": "DoNothing"
-  },
-  "RhodesRunStatusLifeIcon": {
-    "recognition": "TemplateMatch",
-    "roi": [140, 0, 90, 70],
-    "template": "run/LifeIcon.png",
-    "threshold": 0.86,
-    "method": 5,
-    "action": "DoNothing"
-  },
-  "RhodesRunStatusShieldIcon": {
-    "recognition": "TemplateMatch",
-    "roi": [245, 18, 80, 50],
-    "template": "run/ShieldIcon.png",
-    "threshold": 0.84,
     "method": 5,
     "action": "DoNothing"
   },

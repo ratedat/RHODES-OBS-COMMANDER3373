@@ -1,6 +1,4 @@
 import { createMaaOnnxOcrTextExtractor } from "./maa-onnx-ocr-adapter.js";
-import { createPaddleOcrTextExtractor } from "./paddle-ocr-adapter.js";
-import { createWindowsOcrTextExtractor } from "./windows-ocr-adapter.js";
 import { createGlmOcrTextExtractor } from "./glm-ocr-adapter.js";
 
 function hasText(frame) {
@@ -13,7 +11,7 @@ function resultKey(item = {}) {
   return `${item.regionId || "_"}:${item.text || ""}:${roi}`;
 }
 
-export function mergeOcrFrames(baseFrame, frames = [], { engine = "hybrid", minConfidence = 0.2 } = {}) {
+export function mergeOcrFrames(baseFrame, frames = [], { engine = "merged", minConfidence = 0.2 } = {}) {
   const byKey = new Map();
   for (const frame of frames) {
     for (const item of frame?.ocrResults || []) {
@@ -33,7 +31,7 @@ export function mergeOcrFrames(baseFrame, frames = [], { engine = "hybrid", minC
   };
 }
 
-export function createMergedTextExtractor(extractors = [], { engine = "hybrid" } = {}) {
+export function createMergedTextExtractor(extractors = [], { engine = "merged" } = {}) {
   return {
     async extract(frame, context = {}) {
       const frames = [];
@@ -72,37 +70,11 @@ export function createFallbackTextExtractor(extractors = []) {
 export function createDefaultOcrTextExtractor({ engine = process.env.RHODES_OCR_ENGINE || "auto", glmOcrPythonPath, glmOcrEnv } = {}) {
   const normalized = String(engine || "auto").toLowerCase();
   const glmOcrOptions = { pythonPath: glmOcrPythonPath, extraEnv: glmOcrEnv };
-  if (normalized === "windows") return createWindowsOcrTextExtractor();
-  if (["windows-paddle", "paddle-windows"].includes(normalized)) {
-    return createMergedTextExtractor([
-      createWindowsOcrTextExtractor(),
-      createPaddleOcrTextExtractor({ required: false }),
-    ], { engine: "hybrid-windows-paddle" });
+  if (["auto", "profile", "maa-ocr", "maa-onnx", "maa", "onnx"].includes(normalized)) {
+    return createMaaOnnxOcrTextExtractor({ required: true });
   }
-  if (normalized === "paddle") return createPaddleOcrTextExtractor({ required: true });
-  if (["maa-onnx", "maa", "onnx"].includes(normalized)) return createMaaOnnxOcrTextExtractor({ required: true });
   if (["glm-ocr", "glm"].includes(normalized)) return createGlmOcrTextExtractor({ required: true, ...glmOcrOptions });
-  if (["windows-glm", "glm-windows", "glm-hybrid", "hybrid-glm"].includes(normalized)) {
-    return createMergedTextExtractor([
-      createWindowsOcrTextExtractor(),
-      createGlmOcrTextExtractor({ required: false, ...glmOcrOptions }),
-    ], { engine: "hybrid-windows-glm" });
-  }
-  if (["hybrid", "maa-hybrid", "onnx-hybrid"].includes(normalized)) {
-    return createMergedTextExtractor([
-      createMaaOnnxOcrTextExtractor({ required: false }),
-      createPaddleOcrTextExtractor({ required: false }),
-      createWindowsOcrTextExtractor(),
-    ], {
-      engine: "hybrid-maa-onnx-paddle-windows",
-      minConfidence: Number(process.env.RHODES_HYBRID_OCR_MIN_CONFIDENCE || 0.2),
-    });
-  }
-  return createFallbackTextExtractor([
-    createMaaOnnxOcrTextExtractor({ required: false }),
-    createPaddleOcrTextExtractor({ required: false }),
-    createWindowsOcrTextExtractor(),
-  ]);
+  return createMaaOnnxOcrTextExtractor({ required: true });
 }
 
 export function createProfileAwareTextExtractor({ defaultExtractor, profileExtractors = {} } = {}) {

@@ -4,12 +4,6 @@ import { maaTaskResultToRecognitionItems, maaTaskResultsToFrame, parseMaaRecogni
 import { extractRunStatusCandidates } from "../app/domain/recognition/run-status-extractor.js";
 
 const pipeline = {
-  RhodesOcrRegion_run_hope_current: {
-    attach: { id: "run.hope.current" },
-  },
-  RhodesOcrRegion_run_hope_max: {
-    attach: { id: "run.hope.max" },
-  },
   RhodesOcrRegion_run_ingot: {
     attach: { id: "run.ingot" },
   },
@@ -25,22 +19,22 @@ test("parseMaaRecognitionDetail accepts raw JSON and C# summary strings", () => 
 
 test("maaTaskResultToRecognitionItems converts OCR detail into frame OCR rows", () => {
   const converted = maaTaskResultToRecognitionItems({
-    entry: "RhodesOcrRegion_run_hope_current",
+    entry: "RhodesOcrRegion_run_ingot",
     algorithm: "OCR",
     recognitionDetailJson: JSON.stringify({
-      all: [{ text: "6", score: 0.91, box: [941, 17, 32, 35] }],
-      best: { text: "6", score: 0.91, box: [941, 17, 32, 35] },
+      all: [{ text: "20", score: 0.91, box: [1190, 10, 90, 52] }],
+      best: { text: "20", score: 0.91, box: [1190, 10, 90, 52] },
     }),
   }, { pipeline });
 
   assert.deepEqual(converted.ocrResults, [{
-    text: "6",
-    rawText: "6",
-    regionId: "run.hope.current",
-    roi: { x: 941, y: 17, width: 32, height: 35 },
+    text: "20",
+    rawText: "20",
+    regionId: "run.ingot",
+    roi: { x: 1190, y: 10, width: 90, height: 52 },
     confidence: 0.91,
     source: "maa-framework",
-    maaEntry: "RhodesOcrRegion_run_hope_current",
+    maaEntry: "RhodesOcrRegion_run_ingot",
   }]);
   assert.deepEqual(converted.templateResults, []);
 });
@@ -69,16 +63,6 @@ test("maaTaskResultToRecognitionItems converts TemplateMatch detail into templat
 test("maaTaskResultsToFrame feeds existing run status candidate extraction", () => {
   const frame = maaTaskResultsToFrame([
     {
-      entry: "RhodesOcrRegion_run_hope_current",
-      algorithm: "OCR",
-      recognitionDetailJson: JSON.stringify({ best: { text: "6", score: 0.94, box: [941, 17, 32, 35] } }),
-    },
-    {
-      entry: "RhodesOcrRegion_run_hope_max",
-      algorithm: "OCR",
-      recognitionDetailJson: JSON.stringify({ best: { text: "6", score: 0.95, box: [965, 17, 64, 35] } }),
-    },
-    {
       entry: "RhodesOcrRegion_run_ingot",
       algorithm: "OCR",
       recognitionDetailJson: JSON.stringify({ best: { text: "20", score: 0.96, box: [1190, 10, 90, 52] } }),
@@ -90,7 +74,6 @@ test("maaTaskResultsToFrame feeds existing run status candidate extraction", () 
     difficultyGrades: {},
   });
 
-  assert.equal(candidates.find((candidate) => candidate.field === "hope")?.value, 6);
-  assert.equal(candidates.find((candidate) => candidate.field === "maxHope")?.value, 6);
   assert.equal(candidates.find((candidate) => candidate.field === "ingot")?.value, 20);
+  assert.equal(candidates.some((candidate) => ["hope", "maxHope"].includes(candidate.field)), false);
 });

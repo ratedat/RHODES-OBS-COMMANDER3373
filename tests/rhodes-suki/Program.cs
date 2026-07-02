@@ -347,15 +347,15 @@ static void CandidateMergerSupplementsLocalCandidates()
 {
     var merged = RhodesMaaCandidateMerger.Merge(
         [
-            new MaaCandidatePreview("runStatus", "希望", "3", "3", 0.94, Field: "hope"),
+            new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.94, Field: "ingot"),
             new MaaCandidatePreview("operator", "グム", "gummy", "グム", 0.91, OperatorId: "gummy"),
             new MaaCandidatePreview("thought", "枯れ木と若枝", "fallback", "枯れ木と若枝", 0.91, CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
             new MaaCandidatePreview("revelation", "修辞A", "fallback", "修辞A", 0.91, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "rhetoric", EffectId: "rhetoric_a"),
             new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.91, CampaignId: "is6_sui", CoinId: "coin_a", Count: 1),
         ],
         [
-            new MaaCandidatePreview("runStatus", "希望", "3", "3", 0.99, Field: "hope"),
-            new MaaCandidatePreview("runStatus", "希望上限", "8", "8", 0.92, Field: "maxHope"),
+            new MaaCandidatePreview("runStatus", "源石錐", "21", "21", 0.99, Field: "ingot"),
+            new MaaCandidatePreview("runStatus", "等級", "18", "18", 0.92, Field: "difficulty"),
             new MaaCandidatePreview("operator", "グム", "gummy", "グム", 0.99, OperatorId: "gummy"),
             new MaaCandidatePreview("operator", "セイリュウ", "purestream", "セイリュウ", 0.88, OperatorId: "purestream"),
             new MaaCandidatePreview("thought", "枯れ木と若枝", "fallback", "枯れ木と若枝", 0.88, CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
@@ -367,7 +367,7 @@ static void CandidateMergerSupplementsLocalCandidates()
             new MaaCandidatePreview("coin", "通宝A裏", "fallback", "通宝A", 0.89, CampaignId: "is6_sui", CoinId: "coin_a", Face: "back", Count: 1),
         ]);
 
-    Equal("hope|maxHope", string.Join("|", merged.Where(item => item.Kind == "runStatus").Select(item => item.Field)), "merged run status fields");
+    Equal("ingot|difficulty", string.Join("|", merged.Where(item => item.Kind == "runStatus").Select(item => item.Field)), "merged run status fields");
     Equal("gummy|purestream", string.Join("|", merged.Where(item => item.Kind == "operator").Select(item => item.OperatorId)), "merged operators");
     Equal("thought_a", string.Join("|", merged.Where(item => item.Kind == "thought").Select(item => item.ThoughtId)), "primary thought preserved without local duplicates");
     Equal("age_prime", string.Join("|", merged.Where(item => item.Kind == "age").Select(item => item.AgeId)), "local age supplemented");
@@ -393,8 +393,8 @@ static void LocalCandidateConverterRunStatus()
             M("RhodesOcrRegion_operator_name", "グム", 0.99),
         ]);
 
-    Equal("campaignId|hope|maxHope|ingot|lifePoints|shield|commandLevel|idea|difficulty|squadId", string.Join("|", candidates.Select(item => item.Field)), "local run fields");
-    Equal("is5_sarkaz|3|8|20|4|2|1|7|18|is5_sarkaz_squad_04", string.Join("|", candidates.Select(item => item.Value)), "local run values");
+    Equal("campaignId|ingot|idea|difficulty|squadId", string.Join("|", candidates.Select(item => item.Field)), "local run fields");
+    Equal("is5_sarkaz|20|7|18|is5_sarkaz_squad_04", string.Join("|", candidates.Select(item => item.Value)), "local run values");
     Equal("is5_sarkaz", candidates.Single(item => item.Field == "idea").CampaignId, "idea campaign id");
     Equal("is5_sarkaz", candidates.Single(item => item.Field == "squadId").CampaignId, "squad campaign id");
     Equal("maa-local:static:is5.sarkaz.map_select.campaign", candidates.Single(item => item.Field == "campaignId").RecognitionKey, "campaign recognition key");
@@ -418,13 +418,12 @@ static void LocalCandidateConverterRunStatusBestDuplicate()
     var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "runStatusFull",
         [
-            M("RhodesOcrRegion_run_hope_current", "3", 0.40),
-            M("RhodesTemplate_runStatusFull_run_hope_current", "5", 0.96),
-            M("RhodesOcrRegion_run_hope_max", "8", 0.95),
+            M("RhodesOcrRegion_run_ingot", "12", 0.40),
+            M("RhodesTemplate_runStatusFull_run_ingot", "20", 0.96),
         ]);
 
-    Equal("hope|maxHope", string.Join("|", candidates.Select(item => item.Field)), "best duplicate fields");
-    Equal("5|8", string.Join("|", candidates.Select(item => item.Value)), "best duplicate values");
+    Equal("ingot", string.Join("|", candidates.Select(item => item.Field)), "best duplicate fields");
+    Equal("20", string.Join("|", candidates.Select(item => item.Value)), "best duplicate values");
 
     static MaaTaskRunResult M(string entry, string text, double score)
     {
@@ -681,8 +680,7 @@ static void LocalCandidateConverterAllProfiles()
     var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
         null,
         [
-            M("RhodesOcrRegion_run_hope_current", "3", 0.94),
-            M("RhodesOcrRegion_run_hope_max", "8", 0.92),
+            M("RhodesOcrRegion_run_ingot", "20", 0.94),
             M("RhodesOcrRegion_operator_name_left_1", "グム", 0.91),
             M("RhodesOcrRegion_relic_list_text", relic.Name, 0.90),
             M("RhodesOcrRegion_is4_revelation_list_text", "歌唱", 0.89),
@@ -691,7 +689,7 @@ static void LocalCandidateConverterAllProfiles()
             M("RhodesOcrRegion_is6_coin_list_text", "大炎通宝", 0.87),
         ]);
 
-    Equal("hope|maxHope", string.Join("|", candidates.Where(item => item.Kind == "runStatus").Select(item => item.Field)), "all profile run fields");
+    Equal("ingot", string.Join("|", candidates.Where(item => item.Kind == "runStatus").Select(item => item.Field)), "all profile run fields");
     Equal("gummy", string.Join("|", candidates.Where(item => item.Kind == "operator").Select(item => item.OperatorId)), "all profile operator");
     Equal(relic.Id, string.Join("|", candidates.Where(item => item.Kind == "relic").Select(item => item.RelicId)), "all profile relic");
     Equal("is4_sami_selectable_revelationBoard_is4_kvama1", string.Join("|", candidates.Where(item => item.Kind == "revelation").Select(item => item.EffectId)), "all profile revelation");
@@ -1477,8 +1475,9 @@ static void MaaGeneratedResourceBuilder()
         File.ReadAllText(Path.Combine("data", "recognition", "scan-profiles.json")));
     var root = JsonNode.Parse(generated)!.AsObject();
     Equal(true, root.ContainsKey("RhodesGeneratedEmpty"), "generated empty node");
-    Equal("OCR", root["RhodesOcrRegion_run_hope_current"]!.AsObject()["recognition"]!.GetValue<string>(), "generated hope recognition");
-    Equal(941, root["RhodesOcrRegion_run_hope_current"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "generated hope roi x");
+    Equal("OCR", root["RhodesOcrRegion_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated ingot recognition");
+    Equal(1190, root["RhodesOcrRegion_run_ingot"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "generated ingot roi x");
+    Equal(false, root.ContainsKey("RhodesOcrRegion_run_hope_current"), "discarded hope node omitted");
     Equal("TemplateMatch", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated template recognition");
     Equal("run/IngotIcon.png", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["template"]!.GetValue<string>(), "generated template path");
 
@@ -1496,7 +1495,8 @@ static void MaaGeneratedResourceBuilder()
         Equal(true, result.Succeeded, "regenerate resource succeeded");
         Equal(true, File.Exists(result.BackupPath), "regenerate resource backup");
         Equal(true, result.NodeCount > 10, "regenerate resource node count");
-        Equal(true, File.ReadAllText(output).Contains("RhodesOcrRegion_run_hope_current", StringComparison.Ordinal), "regenerated resource output");
+        Equal(true, File.ReadAllText(output).Contains("RhodesOcrRegion_run_ingot", StringComparison.Ordinal), "regenerated resource output");
+        Equal(false, File.ReadAllText(output).Contains("RhodesOcrRegion_run_hope_current", StringComparison.Ordinal), "discarded hope output omitted");
     }
     finally
     {
@@ -1983,11 +1983,11 @@ static void StateApiSukiPreferencesApply()
                 new SukiOutputPartState("operators", true, false, true, 420, 132),
                 new SukiOutputPartState("relics", true, true, true, 420, 170),
             ]),
-        "maa-onnx"))!.AsObject();
+        "maa-ocr"))!.AsObject();
 
     Equal("tournament", updated["mode"]!.GetValue<string>(), "mode tournament");
     var preferences = updated["preferences"]!.AsObject();
-    Equal("maa-onnx", preferences["ocrEngine"]!.GetValue<string>(), "ocr engine updated");
+    Equal("maa-ocr", preferences["ocrEngine"]!.GetValue<string>(), "ocr engine updated");
     Equal(true, preferences["operatorShowSelectedFirst"]!.GetValue<bool>(), "operator selected first");
     Equal(true, preferences["operatorHideExcluded"]!.GetValue<bool>(), "operator hide excluded");
     Equal(4, preferences["operatorGridColumns"]!.GetValue<int>(), "operator columns");
@@ -2076,7 +2076,7 @@ static void RunContextPersistence()
     Equal(false, run.ContainsKey("maxHope"), "stale max hope removed");
     Equal(false, run.ContainsKey("squad"), "stale squad removed");
     Equal(false, run.ContainsKey("special"), "stale special values removed");
-    Equal(1, run["commandLevel"]!.GetValue<int>(), "command level reset");
+    Equal(false, run.ContainsKey("commandLevel"), "stale command level removed");
     Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "operators preserved");
     Equal("is3_relic_001", updated["relics"]!.AsArray()[0]!.GetValue<string>(), "relics preserved");
     Equal(4, updated["preferences"]!.AsObject()["operatorGridColumns"]!.GetValue<int>(), "preferences preserved");
@@ -2111,7 +2111,7 @@ static void StateApiRunContextApply()
     Equal("is5_sarkaz", run["campaignId"]!.GetValue<string>(), "api campaign id");
     Equal(false, run.ContainsKey("hope"), "api stale hope removed");
     Equal(false, run.ContainsKey("special"), "api stale special removed");
-    Equal(1, run["commandLevel"]!.GetValue<int>(), "api command level reset");
+    Equal(false, run.ContainsKey("commandLevel"), "api stale command level removed");
     Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "api operators preserved");
     Equal("glm-ocr", updated["preferences"]!.AsObject()["ocrEngine"]!.GetValue<string>(), "api preferences preserved");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "api updatedAt");
@@ -2133,13 +2133,15 @@ static void StateApiCandidatesApply()
         """,
         [
             new MaaCandidatePreview("runStatus", "希望", "7", "7", 0.9, Field: "hope", CampaignId: "is5_sarkaz"),
+            new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.9, Field: "ingot", CampaignId: "is5_sarkaz"),
             new MaaCandidatePreview("runStatus", "構想", "3", "3", 0.9, Field: "idea", CampaignId: "is5_sarkaz"),
         ],
         DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
 
     var updated = JsonNode.Parse(result.StateJson)!.AsObject();
     Equal(2, result.Summary.AppliedCount, "api candidates applied count");
-    Equal(7, updated["run"]!.AsObject()["hope"]!.GetValue<int>(), "api candidate hope");
+    Equal(0, updated["run"]!.AsObject()["hope"]!.GetValue<int>(), "discarded api candidate hope ignored");
+    Equal(20, updated["run"]!.AsObject()["ingot"]!.GetValue<int>(), "api candidate ingot");
     Equal(3, updated["run"]!.AsObject()["special"]!.AsObject()["is5_sarkaz"]!.AsObject()["idea"]!.GetValue<int>(), "api candidate idea");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "api candidate updatedAt");
 }
@@ -2174,14 +2176,14 @@ static void CandidateRunStatusApply()
         candidates,
         DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
 
-    Equal(6, summary.AppliedCount, "applied count");
-    Equal(2, summary.IgnoredCount, "ignored count");
-    Equal("hope|maxHope|ingot|commandLevel|difficulty|idea", string.Join("|", summary.AppliedFields), "applied fields");
+    Equal(3, summary.AppliedCount, "applied count");
+    Equal(5, summary.IgnoredCount, "ignored count");
+    Equal("ingot|difficulty|idea", string.Join("|", summary.AppliedFields), "applied fields");
     var run = state["run"]!.AsObject();
-    Equal(3, run["hope"]!.GetValue<int>(), "hope");
-    Equal(8, run["maxHope"]!.GetValue<int>(), "max hope");
     Equal(20, run["ingot"]!.GetValue<int>(), "ingot");
-    Equal(1, run["commandLevel"]!.GetValue<int>(), "command clamped");
+    Equal(0, run["hope"]!.GetValue<int>(), "discarded hope preserved");
+    Equal(false, run.ContainsKey("maxHope"), "discarded max hope not written");
+    Equal(false, run.ContainsKey("commandLevel"), "discarded command level not written");
     Equal(18, run["difficulty"]!.GetValue<int>(), "difficulty");
     Equal(7, run["special"]!.AsObject()["is5_sarkaz"]!.AsObject()["idea"]!.GetValue<int>(), "idea");
     Equal("gummy", state["operators"]!.AsArray()[0]!.GetValue<string>(), "unrelated selections preserved");
@@ -2205,6 +2207,7 @@ static void CandidateCampaignApplyFirst()
     var candidates = new[]
     {
         new MaaCandidatePreview("runStatus", "希望", "3", "3", 0.94, Field: "hope"),
+        new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.94, Field: "ingot"),
         new MaaCandidatePreview("runStatus", "統合戦略", "is5_sarkaz", "サルカズの炉辺奇談", 0.99, Field: "campaignId"),
         new MaaCandidatePreview("runStatus", "構想", "7", "7", 0.86, Field: "idea", CampaignId: "is5_sarkaz"),
     };
@@ -2215,10 +2218,11 @@ static void CandidateCampaignApplyFirst()
         DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
 
     Equal(3, summary.AppliedCount, "campaign apply count");
-    Equal("campaignId|hope|idea", string.Join("|", summary.AppliedFields), "campaign applied before dependents");
+    Equal("campaignId|ingot|idea", string.Join("|", summary.AppliedFields), "campaign applied before dependents");
     var run = state["run"]!.AsObject();
     Equal("is5_sarkaz", run["campaignId"]!.GetValue<string>(), "campaign id");
-    Equal(3, run["hope"]!.GetValue<int>(), "hope after campaign reset");
+    Equal(false, run.ContainsKey("hope"), "discarded hope ignored after campaign reset");
+    Equal(20, run["ingot"]!.GetValue<int>(), "ingot after campaign reset");
     Equal(false, run["special"]!.AsObject().ContainsKey("is3_mizuki"), "old special reset");
     Equal(7, run["special"]!.AsObject()["is5_sarkaz"]!.AsObject()["idea"]!.GetValue<int>(), "new campaign idea");
     Equal("gummy", state["operators"]!.AsArray()[0]!.GetValue<string>(), "operators preserved");
@@ -2230,9 +2234,8 @@ static void CandidateRunStatusApplyBestDuplicate()
     var state = JsonNode.Parse("""{ "run": { "campaignId": "is5_sarkaz" } }""")!.AsObject();
     var candidates = new[]
     {
-        new MaaCandidatePreview("runStatus", "希望", "5", "5", 0.95, Field: "hope"),
-        new MaaCandidatePreview("runStatus", "希望", "3", "3", 0.40, Field: "hope"),
-        new MaaCandidatePreview("runStatus", "希望上限", "8", "8", 0.90, Field: "maxHope"),
+        new MaaCandidatePreview("runStatus", "源石錐", "5", "5", 0.95, Field: "ingot"),
+        new MaaCandidatePreview("runStatus", "源石錐", "3", "3", 0.40, Field: "ingot"),
     };
 
     var summary = RhodesRecognitionCandidateApplier.ApplyRunStatus(
@@ -2240,12 +2243,11 @@ static void CandidateRunStatusApplyBestDuplicate()
         candidates,
         DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
 
-    Equal(2, summary.AppliedCount, "applied duplicate count");
+    Equal(1, summary.AppliedCount, "applied duplicate count");
     Equal(0, summary.IgnoredCount, "ignored duplicate count");
-    Equal("hope|maxHope", string.Join("|", summary.AppliedFields), "applied duplicate fields");
+    Equal("ingot", string.Join("|", summary.AppliedFields), "applied duplicate fields");
     var run = state["run"]!.AsObject();
-    Equal(5, run["hope"]!.GetValue<int>(), "best hope");
-    Equal(8, run["maxHope"]!.GetValue<int>(), "max hope");
+    Equal(5, run["ingot"]!.GetValue<int>(), "best ingot");
 }
 
 static void CandidateChoiceApply()

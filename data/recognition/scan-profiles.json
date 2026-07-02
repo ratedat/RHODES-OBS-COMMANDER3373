@@ -7,23 +7,9 @@
       "label": "基本情報スキャン",
       "triggerPath": "/trigger/scan/run/status",
       "candidateKind": "runStatus",
-      "ocrEngine": "hybrid",
+      "ocrEngine": "maa-ocr",
       "ocrRegionIds": [
-        "run.status_top",
-        "run.status_band",
-        "run.command_level",
-        "run.life_points",
-        "run.shield",
-        "run.top_right_status",
-        "run.resource_numbers",
-        "run.hope",
-        "run.hope.current",
-        "run.hope.max",
         "run.ingot",
-        "run.top_ingot",
-        "run.top_hope",
-        "run.top_ingot.wide",
-        "run.top_hope.wide",
         "run.squad_card",
         "run.squad_name",
         "run.difficulty_grade",
@@ -53,102 +39,6 @@
           "scale": 10
         },
         {
-          "idPrefix": "run.hope.current",
-          "templatePath": "assets/recognition/templates/run/HopeIcon.png",
-          "searchRoi": {
-            "x": 820,
-            "y": 0,
-            "width": 190,
-            "height": 72
-          },
-          "ocrOffset": {
-            "x": 70,
-            "y": -10,
-            "width": 26,
-            "height": 36
-          },
-          "threshold": 0.74,
-          "maxMatches": 1,
-          "step": 2,
-          "sampleStride": 2,
-          "numericFallback": true,
-          "numericStartYRatio": 0,
-          "scale": 10,
-          "suppressStaticRegionIdPattern": "^run\\.hope\\.current$"
-        },
-        {
-          "idPrefix": "run.hope.current.full",
-          "templatePath": "assets/recognition/templates/run/HopeIcon.png",
-          "searchRoi": {
-            "x": 820,
-            "y": 0,
-            "width": 190,
-            "height": 72
-          },
-          "ocrOffset": {
-            "x": 124,
-            "y": -10,
-            "width": 22,
-            "height": 36
-          },
-          "threshold": 0.74,
-          "maxMatches": 1,
-          "step": 2,
-          "sampleStride": 2,
-          "numericFallback": true,
-          "numericStartYRatio": 0,
-          "scale": 10,
-          "suppressStaticRegionIdPattern": "^run\\.hope\\.current$"
-        },
-        {
-          "idPrefix": "run.hope.max",
-          "templatePath": "assets/recognition/templates/run/HopeIcon.png",
-          "searchRoi": {
-            "x": 820,
-            "y": 0,
-            "width": 190,
-            "height": 72
-          },
-          "ocrOffset": {
-            "x": 126,
-            "y": -10,
-            "width": 26,
-            "height": 36
-          },
-          "threshold": 0.74,
-          "maxMatches": 1,
-          "step": 2,
-          "sampleStride": 2,
-          "numericFallback": true,
-          "numericStartYRatio": 0,
-          "scale": 10,
-          "suppressStaticRegionIdPattern": "^run\\.hope\\.max$"
-        },
-        {
-          "idPrefix": "run.hope.max.full",
-          "templatePath": "assets/recognition/templates/run/HopeIcon.png",
-          "searchRoi": {
-            "x": 820,
-            "y": 0,
-            "width": 190,
-            "height": 72
-          },
-          "ocrOffset": {
-            "x": 150,
-            "y": -10,
-            "width": 22,
-            "height": 36
-          },
-          "threshold": 0.74,
-          "maxMatches": 1,
-          "step": 2,
-          "sampleStride": 2,
-          "numericFallback": true,
-          "numericStartYRatio": 0,
-          "scale": 10,
-          "suppressStaticRegionIdPattern": "^run\\.hope\\.max$"
-        },
-        {
           "idPrefix": "run.ingot",
           "templatePath": "assets/recognition/templates/run/IngotIcon.png",
           "searchRoi": {
@@ -167,52 +57,6 @@
           "maxMatches": 1,
           "step": 2,
           "sampleStride": 4,
-          "numericFallback": true,
-          "numericStartYRatio": 0,
-          "scale": 10
-        },
-        {
-          "idPrefix": "run.life_points",
-          "templatePath": "assets/recognition/templates/run/LifeIcon.png",
-          "searchRoi": {
-            "x": 140,
-            "y": 0,
-            "width": 90,
-            "height": 70
-          },
-          "ocrOffset": {
-            "x": 31,
-            "y": 25,
-            "width": 18,
-            "height": 35
-          },
-          "threshold": 0.86,
-          "maxMatches": 1,
-          "step": 2,
-          "sampleStride": 4,
-          "numericFallback": true,
-          "numericStartYRatio": 0,
-          "scale": 10
-        },
-        {
-          "idPrefix": "run.shield",
-          "templatePath": "assets/recognition/templates/run/ShieldIcon.png",
-          "searchRoi": {
-            "x": 245,
-            "y": 18,
-            "width": 80,
-            "height": 50
-          },
-          "ocrOffset": {
-            "x": 16,
-            "y": 0,
-            "width": 34,
-            "height": 30
-          },
-          "threshold": 0.84,
-          "maxMatches": 1,
-          "step": 1,
-          "sampleStride": 3,
           "numericFallback": true,
           "numericStartYRatio": 0,
           "scale": 10
@@ -280,7 +124,7 @@
       "endFingerprintStableCount": 1,
       "captureDelayMs": 180,
       "inferredScreenId": "run-squad-info-panel",
-      "navigationNote": "分隊は左下をクリックすると等級と同時に表示される。構想は下部中央の家型アイコン下に表示される数値を別ROIで読む。",
+      "navigationNote": "分隊は左下をクリックすると等級と同時に表示される。構想は下部中央の家型アイコン下、源石錐は右上の源石錐アイコンを基準に取得する。希望、耐久値、シールド、指揮Lvは取得対象外。",
       "targetScreenIds": [
         "run-squad-info-panel"
       ]
@@ -290,7 +134,7 @@
       "label": "オペレーターフルスキャン",
       "triggerPath": "/trigger/scan/operators/full",
       "candidateKind": "operator",
-      "ocrEngine": "hybrid",
+      "ocrEngine": "maa-ocr",
       "ocrFullFrame": false,
       "ocrRegionIds": [
         "operator.name.left.1",
@@ -493,7 +337,7 @@
       "label": "秘宝フルスキャン",
       "triggerPath": "/trigger/scan/relics/full",
       "candidateKind": "relic",
-      "ocrEngine": "hybrid",
+      "ocrEngine": "maa-ocr",
       "baseResolution": {
         "width": 1280,
         "height": 720
@@ -634,7 +478,7 @@
       "triggerPath": "/trigger/scan/sami/revelation",
       "campaignId": "is4_sami",
       "candidateKind": "revelation",
-      "ocrEngine": "hybrid",
+      "ocrEngine": "maa-ocr",
       "baseResolution": {
         "width": 1280,
         "height": 720
@@ -727,7 +571,7 @@
       "triggerPath": "/trigger/scan/sarkaz/thought",
       "campaignId": "is5_sarkaz",
       "candidateKind": "thought",
-      "ocrEngine": "hybrid",
+      "ocrEngine": "maa-ocr",
       "baseResolution": {
         "width": 1280,
         "height": 720
@@ -869,7 +713,7 @@
       "triggerPath": "/trigger/scan/sarkaz/age",
       "campaignId": "is5_sarkaz",
       "candidateKind": "age",
-      "ocrEngine": "hybrid",
+      "ocrEngine": "maa-ocr",
       "baseResolution": {
         "width": 1280,
         "height": 720
@@ -943,7 +787,7 @@
       "triggerPath": "/trigger/scan/sui/coins",
       "campaignId": "is6_sui",
       "candidateKind": "coin",
-      "ocrEngine": "hybrid",
+      "ocrEngine": "maa-ocr",
       "baseResolution": {
         "width": 1280,
         "height": 720

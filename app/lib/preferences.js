@@ -5,16 +5,28 @@ export const gridColumnOptions = [1, 2, 3, 4, 5, 6];
 
 export const ocrEngineOptions = Object.freeze([
   { id: "profile", label: "プロファイル既定" },
-  { id: "hybrid", label: "MAA ONNX + PaddleOCR + Windows保険" },
-  { id: "maa-onnx", label: "MAA ONNX OCR" },
-  { id: "paddle", label: "PaddleOCR" },
-  { id: "windows-paddle", label: "Windows + PaddleOCR 旧互換" },
-  { id: "windows", label: "Windows OCR 旧互換" },
-  { id: "windows-glm", label: "Windows + GLM-OCR 検証" },
-  { id: "glm-ocr", label: "GLM-OCR 検証" },
+  { id: "maa-ocr", label: "MAA-OCR" },
+  { id: "glm-ocr", label: "GLM-OCR 任意検証" },
 ]);
 
 const validOcrEngines = new Set(ocrEngineOptions.map((item) => item.id));
+const ocrEngineAliases = new Map([
+  ["maa", "maa-ocr"],
+  ["maa-onnx", "maa-ocr"],
+  ["onnx", "maa-ocr"],
+  ["glm", "glm-ocr"],
+  ["hybrid", "profile"],
+  ["maa-hybrid", "profile"],
+  ["onnx-hybrid", "profile"],
+  ["paddle", "profile"],
+  ["windows", "profile"],
+  ["windows-paddle", "profile"],
+  ["paddle-windows", "profile"],
+  ["windows-glm", "glm-ocr"],
+  ["glm-windows", "glm-ocr"],
+  ["glm-hybrid", "glm-ocr"],
+  ["hybrid-glm", "glm-ocr"],
+]);
 const booleanPreferenceFields = [
   "operatorShowSelectedFirst",
   "operatorHideExcluded",
@@ -32,6 +44,7 @@ export function clampGridColumns(value) {
 
 export function normalizeOcrEngine(value) {
   const normalized = String(value || "profile").toLowerCase();
+  if (ocrEngineAliases.has(normalized)) return ocrEngineAliases.get(normalized);
   return validOcrEngines.has(normalized) ? normalized : "profile";
 }
 

@@ -51,13 +51,13 @@ test("scan profiles own the server-side OCR engine routing", async () => {
   const engines = ocrEnginesFromScanProfiles(profileList);
 
   assert.deepEqual(engines, {
-    runStatusFull: "hybrid",
-    operatorsFull: "hybrid",
-    relicsFull: "hybrid",
-    is4RevelationFull: "hybrid",
-    is5ThoughtFull: "hybrid",
-    is5AgeFull: "hybrid",
-    is6CoinsFull: "hybrid",
+    runStatusFull: "maa-ocr",
+    operatorsFull: "maa-ocr",
+    relicsFull: "maa-ocr",
+    is4RevelationFull: "maa-ocr",
+    is5ThoughtFull: "maa-ocr",
+    is5AgeFull: "maa-ocr",
+    is6CoinsFull: "maa-ocr",
   });
   for (const profile of profileList) {
     assert.ok(profile.ocrEngine, `${profile.id} should declare ocrEngine for server routing`);
@@ -103,46 +103,43 @@ test("run status profile reads conception through the icon template, not thought
   assert.ok(tasks.ocrRegions.find((region) => region.id === "run.idea"), "legacy fallback ROI remains documented but is not active for runStatusFull");
 });
 
-test("run status top-bar resource ROIs target narrow digit crops", async () => {
+test("run status profile no longer carries discarded base-value OCR regions", async () => {
   const tasks = await recognitionTasks();
   const rois = new Map(tasks.ocrRegions.map((region) => [region.id, region.roi]));
 
-  assert.deepEqual(rois.get("run.top_ingot"), [916, 14, 31, 36]);
-  assert.deepEqual(rois.get("run.top_hope"), [960, 13, 38, 38]);
-  assert.deepEqual(rois.get("run.top_ingot.wide"), [965, 13, 38, 38]);
-  assert.deepEqual(rois.get("run.top_hope.wide"), [1004, 13, 38, 38]);
-  assert.equal(rois.has("run.top_idea"), false);
+  for (const removed of [
+    "run.status_top",
+    "run.status_band",
+    "run.command_level",
+    "run.life_points",
+    "run.shield",
+    "run.hope",
+    "run.hope.current",
+    "run.hope.max",
+    "run.top_ingot",
+    "run.top_hope",
+    "run.top_ingot.wide",
+    "run.top_hope.wide",
+  ]) {
+    assert.equal(rois.has(removed), false);
+  }
+  assert.deepEqual(rois.get("run.ingot"), [1190, 10, 90, 52]);
 });
 
 test("run status profile includes template anchors for map resources", async () => {
   const profiles = await profilesById();
   const profile = profiles.get("runStatusFull");
   const byPrefix = new Map(profile.templateOcrRegions.map((region) => [region.idPrefix + ":" + region.templatePath, region]));
-  const hopeIconTemplates = profile.templateOcrRegions.filter((region) => region.templatePath === "assets/recognition/templates/run/HopeIcon.png");
 
   for (const key of [
     "run.ingot:assets/recognition/templates/run/IngotIcon.png",
-    "run.life_points:assets/recognition/templates/run/LifeIcon.png",
-    "run.shield:assets/recognition/templates/run/ShieldIcon.png",
+    "run.idea.current:assets/recognition/templates/run/IdeaIcon.png",
   ]) {
     assert.equal(byPrefix.get(key)?.numericFallback, true);
   }
-  assert.equal(hopeIconTemplates.length, 4);
-  assert.deepEqual(hopeIconTemplates.map((region) => [region.idPrefix, region.ocrOffset]), [
-    ["run.hope.current", { x: 70, y: -10, width: 26, height: 36 }],
-    ["run.hope.current.full", { x: 124, y: -10, width: 22, height: 36 }],
-    ["run.hope.max", { x: 126, y: -10, width: 26, height: 36 }],
-    ["run.hope.max.full", { x: 150, y: -10, width: 22, height: 36 }],
-  ]);
-  assert.ok(hopeIconTemplates.every((region) => region.numericFallback));
-  assert.ok(hopeIconTemplates.every((region) => region.threshold === 0.74));
-  assert.deepEqual(hopeIconTemplates.map((region) => region.suppressStaticRegionIdPattern), [
-    "^run\\.hope\\.current$",
-    "^run\\.hope\\.current$",
-    "^run\\.hope\\.max$",
-    "^run\\.hope\\.max$",
-  ]);
-  assert.deepEqual(byPrefix.get("run.life_points:assets/recognition/templates/run/LifeIcon.png")?.ocrOffset, { x: 31, y: 25, width: 18, height: 35 });
+  assert.equal(profile.templateOcrRegions.some((region) => region.templatePath === "assets/recognition/templates/run/HopeIcon.png"), false);
+  assert.equal(profile.templateOcrRegions.some((region) => region.templatePath === "assets/recognition/templates/run/LifeIcon.png"), false);
+  assert.equal(profile.templateOcrRegions.some((region) => region.templatePath === "assets/recognition/templates/run/ShieldIcon.png"), false);
 });
 
 

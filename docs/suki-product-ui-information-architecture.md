@@ -15,7 +15,7 @@ Treating the current screen as the final structure would be a mistake. The app n
 - Campaigns: 5 Integrated Strategies campaigns.
 - Operators: 430 entries across 8 classes.
 - Relics: 1327 entries across campaign catalogs; IS#5 currently has 296 relics.
-- Run base fields: squad, difficulty/tier, random squad effect, performance, hope/current max hope, ingot, life points, shield, command level, campaign.
+- Run base fields retained for recognition: campaign, squad, difficulty/tier, random squad effect, originium ingots, and campaign-specific values.
 - IS-specific fields:
   - IS#2: no special field in current catalog.
   - IS#3: rejection reaction, revelations, horde calls.
@@ -99,7 +99,7 @@ New UI elements should enter through an explicit extension model. The app should
 
 ### Extension Categories
 
-- Run field: a value stored on the active run, such as difficulty, hope, shield, command level, or a future campaign stat.
+- Run field: a value stored on the active run and retained for recognition, such as difficulty, squad, originium ingots, or a campaign-specific stat.
 - Campaign special field: a campaign-scoped value described by catalog schema, such as number, single effect, multi effect, ranked effect, board loadout, stack loadout, or coin loadout.
 - Choice catalog: selectable run inventory such as operators, relics, future recruitable groups, temporary units, or campaign-specific collectibles.
 - Recognition profile: a scan task that produces raw observations, normalized values, candidates, or auto-applied state.

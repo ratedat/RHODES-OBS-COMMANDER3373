@@ -7,41 +7,41 @@ test("mergeOcrFrames keeps OCR results from multiple engines and dedupes exact d
   const frame = mergeOcrFrames({ bytes: Buffer.from("x") }, [
     { ocrResults: [
       { text: "位置測定分隊", regionId: "run.squad_name", confidence: 0.94 },
-      { text: "4/4", regionId: "run.life_points", confidence: 0.8 },
+      { text: "18", regionId: "run.difficulty_grade", confidence: 0.8 },
     ] },
     { ocrResults: [
-      { text: "4/4", regionId: "run.life_points", confidence: 0.99 },
-      { text: "1", regionId: "run.command_level", confidence: 0.91 },
+      { text: "18", regionId: "run.difficulty_grade", confidence: 0.99 },
+      { text: "20", regionId: "run.ingot", confidence: 0.91 },
     ] },
-  ], { engine: "hybrid-test" });
+  ], { engine: "merged-test" });
 
-  assert.equal(frame.ocrEngine, "hybrid-test");
+  assert.equal(frame.ocrEngine, "merged-test");
   assert.equal(frame.ocrResults.length, 3);
-  assert.equal(frame.ocrResults.find((item) => item.regionId === "run.life_points").confidence, 0.99);
+  assert.equal(frame.ocrResults.find((item) => item.regionId === "run.difficulty_grade").confidence, 0.99);
   assert.match(frame.text, /位置測定分隊/);
-  assert.match(frame.text, /1/);
+  assert.match(frame.text, /20/);
 });
 
 test("createMergedTextExtractor returns all successful OCR outputs when one engine fails", async () => {
   const extractor = createMergedTextExtractor([
     { extract: async () => { throw new Error("onnx missing"); } },
-    { extract: async (frame) => ({ ...frame, ocrResults: [{ text: "4/4", regionId: "run.life_points" }] }) },
-  ], { engine: "hybrid-test" });
+    { extract: async (frame) => ({ ...frame, ocrResults: [{ text: "20", regionId: "run.ingot" }] }) },
+  ], { engine: "merged-test" });
 
   const frame = await extractor.extract({ bytes: Buffer.from("x") });
 
-  assert.equal(frame.ocrEngine, "hybrid-test");
-  assert.equal(frame.text, "4/4");
+  assert.equal(frame.ocrEngine, "merged-test");
+  assert.equal(frame.text, "20");
 });
 
-test("default OCR selector exposes windows-paddle hybrid for run status scans", () => {
-  const extractor = createDefaultOcrTextExtractor({ engine: "windows-paddle" });
+test("default OCR selector exposes MAA-OCR for profile scans", () => {
+  const extractor = createDefaultOcrTextExtractor({ engine: "maa-ocr" });
 
   assert.equal(typeof extractor.extract, "function");
 });
 
-test("default OCR selector exposes hybrid as an explicit engine", () => {
-  const extractor = createDefaultOcrTextExtractor({ engine: "hybrid" });
+test("default OCR selector maps auto to MAA-OCR", () => {
+  const extractor = createDefaultOcrTextExtractor({ engine: "auto" });
 
   assert.equal(typeof extractor.extract, "function");
 });
@@ -54,7 +54,7 @@ test("mergeOcrFrames drops explicitly low-confidence OCR results", () => {
       { text: "18", regionId: "run.difficulty_grade", confidence: 0.95 },
       { text: "手動候補", regionId: "manual" },
     ] },
-  ], { engine: "hybrid-test", minConfidence: 0.2 });
+  ], { engine: "merged-test", minConfidence: 0.2 });
 
   assert.equal(frame.ocrResults.some((item) => item.text === "2"), false);
   assert.equal(frame.ocrResults.some((item) => item.text === "18"), true);
@@ -75,7 +75,7 @@ test("profile-aware OCR routing can force relic scans to a different extractor",
       relicsFull: {
         async extract(frame) {
           calls.push("relicsFull");
-          return { ...frame, text: "windows" };
+          return { ...frame, text: "profile-specific" };
         },
       },
     },
@@ -84,7 +84,7 @@ test("profile-aware OCR routing can force relic scans to a different extractor",
   const relicFrame = await extractor.extract({ bytes: Buffer.from("x") }, { profile: { id: "relicsFull" } });
   const runFrame = await extractor.extract({ bytes: Buffer.from("x") }, { profile: { id: "runStatusFull" } });
 
-  assert.equal(relicFrame.text, "windows");
+  assert.equal(relicFrame.text, "profile-specific");
   assert.equal(runFrame.text, "default");
   assert.deepEqual(calls, ["relicsFull", "default"]);
 });
