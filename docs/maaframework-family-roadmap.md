@@ -36,6 +36,7 @@ flowchart LR
 - 自前テンプレート検出は MAAFramework task へ移す
 - Custom Recognition は RHODES 固有の候補化に必要な最小単位だけ実装する
 - `data/recognition/maa-tasks.json` と `data/recognition/scan-profiles.json` を生成元にし、`tools/generate-maa-resource.mjs` で `resource/base/pipeline/rhodes-generated.json` を更新する
+- `tools/generate-maa-interface.mjs` で手動/生成済みpipeline entryを `interface.json` のtask公開へ同期し、外部MAAFramework系ツールから全認識ノードを実行対象として見える状態にする
 - 既存の 1280x720 ROI / template 定義は MAA Resource 側に反映する
 - MAA の recognition detail JSON は `maa-resource-results.js` / `maa-resource-scan-runner.js` で既存の RHODES frame/candidate 形式へ変換する
 
@@ -121,6 +122,7 @@ flowchart LR
 - 接続済み: Windows OCR / 単体 PaddleOCR の旧アダプターとハイブリッドfallback経路を削除し、実行時OCR導線を MAA-OCR と任意 GLM-OCR に集約した。
 - 接続済み: Node側の旧 `scan-runner` / `maa-style-recognizer` と専用テストを削除し、旧scan APIは案内付きの終了応答へ移行した。
 - 接続済み: `scan-profiles.json` の旧 `triggerPath` 定義と対応helperを削除し、外部トリガーURLを認識プロファイルの公開契約から外した。
+- 接続済み: `rhodes.json` / `rhodes-generated.json` から `interface.json` のtask一覧を生成し、Suki内だけでなくMAAFramework interface上にも全認識ノードを公開する。
 
 ## First Milestone
 - SukiUI shell が起動する

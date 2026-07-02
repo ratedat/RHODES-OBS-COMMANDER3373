@@ -20,32 +20,530 @@
     {
       "name": "base",
       "label": "RHODES Base 1280x720",
-      "path": ["resource/base"],
-      "controller": ["android_adb"]
+      "path": [
+        "resource/base"
+      ],
+      "controller": [
+        "android_adb"
+      ]
     }
   ],
   "task": [
     {
-      "name": "operator_name_ocr",
-      "label": "Operator name OCR",
-      "entry": "RhodesOperatorNameOcr",
-      "controller": ["android_adb"],
-      "resource": ["base"]
+      "name": "rhodes_probe",
+      "label": "Probe",
+      "entry": "RhodesProbe",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "MAAFramework接続確認用のDirectHitタスクです。 / DirectHit"
     },
     {
-      "name": "operator_codename_flag",
-      "label": "Operator CODENAME template",
-      "entry": "RhodesOperatorCodenameFlag",
-      "controller": ["android_adb"],
-      "resource": ["base"]
+      "name": "rhodes_run_status_idea_icon",
+      "label": "基本情報: 構想アイコン",
+      "entry": "RhodesRunStatusIdeaIcon",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "構想値の基準点になるアイコンTemplateMatchです。 / TemplateMatch"
     },
     {
-      "name": "run_status_template_set",
-      "label": "Run status retained icon templates",
+      "name": "rhodes_run_status_ingot_icon",
+      "label": "基本情報: 源石錐アイコン",
       "entry": "RhodesRunStatusIngotIcon",
-      "controller": ["android_adb"],
-      "resource": ["base"],
-      "description": "MAAFramework template entry for retained run status values: originium ingots and campaign-specific values such as IS#5 conception."
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "源石錐の基準点になるアイコンTemplateMatchです。 / TemplateMatch"
+    },
+    {
+      "name": "rhodes_operator_codename_flag",
+      "label": "オペレーター: CODENAME",
+      "entry": "RhodesOperatorCodenameFlag",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。 / TemplateMatch"
+    },
+    {
+      "name": "rhodes_operator_name_ocr",
+      "label": "オペレーター: 名前OCR",
+      "entry": "RhodesOperatorNameOcr",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "招集カード領域をMAA-OCRで読ませます。 / OCR"
+    },
+    {
+      "name": "rhodes_relic_button",
+      "label": "画面判定: 秘宝ボタン",
+      "entry": "RhodesRelicButton",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。 / TemplateMatch"
+    },
+    {
+      "name": "rhodes_operator_button",
+      "label": "画面判定: 隊員ボタン",
+      "entry": "RhodesOperatorButton",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。 / TemplateMatch"
+    },
+    {
+      "name": "rhodes_thought_button",
+      "label": "画面判定: 思案ボタン",
+      "entry": "RhodesThoughtButton",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "マップ下部の思案ボタンをMAA TemplateMatchで検出します。 / TemplateMatch"
+    },
+    {
+      "name": "rhodes_screen_run_squad_info_panel",
+      "label": "生成: 分隊情報パネル",
+      "entry": "RhodesScreen_run_squad_info_panel",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.screens / run.squad_info_panel / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_screen_run_operator_list",
+      "label": "生成: オペレーター一覧",
+      "entry": "RhodesScreen_run_operator_list",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.screens / run.operator_list / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_screen_run_sarkaz_age_detail",
+      "label": "生成: サルカズ 時代詳細",
+      "entry": "RhodesScreen_run_sarkaz_age_detail",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.screens / run.sarkaz_age_detail / profiles: is5AgeFull"
+    },
+    {
+      "name": "rhodes_screen_run_map_footer",
+      "label": "生成: マップ下部フッター",
+      "entry": "RhodesScreen_run_map_footer",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is5ThoughtFull, is5AgeFull, is6CoinsFull"
+    },
+    {
+      "name": "rhodes_screen_run_map_footer_relic",
+      "label": "生成: マップ下部フッター 秘宝ボタン",
+      "entry": "RhodesScreen_run_map_footer_relic",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.screens / run.map_footer.relic / profiles: relicsFull"
+    },
+    {
+      "name": "rhodes_candidate_is5_sarkaz_map_select_campaign",
+      "label": "生成: IS#5 campaign marker",
+      "entry": "RhodesCandidate_is5_sarkaz_map_select_campaign",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.candidates / is5.sarkaz.map_select.campaign / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_ocr_region_run_ingot",
+      "label": "生成: run.ingot",
+      "entry": "RhodesOcrRegion_run_ingot",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / run.ingot / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_ocr_region_run_idea",
+      "label": "生成: run.idea",
+      "entry": "RhodesOcrRegion_run_idea",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / run.idea / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_ocr_region_run_idea_current",
+      "label": "生成: run.idea.current",
+      "entry": "RhodesOcrRegion_run_idea_current",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / run.idea.current / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_ocr_region_run_squad_card",
+      "label": "生成: run.squad_card",
+      "entry": "RhodesOcrRegion_run_squad_card",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / run.squad_card / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_ocr_region_run_squad_name",
+      "label": "生成: run.squad_name",
+      "entry": "RhodesOcrRegion_run_squad_name",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / run.squad_name / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_ocr_region_run_difficulty_grade",
+      "label": "生成: run.difficulty_grade",
+      "entry": "RhodesOcrRegion_run_difficulty_grade",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_grade / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_ocr_region_run_difficulty_block",
+      "label": "生成: run.difficulty_block",
+      "entry": "RhodesOcrRegion_run_difficulty_block",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_block / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_ocr_region_relic_list_text",
+      "label": "生成: relic.list_text",
+      "entry": "RhodesOcrRegion_relic_list_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / relic.list_text / profiles: relicsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_is4_revelation_list_text",
+      "label": "生成: is4.revelation_list_text",
+      "entry": "RhodesOcrRegion_is4_revelation_list_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is4.revelation_list_text / profiles: is4RevelationFull"
+    },
+    {
+      "name": "rhodes_ocr_region_is5_thought_list_text",
+      "label": "生成: is5.thought_list_text",
+      "entry": "RhodesOcrRegion_is5_thought_list_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is5.thought_list_text / profiles: is5ThoughtFull"
+    },
+    {
+      "name": "rhodes_ocr_region_is6_coin_list_text",
+      "label": "生成: is6.coin_list_text",
+      "entry": "RhodesOcrRegion_is6_coin_list_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is6.coin_list_text / profiles: is6CoinsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_list_text",
+      "label": "生成: operator.list_text",
+      "entry": "RhodesOcrRegion_operator_list_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.list_text / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_left_1",
+      "label": "生成: operator.name.left.1",
+      "entry": "RhodesOcrRegion_operator_name_left_1",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.1 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_center_1",
+      "label": "生成: operator.name.center.1",
+      "entry": "RhodesOcrRegion_operator_name_center_1",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.1 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_right_1",
+      "label": "生成: operator.name.right.1",
+      "entry": "RhodesOcrRegion_operator_name_right_1",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.1 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_left_2",
+      "label": "生成: operator.name.left.2",
+      "entry": "RhodesOcrRegion_operator_name_left_2",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.2 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_center_2",
+      "label": "生成: operator.name.center.2",
+      "entry": "RhodesOcrRegion_operator_name_center_2",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.2 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_right_2",
+      "label": "生成: operator.name.right.2",
+      "entry": "RhodesOcrRegion_operator_name_right_2",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.2 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_left_3",
+      "label": "生成: operator.name.left.3",
+      "entry": "RhodesOcrRegion_operator_name_left_3",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.3 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_center_3",
+      "label": "生成: operator.name.center.3",
+      "entry": "RhodesOcrRegion_operator_name_center_3",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.3 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_right_3",
+      "label": "生成: operator.name.right.3",
+      "entry": "RhodesOcrRegion_operator_name_right_3",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.3 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_left_4",
+      "label": "生成: operator.name.left.4",
+      "entry": "RhodesOcrRegion_operator_name_left_4",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.4 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_center_4",
+      "label": "生成: operator.name.center.4",
+      "entry": "RhodesOcrRegion_operator_name_center_4",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.4 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_operator_name_right_4",
+      "label": "生成: operator.name.right.4",
+      "entry": "RhodesOcrRegion_operator_name_right_4",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.4 / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_ocr_region_is5_age_detail_text",
+      "label": "生成: is5.age_detail_text",
+      "entry": "RhodesOcrRegion_is5_age_detail_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is5.age_detail_text / profiles: is5AgeFull"
+    },
+    {
+      "name": "rhodes_template_run_status_full_run_idea_current",
+      "label": "生成: RhodesTemplate_runStatusFull_run_idea_current",
+      "entry": "RhodesTemplate_runStatusFull_run_idea_current",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_template_run_status_full_run_ingot",
+      "label": "生成: RhodesTemplate_runStatusFull_run_ingot",
+      "entry": "RhodesTemplate_runStatusFull_run_ingot",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull"
+    },
+    {
+      "name": "rhodes_template_operators_full_operator_recruit_name",
+      "label": "生成: RhodesTemplate_operatorsFull_operator_recruit_name",
+      "entry": "RhodesTemplate_operatorsFull_operator_recruit_name",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: operatorsFull"
+    },
+    {
+      "name": "rhodes_template_operators_full_operator_card_name",
+      "label": "生成: RhodesTemplate_operatorsFull_operator_card_name",
+      "entry": "RhodesTemplate_operatorsFull_operator_card_name",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: operatorsFull"
     }
   ]
 }
