@@ -32,6 +32,8 @@
     "maa:interface:generate": "node tools/generate-maa-interface.mjs",
     "maa:interface:check": "node tools/generate-maa-interface.mjs --check",
     "maa:contract:check": "node tools/check-maa-contract.mjs",
+    "maa:check": "npm run maa:resource:check && npm run maa:interface:check && npm run maa:contract:check",
+    "suki:check": "npm run maa:check && npm run suki:test",
     "suki:publish:portable": "npm run maa:resource:generate && npm run maa:interface:generate && npm run maa:contract:check && dotnet publish apps/rhodes-suki/RhodesSuki.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o outputs/suki-portable",
     "data:update": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1",
     "data:update:plan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1 -PlanOnly",

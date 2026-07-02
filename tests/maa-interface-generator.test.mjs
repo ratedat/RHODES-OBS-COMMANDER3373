@@ -179,5 +179,7 @@ test("package scripts check MAA resource and interface before Suki publish", () 
   assert.equal(packageJson.scripts["maa:interface:generate"], "node tools/generate-maa-interface.mjs");
   assert.equal(packageJson.scripts["maa:interface:check"], "node tools/generate-maa-interface.mjs --check");
   assert.equal(packageJson.scripts["maa:contract:check"], "node tools/check-maa-contract.mjs");
+  assert.equal(packageJson.scripts["maa:check"], "npm run maa:resource:check && npm run maa:interface:check && npm run maa:contract:check");
+  assert.equal(packageJson.scripts["suki:check"], "npm run maa:check && npm run suki:test");
   assert.match(packageJson.scripts["suki:publish:portable"], /npm run maa:resource:generate && npm run maa:interface:generate && npm run maa:contract:check/);
 });
