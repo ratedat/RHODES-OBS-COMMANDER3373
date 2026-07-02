@@ -123,6 +123,7 @@ flowchart LR
 - 接続済み: Node側の旧 `scan-runner` / `maa-style-recognizer` と専用テストを削除し、旧scan APIは案内付きの終了応答へ移行した。
 - 接続済み: `scan-profiles.json` の旧 `triggerPath` 定義と対応helperを削除し、外部トリガーURLを認識プロファイルの公開契約から外した。
 - 接続済み: `rhodes.json` / `rhodes-generated.json` から `interface.json` のtask一覧を生成し、Suki内だけでなくMAAFramework interface上にも全認識ノードを公開する。
+- 接続済み: Suki のResourceタスク一覧も `resource/base/pipeline/rhodes.json` / `rhodes-generated.json` を直接読み、手動定義と生成定義を同じpipeline entry単位で実行対象にする。
 
 ## First Milestone
 - SukiUI shell が起動する

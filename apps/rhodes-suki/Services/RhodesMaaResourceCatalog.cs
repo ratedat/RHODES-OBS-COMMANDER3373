@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using RhodesSuki.Models;
 
@@ -5,6 +6,32 @@ namespace RhodesSuki.Services;
 
 public static class RhodesMaaResourceCatalog
 {
+    private const string ManualPipelineSource = "resource/base/pipeline/rhodes.json";
+    private const string GeneratedPipelineSource = "resource/base/pipeline/rhodes-generated.json";
+
+    private static readonly IReadOnlyDictionary<string, TaskMetadata> ManualTaskMetadata = new Dictionary<string, TaskMetadata>(StringComparer.Ordinal)
+    {
+        ["RhodesProbe"] = new("Probe", "MAAFramework接続確認用のDirectHitタスクです。", []),
+        ["RhodesRunStatusIdeaIcon"] = new("基本情報: 構想アイコン", "構想値の基準点になるアイコンTemplateMatchをMAAで実行します。", ["runStatusFull"]),
+        ["RhodesRunStatusIngotIcon"] = new("基本情報: 源石錐アイコン", "源石錐の基準点になるアイコンTemplateMatchをMAAで実行します。", ["runStatusFull"]),
+        ["RhodesOperatorCodenameFlag"] = new("オペレーター: CODENAME", "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。", ["operatorsFull"]),
+        ["RhodesOperatorNameOcr"] = new("オペレーター: 名前OCR", "招集カード領域をMAA-OCRで読ませます。", ["operatorsFull"]),
+        ["RhodesRelicButton"] = new("画面判定: 秘宝ボタン", "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。", ["relicsFull"]),
+        ["RhodesOperatorButton"] = new("画面判定: 隊員ボタン", "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。", ["operatorsFull"]),
+        ["RhodesThoughtButton"] = new("画面判定: 思案ボタン", "マップ下部の思案ボタンをMAA TemplateMatchで検出します。", ["is5ThoughtFull"]),
+    };
+
+    private static readonly HashSet<string> AbandonedRunIdTokens = new(StringComparer.Ordinal)
+    {
+        "hope",
+        "maxhope",
+        "life",
+        "lifepoints",
+        "shield",
+        "command",
+        "commandlevel",
+    };
+
     private static readonly IReadOnlyDictionary<string, string> ProfileLabels = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["all"] = "すべて",
@@ -66,69 +93,17 @@ public static class RhodesMaaResourceCatalog
 
     private static IReadOnlyList<MaaResourceTaskPreview> ManualTasks()
     {
-        return
-        [
-            new MaaResourceTaskPreview(
-                "RhodesRunStatusIdeaIcon",
-                "基本情報: 構想アイコン",
-                "構想値の基準点になるアイコンTemplateMatchをMAAで実行します。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesRunStatusIngotIcon",
-                "基本情報: 源石錐アイコン",
-                "源石錐の基準点になるアイコンTemplateMatchをMAAで実行します。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesOperatorCodenameFlag",
-                "オペレーター: CODENAME",
-                "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。",
-                ["operatorsFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesOperatorNameOcr",
-                "オペレーター: 名前OCR",
-                "招集カード領域をMAA-OCRで読ませます。",
-                ["operatorsFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesRelicButton",
-                "画面判定: 秘宝ボタン",
-                "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。",
-                ["relicsFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesOperatorButton",
-                "画面判定: 隊員ボタン",
-                "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。",
-                ["operatorsFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesThoughtButton",
-                "画面判定: 思案ボタン",
-                "マップ下部の思案ボタンをMAA TemplateMatchで検出します。",
-                ["is5ThoughtFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesScreen_run_map_footer",
-                "生成: マップ下部OCR",
-                "data/recognition/maa-tasks.json から生成したマップフッター判定です。",
-                ["runStatusFull", "operatorsFull", "relicsFull", "is4RevelationFull", "is5ThoughtFull", "is5AgeFull", "is6CoinsFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesTemplate_runStatusFull_run_ingot",
-                "生成: 源石錐基準点",
-                "scan-profiles.json の templateOcrRegions から生成したTemplateMatchです。",
-                ["runStatusFull"]),
-            new MaaResourceTaskPreview(
-                "RhodesTemplate_operatorsFull_operator_recruit_name",
-                "生成: 招集名基準点",
-                "CODENAME目印から招集カード名ROIを作るためのTemplateMatchです。",
-                ["operatorsFull"]),
-        ];
+        return PipelineTasks(ManualPipelineSource, manual: true);
     }
 
     private static IReadOnlyList<MaaResourceTaskPreview> GeneratedTasks()
     {
-        var path = Path.Combine(
-            AppContext.BaseDirectory,
-            "resource",
-            "base",
-            "pipeline",
-            "rhodes-generated.json");
+        return PipelineTasks(GeneratedPipelineSource, manual: false);
+    }
+
+    private static IReadOnlyList<MaaResourceTaskPreview> PipelineTasks(string relativePath, bool manual)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
         if (!File.Exists(path))
             return [];
 
@@ -138,10 +113,25 @@ public static class RhodesMaaResourceCatalog
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             foreach (var node in document.RootElement.EnumerateObject())
             {
-                if (node.NameEquals("RhodesGeneratedEmpty"))
+                if (!IsPublishableEntry(node.Name))
                     continue;
 
                 var attach = node.Value.TryGetProperty("attach", out var attachValue) ? attachValue : default;
+                if (manual)
+                {
+                    var metadata = ManualTaskMetadata.TryGetValue(node.Name, out var value)
+                        ? value
+                        : new TaskMetadata(node.Name, "RHODES手動定義のMAA Resourceタスクです。", []);
+                    var manualRecognition = JsonString(node.Value, "recognition");
+                    tasks.Add(new MaaResourceTaskPreview(
+                        node.Name,
+                        metadata.Label,
+                        string.Join(" / ", new[] { metadata.Purpose, manualRecognition }.Where(part => !string.IsNullOrWhiteSpace(part))),
+                        metadata.ProfileIds,
+                        relativePath));
+                    continue;
+                }
+
                 var label = JsonString(attach, "label");
                 var source = JsonString(attach, "source");
                 var id = JsonString(attach, "id");
@@ -171,6 +161,22 @@ public static class RhodesMaaResourceCatalog
         return tasks;
     }
 
+    private static bool IsPublishableEntry(string entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry) || entry.EndsWith("Empty", StringComparison.Ordinal))
+            return false;
+        var normalized = new StringBuilder(entry.Length + 8);
+        for (var index = 0; index < entry.Length; index++)
+        {
+            var character = entry[index];
+            if (index > 0 && char.IsUpper(character) && char.IsLower(entry[index - 1]))
+                normalized.Append('_');
+            normalized.Append(char.ToLowerInvariant(character));
+        }
+        var tokens = normalized.ToString().Split(['_', '.', '-'], StringSplitOptions.RemoveEmptyEntries);
+        return !tokens.Any(token => AbandonedRunIdTokens.Contains(token));
+    }
+
     private static string JsonString(JsonElement element, string propertyName)
     {
         return element.ValueKind == JsonValueKind.Object
@@ -195,4 +201,9 @@ public static class RhodesMaaResourceCatalog
             .Distinct(StringComparer.Ordinal)
             .ToArray();
     }
+
+    private sealed record TaskMetadata(
+        string Label,
+        string Purpose,
+        IReadOnlyList<string> ProfileIds);
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using RhodesSuki.Models;
 using RhodesSuki.Services;
@@ -50,6 +51,7 @@ var tests = new (string Name, Action Run)[]
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
     ("Evidence preview tree uses compact typed nodes", EvidencePreviewTreeUsesCompactTypedNodes),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
+    ("Resource catalog reads checked-in pipeline nodes", ResourceCatalogReadsPipelineNodes),
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
@@ -1782,6 +1784,38 @@ static void ResourceTaskSummary()
     Equal("profiles: runStatusFull, operatorsFull", generated.ProfileSummary, "generated profiles");
 }
 
+static void ResourceCatalogReadsPipelineNodes()
+{
+    var tasks = RhodesMaaResourceCatalog.DefaultTasks();
+    var entries = tasks.Select(task => task.Entry).ToHashSet(StringComparer.Ordinal);
+    var pipelineDirectory = Path.Combine(AppContext.BaseDirectory, "resource", "base", "pipeline");
+    var expectedEntries = PipelineEntries(Path.Combine(pipelineDirectory, "rhodes.json"))
+        .Concat(PipelineEntries(Path.Combine(pipelineDirectory, "rhodes-generated.json")))
+        .Where(entry => !entry.EndsWith("Empty", StringComparison.Ordinal))
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
+
+    Equal(expectedEntries.Length, entries.Count, "resource catalog task count");
+    foreach (var entry in expectedEntries)
+        Equal(true, entries.Contains(entry), $"resource catalog contains {entry}");
+    Equal(false, entries.Contains("RhodesEmpty"), "manual empty omitted");
+    Equal(false, entries.Contains("RhodesGeneratedEmpty"), "generated empty omitted");
+    var abandonedTokens = new[] { "hope", "maxhope", "life", "lifepoints", "shield", "command", "commandlevel" };
+    Equal(false, tasks.Any(task => abandonedTokens.Any(token => NormalizeTaskEntry(task.Entry).Contains(token, StringComparison.Ordinal))),
+        "abandoned run values omitted from resource catalog");
+
+    var probe = tasks.Single(task => task.Entry == "RhodesProbe");
+    Equal("Probe", probe.Label, "probe label");
+    Equal("source: resource/base/pipeline/rhodes.json", probe.SourceSummary, "probe source");
+
+    var idea = tasks.Single(task => task.Entry == "RhodesRunStatusIdeaIcon");
+    Equal("profiles: runStatusFull", idea.ProfileSummary, "idea profile");
+
+    var generated = tasks.Single(task => task.Entry == "RhodesTemplate_operatorsFull_operator_card_name");
+    Equal("scan-profiles.templateOcrRegions", generated.Source, "generated source");
+    Equal("profiles: operatorsFull", generated.ProfileSummary, "generated card profile");
+}
+
 static void ResourceProfileOrder()
 {
     var tasks = new[]
@@ -2578,6 +2612,28 @@ static void CandidateOtherSpecialApply()
 static string NormalizeLineEndings(string value)
 {
     return value.Replace("\r\n", "\n", StringComparison.Ordinal);
+}
+
+static IReadOnlyList<string> PipelineEntries(string path)
+{
+    using var document = JsonDocument.Parse(File.ReadAllText(path));
+    return document.RootElement
+        .EnumerateObject()
+        .Select(property => property.Name)
+        .ToArray();
+}
+
+static string NormalizeTaskEntry(string entry)
+{
+    var normalized = new System.Text.StringBuilder(entry.Length + 8);
+    for (var index = 0; index < entry.Length; index++)
+    {
+        var character = entry[index];
+        if (index > 0 && char.IsUpper(character) && char.IsLower(entry[index - 1]))
+            normalized.Append('_');
+        normalized.Append(char.ToLowerInvariant(character));
+    }
+    return string.Join("_", normalized.ToString().Split(['_', '.', '-'], StringSplitOptions.RemoveEmptyEntries));
 }
 
 static void Equal<T>(T expected, T actual, string label)
