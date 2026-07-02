@@ -172,13 +172,15 @@ public sealed record MaaResourceTaskPreview(
 public sealed record MaaResourceProfilePreview(
     string Id,
     string Label,
-    int TaskCount)
+    int TaskCount,
+    string Description = "",
+    string Source = "")
 {
     public string DisplayName => $"{Label} ({TaskCount})";
 
     public string ProfileSummary => Id == "all" ? "profiles: all" : $"profile: {Id}";
 
-    public string SourceSummary => "source: data/recognition/maa-tasks.json";
+    public string SourceSummary => string.IsNullOrWhiteSpace(Source) ? "source: local profile ids" : $"source: {Source}";
 }
 
 public sealed record MaaTaskRunResult(

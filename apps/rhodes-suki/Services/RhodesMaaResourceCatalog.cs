@@ -6,6 +6,7 @@ namespace RhodesSuki.Services;
 
 public static class RhodesMaaResourceCatalog
 {
+    private const string InterfaceSource = "interface.json";
     private const string ManualPipelineSource = "resource/base/pipeline/rhodes.json";
     private const string GeneratedPipelineSource = "resource/base/pipeline/rhodes-generated.json";
 
@@ -68,19 +69,38 @@ public static class RhodesMaaResourceCatalog
 
     public static IReadOnlyList<MaaResourceProfilePreview> ProfileGroups(IReadOnlyList<MaaResourceTaskPreview> tasks)
     {
+        var interfaceProfiles = InterfaceProfiles();
+        var interfaceProfileById = new Dictionary<string, ProfileMetadata>(StringComparer.Ordinal);
+        foreach (var profile in interfaceProfiles)
+            interfaceProfileById.TryAdd(profile.Id, profile);
         var groups = tasks
             .SelectMany(task => task.ProfileIds ?? [])
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal)
-            .Select(id => new MaaResourceProfilePreview(
-                id,
-                ProfileLabels.TryGetValue(id, out var label) ? label : id,
-                tasks.Count(task => TaskAppliesToProfile(task, id))))
-            .OrderBy(group => ProfileOrder.TryGetValue(group.Id, out var order) ? order : int.MaxValue)
+            .Select(id =>
+            {
+                var source = "";
+                var description = "";
+                var label = ProfileLabels.TryGetValue(id, out var fallbackLabel) ? fallbackLabel : id;
+                if (interfaceProfileById.TryGetValue(id, out var profile))
+                {
+                    label = profile.Label;
+                    description = profile.Description;
+                    source = profile.Source;
+                }
+
+                return new MaaResourceProfilePreview(
+                    id,
+                    label,
+                    tasks.Count(task => TaskAppliesToProfile(task, id)),
+                    description,
+                    source);
+            })
+            .OrderBy(group => interfaceProfileById.TryGetValue(group.Id, out var profile) ? profile.Order : ProfileOrder.TryGetValue(group.Id, out var order) ? order : int.MaxValue)
             .ThenBy(group => group.Label, StringComparer.Ordinal)
             .ToList();
 
-        groups.Insert(0, new MaaResourceProfilePreview("all", ProfileLabels["all"], tasks.Count));
+        groups.Insert(0, new MaaResourceProfilePreview("all", ProfileLabels["all"], tasks.Count, "すべてのResource taskを表示します。", "local aggregate"));
         return groups;
     }
 
@@ -99,6 +119,42 @@ public static class RhodesMaaResourceCatalog
     private static IReadOnlyList<MaaResourceTaskPreview> GeneratedTasks()
     {
         return PipelineTasks(GeneratedPipelineSource, manual: false);
+    }
+
+    private static IReadOnlyList<ProfileMetadata> InterfaceProfiles()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, InterfaceSource);
+        if (!File.Exists(path))
+            return [];
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (!document.RootElement.TryGetProperty("group", out var groups) || groups.ValueKind != JsonValueKind.Array)
+                return [];
+
+            var profiles = new List<ProfileMetadata>();
+            var index = 0;
+            foreach (var group in groups.EnumerateArray())
+            {
+                var id = JsonString(group, "name");
+                if (string.IsNullOrWhiteSpace(id))
+                    continue;
+                var label = JsonString(group, "label");
+                profiles.Add(new ProfileMetadata(
+                    id,
+                    string.IsNullOrWhiteSpace(label) ? id : label,
+                    JsonString(group, "description"),
+                    "interface.json group/preset",
+                    index++));
+            }
+
+            return profiles;
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     private static IReadOnlyList<MaaResourceTaskPreview> PipelineTasks(string relativePath, bool manual)
@@ -206,4 +262,11 @@ public static class RhodesMaaResourceCatalog
         string Label,
         string Purpose,
         IReadOnlyList<string> ProfileIds);
+
+    private sealed record ProfileMetadata(
+        string Id,
+        string Label,
+        string Description,
+        string Source,
+        int Order);
 }

@@ -53,6 +53,7 @@ var tests = new (string Name, Action Run)[]
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
     ("Resource catalog reads checked-in pipeline nodes", ResourceCatalogReadsPipelineNodes),
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
+    ("Resource profiles use interface groups", ResourceProfilesUseInterfaceGroups),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
@@ -1832,6 +1833,24 @@ static void ResourceProfileOrder()
 
     var profiles = RhodesMaaResourceCatalog.ProfileGroups(tasks).Select(profile => profile.Id).ToArray();
     Equal("all|runStatusFull|operatorsFull|relicsFull|is4RevelationFull|is5ThoughtFull|is5AgeFull|is6CoinsFull|futureProfile", string.Join("|", profiles), "profile order");
+}
+
+static void ResourceProfilesUseInterfaceGroups()
+{
+    var tasks = RhodesMaaResourceCatalog.DefaultTasks();
+    var profiles = RhodesMaaResourceCatalog.ProfileGroups(tasks);
+    var runStatus = profiles.Single(profile => profile.Id == "runStatusFull");
+    var operators = profiles.Single(profile => profile.Id == "operatorsFull");
+    var all = profiles.Single(profile => profile.Id == "all");
+
+    Equal("基礎情報", runStatus.Label, "run status interface label");
+    Equal(true, runStatus.Description.Contains("源石錐", StringComparison.Ordinal), "run status interface description");
+    Equal("source: interface.json group/preset", runStatus.SourceSummary, "run status interface source");
+    Equal("オペレーター", operators.Label, "operator interface label");
+    Equal(true, operators.Description.Contains("オペレーター", StringComparison.Ordinal), "operator interface description");
+    Equal("source: interface.json group/preset", operators.SourceSummary, "operator interface source");
+    Equal("すべて", all.Label, "all label remains local");
+    Equal("source: local aggregate", all.SourceSummary, "all source");
 }
 
 static void RunCatalogLoadsChoices()

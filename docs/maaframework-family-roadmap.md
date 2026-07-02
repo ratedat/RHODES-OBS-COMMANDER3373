@@ -125,6 +125,7 @@ flowchart LR
 - 接続済み: `rhodes.json` / `rhodes-generated.json` から `interface.json` のtask一覧を生成し、Suki内だけでなくMAAFramework interface上にも全認識ノードを公開する。
 - 接続済み: Suki のResourceタスク一覧も `resource/base/pipeline/rhodes.json` / `rhodes-generated.json` を直接読み、手動定義と生成定義を同じpipeline entry単位で実行対象にする。
 - 接続済み: `interface.json` に認識プロファイル単位の `group` / `preset` を生成し、外部MAAFramework系ツールでも基礎情報、オペレーター、秘宝、IS特殊値のまとまりでタスクを選べるようにする。
+- 接続済み: Suki のResource profile表示も `interface.json` の `group` metadataを読み、外部MAAFramework系ツールと同じラベル/説明/順序を使う。
 
 ## First Milestone
 - SukiUI shell が起動する
