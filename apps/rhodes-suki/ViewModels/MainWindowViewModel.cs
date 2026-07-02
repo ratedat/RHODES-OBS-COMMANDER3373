@@ -3492,7 +3492,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void RefreshResourceTasks()
     {
         ResourceTasks.Clear();
-        foreach (var task in _allResourceTasks.Where(task => RhodesMaaResourceCatalog.TaskAppliesToProfile(task, SelectedResourceProfile?.Id)))
+        foreach (var task in _allResourceTasks.Where(task => RhodesMaaResourceCatalog.TaskAppliesToProfile(task, SelectedResourceProfile)))
         {
             ResourceTasks.Add(task);
         }

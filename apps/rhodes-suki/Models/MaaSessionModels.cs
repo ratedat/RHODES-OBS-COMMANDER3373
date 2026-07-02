@@ -174,7 +174,8 @@ public sealed record MaaResourceProfilePreview(
     string Label,
     int TaskCount,
     string Description = "",
-    string Source = "")
+    string Source = "",
+    IReadOnlyList<string>? TaskEntries = null)
 {
     public string DisplayName => $"{Label} ({TaskCount})";
 

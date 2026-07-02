@@ -82,19 +82,25 @@ public static class RhodesMaaResourceCatalog
                 var source = "";
                 var description = "";
                 var label = ProfileLabels.TryGetValue(id, out var fallbackLabel) ? fallbackLabel : id;
-                if (interfaceProfileById.TryGetValue(id, out var profile))
+                interfaceProfileById.TryGetValue(id, out var interfaceProfile);
+                if (interfaceProfile is not null)
                 {
-                    label = profile.Label;
-                    description = profile.Description;
-                    source = profile.Source;
+                    label = interfaceProfile.Label;
+                    description = interfaceProfile.Description;
+                    source = interfaceProfile.Source;
                 }
+                var taskEntries = interfaceProfile?.TaskEntries;
+                var taskCount = taskEntries is { Count: > 0 }
+                    ? tasks.Count(task => taskEntries.Contains(task.Entry, StringComparer.Ordinal))
+                    : tasks.Count(task => TaskAppliesToProfile(task, id));
 
                 return new MaaResourceProfilePreview(
                     id,
                     label,
-                    tasks.Count(task => TaskAppliesToProfile(task, id)),
+                    taskCount,
                     description,
-                    source);
+                    source,
+                    taskEntries);
             })
             .OrderBy(group => interfaceProfileById.TryGetValue(group.Id, out var profile) ? profile.Order : ProfileOrder.TryGetValue(group.Id, out var order) ? order : int.MaxValue)
             .ThenBy(group => group.Label, StringComparer.Ordinal)
@@ -102,6 +108,15 @@ public static class RhodesMaaResourceCatalog
 
         groups.Insert(0, new MaaResourceProfilePreview("all", ProfileLabels["all"], tasks.Count, "すべてのResource taskを表示します。", "local aggregate"));
         return groups;
+    }
+
+    public static bool TaskAppliesToProfile(MaaResourceTaskPreview task, MaaResourceProfilePreview? profile)
+    {
+        if (profile is null || profile.Id == "all")
+            return true;
+        return profile.TaskEntries is { Count: > 0 }
+            ? profile.TaskEntries.Contains(task.Entry, StringComparer.Ordinal)
+            : TaskAppliesToProfile(task, profile.Id);
     }
 
     public static bool TaskAppliesToProfile(MaaResourceTaskPreview task, string? profileId)
@@ -130,6 +145,8 @@ public static class RhodesMaaResourceCatalog
         try
         {
             using var document = JsonDocument.Parse(File.ReadAllText(path));
+            var taskEntryByName = InterfaceTaskEntryByName(document.RootElement);
+            var presetEntriesById = InterfacePresetEntriesById(document.RootElement, taskEntryByName);
             if (!document.RootElement.TryGetProperty("group", out var groups) || groups.ValueKind != JsonValueKind.Array)
                 return [];
 
@@ -146,7 +163,8 @@ public static class RhodesMaaResourceCatalog
                     string.IsNullOrWhiteSpace(label) ? id : label,
                     JsonString(group, "description"),
                     "interface.json group/preset",
-                    index++));
+                    index++,
+                    presetEntriesById.TryGetValue(id, out var entries) ? entries : []));
             }
 
             return profiles;
@@ -155,6 +173,49 @@ public static class RhodesMaaResourceCatalog
         {
             return [];
         }
+    }
+
+    private static IReadOnlyDictionary<string, string> InterfaceTaskEntryByName(JsonElement root)
+    {
+        if (!root.TryGetProperty("task", out var tasks) || tasks.ValueKind != JsonValueKind.Array)
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+
+        var entryByName = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var task in tasks.EnumerateArray())
+        {
+            var name = JsonString(task, "name");
+            var entry = JsonString(task, "entry");
+            if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(entry))
+                entryByName.TryAdd(name, entry);
+        }
+
+        return entryByName;
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> InterfacePresetEntriesById(
+        JsonElement root,
+        IReadOnlyDictionary<string, string> taskEntryByName)
+    {
+        if (!root.TryGetProperty("preset", out var presets) || presets.ValueKind != JsonValueKind.Array)
+            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
+        var entriesById = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (var preset in presets.EnumerateArray())
+        {
+            var id = JsonString(preset, "name");
+            if (string.IsNullOrWhiteSpace(id) || !preset.TryGetProperty("task", out var presetTasks) || presetTasks.ValueKind != JsonValueKind.Array)
+                continue;
+
+            var entries = presetTasks.EnumerateArray()
+                .Select(task => JsonString(task, "name"))
+                .Where(name => !string.IsNullOrWhiteSpace(name) && taskEntryByName.ContainsKey(name))
+                .Select(name => taskEntryByName[name])
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            entriesById.TryAdd(id, entries);
+        }
+
+        return entriesById;
     }
 
     private static IReadOnlyList<MaaResourceTaskPreview> PipelineTasks(string relativePath, bool manual)
@@ -268,5 +329,6 @@ public static class RhodesMaaResourceCatalog
         string Label,
         string Description,
         string Source,
-        int Order);
+        int Order,
+        IReadOnlyList<string> TaskEntries);
 }

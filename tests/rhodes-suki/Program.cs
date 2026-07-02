@@ -54,6 +54,7 @@ var tests = new (string Name, Action Run)[]
     ("Resource catalog reads checked-in pipeline nodes", ResourceCatalogReadsPipelineNodes),
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
     ("Resource profiles use interface groups", ResourceProfilesUseInterfaceGroups),
+    ("Resource profile task filtering follows interface presets", ResourceProfileTaskFilteringFollowsInterfacePresets),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
@@ -1846,11 +1847,30 @@ static void ResourceProfilesUseInterfaceGroups()
     Equal("基礎情報", runStatus.Label, "run status interface label");
     Equal(true, runStatus.Description.Contains("源石錐", StringComparison.Ordinal), "run status interface description");
     Equal("source: interface.json group/preset", runStatus.SourceSummary, "run status interface source");
+    Equal(true, (runStatus.TaskEntries ?? []).Contains("RhodesOcrRegion_run_ingot"), "run status preset includes ingot");
+    Equal(false, (runStatus.TaskEntries ?? []).Contains("RhodesOperatorNameOcr"), "run status preset excludes operator OCR");
     Equal("オペレーター", operators.Label, "operator interface label");
     Equal(true, operators.Description.Contains("オペレーター", StringComparison.Ordinal), "operator interface description");
     Equal("source: interface.json group/preset", operators.SourceSummary, "operator interface source");
+    Equal(true, (operators.TaskEntries ?? []).Contains("RhodesOperatorNameOcr"), "operator preset includes operator OCR");
+    Equal(false, (operators.TaskEntries ?? []).Contains("RhodesOcrRegion_run_ingot"), "operator preset excludes ingot");
     Equal("すべて", all.Label, "all label remains local");
     Equal("source: local aggregate", all.SourceSummary, "all source");
+}
+
+static void ResourceProfileTaskFilteringFollowsInterfacePresets()
+{
+    var profile = new MaaResourceProfilePreview(
+        "operatorsFull",
+        "オペレーター",
+        1,
+        TaskEntries: ["RhodesOcrRegion_run_ingot"]);
+    var ingot = new MaaResourceTaskPreview("RhodesOcrRegion_run_ingot", "源石錐", "", ["runStatusFull"]);
+    var operatorName = new MaaResourceTaskPreview("RhodesOperatorNameOcr", "オペレーター", "", ["operatorsFull"]);
+
+    Equal(true, RhodesMaaResourceCatalog.TaskAppliesToProfile(ingot, profile), "preset entry included");
+    Equal(false, RhodesMaaResourceCatalog.TaskAppliesToProfile(operatorName, profile), "profile id fallback ignored when preset exists");
+    Equal(true, RhodesMaaResourceCatalog.TaskAppliesToProfile(operatorName, (MaaResourceProfilePreview?)null), "null profile shows all");
 }
 
 static void RunCatalogLoadsChoices()
