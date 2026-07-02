@@ -40,13 +40,6 @@ export function findScanProfile(profiles, id) {
   return profile;
 }
 
-export function findScanProfileByTriggerPath(profiles, pathname) {
-  const path = String(pathname || "");
-  const profile = normalizeScanProfiles({ profiles }).find((item) => item.triggerPath === path);
-  if (!profile) throw Object.assign(new Error(`unknown recognition trigger: ${path}`), { status: 404 });
-  return profile;
-}
-
 export function profileIdFromScanBody(body = {}) {
   return requireProfileId(body.profile || body.profileId);
 }

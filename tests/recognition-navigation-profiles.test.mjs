@@ -64,6 +64,14 @@ test("scan profiles own the server-side OCR engine routing", async () => {
   }
 });
 
+test("scan profiles do not carry retired external trigger URLs", async () => {
+  const profiles = await profilesById();
+
+  for (const profile of profiles.values()) {
+    assert.equal(Object.hasOwn(profile, "triggerPath"), false, `${profile.id} should not expose a legacy trigger path`);
+  }
+});
+
 test("run status profile is scoped to retained base and IS-specific values only", async () => {
   const profiles = await profilesById();
   const profile = profiles.get("runStatusFull");
