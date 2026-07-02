@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 test("Suki shell references SukiUI and Maa.Framework as the replacement desktop stack", async () => {
   const csproj = await fs.readFile("apps/rhodes-suki/RhodesSuki.csproj", "utf8");
   const packageJson = await fs.readFile("package.json", "utf8");
+  const portablePublisher = await fs.readFile("tools/publish-suki-portable.mjs", "utf8");
 
   assert.match(csproj, /PackageReference Include="SukiUI" Version="7\.0\.1"/);
   assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.8\.0"/);
@@ -25,7 +26,12 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(packageJson, /"maa:resource:generate": "node tools\/generate-maa-resource\.mjs"/);
   assert.match(packageJson, /"maa:resource:check": "node tools\/generate-maa-resource\.mjs --check"/);
   assert.match(packageJson, /"suki:test": "dotnet run --project tests\/rhodes-suki\/RhodesSuki\.ServiceTests\.csproj"/);
-  assert.match(packageJson, /suki:publish:portable.*--self-contained true/);
+  assert.match(packageJson, /"suki:publish:portable": "node tools\/publish-suki-portable\.mjs"/);
+  assert.match(portablePublisher, /--self-contained/);
+  assert.match(portablePublisher, /PublishSingleFile=true/);
+  assert.match(portablePublisher, /IncludeNativeLibrariesForSelfExtract=true/);
+  assert.match(portablePublisher, /EnableCompressionInSingleFile=true/);
+  assert.match(portablePublisher, /DebugSymbols=false/);
 });
 
 test("Suki service tests cover MAA Resource detail conversion behavior", async () => {
@@ -593,13 +599,14 @@ test("MAA resource generator output is checked into the Suki shell", () => {
 test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   const xaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
 
-  assert.match(xaml, /MAA ADB接続/);
+  assert.match(xaml, /MAAFramework ADB接続/);
   assert.match(xaml, /AdbPath/);
   assert.match(xaml, /AdbSerial/);
   assert.match(xaml, /AdbPresets/);
   assert.match(xaml, /AdbDevices/);
   assert.match(xaml, /ApplyAdbPresetCommand/);
   assert.match(xaml, /RefreshAdbDevicesCommand/);
+  assert.match(xaml, /RunAdbConnectionTestCommand/);
   assert.match(xaml, /ApplyAdbDeviceCommand/);
   assert.match(xaml, /RefreshOptionalRuntimesCommand/);
   assert.match(xaml, /SaveSettingsCommand/);
