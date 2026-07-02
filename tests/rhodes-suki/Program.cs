@@ -1532,6 +1532,10 @@ static void MaaGeneratedResourceBuilder()
     Equal(false, root.ContainsKey("RhodesOcrRegion_run_hope_current"), "discarded hope node omitted");
     Equal("TemplateMatch", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated template recognition");
     Equal("run/IngotIcon.png", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["template"]!.GetValue<string>(), "generated template path");
+    Equal(
+        NormalizeLineEndings(File.ReadAllText(Path.Combine("apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json"))),
+        NormalizeLineEndings(generated),
+        "C# resource generator matches checked-in JS-generated pipeline");
 
     var guardedGenerated = RhodesMaaGeneratedResourceBuilder.BuildJson(
         """
@@ -2610,6 +2614,11 @@ static void CandidateOtherSpecialApply()
     Equal("status_a", coins[1]!.AsObject()["statusId"]!.GetValue<string>(), "coin status");
     Equal("back", coins[1]!.AsObject()["face"]!.GetValue<string>(), "coin face");
     Equal(7, coins[1]!.AsObject()["count"]!.GetValue<int>(), "coin merged count");
+}
+
+static string NormalizeLineEndings(string value)
+{
+    return value.Replace("\r\n", "\n", StringComparison.Ordinal);
 }
 
 static void Equal<T>(T expected, T actual, string label)
