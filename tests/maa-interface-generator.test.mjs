@@ -197,4 +197,8 @@ test("package scripts check MAA resource and interface before Suki publish", () 
   assert.match(portablePublisher, /PublishSingleFile=true/);
   assert.match(portablePublisher, /removeFilesByExtension\(outputDir, "\.pdb"\)/);
   assert.match(portablePublisher, /libs", "MaaAgentBinary"/);
+  assert.match(portablePublisher, /copyMaaNativeRuntimeToRuntimes/);
+  assert.match(portablePublisher, /"runtimes", "win-x64", "native"/);
+  assert.match(portablePublisher, /MaaAdbControlUnit\.dll/);
+  assert.match(portablePublisher, /opencv_world4_maa\.dll/);
 });

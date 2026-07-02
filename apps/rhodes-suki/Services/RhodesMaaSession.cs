@@ -1,11 +1,13 @@
 using MaaFramework.Binding;
 using MaaFramework.Binding.Buffers;
 using RhodesSuki.Models;
+using System.Runtime.InteropServices;
 
 namespace RhodesSuki.Services;
 
 public sealed class RhodesMaaSession : IDisposable
 {
+    private static int NativeRuntimePrepared;
     private MaaResource? _resource;
     private MaaController? _controller;
     private MaaTasker? _tasker;
@@ -52,6 +54,7 @@ public sealed class RhodesMaaSession : IDisposable
     public async Task<MaaSessionSnapshot> InitializeAdbAsync(MaaSessionOptions options, CancellationToken cancellationToken = default)
     {
         DisposeCurrent();
+        EnsureNativeRuntimeDirectory();
 
         if (!Directory.Exists(options.ResourceRoot))
         {
@@ -231,4 +234,63 @@ public sealed class RhodesMaaSession : IDisposable
         _controller = null;
         _resource = null;
     }
+
+    private static void EnsureNativeRuntimeDirectory()
+    {
+        if (Interlocked.Exchange(ref NativeRuntimePrepared, 1) == 1)
+            return;
+
+        var nativeDirectory = Path.Combine(
+            AppContext.BaseDirectory,
+            "runtimes",
+            CurrentRuntimeIdentifier(),
+            "native");
+        if (!Directory.Exists(nativeDirectory))
+            return;
+
+        if (OperatingSystem.IsWindows())
+            _ = SetDllDirectory(nativeDirectory);
+
+        foreach (var fileName in WindowsCoreNativeFiles())
+        {
+            var fullPath = Path.Combine(nativeDirectory, fileName);
+            if (File.Exists(fullPath))
+                _ = NativeLibrary.Load(fullPath);
+        }
+    }
+
+    private static string CurrentRuntimeIdentifier()
+    {
+        var os = OperatingSystem.IsWindows()
+            ? "win"
+            : OperatingSystem.IsMacOS()
+                ? "osx"
+                : "linux";
+        var arch = RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X64 => "x64",
+            Architecture.Arm64 => "arm64",
+            Architecture.X86 => "x86",
+            Architecture.Arm => "arm",
+            _ => RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant(),
+        };
+        return $"{os}-{arch}";
+    }
+
+    private static IReadOnlyList<string> WindowsCoreNativeFiles()
+    {
+        if (!OperatingSystem.IsWindows())
+            return [];
+
+        return
+        [
+            "MaaUtils.dll",
+            "MaaToolkit.dll",
+            "MaaFramework.dll",
+            "MaaAdbControlUnit.dll",
+        ];
+    }
+
+    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool SetDllDirectory(string lpPathName);
 }

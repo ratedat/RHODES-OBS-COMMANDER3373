@@ -32,6 +32,10 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(portablePublisher, /IncludeNativeLibrariesForSelfExtract=true/);
   assert.match(portablePublisher, /EnableCompressionInSingleFile=true/);
   assert.match(portablePublisher, /DebugSymbols=false/);
+  assert.match(portablePublisher, /copyMaaNativeRuntimeToRuntimes/);
+  assert.match(portablePublisher, /"runtimes", "win-x64", "native"/);
+  assert.match(portablePublisher, /MaaFramework\.dll/);
+  assert.match(portablePublisher, /MaaAdbControlUnit\.dll/);
 });
 
 test("Suki service tests cover MAA Resource detail conversion behavior", async () => {

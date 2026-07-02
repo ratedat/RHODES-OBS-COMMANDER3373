@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputsRoot = path.join(repoRoot, "outputs");
 const outputDir = path.join(outputsRoot, "suki-portable");
+const sukiBuildDir = path.join(repoRoot, "apps", "rhodes-suki", "bin", "Release", "net8.0", "win-x64");
 
 function assertSafeOutputPath() {
   const relative = path.relative(outputsRoot, outputDir);
@@ -53,6 +54,37 @@ async function moveMaaAgentBinaryToLibs() {
   await fs.mkdir(path.dirname(target), { recursive: true });
   await fs.rm(target, { recursive: true, force: true });
   await fs.rename(source, target);
+}
+
+async function copyMaaNativeRuntimeToRuntimes() {
+  const source = path.join(sukiBuildDir, "runtimes", "win-x64", "native");
+  const target = path.join(outputDir, "runtimes", "win-x64", "native");
+  const requiredFiles = [
+    "MaaFramework.dll",
+    "MaaToolkit.dll",
+    "MaaUtils.dll",
+    "MaaAdbControlUnit.dll",
+    "fastdeploy_ppocr_maa.dll",
+    "onnxruntime_maa.dll",
+    "opencv_world4_maa.dll",
+  ];
+
+  try {
+    const sourceStat = await fs.stat(source);
+    if (!sourceStat.isDirectory()) {
+      throw new Error(`MAA native runtime source is not a directory: ${source}`);
+    }
+  } catch (error) {
+    throw new Error(`MAA native runtime source was not found: ${source}`, { cause: error });
+  }
+
+  await fs.rm(target, { recursive: true, force: true });
+  await fs.mkdir(target, { recursive: true });
+  await fs.cp(source, target, { recursive: true });
+
+  for (const fileName of requiredFiles) {
+    await fs.access(path.join(target, fileName));
+  }
 }
 
 async function collectSummary(directory) {
@@ -107,6 +139,7 @@ run("dotnet", [
 
 await removeFilesByExtension(outputDir, ".pdb");
 await moveMaaAgentBinaryToLibs();
+await copyMaaNativeRuntimeToRuntimes();
 
 const exePath = path.join(outputDir, "RhodesSuki.exe");
 await fs.access(exePath);
