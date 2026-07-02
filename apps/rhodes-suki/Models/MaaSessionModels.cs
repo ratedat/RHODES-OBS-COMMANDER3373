@@ -184,6 +184,21 @@ public sealed record MaaResourceProfilePreview(
     public string SourceSummary => string.IsNullOrWhiteSpace(Source) ? "source: local profile ids" : $"source: {Source}";
 }
 
+public sealed record MaaResourceExecutionPlan(
+    string ProfileId,
+    string ProfileLabel,
+    string Source,
+    IReadOnlyList<string> TaskEntries,
+    IReadOnlyList<MaaResourceTaskPreview> Tasks,
+    string Error)
+{
+    public bool CanRun => string.IsNullOrWhiteSpace(Error) && Tasks.Count > 0;
+
+    public string Summary => CanRun
+        ? $"{ProfileLabel} / tasks={Tasks.Count} / {Source}"
+        : string.IsNullOrWhiteSpace(Error) ? "実行対象がありません。" : Error;
+}
+
 public sealed record MaaResourceContractSnapshot(
     bool IsValid,
     int TaskCount,

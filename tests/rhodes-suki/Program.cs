@@ -1515,6 +1515,7 @@ static void MaaGeneratedResourceBuilder()
             { "id": "run.life.points", "roi": [1,2,3,4] },
             { "id": "run.shield", "roi": [1,2,3,4] },
             { "id": "run.command.level", "roi": [1,2,3,4] },
+            { "id": "run.safe", "roi": [1,2,3,4] },
             { "id": "run.ingot", "roi": [5,6,7,8] }
           ]
         }
@@ -1539,12 +1540,17 @@ static void MaaGeneratedResourceBuilder()
     Equal(false, guardedRoot.ContainsKey("RhodesOcrRegion_run_life_points"), "guarded life region omitted");
     Equal(false, guardedRoot.ContainsKey("RhodesOcrRegion_run_shield"), "guarded shield region omitted");
     Equal(false, guardedRoot.ContainsKey("RhodesOcrRegion_run_command_level"), "guarded command level region omitted");
+    Equal(false, guardedRoot.ContainsKey("RhodesOcrRegion_run_safe"), "guarded unknown run value omitted");
     Equal(false, guardedRoot.ContainsKey("RhodesTemplate_runStatusFull_run_top_hope"), "guarded hope template omitted");
     Equal("OCR", guardedRoot["RhodesOcrRegion_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "guarded ingot retained");
     Equal("TemplateMatch", guardedRoot["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "guarded ingot template retained");
+    Equal(true, RhodesMaaRecognitionPolicy.IsRetainedRecognitionSource("run.idea.current"), "policy retains IS special value");
+    Equal(false, RhodesMaaRecognitionPolicy.IsRetainedRecognitionSource("run.safe"), "policy rejects unknown run values");
     Equal(false, RhodesMaaRecognitionPolicy.IsRetainedRecognitionSource("run.safe", "commandLevel"), "policy rejects discarded candidate fields");
+    Equal(false, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_safe"), "policy rejects unknown run resource entries");
     Equal(false, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_shield"), "policy rejects discarded resource entries");
     Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_ingot"), "policy retains ingot resource entries");
+    Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesRunStatusIdeaIcon"), "policy retains manual special icon entry");
 
     var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-generated-resource-{Guid.NewGuid():N}");
     Directory.CreateDirectory(directory);
@@ -1900,6 +1906,21 @@ static void ResourceProfileTaskFilteringFollowsInterfacePresets()
     Equal(true, RhodesMaaResourceCatalog.TaskAppliesToProfile(ingot, profile), "preset entry included");
     Equal(false, RhodesMaaResourceCatalog.TaskAppliesToProfile(operatorName, profile), "profile id fallback ignored when preset exists");
     Equal(true, RhodesMaaResourceCatalog.TaskAppliesToProfile(operatorName, (MaaResourceProfilePreview?)null), "null profile shows all");
+
+    var plan = RhodesMaaResourceCatalog.BuildExecutionPlan([operatorName, ingot], profile);
+    Equal(true, plan.CanRun, "preset execution plan runnable");
+    Equal("RhodesOcrRegion_run_ingot", plan.Tasks.Single().Entry, "preset execution plan follows preset entries");
+    Equal("RhodesOcrRegion_run_ingot", plan.TaskEntries.Single(), "preset execution plan records preset entries");
+
+    var allPlan = RhodesMaaResourceCatalog.BuildExecutionPlan([operatorName, ingot], new MaaResourceProfilePreview("all", "すべて", 2));
+    Equal(false, allPlan.CanRun, "all profile is display only");
+    Equal(true, allPlan.Error.Contains("一覧表示用", StringComparison.Ordinal), "all plan explains display only");
+
+    var missingPlan = RhodesMaaResourceCatalog.BuildExecutionPlan(
+        [operatorName, ingot],
+        profile with { TaskEntries = ["RhodesMissingTask"] });
+    Equal(false, missingPlan.CanRun, "missing preset task refuses execution");
+    Equal(true, missingPlan.Error.Contains("RhodesMissingTask", StringComparison.Ordinal), "missing plan names task");
 }
 
 static void RunCatalogLoadsChoices()

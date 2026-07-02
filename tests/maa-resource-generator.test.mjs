@@ -32,9 +32,14 @@ test("MAA recognition policy defines the retained run target boundary once", () 
   assert.equal(isAbandonedRunField("hope"), true);
   assert.equal(isRetainedRecognitionSource({ id: "run.hope.current" }), false);
   assert.equal(isRetainedRecognitionSource({ id: "run.ingot" }), true);
+  assert.equal(isRetainedRecognitionSource({ id: "run.idea.current" }), true);
+  assert.equal(isRetainedRecognitionSource({ id: "run.safe" }), false);
   assert.equal(isRetainedRecognitionSource({ id: "run.safe", candidateField: "commandLevel" }), false);
   assert.equal(isAbandonedRunMaaEntry("RhodesOcrRegion_run_shield"), true);
+  assert.equal(isAbandonedRunMaaEntry("RhodesOcrRegion_run_safe"), true);
   assert.equal(isAbandonedRunMaaEntry("RhodesOcrRegion_run_ingot"), false);
+  assert.equal(isAbandonedRunMaaEntry("RhodesRunStatusIdeaIcon"), false);
+  assert.equal(isAbandonedRunMaaEntry("RhodesTemplate_runStatusFull_run_ingot"), false);
 });
 
 test("MAA resource generator refuses abandoned run value targets even if source JSON contains them", () => {
@@ -55,6 +60,7 @@ test("MAA resource generator refuses abandoned run value targets even if source 
         { id: "run.life.points", roi: [1, 2, 3, 4] },
         { id: "run.shield", roi: [1, 2, 3, 4] },
         { id: "run.command.level", roi: [1, 2, 3, 4] },
+        { id: "run.safe", roi: [1, 2, 3, 4] },
         { id: "run.ingot", roi: [5, 6, 7, 8] },
       ],
     },
@@ -77,6 +83,7 @@ test("MAA resource generator refuses abandoned run value targets even if source 
   assert.equal(pipeline.RhodesOcrRegion_run_life_points, undefined);
   assert.equal(pipeline.RhodesOcrRegion_run_shield, undefined);
   assert.equal(pipeline.RhodesOcrRegion_run_command_level, undefined);
+  assert.equal(pipeline.RhodesOcrRegion_run_safe, undefined);
   assert.equal(pipeline.RhodesTemplate_runStatusFull_run_top_hope, undefined);
   assert.equal(pipeline.RhodesOcrRegion_run_ingot.recognition, "OCR");
   assert.equal(pipeline.RhodesTemplate_runStatusFull_run_ingot.recognition, "TemplateMatch");

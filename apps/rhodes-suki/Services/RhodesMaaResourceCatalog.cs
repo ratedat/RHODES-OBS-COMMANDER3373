@@ -236,6 +236,69 @@ public static class RhodesMaaResourceCatalog
         return task.ProfileIds?.Contains(profileId, StringComparer.Ordinal) == true;
     }
 
+    public static MaaResourceExecutionPlan BuildExecutionPlan(
+        IReadOnlyList<MaaResourceTaskPreview> tasks,
+        MaaResourceProfilePreview? profile)
+    {
+        if (profile is null)
+            return ExecutionPlanError("認識プロファイルが選択されていません。");
+        if (profile.Id == "all")
+            return ExecutionPlanError("「すべて」は一覧表示用です。認識実行では具体的なプロファイルを選択してください。", profile);
+
+        if (profile.TaskEntries is { Count: > 0 })
+        {
+            var taskByEntry = tasks
+                .GroupBy(task => task.Entry, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            var selected = new List<MaaResourceTaskPreview>();
+            var missing = new List<string>();
+            foreach (var entry in profile.TaskEntries.Where(entry => !string.IsNullOrWhiteSpace(entry)).Distinct(StringComparer.Ordinal))
+            {
+                if (taskByEntry.TryGetValue(entry, out var task))
+                    selected.Add(task);
+                else
+                    missing.Add(entry);
+            }
+
+            if (missing.Count > 0)
+                return ExecutionPlanError($"preset taskがResource catalogに存在しません: {string.Join(", ", missing)}", profile);
+            if (selected.Count == 0)
+                return ExecutionPlanError("選択プロファイルのpresetに実行可能なResource taskがありません。", profile);
+
+            return new MaaResourceExecutionPlan(
+                profile.Id,
+                profile.Label,
+                string.IsNullOrWhiteSpace(profile.Source) ? "profile preset" : profile.Source,
+                profile.TaskEntries,
+                selected,
+                "");
+        }
+
+        var fallbackTasks = tasks
+            .Where(task => TaskAppliesToProfile(task, profile.Id))
+            .ToArray();
+        return fallbackTasks.Length == 0
+            ? ExecutionPlanError("選択プロファイルに実行可能なResource taskがありません。", profile)
+            : new MaaResourceExecutionPlan(
+                profile.Id,
+                profile.Label,
+                "resource profile ids",
+                fallbackTasks.Select(task => task.Entry).ToArray(),
+                fallbackTasks,
+                "");
+    }
+
+    private static MaaResourceExecutionPlan ExecutionPlanError(string error, MaaResourceProfilePreview? profile = null)
+    {
+        return new MaaResourceExecutionPlan(
+            profile?.Id ?? "",
+            profile?.Label ?? "",
+            profile?.Source ?? "",
+            profile?.TaskEntries ?? [],
+            [],
+            error);
+    }
+
     private static IReadOnlyList<MaaResourceTaskPreview> ManualTasks()
     {
         return PipelineTasks(ManualPipelineSource, manual: true);

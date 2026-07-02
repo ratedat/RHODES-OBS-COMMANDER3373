@@ -4,6 +4,24 @@ namespace RhodesSuki.Services;
 
 public static class RhodesMaaRecognitionPolicy
 {
+    private static readonly HashSet<string> RetainedRunRecognitionIds = new(StringComparer.Ordinal)
+    {
+        "run.squad.info.panel",
+        "run.status.idea.icon",
+        "run.status.ingot.icon",
+        "run.operator.list",
+        "run.sarkaz.age.detail",
+        "run.map.footer",
+        "run.map.footer.relic",
+        "run.ingot",
+        "run.idea",
+        "run.idea.current",
+        "run.squad.card",
+        "run.squad.name",
+        "run.difficulty.grade",
+        "run.difficulty.block",
+    };
+
     private static readonly HashSet<string> AbandonedRunFields = new(StringComparer.Ordinal)
     {
         "hope",
@@ -11,17 +29,6 @@ public static class RhodesMaaRecognitionPolicy
         "lifePoints",
         "shield",
         "commandLevel",
-    };
-
-    private static readonly HashSet<string> AbandonedRunIdTokens = new(StringComparer.Ordinal)
-    {
-        "hope",
-        "maxhope",
-        "life",
-        "lifepoints",
-        "shield",
-        "command",
-        "commandlevel",
     };
 
     public static bool IsRetainedRecognitionSource(string? id, string? candidateField = "")
@@ -39,15 +46,14 @@ public static class RhodesMaaRecognitionPolicy
 
     public static bool IsAbandonedRunEntry(string? entry)
     {
-        return IdTokens(entry).Any(AbandonedRunIdTokens.Contains);
+        return IsAbandonedRunRecognitionId(entry);
     }
 
     private static bool IsAbandonedRunRecognitionId(string? id)
     {
-        var tokens = IdTokens(id);
-        return tokens.Count > 0
-            && tokens[0].Equals("run", StringComparison.Ordinal)
-            && tokens.Skip(1).Any(AbandonedRunIdTokens.Contains);
+        var retainedId = RetainedRunRecognitionId(id);
+        return !string.IsNullOrWhiteSpace(retainedId)
+            && !RetainedRunRecognitionIds.Contains(retainedId);
     }
 
     private static IReadOnlyList<string> IdTokens(string? value)
@@ -56,5 +62,18 @@ public static class RhodesMaaRecognitionPolicy
         return Regex.Split(dotted.ToLowerInvariant(), "[^a-z0-9]+")
             .Where(token => !string.IsNullOrWhiteSpace(token))
             .ToArray();
+    }
+
+    private static string RetainedRunRecognitionId(string? value)
+    {
+        var tokens = IdTokens(value);
+        var runIndex = -1;
+        for (var index = 0; index < tokens.Count; index++)
+        {
+            if (tokens[index].Equals("run", StringComparison.Ordinal))
+                runIndex = index;
+        }
+
+        return runIndex < 0 ? "" : string.Join(".", tokens.Skip(runIndex));
     }
 }

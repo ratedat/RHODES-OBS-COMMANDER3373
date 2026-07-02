@@ -83,6 +83,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private RhodesRecognitionScanLogRow? _selectedRecognitionScanLogRow;
     private MaaAdbPresetPreview? _selectedAdbPreset;
     private MaaResourceProfilePreview? _selectedResourceProfile;
+    private MaaResourceExecutionPlan? _lastResourceExecutionPlan;
     private SukiOcrEngineOption? _selectedOcrEngine;
     private SukiCampaignPreview? _selectedCampaign;
     private MaaTaskDiagnosticsSnapshot _resourceTaskDiagnostics = MaaTaskDiagnosticsSnapshot.Empty;
@@ -3152,6 +3153,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RunAllResourceTasksCoreAsync()
     {
+        var plan = RhodesMaaResourceCatalog.BuildExecutionPlan(_allResourceTasks, SelectedResourceProfile);
+        _lastResourceExecutionPlan = null;
         ClearRoiRescanComparison();
         ResourceTaskResults.Clear();
         CandidateResults.Clear();
@@ -3159,15 +3162,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         LastCandidateApplySummary = "候補未反映";
         RefreshResourceTaskDiagnostics();
         RefreshInspectorRows();
-        if (!ResourceTasks.Any())
+        if (!plan.CanRun)
         {
-            StatusMessage = "選択プロファイルにResource taskがありません。";
+            StatusMessage = plan.Summary;
             return;
         }
+        _lastResourceExecutionPlan = plan;
+        StatusMessage = $"MAA実行計画: {plan.Summary}";
         if (!await ForceCaptureAsync())
             return;
 
-        foreach (var task in ResourceTasks)
+        foreach (var task in plan.Tasks)
         {
             var result = await _session.RunResourceTaskAsync(task.Entry);
             ResourceTaskResults.Add(result);
@@ -3178,12 +3183,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (ResourceTaskResults.Any())
         {
             var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
-                CandidateApiProfileId(),
+                plan.ProfileId,
                 ResourceTaskResults);
             LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                 ResourceTaskResults,
-                SelectedResourceProfile?.Id,
-                localCandidates);
+                plan.ProfileId,
+                localCandidates,
+                plan.ProfileLabel,
+                plan.TaskEntries);
             StatusMessage = $"MAA scan証跡を保存しました: {LastResourceTaskResultsPath}";
         }
     }
@@ -3197,12 +3204,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         CandidateResults.Clear();
+        var profileId = CandidateApiProfileId();
+        var evidencePlan = CurrentEvidencePlan(profileId);
         var apiResult = await RhodesMaaCandidateApiClient.ConvertAsync(
             RhodesApiUrl,
-            CandidateApiProfileId(),
+            profileId,
             ResourceTaskResults);
         var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
-            CandidateApiProfileId(),
+            profileId,
             ResourceTaskResults);
 
         if (apiResult.HasCandidates)
@@ -3215,8 +3224,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RefreshInspectorRows();
             LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                 ResourceTaskResults,
-                SelectedResourceProfile?.Id,
-                CandidateResults);
+                profileId,
+                CandidateResults,
+                evidencePlan?.ProfileLabel,
+                evidencePlan?.TaskEntries);
             var supplementalCount = CandidateResults.Count - apiResult.Candidates.Count;
             StatusMessage = supplementalCount > 0
                 ? $"候補化しました: {CandidateResults.Count}件 (ローカル補完 +{supplementalCount})"
@@ -3233,8 +3244,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RefreshInspectorRows();
             LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                 ResourceTaskResults,
-                SelectedResourceProfile?.Id,
-                CandidateResults);
+                profileId,
+                CandidateResults,
+                evidencePlan?.ProfileLabel,
+                evidencePlan?.TaskEntries);
             StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
                 ? $"ローカル候補化しました: {CandidateResults.Count}件"
                 : $"候補化APIに接続できないためローカル候補化しました: {CandidateResults.Count}件";
@@ -3251,8 +3264,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RefreshInspectorRows();
             LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                 ResourceTaskResults,
-                SelectedResourceProfile?.Id,
-                CandidateResults);
+                profileId,
+                CandidateResults,
+                evidencePlan?.ProfileLabel,
+                evidencePlan?.TaskEntries);
             StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
                 ? $"候補化APIは0件だったためローカルMAAプレビューを表示しました: {CandidateResults.Count}件"
                 : $"候補化APIに接続できないためローカルMAAプレビューを表示しました: {CandidateResults.Count}件";
@@ -3262,8 +3277,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshInspectorRows();
         LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
             ResourceTaskResults,
-            SelectedResourceProfile?.Id,
-            CandidateResults);
+            profileId,
+            CandidateResults,
+            evidencePlan?.ProfileLabel,
+            evidencePlan?.TaskEntries);
         StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
             ? "候補は0件です。"
             : $"候補化API失敗: {apiResult.Error}";
@@ -3271,8 +3288,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private string? CandidateApiProfileId()
     {
-        var profileId = SelectedResourceProfile?.Id;
+        var profileId = _lastResourceExecutionPlan?.CanRun == true
+            ? _lastResourceExecutionPlan.ProfileId
+            : SelectedResourceProfile?.Id;
         return string.IsNullOrWhiteSpace(profileId) || profileId == "all" ? null : profileId;
+    }
+
+    private MaaResourceExecutionPlan? CurrentEvidencePlan(string? profileId)
+    {
+        return _lastResourceExecutionPlan?.CanRun == true
+            && string.Equals(_lastResourceExecutionPlan.ProfileId, profileId, StringComparison.Ordinal)
+            ? _lastResourceExecutionPlan
+            : null;
     }
 
     private async Task RunProbeAsync(MaaProbePayloadPreview? payload)
@@ -3297,6 +3324,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             ClearRoiRescanComparison();
+            _lastResourceExecutionPlan = null;
             if (!await ForceCaptureAsync())
                 return;
 
@@ -4242,8 +4270,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private async Task<string> SaveResourceTaskResultsAsync(
         IEnumerable<MaaTaskRunResult> taskResults,
         string? profileId,
-        IEnumerable<MaaCandidatePreview>? candidates = null)
+        IEnumerable<MaaCandidatePreview>? candidates = null,
+        string? profileLabel = null,
+        IEnumerable<string>? presetTaskEntries = null)
     {
+        var selectedMatches = string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal);
         return await RhodesMaaRecognitionEvidenceLog.SaveAsync(
             taskResults,
             candidates ?? [],
@@ -4251,8 +4282,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RhodesSukiDebugPaths.RecognitionScansDirectory,
             capturePath: LastCapturePath,
             captureBytes: _lastCapture.Length,
-            profileLabel: string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal) ? SelectedResourceProfile?.Label : null,
-            presetTaskEntries: string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal) ? SelectedResourceProfile?.TaskEntries : null);
+            profileLabel: profileLabel ?? (selectedMatches ? SelectedResourceProfile?.Label : null),
+            presetTaskEntries: presetTaskEntries ?? (selectedMatches ? SelectedResourceProfile?.TaskEntries : null));
     }
 
     private static string ResolveMaaTasksSourcePath()

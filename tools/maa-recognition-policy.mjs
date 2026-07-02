@@ -1,7 +1,23 @@
 export const abandonedRunFieldIds = Object.freeze(["hope", "maxHope", "lifePoints", "shield", "commandLevel"]);
+export const retainedRunRecognitionIds = Object.freeze([
+  "run.squad.info.panel",
+  "run.status.idea.icon",
+  "run.status.ingot.icon",
+  "run.operator.list",
+  "run.sarkaz.age.detail",
+  "run.map.footer",
+  "run.map.footer.relic",
+  "run.ingot",
+  "run.idea",
+  "run.idea.current",
+  "run.squad.card",
+  "run.squad.name",
+  "run.difficulty.grade",
+  "run.difficulty.block",
+]);
 
 const abandonedRunFieldSet = new Set(abandonedRunFieldIds);
-const abandonedRunIdTokens = new Set(["hope", "maxhope", "life", "lifepoints", "shield", "command", "commandlevel"]);
+const retainedRunRecognitionIdSet = new Set(retainedRunRecognitionIds);
 
 export function maaRecognitionIdTokens(value) {
   return String(value || "")
@@ -12,8 +28,8 @@ export function maaRecognitionIdTokens(value) {
 }
 
 export function isAbandonedRunRecognitionId(id) {
-  const tokens = maaRecognitionIdTokens(id);
-  return tokens[0] === "run" && tokens.slice(1).some((token) => abandonedRunIdTokens.has(token));
+  const retainedId = retainedRunRecognitionId(id);
+  return retainedId !== "" && !retainedRunRecognitionIdSet.has(retainedId);
 }
 
 export function isAbandonedRunField(fieldId) {
@@ -25,10 +41,16 @@ export function isRetainedRecognitionSource({ id, candidateField } = {}) {
 }
 
 export function isAbandonedRunMaaEntry(entry) {
-  return maaRecognitionIdTokens(entry).some((token) => abandonedRunIdTokens.has(token));
+  return isAbandonedRunRecognitionId(entry);
 }
 
 export function isPublishableMaaEntry(entry) {
   if (!entry || /Empty$/.test(entry)) return false;
   return !isAbandonedRunMaaEntry(entry);
+}
+
+function retainedRunRecognitionId(id) {
+  const tokens = maaRecognitionIdTokens(id);
+  const runIndex = tokens.lastIndexOf("run");
+  return runIndex < 0 ? "" : tokens.slice(runIndex).join(".");
 }
