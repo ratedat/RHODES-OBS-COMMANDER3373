@@ -75,7 +75,7 @@ public static class RhodesMaaCandidateApiClient
             var name = JsonString(candidate, "name");
             var value = JsonValueText(candidate, "value");
             var confidence = JsonNumber(candidate, "confidence");
-            previews.Add(new MaaCandidatePreview(
+            var preview = new MaaCandidatePreview(
                 kind,
                 string.IsNullOrWhiteSpace(label) ? field : label,
                 string.IsNullOrWhiteSpace(value) ? name : value,
@@ -95,9 +95,17 @@ public static class RhodesMaaCandidateApiClient
                 JsonString(candidate, "coinId"),
                 JsonString(candidate, "statusId"),
                 JsonString(candidate, "face"),
-                JsonInt(candidate, "count")));
+                JsonInt(candidate, "count"));
+            if (IsRetainedCandidate(preview))
+                previews.Add(preview);
         }
         return previews;
+    }
+
+    private static bool IsRetainedCandidate(MaaCandidatePreview candidate)
+    {
+        return !candidate.Kind.Equals("runStatus", StringComparison.OrdinalIgnoreCase)
+            || RhodesMaaRecognitionPolicy.IsRetainedRecognitionSource(candidate.RecognitionKey, candidate.Field);
     }
 
     private static bool TryCandidateArray(JsonElement root, out JsonElement candidates)

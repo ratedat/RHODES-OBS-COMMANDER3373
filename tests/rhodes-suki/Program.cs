@@ -260,17 +260,16 @@ static void CandidateApiExtraction()
         }
         """);
 
-    Equal(5, candidates.Count, "api candidate count");
-    Equal("hope", candidates[0].Label, "field fallback label");
-    Equal("3", candidates[0].Value, "numeric value text");
-    Equal("thought_a", candidates[1].ThoughtId, "thought id");
-    Equal("thought_a", candidates[1].Identity, "thought identity");
-    Equal("age_prime", candidates[2].AgeId, "age id");
-    Equal("rhetoric_a", candidates[3].EffectId, "revelation effect id");
-    Equal("coin_a", candidates[4].CoinId, "coin id");
-    Equal("status_a", candidates[4].StatusId, "coin status id");
-    Equal("back", candidates[4].Face, "coin face");
-    Equal(2, candidates[4].Count, "coin count");
+    Equal(4, candidates.Count, "api candidate count");
+    Equal(false, candidates.Any(item => item.Field == "hope"), "api abandoned run field omitted");
+    Equal("thought_a", candidates[0].ThoughtId, "thought id");
+    Equal("thought_a", candidates[0].Identity, "thought identity");
+    Equal("age_prime", candidates[1].AgeId, "age id");
+    Equal("rhetoric_a", candidates[2].EffectId, "revelation effect id");
+    Equal("coin_a", candidates[3].CoinId, "coin id");
+    Equal("status_a", candidates[3].StatusId, "coin status id");
+    Equal("back", candidates[3].Face, "coin face");
+    Equal(2, candidates[3].Count, "coin count");
 }
 
 static void RecognitionScanApiExtraction()
@@ -308,10 +307,9 @@ static void RecognitionScanApiExtraction()
     Equal("completed", result.Status, "scan status");
     Equal("O:/logs/recognition.json", result.LogPath, "scan log path");
     Equal(true, result.Succeeded, "scan success");
-    Equal(2, result.Candidates.Count, "scan candidates");
+    Equal(1, result.Candidates.Count, "scan candidates");
     Equal("gummy", result.Candidates[0].OperatorId, "operator id");
-    Equal("hope", result.Candidates[1].Field, "run field");
-    Equal("3", result.Candidates[1].Value, "numeric scan value");
+    Equal(false, result.Candidates.Any(item => item.Field == "hope"), "scan abandoned run field omitted");
 }
 
 static void CandidateMergerSupplementsLocalCandidates()
