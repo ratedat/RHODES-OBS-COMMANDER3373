@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
 import { normalizeScanProfiles, ocrEnginesFromScanProfiles } from "../app/domain/recognition/profiles.js";
 
@@ -266,13 +266,24 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
 test("local run template assets keep the expected 1280x720 crop sizes", async () => {
   assert.deepEqual(await pngSize("assets/recognition/templates/run/OperatorCardCodeNameFlag.png"), { width: 29, height: 22 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/IdeaIcon.png"), { width: 39, height: 41 });
-  assert.deepEqual(await pngSize("assets/recognition/templates/run/LifeIcon.png"), { width: 28, height: 51 });
-  assert.deepEqual(await pngSize("assets/recognition/templates/run/HopeIcon.png"), { width: 54, height: 27 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/IngotIcon.png"), { width: 54, height: 27 });
-  assert.deepEqual(await pngSize("assets/recognition/templates/run/ShieldIcon.png"), { width: 19, height: 28 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/RelicButton.png"), { width: 89, height: 25 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/OperatorButton.png"), { width: 90, height: 26 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/ThoughtButton.png"), { width: 117, height: 30 });
+});
+
+test("local run template assets omit discarded run value anchors", async () => {
+  const files = new Set(await readdir(new URL("../assets/recognition/templates/run/", import.meta.url)));
+  for (const file of [
+    "HopeCurrentArrow.png",
+    "HopeCurrentFullArrow.png",
+    "HopeIcon.png",
+    "HopeMaxArrow.png",
+    "LifeIcon.png",
+    "ShieldIcon.png",
+  ]) {
+    assert.equal(files.has(file), false, `${file} should not be a retained OCR anchor`);
+  }
 });
 
 

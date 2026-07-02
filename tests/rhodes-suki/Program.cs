@@ -1386,8 +1386,8 @@ static void RoiDraftSourceUpdater()
               "searchRoi": { "x": 1, "y": 2, "width": 3, "height": 4 }
             },
             {
-              "idPrefix": "run.hope",
-              "templatePath": "assets/recognition/templates/run/HopeIcon.png",
+              "idPrefix": "run.idea.current",
+              "templatePath": "assets/recognition/templates/run/IdeaIcon.png",
               "searchRoi": { "x": 5, "y": 6, "width": 7, "height": 8 }
             }
           ]
