@@ -2,7 +2,25 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { updateRunField } from "../app/control-actions.js";
-import { formatRunStatValue, normalizeRunStatValue, normalizeRunStats, runStatDisplayItems } from "../app/domain/run-stats.js";
+import {
+  ABANDONED_RUN_STAT_FIELD_IDS,
+  formatRunStatValue,
+  isAbandonedRunStatField,
+  normalizeRunStatValue,
+  normalizeRunStats,
+  runStatDisplayItems,
+} from "../app/domain/run-stats.js";
+
+test("run stat abandoned field policy stays synchronized with MAA target manifest", async () => {
+  const manifest = JSON.parse(await readFile(new URL("../data/recognition/maa-recognition-target-policy.json", import.meta.url), "utf8"));
+  const abandonedFields = manifest.runRecognition.abandonedFields;
+
+  assert.deepEqual(ABANDONED_RUN_STAT_FIELD_IDS, abandonedFields);
+  for (const field of abandonedFields) {
+    assert.equal(isAbandonedRunStatField(field), true, `${field} should be abandoned in runtime filtering`);
+  }
+  assert.equal(isAbandonedRunStatField("ingot"), false);
+});
 
 test("normalizeRunStatValue accepts blank values as unset", () => {
   assert.equal(normalizeRunStatValue("hope", ""), null);
