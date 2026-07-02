@@ -49,6 +49,26 @@ function baseProfile(overrides = {}) {
   };
 }
 
+test("scan runner default recognizer does not trust metadata-only frames", async () => {
+  const adapterLog = [];
+  const result = await runScanProfile({
+    profile: baseProfile(),
+    adapter: createAdapter([
+      { known: true, knownScreenId: "run-home" },
+      { fingerprint: "metadata-page", candidates: [{ kind: "relic", relicId: "debug-relic", confidence: 1 }] },
+    ], adapterLog),
+    scanId: "scan-noop-default",
+    now: () => new Date("2026-06-25T00:00:00.000Z"),
+    random: () => 0.5,
+  });
+
+  assert.equal(result.status, "aborted");
+  assert.equal(result.reason, "unknown_screen");
+  assert.deepEqual(result.candidates, []);
+  assert.deepEqual(result.suggestions, []);
+  assert.equal(adapterLog.some((entry) => entry[0] === "tap"), false);
+});
+
 test("scan runner executes open -> scan -> scroll -> restore and dedupes candidates", async () => {
   const adapterLog = [];
   const adapter = createAdapter([

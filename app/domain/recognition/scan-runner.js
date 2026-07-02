@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { computeResolutionScale, randomizeAction, scaleAction, scaleRect, scaleSwipe } from "./geometry.js";
-import { fingerprintsEqual } from "./fingerprint.js";
-import { createMetadataRecognizer } from "./placeholder-recognizer.js";
+import { fingerprintFrame, fingerprintsEqual } from "./fingerprint.js";
 import { buildRecognitionSuggestions, dedupeRecognitionCandidates, recognitionCandidateKey } from "./suggestions.js";
 
 function throwIfAborted(signal) {
@@ -224,7 +223,24 @@ function recognizeLogDetails(candidates = [], collectedCandidates = candidates, 
   return details;
 }
 
-export async function runScanProfile({ profile, adapter, recognizer = createMetadataRecognizer(), source = "adb", now = () => new Date(), scanId = randomUUID(), signal, random = Math.random, onLog = null, onCaptureFrame = null, recognitionContext = {} } = {}) {
+const NOOP_RECOGNIZER = {
+  async classify() {
+    return {
+      known: false,
+      screenId: null,
+      confidence: 0,
+      engine: "none",
+    };
+  },
+  async recognize() {
+    return [];
+  },
+  async fingerprint(frame, { region } = {}) {
+    return fingerprintFrame(frame, region);
+  },
+};
+
+export async function runScanProfile({ profile, adapter, recognizer = NOOP_RECOGNIZER, source = "adb", now = () => new Date(), scanId = randomUUID(), signal, random = Math.random, onLog = null, onCaptureFrame = null, recognitionContext = {} } = {}) {
   if (!profile?.id) throw new Error("scan profile is required");
   if (!adapter) throw new Error("scan adapter is required");
   const startedAt = now();
