@@ -64,6 +64,19 @@ test("scan profiles own the server-side OCR engine routing", async () => {
   }
 });
 
+test("scan profile defaults never restore with Android Back", () => {
+  const [profile] = normalizeScanProfiles({
+    profiles: [
+      {
+        id: "debugProfile",
+        label: "debug",
+      },
+    ],
+  });
+
+  assert.deepEqual(profile.restoreSteps, []);
+});
+
 
 test("ADB scan profile taps match the annotated 2560x1440 screenshot scaled to 1280x720", async () => {
   const profiles = await profilesById();

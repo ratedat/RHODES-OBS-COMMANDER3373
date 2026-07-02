@@ -74,10 +74,6 @@ async function executeAction(adapter, action, scale, log, signal, random, onLog)
     logEvent(log, "swipe", { start: scaled.start, end: scaled.end, durationMs: scaled.durationMs, label: scaled.label || null }, onLog);
     return adapter.swipe(scaled, { randomized: true });
   }
-  if (scaled.type === "back") {
-    logEvent(log, "restore", { method: "back", label: scaled.label || null }, onLog);
-    return adapter.back();
-  }
   if (scaled.type === "wait") {
     logEvent(log, "wait", { durationMs: Number(scaled.durationMs || 0), label: scaled.label || null }, onLog);
     return wait(adapter, Number(scaled.durationMs || 0), signal);

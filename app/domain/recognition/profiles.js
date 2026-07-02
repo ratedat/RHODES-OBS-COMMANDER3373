@@ -13,7 +13,7 @@ function normalizeProfile(profile) {
     endFingerprintStableCount: 1,
     captureDelayMs: 120,
     openSteps: [],
-    restoreSteps: [{ type: "back" }],
+    restoreSteps: [],
     knownScreenIds: [],
     ...profile,
     id,

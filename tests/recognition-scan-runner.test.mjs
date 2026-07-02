@@ -37,7 +37,7 @@ function baseProfile(overrides = {}) {
     baseResolution: { width: 1280, height: 720 },
     knownScreenIds: ["run-home"],
     openSteps: [{ type: "tap", point: { x: 100, y: 200 }, label: "open" }],
-    restoreSteps: [{ type: "back", label: "restore" }],
+    restoreSteps: [{ type: "tap", point: { x: 100, y: 200 }, label: "restore" }],
     scanRegion: { x: 10, y: 20, width: 100, height: 50 },
     scrollAxis: "vertical",
     scrollDirection: "down",
@@ -82,9 +82,28 @@ test("scan runner executes open -> scan -> scroll -> restore and dedupes candida
 
   assert.equal(result.status, "completed");
   assert.equal(result.suggestions.length, 2);
-  assert.deepEqual(adapterLog.map((entry) => entry[0]), ["resolution", "capture", "tap", "capture", "swipe", "capture", "swipe", "capture", "back"]);
+  assert.deepEqual(adapterLog.map((entry) => entry[0]), ["resolution", "capture", "tap", "capture", "swipe", "capture", "swipe", "capture", "tap"]);
   assert.deepEqual(adapterLog.find((entry) => entry[0] === "tap")[1], { x: 200, y: 400 });
   assert.equal(result.log.some((entry) => entry.event === "scroll" && entry.status === "end"), true);
+});
+
+test("scan runner rejects Android Back actions instead of invoking adapter.back", async () => {
+  const adapterLog = [];
+  const result = await runScanProfile({
+    profile: baseProfile({ maxScrolls: 0, restoreSteps: [{ type: "back", label: "legacy restore" }] }),
+    adapter: createAdapter([
+      { knownScreenId: "run-home" },
+      { fingerprint: "page-1", candidates: [] },
+    ], adapterLog),
+    recognizer: createMetadataRecognizer(),
+    scanId: "scan-no-back",
+    now: () => new Date("2026-06-25T00:00:00.000Z"),
+    random: () => 0.5,
+  });
+
+  assert.equal(result.status, "completed");
+  assert.equal(adapterLog.some((entry) => entry[0] === "back"), false);
+  assert.equal(result.log.some((entry) => entry.event === "restore" && entry.status === "failed" && /unsupported recognition action: back/.test(entry.error)), true);
 });
 
 test("scan runner forwards recognition context to classify, fingerprint, and recognize", async () => {
