@@ -33,10 +33,10 @@ public static class RhodesMaaCandidateMerger
 
         if (IsKind(candidate, "runStatus"))
         {
-            var field = CandidateId(candidate.Field, candidate.Value);
-            return !string.IsNullOrWhiteSpace(field)
+            var id = RunStatusKey(candidate);
+            return !string.IsNullOrWhiteSpace(id)
                 && !existing.Any(item => IsKind(item, "runStatus")
-                    && CandidateId(item.Field, item.Value).Equals(field, StringComparison.Ordinal));
+                    && RunStatusKey(item).Equals(id, StringComparison.Ordinal));
         }
 
         if (IsKind(candidate, "operator"))
@@ -87,6 +87,15 @@ public static class RhodesMaaCandidateMerger
     private static string CandidateId(string primary, string fallback)
     {
         return string.IsNullOrWhiteSpace(primary) ? fallback.Trim() : primary.Trim();
+    }
+
+    private static string RunStatusKey(MaaCandidatePreview candidate)
+    {
+        var field = CandidateId(candidate.Field, candidate.Value);
+        if (string.IsNullOrWhiteSpace(field))
+            return "";
+
+        return string.Join("\u001f", [candidate.CampaignId.Trim(), field]);
     }
 
     private static string RevelationKey(MaaCandidatePreview candidate)

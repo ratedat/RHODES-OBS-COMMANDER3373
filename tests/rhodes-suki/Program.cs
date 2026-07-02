@@ -15,6 +15,7 @@ var tests = new (string Name, Action Run)[]
     ("Recognition scan API extraction preserves profile status and candidates", RecognitionScanApiExtraction),
     ("Recognition scan status API extraction exposes active and last scan summaries", RecognitionScanStatusExtraction),
     ("MAA candidate merger supplements missing local candidates safely", CandidateMergerSupplementsLocalCandidates),
+    ("MAA candidate merger keeps campaign-specific run status fields", CandidateMergerKeepsCampaignRunStatusFields),
     ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
     ("Local MAA candidate converter keeps the best duplicate run status field", LocalCandidateConverterRunStatusBestDuplicate),
     ("Local MAA candidate converter extracts random squad effect candidates", LocalCandidateConverterRunStatusSquadRandomEffect),
@@ -378,6 +379,25 @@ static void CandidateMergerSupplementsLocalCandidates()
     Equal("age_prime", string.Join("|", merged.Where(item => item.Kind == "age").Select(item => item.AgeId)), "local age supplemented");
     Equal("rhetoric_a|cause_a", string.Join("|", merged.Where(item => item.Kind == "revelation").Select(item => item.EffectId)), "merged revelation candidates");
     Equal("coin_a:front|coin_a:back", string.Join("|", merged.Where(item => item.Kind == "coin").Select(item => $"{item.CoinId}:{(string.IsNullOrWhiteSpace(item.Face) ? "front" : item.Face)}")), "merged coin candidates");
+}
+
+static void CandidateMergerKeepsCampaignRunStatusFields()
+{
+    var merged = RhodesMaaCandidateMerger.Merge(
+        [
+            new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.94, Field: "ingot"),
+            new MaaCandidatePreview("runStatus", "サーミ等級", "12", "12", 0.94, Field: "difficulty", CampaignId: "is4_sami"),
+        ],
+        [
+            new MaaCandidatePreview("runStatus", "サルカズ等級", "18", "18", 0.92, Field: "difficulty", CampaignId: "is5_sarkaz"),
+            new MaaCandidatePreview("runStatus", "サーミ等級低信頼", "14", "14", 0.80, Field: "difficulty", CampaignId: "is4_sami"),
+            new MaaCandidatePreview("runStatus", "源石錐低信頼", "21", "21", 0.80, Field: "ingot"),
+        ]);
+
+    Equal(
+        "ingot::20|difficulty:is4_sami:12|difficulty:is5_sarkaz:18",
+        string.Join("|", merged.Where(item => item.Kind == "runStatus").Select(item => $"{item.Field}:{item.CampaignId}:{item.Value}")),
+        "campaign-specific run status fields");
 }
 
 static void LocalCandidateConverterRunStatus()
