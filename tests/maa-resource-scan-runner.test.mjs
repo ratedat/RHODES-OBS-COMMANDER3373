@@ -43,3 +43,31 @@ test("runMaaResourceRecognition feeds MAA Resource OCR results into existing can
   assert.equal(result.candidates.find((candidate) => candidate.field === "ingot")?.value, 20);
   assert.deepEqual(result.suggestions.map((suggestion) => suggestion.profileId), ["runStatusFull"]);
 });
+
+test("runMaaResourceRecognition drops abandoned run status candidates from extractor output", async () => {
+  const result = await runMaaResourceRecognition({
+    profile: { id: "runStatusFull", label: "基礎情報" },
+    pipeline,
+    taskResults: [
+      {
+        entry: "RhodesOcrRegion_run_ingot",
+        algorithm: "OCR",
+        recognitionDetailJson: JSON.stringify({ best: { text: "20", score: 0.96 } }),
+      },
+    ],
+    candidateExtractors: [
+      async () => [
+        { kind: "runStatus", field: "hope", label: "希望", value: 3, rawText: "3", confidence: 0.99 },
+        { kind: "runStatus", field: "ingot", label: "源石錐", value: 20, rawText: "20", confidence: 0.96 },
+      ],
+    ],
+    recognitionContext: { campaignId: "is5_sarkaz" },
+    scanId: "maa-resource-scan-filter",
+    now: () => new Date("2026-06-30T10:00:00.000Z"),
+  });
+
+  assert.deepEqual(result.candidates.map((candidate) => candidate.field), ["ingot"]);
+  assert.deepEqual(result.suggestions.map((suggestion) => suggestion.candidate.field), ["ingot"]);
+  assert.equal(result.counts.candidates, 1);
+  assert.equal(result.counts.suggestions, 1);
+});

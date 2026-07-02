@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isAbandonedRunStatField } from "../run-stats.js";
 import { maaTaskResultsToFrame } from "./maa-resource-results.js";
 import { buildRecognitionSuggestions, dedupeRecognitionCandidates } from "./suggestions.js";
 
@@ -13,7 +14,12 @@ async function extractCandidates(frame, context = {}, candidateExtractors = []) 
     const extracted = await extractor(frame, context);
     if (Array.isArray(extracted)) candidates.push(...extracted);
   }
-  return dedupeRecognitionCandidates(candidates);
+  return dedupeRecognitionCandidates(candidates.filter(isRetainedCandidate));
+}
+
+function isRetainedCandidate(candidate = {}) {
+  const kind = candidate.kind || candidate.type || "";
+  return kind !== "runStatus" || !isAbandonedRunStatField(candidate.field);
 }
 
 export async function runMaaResourceRecognition({

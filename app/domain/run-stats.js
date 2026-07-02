@@ -3,7 +3,8 @@ export const RUN_STAT_FIELDS = Object.freeze([
 ]);
 
 export const RUN_STAT_FIELD_IDS = new Set(RUN_STAT_FIELDS.map((field) => field.id));
-const ABANDONED_RUN_STAT_FIELD_IDS = Object.freeze(["hope", "maxHope", "lifePoints", "shield", "commandLevel"]);
+export const ABANDONED_RUN_STAT_FIELD_IDS = Object.freeze(["hope", "maxHope", "lifePoints", "shield", "commandLevel"]);
+const ABANDONED_RUN_STAT_FIELD_ID_SET = new Set(ABANDONED_RUN_STAT_FIELD_IDS);
 
 function getRunStatField(fieldId) {
   return RUN_STAT_FIELDS.find((field) => field.id === fieldId) || null;
@@ -25,6 +26,10 @@ export function normalizeRunStats(run) {
     run[field.id] = normalizeRunStatValue(field.id, run[field.id]);
   }
   return run;
+}
+
+export function isAbandonedRunStatField(fieldId) {
+  return ABANDONED_RUN_STAT_FIELD_ID_SET.has(fieldId);
 }
 
 export function formatRunStatValue(run, fieldId) {
