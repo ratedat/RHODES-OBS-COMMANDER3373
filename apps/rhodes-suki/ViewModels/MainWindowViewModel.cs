@@ -225,7 +225,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ApplyAdbPathCandidateCommand = new AsyncRelayCommand(parameter => ApplyAdbPathCandidateAsync(parameter as MaaAdbPathCandidatePreview));
         RefreshAdbDevicesCommand = new AsyncRelayCommand(RefreshAdbDevicesAsync);
         ApplyAdbDeviceCommand = new AsyncRelayCommand(parameter => ApplyAdbDeviceAsync(parameter as MaaAdbDevicePreview));
-        RunAdbApiTestCommand = new AsyncRelayCommand(RunAdbApiTestAsync);
+        RunAdbConnectionTestCommand = new AsyncRelayCommand(RunAdbConnectionTestAsync);
         RefreshOptionalRuntimesCommand = new AsyncRelayCommand(RefreshOptionalRuntimesAsync);
         InstallGlmOcrCommand = new AsyncRelayCommand(() => RunOptionalRuntimeActionAsync("GLM-OCR導入", RhodesOptionalRuntimeProbe.InstallGlmAsync, status => _glmRuntimeStatus = status));
         UninstallGlmOcrCommand = new AsyncRelayCommand(() => RunOptionalRuntimeActionAsync("GLM-OCR削除", RhodesOptionalRuntimeProbe.UninstallGlmAsync, status => _glmRuntimeStatus = status));
@@ -1189,7 +1189,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand ApplyAdbDeviceCommand { get; }
 
-    public ICommand RunAdbApiTestCommand { get; }
+    public ICommand RunAdbConnectionTestCommand { get; }
 
     public ICommand RefreshOptionalRuntimesCommand { get; }
 
@@ -2024,45 +2024,48 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
-    private async Task RunAdbApiTestAsync()
+    private async Task RunAdbConnectionTestAsync()
     {
         await RunBusyAsync(async () =>
         {
-            StatusMessage = "ADB接続テストAPIを実行しています。";
-            var result = await RhodesAdbApiClient.TestAsync(
-                RhodesApiUrl,
-                new RhodesAdbApiSettings(
-                    true,
-                    SelectedAdbPreset?.Id ?? "auto",
-                    AdbPath,
-                    AdbSerial),
-                capture: true);
-            if (!result.Succeeded)
+            StatusMessage = "ADB接続テストを実行しています。";
+            await DetectAdbLocallyCoreAsync();
+            if (AdbPathCandidates.All(candidate => !candidate.Available))
             {
-                _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", result.Error, false, false);
-                SessionState = "API接続テスト失敗";
-                SessionDetail = result.Error;
-                StatusMessage = $"ADB接続テストAPI失敗: {result.Error}";
+                SessionState = "ADB接続テスト失敗";
+                SessionDetail = AdbDetectionDetail;
+                StatusMessage = $"利用可能なADBが見つかりません: {AdbDetectionDetail}";
                 RefreshRuntimeCapabilities();
                 RefreshInspectorRows();
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(result.RuntimeAdbPath))
-                AdbPath = result.RuntimeAdbPath;
-            if (!string.IsNullOrWhiteSpace(result.RuntimeSerial))
-                AdbSerial = result.RuntimeSerial;
+            StatusMessage = "MAA Controller でADB接続を確認しています。";
+            var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
+            SessionState = snapshot.IsReady ? "ADB接続OK" : "ADB接続テスト失敗";
+            SessionDetail = snapshot.Detail;
+            if (!snapshot.IsReady)
+            {
+                StatusMessage = $"ADB接続テスト失敗: {snapshot.Detail}";
+                RefreshRuntimeCapabilities();
+                RefreshInspectorRows();
+                return;
+            }
 
-            _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続済み", "ADB接続テストAPI成功", true, false);
-            SessionState = "API接続OK";
-            SessionDetail = $"{result.Width}x{result.Height} / {result.RuntimeSerial}";
-            LastCapturePath = result.ScreenshotPath;
-            CaptureState = result.ScreenshotBytes > 0
-                ? $"API撮影: {result.ScreenshotBytes} bytes / {result.CapturedAt}"
-                : $"API接続: {result.Width}x{result.Height}";
-            if (!string.IsNullOrWhiteSpace(result.ScreenshotPath) && File.Exists(result.ScreenshotPath))
-                LastCaptureImage = new Bitmap(result.ScreenshotPath);
-            StatusMessage = $"ADB接続テストAPI成功: {result.Width}x{result.Height}";
+            var capture = await CaptureCoreAsync();
+            if (capture?.Succeeded == true)
+            {
+                SessionState = "ADB接続OK";
+                SessionDetail = $"{AdbSerial} / {CapturePixelSizeLabel}";
+                StatusMessage = $"ADB接続テスト成功: {CapturePixelSizeLabel}";
+            }
+            else
+            {
+                SessionState = "ADB接続OK / 撮影失敗";
+                SessionDetail = capture?.Detail ?? snapshot.Detail;
+                StatusMessage = $"ADB接続は成功しましたが撮影に失敗しました: {SessionDetail}";
+            }
+
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         });
