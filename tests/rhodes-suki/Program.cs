@@ -1559,9 +1559,23 @@ static void MaaGeneratedResourceBuilder()
     Equal(false, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_shield"), "policy rejects discarded resource entries");
     Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_ingot"), "policy retains ingot resource entries");
     Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesRunStatusIdeaIcon"), "policy retains manual special icon entry");
-    Equal(true, File.Exists(Path.Combine(
+    var targetPolicyPath = Path.Combine(
         Directory.GetCurrentDirectory(),
-        RhodesMaaRecognitionPolicy.TargetPolicySourcePath.Replace('/', Path.DirectorySeparatorChar))),
+        RhodesMaaRecognitionPolicy.TargetPolicySourcePath.Replace('/', Path.DirectorySeparatorChar));
+    using var targetPolicyDocument = JsonDocument.Parse(File.ReadAllText(targetPolicyPath));
+    var manifestAbandonedFields = targetPolicyDocument.RootElement
+        .GetProperty("runRecognition")
+        .GetProperty("abandonedFields")
+        .EnumerateArray()
+        .Select(item => item.GetString() ?? "")
+        .Where(item => !string.IsNullOrWhiteSpace(item))
+        .OrderBy(item => item, StringComparer.Ordinal);
+    Equal(
+        string.Join("|", manifestAbandonedFields),
+        string.Join("|", RhodesMaaRecognitionPolicy.AbandonedRunFields.OrderBy(item => item, StringComparer.Ordinal)),
+        "policy abandoned fields from manifest");
+    Equal(true, RhodesMaaRecognitionPolicy.RetainedRunRecognitionIds.Contains("run.ingot"), "policy retained fields from manifest");
+    Equal(true, File.Exists(targetPolicyPath),
         "target policy manifest exists");
     Equal(true, File.Exists(Path.Combine(
         AppContext.BaseDirectory,

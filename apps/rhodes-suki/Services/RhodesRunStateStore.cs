@@ -7,14 +7,6 @@ namespace RhodesSuki.Services;
 public static class RhodesRunStateStore
 {
     private static readonly SemaphoreSlim WriteLock = new(1, 1);
-    private static readonly string[] AbandonedRunValuePropertyNames =
-    [
-        "hope",
-        "maxHope",
-        "lifePoints",
-        "shield",
-        "commandLevel",
-    ];
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
         WriteIndented = true,
@@ -168,7 +160,7 @@ public static class RhodesRunStateStore
     public static bool PruneAbandonedRunValuesFromRun(JsonObject run)
     {
         var removed = false;
-        foreach (var propertyName in AbandonedRunValuePropertyNames)
+        foreach (var propertyName in RhodesMaaRecognitionPolicy.AbandonedRunFields)
         {
             removed |= run.Remove(propertyName);
         }
@@ -217,19 +209,8 @@ public static class RhodesRunStateStore
 
     private static void ResetRunValues(JsonObject run)
     {
-        foreach (var propertyName in new[]
-        {
-            "squad",
-            "difficulty",
-            "hope",
-            "maxHope",
-            "ingot",
-            "lifePoints",
-            "shield",
-            "commandLevel",
-            "idea",
-            "special",
-        })
+        foreach (var propertyName in new[] { "squad", "difficulty", "ingot", "idea", "special" }
+            .Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {
             run.Remove(propertyName);
         }

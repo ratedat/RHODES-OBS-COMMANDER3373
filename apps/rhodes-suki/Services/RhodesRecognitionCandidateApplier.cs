@@ -623,19 +623,8 @@ public static class RhodesRecognitionCandidateApplier
 
     private static void ResetRunValues(JsonObject run)
     {
-        foreach (var propertyName in new[]
-        {
-            "squad",
-            "difficulty",
-            "hope",
-            "maxHope",
-            "ingot",
-            "lifePoints",
-            "shield",
-            "commandLevel",
-            "idea",
-            "special",
-        })
+        foreach (var propertyName in new[] { "squad", "difficulty", "ingot", "idea", "special" }
+            .Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {
             run.Remove(propertyName);
         }

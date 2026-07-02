@@ -8,6 +8,10 @@ public static class RhodesMaaRecognitionPolicy
     public const string TargetPolicySourcePath = "data/recognition/maa-recognition-target-policy.json";
     private static readonly Lazy<TargetPolicy> Policy = new(LoadTargetPolicy);
 
+    public static IReadOnlyCollection<string> RetainedRunRecognitionIds => Policy.Value.RetainedRunRecognitionIds;
+
+    public static IReadOnlyCollection<string> AbandonedRunFields => Policy.Value.AbandonedRunFields;
+
     public static bool IsRetainedRecognitionSource(string? id, string? candidateField = "")
     {
         return !IsAbandonedRunRecognitionId(id)
