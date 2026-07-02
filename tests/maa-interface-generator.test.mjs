@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { validateInterfaceContract } from "../tools/check-maa-contract.mjs";
 import { generateInterface } from "../tools/generate-maa-interface.mjs";
 
 function readJson(path) {
@@ -119,10 +120,56 @@ test("checked-in MAA interface stays synchronized with generated task metadata",
   assert.equal(actual, expected);
 });
 
+test("MAA interface contract catches broken task, group, resource, and preset references", () => {
+  const valid = {
+    interface_version: 2,
+    controller: [{ name: "android_adb" }],
+    resource: [{ name: "base", path: ["resource/base"], controller: ["android_adb"] }],
+    group: [{ name: "operatorsFull", label: "オペレーター" }],
+    task: [
+      {
+        name: "rhodes_operator_name_ocr",
+        entry: "RhodesOperatorNameOcr",
+        controller: ["android_adb"],
+        resource: ["base"],
+        group: ["operatorsFull"],
+      },
+    ],
+    preset: [
+      {
+        name: "operatorsFull",
+        task: [{ name: "rhodes_operator_name_ocr", option: { enabled: true } }],
+      },
+    ],
+  };
+  const pipelineEntries = new Set(["RhodesOperatorNameOcr"]);
+
+  assert.deepEqual(validateInterfaceContract(valid, { pipelineEntries }).errors, []);
+
+  const broken = structuredClone(valid);
+  broken.task[0].entry = "MissingEntry";
+  broken.task[0].controller = ["missing_controller"];
+  broken.task[0].resource = ["missing_resource"];
+  broken.task[0].group = ["missingGroup"];
+  broken.preset[0].task = [{ name: "missing_task", option: { enabled: true } }];
+
+  const errors = validateInterfaceContract(broken, { pipelineEntries }).errors.join("\n");
+  assert.match(errors, /unknown pipeline entry MissingEntry/);
+  assert.match(errors, /unknown controller missing_controller/);
+  assert.match(errors, /unknown resource missing_resource/);
+  assert.match(errors, /unknown group missingGroup/);
+  assert.match(errors, /unknown task missing_task/);
+
+  const duplicated = structuredClone(valid);
+  duplicated.task.push({ ...duplicated.task[0] });
+  assert.match(validateInterfaceContract(duplicated, { pipelineEntries }).errors.join("\n"), /duplicate task name/);
+});
+
 test("package scripts check MAA resource and interface before Suki publish", () => {
   const packageJson = readJson("package.json");
 
   assert.equal(packageJson.scripts["maa:interface:generate"], "node tools/generate-maa-interface.mjs");
   assert.equal(packageJson.scripts["maa:interface:check"], "node tools/generate-maa-interface.mjs --check");
-  assert.match(packageJson.scripts["suki:publish:portable"], /npm run maa:resource:generate && npm run maa:interface:generate/);
+  assert.equal(packageJson.scripts["maa:contract:check"], "node tools/check-maa-contract.mjs");
+  assert.match(packageJson.scripts["suki:publish:portable"], /npm run maa:resource:generate && npm run maa:interface:generate && npm run maa:contract:check/);
 });
