@@ -63,6 +63,7 @@ var tests = new (string Name, Action Run)[]
     ("State API client can apply recognition candidates into current state JSON", StateApiCandidatesApply),
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
+    ("Recognition candidate applier rejects run status candidates from other campaigns", CandidateRunStatusRejectsOtherCampaign),
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
     ("Recognition candidate applier keeps the best duplicate run status candidate", CandidateRunStatusApplyBestDuplicate),
     ("Recognition candidate applier can select operator and relic candidates", CandidateChoiceApply),
@@ -2312,6 +2313,42 @@ static void CandidateRunStatusApply()
     Equal(7, run["special"]!.AsObject()["is5_sarkaz"]!.AsObject()["idea"]!.GetValue<int>(), "idea");
     Equal("gummy", state["operators"]!.AsArray()[0]!.GetValue<string>(), "unrelated selections preserved");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "updatedAt");
+}
+
+static void CandidateRunStatusRejectsOtherCampaign()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is5_sarkaz",
+            "difficulty": 12,
+            "squadId": "is5_sarkaz_squad_01",
+            "squadRandomEffectOptionId": "is5_sarkaz_mimic_01"
+          }
+        }
+        """)!.AsObject();
+    var candidates = new[]
+    {
+        new MaaCandidatePreview("runStatus", "別IS等級", "18", "18", 0.99, Field: "difficulty", CampaignId: "is4_sami"),
+        new MaaCandidatePreview("runStatus", "別IS分隊", "is4_sami_squad_01", "別IS分隊", 0.99, Field: "squadId", CampaignId: "is4_sami"),
+        new MaaCandidatePreview("runStatus", "別IS分隊効果", "is4_sami_option_01", "別IS分隊効果", 0.99, Field: "squadRandomEffectOptionId", CampaignId: "is4_sami"),
+        new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.90, Field: "ingot"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.ApplyRunStatus(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+
+    Equal(1, summary.AppliedCount, "only neutral run status applied");
+    Equal(3, summary.IgnoredCount, "other campaign run status ignored");
+    Equal("ingot", string.Join("|", summary.AppliedFields), "applied retained neutral field");
+    var run = state["run"]!.AsObject();
+    Equal(12, run["difficulty"]!.GetValue<int>(), "difficulty preserved");
+    Equal("is5_sarkaz_squad_01", run["squadId"]!.GetValue<string>(), "squad preserved");
+    Equal("is5_sarkaz_mimic_01", run["squadRandomEffectOptionId"]!.GetValue<string>(), "squad option preserved");
+    Equal(20, run["ingot"]!.GetValue<int>(), "neutral ingot applied");
 }
 
 static void CandidateCampaignApplyFirst()

@@ -161,6 +161,9 @@ public static class RhodesRecognitionCandidateApplier
         var run = EnsureObject(state, "run");
         RhodesRunStateStore.PruneAbandonedRunValuesFromRun(run);
         var field = candidate.Field.Trim();
+        if (!field.Equals("campaignId", StringComparison.Ordinal) && !CandidateCampaignMatchesCurrentRun(run, candidate))
+            return false;
+
         switch (field)
         {
             case "ingot":
@@ -497,6 +500,16 @@ public static class RhodesRecognitionCandidateApplier
     {
         return string.IsNullOrWhiteSpace(candidate.CampaignId)
             || candidate.CampaignId.Equals(campaignId, StringComparison.Ordinal);
+    }
+
+    private static bool CandidateCampaignMatchesCurrentRun(JsonObject run, MaaCandidatePreview candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate.CampaignId))
+            return true;
+
+        var currentCampaignId = JsonString(run, "campaignId");
+        return string.IsNullOrWhiteSpace(currentCampaignId)
+            || candidate.CampaignId.Equals(currentCampaignId, StringComparison.Ordinal);
     }
 
     private static bool CandidateIsKind(MaaCandidatePreview candidate, string kind)
