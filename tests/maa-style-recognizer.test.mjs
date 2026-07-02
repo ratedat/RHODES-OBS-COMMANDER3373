@@ -287,6 +287,7 @@ test("recognition task data exposes retained run status OCR regions", async () =
   assert.equal(regions.some((region) => region.id === "run.hope"), false);
   assert.equal(regions.some((region) => region.id === "run.life_points"), false);
   assert.equal(regions.some((region) => region.id === "run.shield"), false);
+  assert.equal(regions.some((region) => region.id === "run.command_level"), false);
 });
 
 test("recognition task data exposes a dedicated relic footer OCR region", async () => {

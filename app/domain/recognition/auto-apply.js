@@ -1,8 +1,11 @@
 import { normalizeRunStatValue } from "../run-stats.js";
+import { clampCoinCount, mergeCoinEntries, normalizeCoinFace } from "../special-values.js";
 
+export const IS4_AUTO_APPLY_CAMPAIGN_ID = "is4_sami";
 export const IS5_AUTO_APPLY_CAMPAIGN_ID = "is5_sarkaz";
+export const IS6_AUTO_APPLY_CAMPAIGN_ID = "is6_sui";
 
-const autoApplyProfiles = new Set(["runStatusFull", "relicsFull", "operatorsFull", "is5ThoughtFull", "is5AgeFull"]);
+const autoApplyProfiles = new Set(["runStatusFull", "relicsFull", "operatorsFull", "is4RevelationFull", "is5ThoughtFull", "is5AgeFull", "is6CoinsFull"]);
 
 function candidateFromSuggestion(suggestion = {}) {
   return suggestion.candidate && typeof suggestion.candidate === "object" ? suggestion.candidate : suggestion;
@@ -30,9 +33,13 @@ function candidateCampaignMatchesState(state, candidate = {}) {
 }
 
 function ensureIs5Special(run) {
+  return ensureCampaignSpecial(run, IS5_AUTO_APPLY_CAMPAIGN_ID);
+}
+
+function ensureCampaignSpecial(run, campaignId) {
   run.special ||= {};
-  run.special[IS5_AUTO_APPLY_CAMPAIGN_ID] ||= {};
-  return run.special[IS5_AUTO_APPLY_CAMPAIGN_ID];
+  run.special[campaignId] ||= {};
+  return run.special[campaignId];
 }
 
 function applyRunStatusCandidate(state, candidate) {
@@ -208,6 +215,111 @@ function syncIs5AgeFullScanCandidates(state, suggestions = []) {
   };
 }
 
+function normalizeRevelationFieldId(fieldId) {
+  const value = String(fieldId || "").trim();
+  return !value || value === "revelationBoard" ? "revelation" : value;
+}
+
+function mergeRevelationRhetorics(entries = []) {
+  const merged = new Map();
+  for (const entry of entries) {
+    if (!entry?.effectId) continue;
+    const count = clampCoinCount(entry.count);
+    if (merged.has(entry.effectId)) {
+      const current = merged.get(entry.effectId);
+      current.count = clampCoinCount(current.count + count);
+    } else {
+      merged.set(entry.effectId, { effectId: entry.effectId, count, stateId: null });
+    }
+  }
+  return [...merged.values()];
+}
+
+function revelationBoardDraft() {
+  return { causeId: null, structureId: null, rhetorics: [] };
+}
+
+function revelationEffectIdFromCandidate(candidate = {}) {
+  const effectId = candidate.effectId || candidate.value;
+  return typeof effectId === "string" && effectId.trim() ? effectId.trim() : null;
+}
+
+function syncIs4RevelationFullScanCandidates(state, suggestions = []) {
+  const revelationSuggestions = [];
+  const boards = new Map();
+  for (const suggestion of suggestions || []) {
+    const candidate = candidateFromSuggestion(suggestion);
+    if (!canAutoApplySuggestion(state, suggestion, candidate)) continue;
+    if (suggestion.profileId !== "is4RevelationFull" || candidate.kind !== "revelation") continue;
+    const effectId = revelationEffectIdFromCandidate(candidate);
+    if (!effectId) continue;
+
+    const fieldId = normalizeRevelationFieldId(candidate.fieldId);
+    const slotKind = String(candidate.slotKind || "").trim().toLowerCase();
+    if (!["cause", "causeid", "structure", "structureid", "rhetoric", "rhetoricid"].includes(slotKind)) continue;
+
+    const board = boards.get(fieldId) || revelationBoardDraft();
+    boards.set(fieldId, board);
+    if (slotKind === "cause" || slotKind === "causeid") board.causeId = effectId;
+    else if (slotKind === "structure" || slotKind === "structureid") board.structureId = effectId;
+    else board.rhetorics.push({ effectId, count: candidate.count || 1, stateId: null });
+    revelationSuggestions.push(suggestion);
+  }
+  if (!revelationSuggestions.length) return { applied: [], keys: new Set() };
+
+  const run = state.run ||= {};
+  const campaign = ensureCampaignSpecial(run, IS4_AUTO_APPLY_CAMPAIGN_ID);
+  for (const [fieldId, board] of boards.entries()) {
+    campaign[fieldId] = {
+      causeId: board.causeId,
+      structureId: board.structureId,
+      rhetorics: mergeRevelationRhetorics(board.rhetorics),
+    };
+  }
+  return {
+    applied: revelationSuggestions,
+    keys: new Set(revelationSuggestions.map(suggestionKey).filter(Boolean)),
+  };
+}
+
+function coinEntryFromCandidate(state, candidate = {}) {
+  if (!candidateCampaignMatchesState(state, candidate)) return null;
+  const coinId = candidate.coinId || candidate.value;
+  if (!coinId || typeof coinId !== "string") return null;
+  return {
+    coinId,
+    count: clampCoinCount(candidate.count),
+    statusId: candidate.statusId || null,
+    face: normalizeCoinFace(candidate.face),
+  };
+}
+
+function syncIs6CoinFullScanCandidates(state, suggestions = []) {
+  const coinSuggestions = [];
+  const entriesByField = new Map();
+  for (const suggestion of suggestions || []) {
+    const candidate = candidateFromSuggestion(suggestion);
+    if (!canAutoApplySuggestion(state, suggestion, candidate)) continue;
+    if (suggestion.profileId !== "is6CoinsFull" || candidate.kind !== "coin") continue;
+    const entry = coinEntryFromCandidate(state, candidate);
+    if (!entry) continue;
+    const fieldId = String(candidate.fieldId || "coins").trim() || "coins";
+    entriesByField.set(fieldId, [...(entriesByField.get(fieldId) || []), entry]);
+    coinSuggestions.push(suggestion);
+  }
+  if (!coinSuggestions.length) return { applied: [], keys: new Set() };
+
+  const run = state.run ||= {};
+  const campaign = ensureCampaignSpecial(run, IS6_AUTO_APPLY_CAMPAIGN_ID);
+  for (const [fieldId, entries] of entriesByField.entries()) {
+    campaign[fieldId] = mergeCoinEntries(entries);
+  }
+  return {
+    applied: coinSuggestions,
+    keys: new Set(coinSuggestions.map(suggestionKey).filter(Boolean)),
+  };
+}
+
 function canAutoApplySuggestion(state, suggestion, candidate) {
   if (!autoApplyProfiles.has(suggestion.profileId)) return false;
   if (candidate.kind === "operator") return suggestion.profileId === "operatorsFull";
@@ -216,6 +328,11 @@ function canAutoApplySuggestion(state, suggestion, candidate) {
       && candidateCampaignMatchesState(state, candidate);
   }
   if (candidate.kind === "relic") return suggestion.profileId === "relicsFull" && candidateCampaignMatchesState(state, candidate);
+  if (candidate.kind === "revelation") {
+    return currentCampaignId(state) === IS4_AUTO_APPLY_CAMPAIGN_ID
+      && suggestion.profileId === "is4RevelationFull"
+      && (!candidate.campaignId || candidate.campaignId === IS4_AUTO_APPLY_CAMPAIGN_ID);
+  }
   if (candidate.kind === "thought") {
     return isIs5State(state)
       && suggestion.profileId === "is5ThoughtFull"
@@ -225,6 +342,11 @@ function canAutoApplySuggestion(state, suggestion, candidate) {
     return isIs5State(state)
       && suggestion.profileId === "is5AgeFull"
       && (!candidate.campaignId || candidate.campaignId === IS5_AUTO_APPLY_CAMPAIGN_ID);
+  }
+  if (candidate.kind === "coin") {
+    return currentCampaignId(state) === IS6_AUTO_APPLY_CAMPAIGN_ID
+      && suggestion.profileId === "is6CoinsFull"
+      && (!candidate.campaignId || candidate.campaignId === IS6_AUTO_APPLY_CAMPAIGN_ID);
   }
   return false;
 }
@@ -250,8 +372,10 @@ export function applyRecognitionSuggestionsToState(state, suggestions = []) {
 
   addSyncedSuggestions(syncedTarget, syncOperatorFullScanCandidates(next, suggestions));
   addSyncedSuggestions(syncedTarget, syncRelicFullScanCandidates(next, suggestions));
+  addSyncedSuggestions(syncedTarget, syncIs4RevelationFullScanCandidates(next, suggestions));
   addSyncedSuggestions(syncedTarget, syncIs5ThoughtFullScanCandidates(next, suggestions));
   addSyncedSuggestions(syncedTarget, syncIs5AgeFullScanCandidates(next, suggestions));
+  addSyncedSuggestions(syncedTarget, syncIs6CoinFullScanCandidates(next, suggestions));
 
   for (const suggestion of suggestions || []) {
     const existingKey = suggestionKey(suggestion);
