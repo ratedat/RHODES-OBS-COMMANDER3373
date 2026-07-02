@@ -1841,6 +1841,10 @@ static void ResourceCatalogReadsPipelineNodes()
 
     var idea = tasks.Single(task => task.Entry == "RhodesRunStatusIdeaIcon");
     Equal("profiles: runStatusFull", idea.ProfileSummary, "idea profile");
+    Equal("構想値の基準点になるアイコンTemplateMatchです。 / TemplateMatch", idea.Purpose, "idea purpose from interface");
+
+    var operatorOcr = tasks.Single(task => task.Entry == "RhodesOperatorNameOcr");
+    Equal("招集カード領域をMAA-OCRで読ませます。 / OCR", operatorOcr.Purpose, "operator OCR purpose from interface");
 
     var generated = tasks.Single(task => task.Entry == "RhodesTemplate_operatorsFull_operator_card_name");
     Equal("scan-profiles.templateOcrRegions", generated.Source, "generated source");

@@ -9,18 +9,6 @@ public static class RhodesMaaResourceCatalog
     private const string ManualPipelineSource = "resource/base/pipeline/rhodes.json";
     private const string GeneratedPipelineSource = "resource/base/pipeline/rhodes-generated.json";
 
-    private static readonly IReadOnlyDictionary<string, TaskMetadata> ManualTaskMetadata = new Dictionary<string, TaskMetadata>(StringComparer.Ordinal)
-    {
-        ["RhodesProbe"] = new("Probe", "MAAFramework接続確認用のDirectHitタスクです。", []),
-        ["RhodesRunStatusIdeaIcon"] = new("基本情報: 構想アイコン", "構想値の基準点になるアイコンTemplateMatchをMAAで実行します。", ["runStatusFull"]),
-        ["RhodesRunStatusIngotIcon"] = new("基本情報: 源石錐アイコン", "源石錐の基準点になるアイコンTemplateMatchをMAAで実行します。", ["runStatusFull"]),
-        ["RhodesOperatorCodenameFlag"] = new("オペレーター: CODENAME", "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。", ["operatorsFull"]),
-        ["RhodesOperatorNameOcr"] = new("オペレーター: 名前OCR", "招集カード領域をMAA-OCRで読ませます。", ["operatorsFull"]),
-        ["RhodesRelicButton"] = new("画面判定: 秘宝ボタン", "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。", ["relicsFull"]),
-        ["RhodesOperatorButton"] = new("画面判定: 隊員ボタン", "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。", ["operatorsFull"]),
-        ["RhodesThoughtButton"] = new("画面判定: 思案ボタン", "マップ下部の思案ボタンをMAA TemplateMatchで検出します。", ["is5ThoughtFull"]),
-    };
-
     private static readonly IReadOnlyDictionary<string, string> ProfileLabels = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["all"] = "すべて",
@@ -46,8 +34,9 @@ public static class RhodesMaaResourceCatalog
 
     public static IReadOnlyList<MaaResourceTaskPreview> DefaultTasks()
     {
+        var interfaceTaskMetadata = InterfaceTaskMetadataByEntry();
         var tasks = new Dictionary<string, MaaResourceTaskPreview>(StringComparer.Ordinal);
-        foreach (var task in ManualTasks().Concat(GeneratedTasks()))
+        foreach (var task in ManualTasks(interfaceTaskMetadata).Concat(GeneratedTasks(interfaceTaskMetadata)))
         {
             tasks.TryAdd(task.Entry, task);
         }
@@ -299,14 +288,14 @@ public static class RhodesMaaResourceCatalog
             error);
     }
 
-    private static IReadOnlyList<MaaResourceTaskPreview> ManualTasks()
+    private static IReadOnlyList<MaaResourceTaskPreview> ManualTasks(IReadOnlyDictionary<string, TaskMetadata> interfaceTaskMetadata)
     {
-        return PipelineTasks(ManualPipelineSource, manual: true);
+        return PipelineTasks(ManualPipelineSource, manual: true, interfaceTaskMetadata);
     }
 
-    private static IReadOnlyList<MaaResourceTaskPreview> GeneratedTasks()
+    private static IReadOnlyList<MaaResourceTaskPreview> GeneratedTasks(IReadOnlyDictionary<string, TaskMetadata> interfaceTaskMetadata)
     {
-        return PipelineTasks(GeneratedPipelineSource, manual: false);
+        return PipelineTasks(GeneratedPipelineSource, manual: false, interfaceTaskMetadata);
     }
 
     private static IReadOnlyList<ProfileMetadata> InterfaceProfiles()
@@ -365,6 +354,39 @@ public static class RhodesMaaResourceCatalog
         return entryByName;
     }
 
+    private static IReadOnlyDictionary<string, TaskMetadata> InterfaceTaskMetadataByEntry()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, InterfaceSource);
+        if (!File.Exists(path))
+            return new Dictionary<string, TaskMetadata>(StringComparer.Ordinal);
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (!document.RootElement.TryGetProperty("task", out var tasks) || tasks.ValueKind != JsonValueKind.Array)
+                return new Dictionary<string, TaskMetadata>(StringComparer.Ordinal);
+
+            var metadataByEntry = new Dictionary<string, TaskMetadata>(StringComparer.Ordinal);
+            foreach (var task in tasks.EnumerateArray())
+            {
+                var entry = JsonString(task, "entry");
+                if (string.IsNullOrWhiteSpace(entry))
+                    continue;
+                var label = JsonString(task, "label");
+                metadataByEntry.TryAdd(entry, new TaskMetadata(
+                    string.IsNullOrWhiteSpace(label) ? entry : label,
+                    JsonString(task, "description"),
+                    JsonStrings(task, "group")));
+            }
+
+            return metadataByEntry;
+        }
+        catch
+        {
+            return new Dictionary<string, TaskMetadata>(StringComparer.Ordinal);
+        }
+    }
+
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> InterfacePresetEntriesById(
         JsonElement root,
         IReadOnlyDictionary<string, string> taskEntryByName)
@@ -391,7 +413,10 @@ public static class RhodesMaaResourceCatalog
         return entriesById;
     }
 
-    private static IReadOnlyList<MaaResourceTaskPreview> PipelineTasks(string relativePath, bool manual)
+    private static IReadOnlyList<MaaResourceTaskPreview> PipelineTasks(
+        string relativePath,
+        bool manual,
+        IReadOnlyDictionary<string, TaskMetadata> interfaceTaskMetadata)
     {
         var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
         if (!File.Exists(path))
@@ -407,17 +432,21 @@ public static class RhodesMaaResourceCatalog
                     continue;
 
                 var attach = node.Value.TryGetProperty("attach", out var attachValue) ? attachValue : default;
+                interfaceTaskMetadata.TryGetValue(node.Name, out var interfaceMetadata);
                 if (manual)
                 {
-                    var metadata = ManualTaskMetadata.TryGetValue(node.Name, out var value)
-                        ? value
-                        : new TaskMetadata(node.Name, "RHODES手動定義のMAA Resourceタスクです。", []);
                     var manualRecognition = JsonString(node.Value, "recognition");
+                    var purpose = interfaceMetadata?.Purpose;
+                    if (string.IsNullOrWhiteSpace(purpose))
+                    {
+                        purpose = string.Join(" / ", new[] { "RHODES手動定義のMAA Resourceタスクです。", manualRecognition }
+                            .Where(part => !string.IsNullOrWhiteSpace(part)));
+                    }
                     tasks.Add(new MaaResourceTaskPreview(
                         node.Name,
-                        metadata.Label,
-                        string.Join(" / ", new[] { metadata.Purpose, manualRecognition }.Where(part => !string.IsNullOrWhiteSpace(part))),
-                        metadata.ProfileIds,
+                        interfaceMetadata?.Label ?? node.Name,
+                        purpose,
+                        interfaceMetadata?.ProfileIds ?? [],
                         relativePath));
                     continue;
                 }
@@ -437,9 +466,11 @@ public static class RhodesMaaResourceCatalog
 
                 tasks.Add(new MaaResourceTaskPreview(
                     node.Name,
-                    $"生成: {generatedLabel}",
-                    string.IsNullOrWhiteSpace(generatedPurpose) ? "生成済みMAA Resourceノードです。" : generatedPurpose,
-                    profileIds,
+                    interfaceMetadata?.Label ?? $"生成: {generatedLabel}",
+                    string.IsNullOrWhiteSpace(interfaceMetadata?.Purpose)
+                        ? string.IsNullOrWhiteSpace(generatedPurpose) ? "生成済みMAA Resourceノードです。" : generatedPurpose
+                        : interfaceMetadata.Purpose,
+                    interfaceMetadata?.ProfileIds ?? profileIds,
                     source));
             }
         }
