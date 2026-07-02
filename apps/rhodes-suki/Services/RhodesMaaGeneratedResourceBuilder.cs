@@ -11,6 +11,25 @@ public static class RhodesMaaGeneratedResourceBuilder
     public const string MaaTasksSourcePath = "data/recognition/maa-tasks.json";
     public const string ScanProfilesSourcePath = "data/recognition/scan-profiles.json";
     public const string GeneratedPipelinePath = "resource/base/pipeline/rhodes-generated.json";
+    private static readonly HashSet<string> AbandonedRunFields = new(StringComparer.Ordinal)
+    {
+        "hope",
+        "maxHope",
+        "lifePoints",
+        "shield",
+        "commandLevel",
+    };
+
+    private static readonly HashSet<string> AbandonedRunIdTokens = new(StringComparer.Ordinal)
+    {
+        "hope",
+        "maxhope",
+        "life",
+        "lifepoints",
+        "shield",
+        "command",
+        "commandlevel",
+    };
 
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
@@ -39,6 +58,8 @@ public static class RhodesMaaGeneratedResourceBuilder
         {
             if (!RecognitionIs(screen, "OCR"))
                 continue;
+            if (!IsRetainedRecognitionSource(JsonString(screen, "id")))
+                continue;
 
             var recognition = screen.GetProperty("recognition");
             pipeline[NodeName("RhodesScreen", JsonString(screen, "id"))] = OcrNode(recognition, new JsonObject
@@ -56,6 +77,8 @@ public static class RhodesMaaGeneratedResourceBuilder
         {
             if (!RecognitionIs(candidate, "OCR"))
                 continue;
+            if (!IsRetainedRecognitionSource(JsonString(candidate, "id"), CandidateField(candidate)))
+                continue;
 
             var recognition = candidate.GetProperty("recognition");
             pipeline[NodeName("RhodesCandidate", JsonString(candidate, "id"))] = OcrNode(recognition, new JsonObject
@@ -71,6 +94,9 @@ public static class RhodesMaaGeneratedResourceBuilder
 
         foreach (var region in ArrayProperty(maaTasks.RootElement, "ocrRegions"))
         {
+            if (!IsRetainedRecognitionSource(JsonString(region, "id")))
+                continue;
+
             var recognition = new JsonObject
             {
                 ["roi"] = Clone(region.GetProperty("roi")),
@@ -102,6 +128,12 @@ public static class RhodesMaaGeneratedResourceBuilder
                 }
 
                 var idPrefix = JsonString(config, "idPrefix");
+                if (!IsRetainedRecognitionSource(idPrefix))
+                {
+                    index++;
+                    continue;
+                }
+
                 var suffix = string.IsNullOrWhiteSpace(idPrefix) ? index.ToString() : idPrefix;
                 pipeline[NodeName("RhodesTemplate", $"{profileId}.{suffix}")] = TemplateNode(config, new JsonObject
                 {
@@ -211,6 +243,36 @@ public static class RhodesMaaGeneratedResourceBuilder
         return element.ValueKind == JsonValueKind.Object
             && element.TryGetProperty("recognition", out var recognition)
             && JsonString(recognition, "type").Equals(type, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string CandidateField(JsonElement candidate)
+    {
+        return candidate.ValueKind == JsonValueKind.Object
+            && candidate.TryGetProperty("candidate", out var candidateObject)
+            ? JsonString(candidateObject, "field")
+            : "";
+    }
+
+    private static bool IsRetainedRecognitionSource(string id, string candidateField = "")
+    {
+        return !IsAbandonedRunRecognitionId(id)
+            && !AbandonedRunFields.Contains(candidateField);
+    }
+
+    private static bool IsAbandonedRunRecognitionId(string id)
+    {
+        var tokens = IdTokens(id);
+        return tokens.Count > 0
+            && tokens[0].Equals("run", StringComparison.Ordinal)
+            && tokens.Skip(1).Any(AbandonedRunIdTokens.Contains);
+    }
+
+    private static List<string> IdTokens(string id)
+    {
+        var dotted = Regex.Replace(id ?? "", "([a-z])([A-Z])", "$1.$2");
+        return Regex.Split(dotted.ToLowerInvariant(), "[^a-z0-9]+")
+            .Where(token => !string.IsNullOrWhiteSpace(token))
+            .ToList();
     }
 
     private static JsonNode? Clone(JsonElement element)

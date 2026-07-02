@@ -1533,6 +1533,48 @@ static void MaaGeneratedResourceBuilder()
     Equal("TemplateMatch", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated template recognition");
     Equal("run/IngotIcon.png", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["template"]!.GetValue<string>(), "generated template path");
 
+    var guardedGenerated = RhodesMaaGeneratedResourceBuilder.BuildJson(
+        """
+        {
+          "screens": [
+            { "id": "run.hope.panel", "recognition": { "type": "OCR", "roi": [1,2,3,4] } }
+          ],
+          "candidates": [
+            { "id": "run.safe.candidate", "recognition": { "type": "OCR", "roi": [1,2,3,4] }, "candidate": { "kind": "runStatus", "field": "hope" } }
+          ],
+          "ocrRegions": [
+            { "id": "run.hope.current", "roi": [1,2,3,4] },
+            { "id": "run.life.points", "roi": [1,2,3,4] },
+            { "id": "run.shield", "roi": [1,2,3,4] },
+            { "id": "run.command.level", "roi": [1,2,3,4] },
+            { "id": "run.ingot", "roi": [5,6,7,8] }
+          ]
+        }
+        """,
+        """
+        {
+          "profiles": [
+            {
+              "id": "runStatusFull",
+              "templateOcrRegions": [
+                { "idPrefix": "run.top.hope", "templatePath": "assets/recognition/templates/run/IngotIcon.png", "searchRoi": { "x": 1, "y": 2, "width": 3, "height": 4 } },
+                { "idPrefix": "run.ingot", "templatePath": "assets/recognition/templates/run/IngotIcon.png", "searchRoi": { "x": 5, "y": 6, "width": 7, "height": 8 } }
+              ]
+            }
+          ]
+        }
+        """);
+    var guardedRoot = JsonNode.Parse(guardedGenerated)!.AsObject();
+    Equal(false, guardedRoot.ContainsKey("RhodesScreen_run_hope_panel"), "guarded screen hope omitted");
+    Equal(false, guardedRoot.ContainsKey("RhodesCandidate_run_safe_candidate"), "guarded candidate hope field omitted");
+    Equal(false, guardedRoot.ContainsKey("RhodesOcrRegion_run_hope_current"), "guarded hope region omitted");
+    Equal(false, guardedRoot.ContainsKey("RhodesOcrRegion_run_life_points"), "guarded life region omitted");
+    Equal(false, guardedRoot.ContainsKey("RhodesOcrRegion_run_shield"), "guarded shield region omitted");
+    Equal(false, guardedRoot.ContainsKey("RhodesOcrRegion_run_command_level"), "guarded command level region omitted");
+    Equal(false, guardedRoot.ContainsKey("RhodesTemplate_runStatusFull_run_top_hope"), "guarded hope template omitted");
+    Equal("OCR", guardedRoot["RhodesOcrRegion_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "guarded ingot retained");
+    Equal("TemplateMatch", guardedRoot["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "guarded ingot template retained");
+
     var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-generated-resource-{Guid.NewGuid():N}");
     Directory.CreateDirectory(directory);
     try
