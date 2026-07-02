@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using MaaFramework.Binding;
 using RhodesSuki.Models;
 using RhodesSuki.Services;
 using RhodesSuki.ViewModels;
@@ -27,6 +28,7 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter extracts IS6 coin candidates", LocalCandidateConverterCoins),
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
+    ("ADB method catalog maps emulator presets to fast lossless MAA methods", AdbMethodCatalog),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("ADB detect API client parses runtime, candidates, and devices", AdbApiDetectionParsing),
     ("ADB test API client parses resolution and screenshot details", AdbApiTestParsing),
@@ -712,6 +714,24 @@ static void AdbPresets()
     Equal("127.0.0.1:6520", googlePlay.Serial, "Google Play Games developer serial");
 }
 
+static void AdbMethodCatalog()
+{
+    var input = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodIdForPreset("mumu"));
+    var screencap = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodIdForPreset("mumu"));
+    var ldInput = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodIdForPreset("ldplayer"));
+    var ldScreencap = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodIdForPreset("ldplayer"));
+    var googlePlay = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodIdForPreset("google-play-games-dev"));
+
+    Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, input.Id, "mumu input method");
+    Equal(true, input.Value.HasFlag(AdbInputMethods.EmulatorExtras), "mumu input emulator extras");
+    Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, screencap.Id, "mumu screencap method");
+    Equal(true, screencap.Value.HasFlag(AdbScreencapMethods.EmulatorExtras), "mumu screencap emulator extras");
+    Equal(false, screencap.Value.HasFlag(AdbScreencapMethods.MinicapDirect), "mumu screencap avoids minicap direct");
+    Equal(SukiAdbMethodCatalog.DefaultInputMethodId, ldInput.Id, "ldplayer input stays default");
+    Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, ldScreencap.Id, "ldplayer screencap fast");
+    Equal(SukiAdbMethodCatalog.DefaultScreencapMethodId, googlePlay.Id, "google play stays default");
+}
+
 static void AdbDeviceParsing()
 {
     var devices = RhodesAdbDeviceProbe.ParseDevices(
@@ -858,7 +878,9 @@ static void SukiSettingsStore()
                 """{"touch":"adb"}""",
                 "http://127.0.0.1:5173",
                 "mumu",
-                "operatorsFull"),
+                "operatorsFull",
+                SukiAdbMethodCatalog.FastEmulatorMethodId,
+                SukiAdbMethodCatalog.FastEmulatorMethodId),
             path);
 
         var loaded = RhodesSukiSettingsStore.Load(path);
@@ -866,6 +888,8 @@ static void SukiSettingsStore()
         Equal("127.0.0.1:16384", loaded.AdbSerial, "adb serial");
         Equal("mumu", loaded.SelectedAdbPresetId, "preset");
         Equal("operatorsFull", loaded.SelectedResourceProfileId, "profile");
+        Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, loaded.AdbInputMethodId, "input method");
+        Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, loaded.AdbScreencapMethodId, "screencap method");
     }
     finally
     {
@@ -2046,70 +2070,93 @@ static void ResourceProfileTaskFilteringFollowsInterfacePresets()
 
 static void RunCatalogLoadsChoices()
 {
-    var catalog = RhodesRunCatalog.LoadDefault();
-    var is5 = catalog.Campaigns.Single(campaign => campaign.Id == "is5_sarkaz");
-    var is5Relics = catalog.Relics.Where(relic => relic.CampaignId == is5.Id).ToArray();
-
-    Equal(5, catalog.Campaigns.Count, "campaign count");
-    Equal("IS#5 サルカズの炉辺奇談", is5.DisplayName, "campaign label");
-    var gummy = catalog.Operators.Single(item => item.Name == "グム" && item.OperatorClass == "重装");
-    Equal(true, catalog.Operators.Any(item => item.Name == "グム" && item.OperatorClass == "重装"), "operator data");
-    Equal(true, File.Exists(gummy.ImagePath), "operator image path");
-    Equal(false, gummy.Detail.Contains("入手", StringComparison.Ordinal), "operator obtain method hidden");
-    Equal(false, gummy.Detail.Contains("タグ", StringComparison.Ordinal), "operator tags hidden");
-    Equal(false, gummy.SearchText.Contains("公開求人", StringComparison.Ordinal), "operator obtain method search hidden");
-    Equal(false, gummy.SearchText.Contains("タグ", StringComparison.Ordinal), "operator tag search hidden");
-    Equal(296, is5Relics.Length, "is5 relic count");
-    Equal(true, File.Exists(is5Relics.First(item => item.Name == "特選獣肉缶詰").ImagePath), "relic image path");
-    Equal(true, catalog.Current.SelectedRelicIds.Contains("is5_sarkaz_relic_254"), "current relic selection");
-    Equal("is5_sarkaz", catalog.Current.CampaignId, "current campaign");
-    Equal(0, catalog.Current.Idea, "current idea");
-    Equal("maa-ocr", catalog.Current.OcrEngine, "current ocr engine");
-
-    var tempDirectory = Path.Combine(Path.GetTempPath(), "rhodes-suki-tests", Guid.NewGuid().ToString("N"));
-    Directory.CreateDirectory(tempDirectory);
+    var stableDirectory = Path.Combine(Path.GetTempPath(), "rhodes-suki-tests", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(stableDirectory);
     try
     {
-        var statePath = Path.Combine(tempDirectory, "current-state.json");
+        var stableStatePath = Path.Combine(stableDirectory, "current-state.json");
         File.WriteAllText(
-            statePath,
+            stableStatePath,
             """
             {
               "run": {
                 "campaignId": "is5_sarkaz",
-                "squadId": "is5_sarkaz_squad_16",
-                "squadRandomEffectOptionId": "is5_sarkaz_mimic_02"
+                "special": { "is5_sarkaz": { "idea": 0 } }
               },
               "operators": [],
-              "relics": [],
-              "preferences": { "ocrEngine": "glm-ocr" }
+              "relics": [ "is5_sarkaz_relic_254" ],
+              "preferences": { "ocrEngine": "maa-ocr" }
             }
             """);
+        var catalog = RhodesRunCatalog.LoadDefault(RhodesRunCatalog.ResolveDataRoot(), stableStatePath);
+        var is5 = catalog.Campaigns.Single(campaign => campaign.Id == "is5_sarkaz");
+        var is5Relics = catalog.Relics.Where(relic => relic.CampaignId == is5.Id).ToArray();
 
-        var squadIdCatalog = RhodesRunCatalog.LoadDefault(RhodesRunCatalog.ResolveDataRoot(), statePath);
-        Equal("奇想天外分隊", squadIdCatalog.Current.Squad, "current squad id label");
-        Equal("組み合わせ02: #5破壊戦術分隊 + #3精神論分隊", squadIdCatalog.Current.SquadRandomEffect, "current squad option label");
-        Equal("glm-ocr", squadIdCatalog.Current.OcrEngine, "state ocr engine");
+        Equal(5, catalog.Campaigns.Count, "campaign count");
+        Equal("IS#5 サルカズの炉辺奇談", is5.DisplayName, "campaign label");
+        var gummy = catalog.Operators.Single(item => item.Name == "グム" && item.OperatorClass == "重装");
+        Equal(true, catalog.Operators.Any(item => item.Name == "グム" && item.OperatorClass == "重装"), "operator data");
+        Equal(true, File.Exists(gummy.ImagePath), "operator image path");
+        Equal(false, gummy.Detail.Contains("入手", StringComparison.Ordinal), "operator obtain method hidden");
+        Equal(false, gummy.Detail.Contains("タグ", StringComparison.Ordinal), "operator tags hidden");
+        Equal(false, gummy.SearchText.Contains("公開求人", StringComparison.Ordinal), "operator obtain method search hidden");
+        Equal(false, gummy.SearchText.Contains("タグ", StringComparison.Ordinal), "operator tag search hidden");
+        Equal(296, is5Relics.Length, "is5 relic count");
+        Equal(true, File.Exists(is5Relics.First(item => item.Name == "特選獣肉缶詰").ImagePath), "relic image path");
+        Equal(true, catalog.Current.SelectedRelicIds.Contains("is5_sarkaz_relic_254"), "current relic selection");
+        Equal("is5_sarkaz", catalog.Current.CampaignId, "current campaign");
+        Equal(0, catalog.Current.Idea, "current idea");
+        Equal("maa-ocr", catalog.Current.OcrEngine, "current ocr engine");
+
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "rhodes-suki-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDirectory);
+        try
+        {
+            var statePath = Path.Combine(tempDirectory, "current-state.json");
+            File.WriteAllText(
+                statePath,
+                """
+                {
+                  "run": {
+                    "campaignId": "is5_sarkaz",
+                    "squadId": "is5_sarkaz_squad_16",
+                    "squadRandomEffectOptionId": "is5_sarkaz_mimic_02"
+                  },
+                  "operators": [],
+                  "relics": [],
+                  "preferences": { "ocrEngine": "glm-ocr" }
+                }
+                """);
+
+            var squadIdCatalog = RhodesRunCatalog.LoadDefault(RhodesRunCatalog.ResolveDataRoot(), statePath);
+            Equal("奇想天外分隊", squadIdCatalog.Current.Squad, "current squad id label");
+            Equal("組み合わせ02: #5破壊戦術分隊 + #3精神論分隊", squadIdCatalog.Current.SquadRandomEffect, "current squad option label");
+            Equal("glm-ocr", squadIdCatalog.Current.OcrEngine, "state ocr engine");
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+
+        var is5SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is5_sarkaz").ToArray();
+        Equal(3, is5SpecialFields.Length, "is5 special field count");
+        Equal("構想", is5SpecialFields.Single(field => field.FieldId == "idea").Label, "idea label");
+        Equal("0", is5SpecialFields.Single(field => field.FieldId == "idea").Value, "idea value");
+        Equal("思案", is5SpecialFields.Single(field => field.FieldId == "thought").Label, "thought label");
+        Equal("0個", is5SpecialFields.Single(field => field.FieldId == "thought").Value, "thought value");
+        Equal("時代", is5SpecialFields.Single(field => field.FieldId == "age").Label, "age label");
+        Equal("未選択", is5SpecialFields.Single(field => field.FieldId == "age").Value, "age value");
+        Equal(false, is5SpecialFields.Any(field => field.Label == "想念"), "obsolete idea label");
+
+        var is4SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is4_sami").ToArray();
+        Equal("is4RevelationFull", is4SpecialFields.Single(field => field.FieldId == "revelation").ProfileId, "is4 revelation profile");
+        var is6SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is6_sui").ToArray();
+        Equal("is6CoinsFull", is6SpecialFields.Single(field => field.FieldId == "coins").ProfileId, "is6 coins profile");
     }
     finally
     {
-        Directory.Delete(tempDirectory, true);
+        Directory.Delete(stableDirectory, true);
     }
-
-    var is5SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is5_sarkaz").ToArray();
-    Equal(3, is5SpecialFields.Length, "is5 special field count");
-    Equal("構想", is5SpecialFields.Single(field => field.FieldId == "idea").Label, "idea label");
-    Equal("0", is5SpecialFields.Single(field => field.FieldId == "idea").Value, "idea value");
-    Equal("思案", is5SpecialFields.Single(field => field.FieldId == "thought").Label, "thought label");
-    Equal("0個", is5SpecialFields.Single(field => field.FieldId == "thought").Value, "thought value");
-    Equal("時代", is5SpecialFields.Single(field => field.FieldId == "age").Label, "age label");
-    Equal("未選択", is5SpecialFields.Single(field => field.FieldId == "age").Value, "age value");
-    Equal(false, is5SpecialFields.Any(field => field.Label == "想念"), "obsolete idea label");
-
-    var is4SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is4_sami").ToArray();
-    Equal("is4RevelationFull", is4SpecialFields.Single(field => field.FieldId == "revelation").ProfileId, "is4 revelation profile");
-    var is6SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is6_sui").ToArray();
-    Equal("is6CoinsFull", is6SpecialFields.Single(field => field.FieldId == "coins").ProfileId, "is6 coins profile");
 }
 
 static void ChoiceFilters()

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows.Input;
 using Avalonia.Media.Imaging;
+using MaaFramework.Binding;
 using RhodesSuki.Models;
 using RhodesSuki.Services;
 
@@ -83,6 +84,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private RhodesRecognitionScanLogRow? _selectedRecognitionScanLogRow;
     private MaaAdbPresetPreview? _selectedAdbPreset;
     private MaaAdbPathCandidatePreview? _selectedAdbPathCandidate;
+    private SukiAdbInputMethodOption? _selectedAdbInputMethod;
+    private SukiAdbScreencapMethodOption? _selectedAdbScreencapMethod;
     private MaaResourceProfilePreview? _selectedResourceProfile;
     private MaaResourceExecutionPlan? _lastResourceExecutionPlan;
     private SukiOcrEngineOption? _selectedOcrEngine;
@@ -177,7 +180,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         AdbPathCandidates = [];
         AdbDevices = [];
         OcrEngineOptions = new ObservableCollection<SukiOcrEngineOption>(SukiOcrEngineCatalog.Options);
+        AdbInputMethodOptions = new ObservableCollection<SukiAdbInputMethodOption>(SukiAdbMethodCatalog.InputOptions);
+        AdbScreencapMethodOptions = new ObservableCollection<SukiAdbScreencapMethodOption>(SukiAdbMethodCatalog.ScreencapOptions);
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "auto") ?? AdbPresets.FirstOrDefault();
+        SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodId);
+        SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodId);
         Campaigns = new ObservableCollection<SukiCampaignPreview>(runCatalog.Campaigns);
         _allOperators = runCatalog.Operators;
         _allRelics = runCatalog.Relics;
@@ -322,6 +329,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaAdbDevicePreview> AdbDevices { get; }
 
     public ObservableCollection<SukiOcrEngineOption> OcrEngineOptions { get; }
+
+    public ObservableCollection<SukiAdbInputMethodOption> AdbInputMethodOptions { get; }
+
+    public ObservableCollection<SukiAdbScreencapMethodOption> AdbScreencapMethodOptions { get; }
 
     public ObservableCollection<SukiCampaignPreview> Campaigns { get; }
 
@@ -538,7 +549,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             var preset = SelectedAdbPreset?.Label ?? "手動";
             var serial = string.IsNullOrWhiteSpace(AdbSerial) ? "serial未選択" : AdbSerial;
-            return $"{preset} · {serial} · MAAFramework · {BaseResolution.AspectRatioLabel}";
+            return $"{preset} · {serial} · {AdbMethodSummary} · {BaseResolution.AspectRatioLabel}";
+        }
+    }
+
+    public string AdbMethodSummary
+    {
+        get
+        {
+            var screencap = SelectedAdbScreencapMethod?.Label ?? "標準撮影";
+            var input = SelectedAdbInputMethod?.Label ?? "標準入力";
+            return $"{screencap} / {input}";
+        }
+    }
+
+    public string AdbMethodDetail
+    {
+        get
+        {
+            var screencap = SelectedAdbScreencapMethod?.Detail ?? "";
+            var input = SelectedAdbInputMethod?.Detail ?? "";
+            return string.Join(" / ", new[] { screencap, input }.Where(value => !string.IsNullOrWhiteSpace(value)));
         }
     }
 
@@ -1147,6 +1178,36 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public SukiAdbInputMethodOption? SelectedAdbInputMethod
+    {
+        get => _selectedAdbInputMethod;
+        set
+        {
+            if (!SetProperty(ref _selectedAdbInputMethod, value))
+                return;
+            OnPropertyChanged(nameof(AdbHeaderDetail));
+            OnPropertyChanged(nameof(AdbMethodSummary));
+            OnPropertyChanged(nameof(AdbMethodDetail));
+            RefreshRuntimeCapabilities();
+            RefreshInspectorRows();
+        }
+    }
+
+    public SukiAdbScreencapMethodOption? SelectedAdbScreencapMethod
+    {
+        get => _selectedAdbScreencapMethod;
+        set
+        {
+            if (!SetProperty(ref _selectedAdbScreencapMethod, value))
+                return;
+            OnPropertyChanged(nameof(AdbHeaderDetail));
+            OnPropertyChanged(nameof(AdbMethodSummary));
+            OnPropertyChanged(nameof(AdbMethodDetail));
+            RefreshRuntimeCapabilities();
+            RefreshInspectorRows();
+        }
+    }
+
     public MaaResourceProfilePreview? SelectedResourceProfile
     {
         get => _selectedResourceProfile;
@@ -1347,24 +1408,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "ADB",
             "CORE",
             string.IsNullOrWhiteSpace(AdbSerial) ? "未選択" : "選択済み",
-            $"{SelectedAdbPreset?.Label ?? "自動"} / {AdbHeaderTitle}",
+            $"{SelectedAdbPreset?.Label ?? "自動"} / {AdbHeaderTitle} / {AdbMethodSummary}",
             "端末一覧",
-            false);
-        yield return new SukiRuntimeCapabilityPreview(
-            "rhodes-api",
-            "RHODES API",
-            "CORE",
-            _rhodesApiStatus.State,
-            $"{_rhodesApiStatus.Detail} / {RhodesApiUrl}",
-            "状態同期",
-            false);
-        yield return new SukiRuntimeCapabilityPreview(
-            "master-data",
-            "Master Data",
-            "CORE",
-            _masterDataStatus.State,
-            _masterDataStatus.Detail,
-            "件数診断",
             false);
         yield return new SukiRuntimeCapabilityPreview(
             "maa",
@@ -1563,12 +1608,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (WorkspaceTab == "runtime")
         {
             yield return new SukiInspectorRow("ADB", AdbHeaderTitle, AdbHeaderDetail);
-            yield return new SukiInspectorRow("RHODES API", _rhodesApiStatus.State, RhodesApiUrl);
-            yield return new SukiInspectorRow("Master Data", _masterDataStatus.State, _masterDataStatus.Detail);
+            yield return new SukiInspectorRow("撮影方式", SelectedAdbScreencapMethod?.Label ?? "標準撮影", SelectedAdbScreencapMethod?.Detail ?? "");
+            yield return new SukiInspectorRow("入力方式", SelectedAdbInputMethod?.Label ?? "標準入力", SelectedAdbInputMethod?.Detail ?? "");
             yield return new SukiInspectorRow("端末", $"{AdbDevices.Count}件", SessionState);
             yield return new SukiInspectorRow("Hyper-V", _hypervisorStatus.State, _hypervisorStatus.Detail);
             yield return new SukiInspectorRow("OCRエンジン", SelectedOcrEngine?.Label ?? "MAA-OCR", SelectedOcrEngine?.Id ?? SukiOcrEngineCatalog.DefaultId);
-            yield return new SukiInspectorRow("任意OCR", $"GLM={_glmRuntimeStatus.State} / Ollama={_ollamaRuntimeStatus.State}", RhodesApiUrl);
+            yield return new SukiInspectorRow("任意OCR", $"GLM={_glmRuntimeStatus.State} / Ollama={_ollamaRuntimeStatus.State}", "必要な検証環境だけで導入");
             yield break;
         }
 
@@ -1600,6 +1645,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RhodesApiUrl = string.IsNullOrWhiteSpace(settings.RhodesApiUrl) ? "http://127.0.0.1:5173" : settings.RhodesApiUrl;
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == settings.SelectedAdbPresetId) ?? SelectedAdbPreset;
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == settings.SelectedResourceProfileId) ?? SelectedResourceProfile;
+        SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(settings.AdbInputMethodId);
+        SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(settings.AdbScreencapMethodId);
     }
 
     private async Task SaveSettingsAsync()
@@ -1612,7 +1659,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 AdbConfigJson,
                 RhodesApiUrl,
                 SelectedAdbPreset?.Id ?? "auto",
-                SelectedResourceProfile?.Id ?? "runStatusFull"));
+                SelectedResourceProfile?.Id ?? "runStatusFull",
+                SelectedAdbInputMethod?.Id ?? SukiAdbMethodCatalog.DefaultInputMethodId,
+                SelectedAdbScreencapMethod?.Id ?? SukiAdbMethodCatalog.DefaultScreencapMethodId));
             var apiError = await SaveAdbSettingsToApiStateAsync();
             StatusMessage = string.IsNullOrWhiteSpace(apiError)
                 ? $"Suki設定とADB API設定を保存しました: {RhodesSukiSettingsStore.DefaultPath}"
@@ -1835,10 +1884,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!string.IsNullOrWhiteSpace(preset.AdbPath))
             AdbPath = preset.AdbPath;
 
+        SelectedAdbPreset = preset;
         AdbSerial = preset.Serial;
+        ApplyAdbMethodsForPreset(preset.Id);
         RefreshRuntimeCapabilities();
         RefreshInspectorRows();
-        StatusMessage = $"ADBプリセットを適用しました: {preset.DisplayName}";
+        StatusMessage = $"ADBプリセットを適用しました: {preset.DisplayName} / {AdbMethodSummary}";
         return Task.CompletedTask;
     }
 
@@ -1862,10 +1913,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             SelectedAdbPreset = AdbPresets.FirstOrDefault(preset =>
                 preset.Id.Equals(candidate.Preset, StringComparison.OrdinalIgnoreCase)) ?? SelectedAdbPreset;
+            ApplyAdbMethodsForPreset(candidate.Preset);
         }
         RefreshRuntimeCapabilities();
         RefreshInspectorRows();
-        StatusMessage = $"ADBパスを適用しました: {candidate.Path}";
+        StatusMessage = $"ADBパスを適用しました: {candidate.Path} / {AdbMethodSummary}";
         return Task.CompletedTask;
     }
 
@@ -1876,6 +1928,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         AdbPath = path.Trim();
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "custom") ?? SelectedAdbPreset;
+        ApplyAdbMethodsForPreset("custom");
         var manual = new MaaAdbPathCandidatePreview(AdbPath, "manual", "custom", File.Exists(AdbPath), File.Exists(AdbPath), "");
         UpsertAdbPathCandidate(manual);
         SelectedAdbPathCandidate = manual;
@@ -1983,6 +2036,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return ordered.Values
+            .Where(ShouldShowAdbPathCandidate)
             .OrderByDescending(candidate => candidate.Available)
             .ThenByDescending(candidate => candidate.Exists)
             .ThenBy(candidate => candidate.Preset)
@@ -1995,6 +2049,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return (candidate.Available ? 4 : 0)
             + (candidate.Exists ? 2 : 0)
             + (string.IsNullOrWhiteSpace(candidate.Error) ? 1 : 0);
+    }
+
+    private static bool ShouldShowAdbPathCandidate(MaaAdbPathCandidatePreview candidate)
+    {
+        if (candidate.Available || candidate.Exists || !string.IsNullOrWhiteSpace(candidate.Error))
+            return true;
+
+        return candidate.Source.Equals("settings", StringComparison.OrdinalIgnoreCase)
+            || candidate.Source.Equals("manual", StringComparison.OrdinalIgnoreCase)
+            || candidate.Source.Equals("env", StringComparison.OrdinalIgnoreCase)
+            || candidate.Source.Equals("path", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ApplyAdbMethodsForPreset(string? presetId)
+    {
+        SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(
+            SukiAdbMethodCatalog.DefaultInputMethodIdForPreset(presetId));
+        SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(
+            SukiAdbMethodCatalog.DefaultScreencapMethodIdForPreset(presetId));
     }
 
     private static bool PathsEqual(string left, string right)
@@ -4404,7 +4477,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return RhodesMaaSession.DefaultAdbOptions(
             string.IsNullOrWhiteSpace(AdbPath) ? "adb" : AdbPath.Trim(),
             AdbSerial.Trim(),
-            AdbConfigJson.Trim());
+            AdbConfigJson.Trim(),
+            SelectedAdbInputMethod?.Value ?? AdbInputMethods.Default,
+            SelectedAdbScreencapMethod?.Value ?? AdbScreencapMethods.Default);
     }
 
     private static async Task<string> SaveCaptureAsync(byte[] encodedImage)

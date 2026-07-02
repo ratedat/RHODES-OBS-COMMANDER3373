@@ -15,7 +15,9 @@ public sealed class RhodesMaaSession : IDisposable
     public static MaaSessionOptions DefaultAdbOptions(
         string adbPath = "adb",
         string adbSerial = "",
-        string adbConfigJson = "{}")
+        string adbConfigJson = "{}",
+        AdbInputMethods inputMethod = AdbInputMethods.Default,
+        AdbScreencapMethods screencapMethod = AdbScreencapMethods.Default)
     {
         return new MaaSessionOptions(
             RhodesMaaPaths.DefaultResourceRoot,
@@ -23,8 +25,8 @@ public sealed class RhodesMaaSession : IDisposable
             adbPath,
             adbSerial,
             string.IsNullOrWhiteSpace(adbConfigJson) ? "{}" : adbConfigJson,
-            AdbInputMethods.Default,
-            AdbScreencapMethods.Default);
+            inputMethod,
+            screencapMethod);
     }
 
     public static MaaSessionSnapshot ProbeDefaultPaths()

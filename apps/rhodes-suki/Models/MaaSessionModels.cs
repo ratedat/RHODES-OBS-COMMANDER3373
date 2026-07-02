@@ -118,6 +118,151 @@ public static class SukiOcrEngineCatalog
     }
 }
 
+public sealed record SukiAdbInputMethodOption(
+    string Id,
+    string Label,
+    string Detail,
+    AdbInputMethods Value)
+{
+    public string DisplayName => Label;
+}
+
+public sealed record SukiAdbScreencapMethodOption(
+    string Id,
+    string Label,
+    string Detail,
+    AdbScreencapMethods Value)
+{
+    public string DisplayName => Label;
+}
+
+public static class SukiAdbMethodCatalog
+{
+    public const string DefaultInputMethodId = "default";
+    public const string DefaultScreencapMethodId = "default";
+    public const string FastEmulatorMethodId = "emulator-fast";
+
+    private static readonly SukiAdbInputMethodOption[] BuiltInInputOptions =
+    [
+        new(
+            DefaultInputMethodId,
+            "標準入力",
+            "MAA既定。互換性優先でEmulatorExtrasは使いません。",
+            AdbInputMethods.Default),
+        new(
+            FastEmulatorMethodId,
+            "MuMu高速入力",
+            "MuMu 12向け。EmulatorExtrasを優先し、失敗時はMaaTouch/MiniTouch/ADB shellへ戻します。",
+            AdbInputMethods.EmulatorExtras
+                | AdbInputMethods.Maatouch
+                | AdbInputMethods.MinitouchAndAdbKey
+                | AdbInputMethods.AdbShell),
+        new(
+            "adb-shell",
+            "互換ADB入力",
+            "低速ですが最も通りやすいADB shell入力だけを使います。",
+            AdbInputMethods.AdbShell),
+    ];
+
+    private static readonly SukiAdbScreencapMethodOption[] BuiltInScreencapOptions =
+    [
+        new(
+            DefaultScreencapMethodId,
+            "標準撮影",
+            "MAA既定。ロスレスで高互換の方式から自動選択します。",
+            AdbScreencapMethods.Default),
+        new(
+            FastEmulatorMethodId,
+            "MuMu/LD高速撮影",
+            "EmulatorExtrasを最優先し、失敗時はRawWithGzip/Encode系へ戻します。ロスレスを維持します。",
+            AdbScreencapMethods.EmulatorExtras
+                | AdbScreencapMethods.RawWithGzip
+                | AdbScreencapMethods.Encode
+                | AdbScreencapMethods.EncodeToFileAndPull),
+        new(
+            "raw-gzip",
+            "Raw/Gzip優先",
+            "RawWithGzipを優先します。EmulatorExtrasが不安定な環境向けのロスレス設定です。",
+            AdbScreencapMethods.RawWithGzip
+                | AdbScreencapMethods.Encode
+                | AdbScreencapMethods.EncodeToFileAndPull),
+        new(
+            "compat",
+            "互換撮影",
+            "Encode系だけを使います。低速ですが互換性を優先します。",
+            AdbScreencapMethods.Encode
+                | AdbScreencapMethods.EncodeToFileAndPull),
+    ];
+
+    private static readonly HashSet<string> ValidInputIds = BuiltInInputOptions
+        .Select(option => option.Id)
+        .ToHashSet(StringComparer.Ordinal);
+
+    private static readonly HashSet<string> ValidScreencapIds = BuiltInScreencapOptions
+        .Select(option => option.Id)
+        .ToHashSet(StringComparer.Ordinal);
+
+    public static IReadOnlyList<SukiAdbInputMethodOption> InputOptions => BuiltInInputOptions;
+
+    public static IReadOnlyList<SukiAdbScreencapMethodOption> ScreencapOptions => BuiltInScreencapOptions;
+
+    public static SukiAdbInputMethodOption FindInput(string? id)
+    {
+        var normalized = NormalizeInput(id);
+        return BuiltInInputOptions.First(option => option.Id == normalized);
+    }
+
+    public static SukiAdbScreencapMethodOption FindScreencap(string? id)
+    {
+        var normalized = NormalizeScreencap(id);
+        return BuiltInScreencapOptions.First(option => option.Id == normalized);
+    }
+
+    public static string NormalizeInput(string? id)
+    {
+        var normalized = NormalizeId(id, DefaultInputMethodId);
+        normalized = normalized switch
+        {
+            "mumu" or "mumu-fast" or "ldplayer" or "ld-fast" or "emulator" or "emulator-extras" => FastEmulatorMethodId,
+            "shell" or "adb" => "adb-shell",
+            _ => normalized,
+        };
+        return ValidInputIds.Contains(normalized) ? normalized : DefaultInputMethodId;
+    }
+
+    public static string NormalizeScreencap(string? id)
+    {
+        var normalized = NormalizeId(id, DefaultScreencapMethodId);
+        normalized = normalized switch
+        {
+            "mumu" or "mumu-fast" or "ldplayer" or "ld-fast" or "emulator" or "emulator-extras" => FastEmulatorMethodId,
+            "raw" or "gzip" or "raw-with-gzip" => "raw-gzip",
+            "encode" or "safe" => "compat",
+            _ => normalized,
+        };
+        return ValidScreencapIds.Contains(normalized) ? normalized : DefaultScreencapMethodId;
+    }
+
+    public static string DefaultInputMethodIdForPreset(string? presetId)
+    {
+        var normalized = NormalizeId(presetId, "auto");
+        return normalized is "mumu" ? FastEmulatorMethodId : DefaultInputMethodId;
+    }
+
+    public static string DefaultScreencapMethodIdForPreset(string? presetId)
+    {
+        var normalized = NormalizeId(presetId, "auto");
+        return normalized is "mumu" or "ldplayer" ? FastEmulatorMethodId : DefaultScreencapMethodId;
+    }
+
+    private static string NormalizeId(string? id, string fallback)
+    {
+        return string.IsNullOrWhiteSpace(id)
+            ? fallback
+            : id.Trim().ToLowerInvariant();
+    }
+}
+
 public sealed record SukiOutputPreferences(
     bool SeparateWindow,
     bool TournamentMode,
@@ -139,7 +284,9 @@ public sealed record RhodesSukiSettings(
     string AdbConfigJson = "{}",
     string RhodesApiUrl = "http://127.0.0.1:5173",
     string SelectedAdbPresetId = "auto",
-    string SelectedResourceProfileId = "runStatusFull");
+    string SelectedResourceProfileId = "runStatusFull",
+    string AdbInputMethodId = SukiAdbMethodCatalog.DefaultInputMethodId,
+    string AdbScreencapMethodId = SukiAdbMethodCatalog.DefaultScreencapMethodId);
 
 public sealed record MaaSessionSnapshot(
     string State,

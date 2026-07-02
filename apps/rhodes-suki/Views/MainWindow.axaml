@@ -41,6 +41,15 @@
     <DataTemplate x:Key="OcrEngineSelectionTemplate">
       <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
     </DataTemplate>
+    <DataTemplate x:Key="AdbMethodComboItemTemplate">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding Detail}" Foreground="#AAB6B8" FontSize="11" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="AdbMethodSelectionTemplate">
+      <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
     <services:RhodesBitmapPathConverter x:Key="BitmapPathConverter" />
   </suki:SukiWindow.Resources>
   <suki:SukiWindow.Styles>
@@ -572,19 +581,19 @@
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel Spacing="2">
                 <TextBlock Text="ランタイム" FontSize="20" FontWeight="SemiBold" />
-                <TextBlock Text="MAAFramework ADB接続 · 端末検出 · MAA-OCR · 任意GLM/Ollama" FontSize="12" Opacity="0.62" />
+                <TextBlock Text="MAA ADB接続 · MuMu高速撮影 · MAA-OCR · 任意GLM/Ollama" FontSize="12" Opacity="0.62" />
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <Button Content="自動検出" Command="{Binding RefreshAdbDevicesCommand}" />
                 <Button Content="接続テスト" Command="{Binding RunAdbConnectionTestCommand}" />
-                <Button Content="MAA接続" Command="{Binding ConnectCommand}" />
+                <Button Content="接続" Command="{Binding ConnectCommand}" />
                 <Button Content="撮影" Command="{Binding CaptureCommand}" />
                 <Button Content="状態確認" Command="{Binding RefreshOptionalRuntimesCommand}" />
               </StackPanel>
             </Grid>
 
             <Border Grid.Row="1" CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
-              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="116,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="128,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
                 <TextBlock Text="プロファイル" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
                 <ComboBox Grid.Column="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}" ItemTemplate="{StaticResource AdbPresetComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbPresetSelectionTemplate}" />
                 <Button Grid.Column="2" Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
@@ -599,13 +608,21 @@
                 <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbSerial, Mode=TwoWay}" PlaceholderText="127.0.0.1:6520 / 127.0.0.1:16384 / emulator-5554" />
                 <Button Grid.Row="2" Grid.Column="3" Content="端末更新" Command="{Binding RefreshAdbDevicesCommand}" />
 
-                <TextBlock Grid.Row="3" Text="ADB Config" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
-                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding AdbConfigJson, Mode=TwoWay}" />
+                <TextBlock Grid.Row="3" Text="撮影方式" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding AdbScreencapMethodOptions}" SelectedItem="{Binding SelectedAdbScreencapMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
                 <TextBlock Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding AdbDetectionSummary}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
 
-                <TextBlock Grid.Row="4" Text="OCR" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
-                <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
-                <TextBlock Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding AdbDetectionDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="4" Text="入力方式" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AdbInputMethodOptions}" SelectedItem="{Binding SelectedAdbInputMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
+                <TextBlock Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding AdbMethodDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
+
+                <TextBlock Grid.Row="5" Text="ADB Config" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding AdbConfigJson, Mode=TwoWay}" />
+                <TextBlock Grid.Row="5" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding AdbMethodSummary}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Grid.Row="6" Text="OCR" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
+                <TextBlock Grid.Row="6" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding AdbDetectionDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
               </Grid>
             </Border>
 

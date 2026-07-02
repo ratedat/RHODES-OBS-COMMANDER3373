@@ -220,6 +220,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /LastCaptureImage/);
   assert.match(viewModel, /AdbPresets/);
   assert.match(viewModel, /AdbDevices/);
+  assert.match(viewModel, /AdbInputMethodOptions/);
+  assert.match(viewModel, /AdbScreencapMethodOptions/);
+  assert.match(viewModel, /SukiAdbMethodCatalog\.DefaultInputMethodIdForPreset/);
+  assert.match(viewModel, /SukiAdbMethodCatalog\.DefaultScreencapMethodIdForPreset/);
   assert.match(viewModel, /ApplyAdbPresetCommand/);
   assert.match(viewModel, /RefreshAdbDevicesCommand/);
   assert.match(viewModel, /ApplyAdbDeviceCommand/);
@@ -599,11 +603,18 @@ test("MAA resource generator output is checked into the Suki shell", () => {
 test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   const xaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
 
-  assert.match(xaml, /MAAFramework ADB接続/);
+  assert.match(xaml, /MAA ADB接続/);
+  assert.match(xaml, /MuMu高速撮影/);
   assert.match(xaml, /AdbPath/);
   assert.match(xaml, /AdbSerial/);
   assert.match(xaml, /AdbPresets/);
   assert.match(xaml, /AdbDevices/);
+  assert.match(xaml, /AdbScreencapMethodOptions/);
+  assert.match(xaml, /AdbInputMethodOptions/);
+  assert.match(xaml, /SelectedAdbScreencapMethod/);
+  assert.match(xaml, /SelectedAdbInputMethod/);
+  assert.match(xaml, /AdbMethodSummary/);
+  assert.match(xaml, /AdbMethodDetail/);
   assert.match(xaml, /ApplyAdbPresetCommand/);
   assert.match(xaml, /RefreshAdbDevicesCommand/);
   assert.match(xaml, /RunAdbConnectionTestCommand/);
@@ -775,6 +786,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource PlainComboItemTemplate\}"/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource CampaignComboItemTemplate\}"/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbPresetSelectionTemplate\}"/);
+  assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbMethodSelectionTemplate\}"/);
   assert.match(xaml, /Selector="ComboBoxItem"/);
   assert.match(xaml, /Text="\{Binding Name\}"/);
   assert.match(xaml, /Text="\{Binding Heading\}"/);
