@@ -32,7 +32,6 @@ import { clampGridColumns, gridColumnOptions, normalizePreferences, ocrEngineOpt
 import { resolveAppView } from "./lib/view-route.js";
 import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
 import { RUN_STAT_FIELDS, formatRunStatValue, normalizeRunStats, runStatDisplayItems } from "./domain/run-stats.js";
-import { getRecognitionScanActions } from "./domain/recognition/scan-actions.js";
 import { adbConnectionPresetDetails, adbConnectionPresetOptions, filterVisibleAdbCandidates, normalizeAdbSettings } from "./domain/adb-settings.js";
 import { applyChoiceListFilters } from "./domain/choice-filters.js";
 
@@ -68,7 +67,6 @@ const ui = {
   tauriStorageError: "",
   recognitionScanStatus: null,
   recognitionScanStatusError: "",
-  recognitionScanStatusTimer: null,
 };
 
 let master = null;
@@ -111,7 +109,7 @@ function getSelectedPerformance() {
 
 function renderRunStatInputs(extraClass = "") {
   const className = ["run-stat-input-grid", "field-wide", extraClass].filter(Boolean).join(" ");
-  return `<div class="${className}" aria-label="ラン基本値">
+  return `<div class="${className}" aria-label="共通取得値">
     ${RUN_STAT_FIELDS.map((field) => `<label>${html(field.label)}<input type="number" min="${field.min}" max="${field.max}" step="1" inputmode="numeric" data-field="${field.id}" value="${html(formatRunStatValue(state.run, field.id) === "-" ? "" : formatRunStatValue(state.run, field.id))}" placeholder="-" /></label>`).join("")}
   </div>`;
 }
@@ -1164,15 +1162,11 @@ function renderAdbProbeResult(detection, testResult, hypervisorStatus = null) {
 
 function renderRecognitionScanControls() {
   const campaign = getCampaign();
-  const actions = getRecognitionScanActions(campaign.id);
   return `
-    <div class="recognition-scan-scope">IS#${html(campaign.number)}向け</div>
+    <div class="recognition-scan-scope">IS#${html(campaign.number)} / MAAFramework版で実行</div>
     <div class="inline-row recognition-scan-actions">
-      ${actions.map(({ profile, profiles, label }) => {
-        const profileList = Array.isArray(profiles) && profiles.length ? profiles : [profile];
-        return `<button type="button" data-action="trigger-recognition-scan" data-profile="${html(profileList[0] || "")}" data-profiles="${html(profileList.join(","))}">${html(label)}を取得</button>`;
-      }).join("")}
-      <button type="button" class="ghost" data-action="cancel-recognition-scan">停止</button>
+      <span class="recognition-scan-note">取得対象: 源石錐 / 等級 / 分隊 / IS固有値 / オペレーター / 秘宝</span>
+      <span class="recognition-scan-note">Sukiアプリ側の認識ワークフローから実行します。</span>
     </div>
   `;
 }
@@ -1215,7 +1209,7 @@ function renderRecognitionScanStatus() {
   const current = active || last;
   const error = ui.recognitionScanStatusError;
   if (!current && !error) {
-    return `<div class="recognition-status-card idle"><div><strong>ADB取得ログ</strong><span>取得を開始すると、ここにタップ・スクショ・OCRの進行が流れます。</span></div></div>`;
+    return `<div class="recognition-status-card idle"><div><strong>MAAFramework取得ログ</strong><span>Suki / MAAFrameworkの認識ワークフローを実行すると進行と結果がここに残ります。</span></div></div>`;
   }
   const isActive = Boolean(active);
   const logRows = (current?.log || []).slice(-8).reverse();
@@ -1224,7 +1218,7 @@ function renderRecognitionScanStatus() {
   return `
     <div class="recognition-status-card ${isActive ? "active" : "complete"}">
       <div class="recognition-status-head">
-        <div><strong>${html(isActive ? "ADB取得中" : "直近のADB取得")}</strong><span>${html(current?.profileLabel || current?.profileId || "profile未取得")}</span></div>
+        <div><strong>${html(isActive ? "MAAFramework取得中" : "直近のMAAFramework取得")}</strong><span>${html(current?.profileLabel || current?.profileId || "profile未取得")}</span></div>
         <em>${html(recognitionScanStatusLabel(current?.status))}</em>
       </div>
       <div class="recognition-status-grid">
@@ -1255,10 +1249,10 @@ function renderControlV2RecognitionPanel() {
   const suggestions = state.pendingSuggestions || [];
   return `
     <section class="control-v2-panel control-v2-recognition-panel">
-      <div class="control-v2-panel-head"><h2>ADB取得</h2><span>候補 ${suggestions.length}</span></div>
+      <div class="control-v2-panel-head"><h2>MAAFramework取得</h2><span>候補 ${suggestions.length}</span></div>
       <div class="control-v2-panel-body control-v2-effect-stack">
         <div class="control-v2-subsection">
-          <div class="control-v2-subhead"><strong>外部取得</strong><span>候補承認までOverlayには反映しません</span></div>
+          <div class="control-v2-subhead"><strong>取得導線</strong><span>候補承認までOverlayには反映しません</span></div>
           ${renderRecognitionScanControls()}
           ${renderRecognitionScanStatus()}
         </div>
@@ -1310,7 +1304,7 @@ function renderControlV2StatusStrip() {
   const tierCfg = master.difficultyTiers?.[campaign.id];
   const bossEntries = getBossFlagEntries(campaign.id);
   const activeEffects = getActiveEffects();
-  const runStatCards = runStatDisplayItems(state.run).map((item) => [item.label, item.value, "ラン基本値"]);
+  const runStatCards = runStatDisplayItems(state.run).map((item) => [item.label, item.value, "共通取得値"]);
   const cards = [
     ["統合戦略", `IS#${campaign.number}`, campaign.title],
     ["等級", difficultyGrade?.label || "未選択", tierCfg ? `Tier ${getDifficultyTierLabel()}` : "固定"],
@@ -1438,7 +1432,7 @@ function renderControlV2SidecarScreen() {
       </section>
 
       <section class="control-v2-panel control-v2-sidecar-scan-panel">
-        <div class="control-v2-panel-head"><div><h2>ADB / OCR取得</h2><p>取得結果は候補扱い。承認までOverlayへ反映しません</p></div><span>scan</span></div>
+        <div class="control-v2-panel-head"><div><h2>MAAFramework / OCR取得</h2><p>取得結果は候補扱い。承認までOverlayへ反映しません</p></div><span>scan</span></div>
         <div class="control-v2-panel-body control-v2-sidecar-stack">
           ${renderRecognitionScanControls()}
           ${renderRecognitionScanStatus()}

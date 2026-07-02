@@ -124,7 +124,7 @@ cd O:\Arknights_Rogue_OBSTool
 npm.cmd run app:debug
 ```
 
-ADB取得はブラウザのHTMLだけでは端末操作できません。Electronアプリ内のローカルNodeサーバーがADB実行を担当します。
+MAAFramework取得はブラウザのHTMLだけでは端末操作できません。アプリ内のローカル実行環境がADB接続、スクリーンショット、MAA-OCRを担当します。
 
 対応エミュレーター、Google Play Games開発者エミュレーター、Hyper-V診断、標準serial、トラブルシュートは `docs/adb-setup.md` を参照してください。
 
@@ -137,14 +137,9 @@ $env:ARKNIGHTS_ADB_SERIAL = "127.0.0.1:16384"
 
 現在のプリセットは `自動`、`MuMu Player`、`LDPlayer`、`BlueStacks`、`NoxPlayer`、`逍遥 / MEmu`、`テンセントアプリストア`、`Google Play Games 開発者`、`Android Studio AVD`、`WSA`、`手動` です。通常は `自動` から試し、Google Play Games開発者エミュレーターでは `Google Play Games 開発者` を選びます。
 
-現在のControl v2では、選択中の統合戦略に応じてADB取得ボタンを出し分けます。
+取得対象は `源石錐`、`等級`、`分隊`、`IS毎の特殊値`、`オペレーター`、`秘宝` です。希望、耐久値、シールド、指揮Lvは取得対象外です。
 
-| 選択中IS | 表示される取得ボタン |
-| --- | --- |
-| IS#2 / IS#3 | 基本情報、オペレーター、秘宝 |
-| IS#4 | 基本情報、オペレーター、秘宝、啓示 |
-| IS#5 | 基本情報、オペレーター、秘宝、思案 |
-| IS#6 | 基本情報、オペレーター、秘宝、通宝 |
+認識の実行はSuki/Avalonia側の認識ワークフローから行います。Control v2は手入力、候補確認、OBS表示設定を担当します。
 
 取得結果は即座にOverlayへ反映せず、候補としてレビュー待ちに入れる設計です。誤認識や誤取得があり得るため、承認導線を通して反映する方針です。
 

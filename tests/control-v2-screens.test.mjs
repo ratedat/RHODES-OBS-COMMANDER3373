@@ -24,3 +24,13 @@ test("control-v2 screen metadata provides labels and detached-window targets", (
   assert.equal(Object.hasOwn(getControlV2ScreenMeta("operators"), "eyebrow"), false);
   assert.equal(getControlV2ScreenMeta("missing").id, "common");
 });
+
+test("control-v2 common metadata names only the retained recognition targets", () => {
+  const description = getControlV2ScreenMeta("common").description;
+
+  assert.match(description, /源石錐/);
+  assert.match(description, /等級/);
+  assert.match(description, /分隊/);
+  assert.doesNotMatch(description, /ラン基本値/);
+  assert.doesNotMatch(description, /希望|耐久|シールド|指揮Lv/);
+});

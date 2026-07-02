@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
 import { getChoiceActive, getChoiceCount, registerControlEvents, syncControlV2UiAfterStateReplace } from "../app/control-events.js";
 import { toggleChoiceExcluded } from "../app/control-actions.js";
 
@@ -43,6 +44,24 @@ test("toggleChoiceExcluded stores operator and relic display exclusion ids", () 
 
   assert.deepEqual(state.preferences.operatorExcludedIds, []);
   assert.deepEqual(state.preferences.relicExcludedIds, ["is5_sarkaz_relic_001"]);
+});
+
+test("Control v2 no longer exposes the legacy scan execution path", async () => {
+  const [appJs, controlEvents, apiJs] = await Promise.all([
+    fs.readFile("app/app.js", "utf8"),
+    fs.readFile("app/control-events.js", "utf8"),
+    fs.readFile("app/lib/api.js", "utf8"),
+  ]);
+
+  assert.doesNotMatch(appJs, /getRecognitionScanActions/);
+  assert.doesNotMatch(appJs, /trigger-recognition-scan/);
+  assert.doesNotMatch(appJs, /cancel-recognition-scan/);
+  assert.match(appJs, /MAAFramework取得/);
+  assert.doesNotMatch(controlEvents, /recognitionScanUrl/);
+  assert.doesNotMatch(controlEvents, /recognitionScanCancelUrl/);
+  assert.doesNotMatch(controlEvents, /postRecognitionScan/);
+  assert.doesNotMatch(apiJs, /recognitionScanUrl/);
+  assert.doesNotMatch(apiJs, /recognitionScanCancelUrl/);
 });
 
 

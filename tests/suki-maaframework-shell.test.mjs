@@ -608,6 +608,10 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.doesNotMatch(recognitionWorkspace, /RunSelectedProfileAdbScanCommand/);
   assert.match(xaml, /SyncRunStateFromApiCommand/);
   assert.match(xaml, /API状態同期/);
+  assert.match(xaml, /ラン取得値/);
+  assert.match(xaml, /源石錐・等級・分隊とIS固有値/);
+  assert.match(xaml, /共通値を認識/);
+  assert.doesNotMatch(xaml, /基本値を認識/);
   assert.match(xaml, /OpenRecognitionProfileCommand/);
   assert.match(xaml, /CommandParameter="\{Binding ProfileId\}"/);
   assert.match(xaml, /CommandParameter="runStatusFull"/);

@@ -136,7 +136,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _runState = runCatalog.Current;
         WorkspaceNav =
         [
-            new SukiWorkspaceNavItem("run", "ラン", "RUN", "基本値とIS固有値"),
+            new SukiWorkspaceNavItem("run", "ラン", "RUN", "取得値とIS固有値"),
             new SukiWorkspaceNavItem("choices", "選択", "CHOICES", "オペレーターと秘宝"),
             new SukiWorkspaceNavItem("recognition", "認識", "RECOGNITION", "OCR/テンプレート候補"),
             new SukiWorkspaceNavItem("output", "出力", "OUTPUT", "OBS表示構成"),
@@ -153,7 +153,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         [
             new SukiOutputPartPreview("operators", "招集オペレーター", "choices.operators", "選択中オペレーターをOBSへ表示", true, false, true, 420, 132),
             new SukiOutputPartPreview("relics", "秘宝一覧", "choices.relics", "所持秘宝と表示除外を反映", true, true, true, 420, 170),
-            new SukiOutputPartPreview("run", "ラン基本値", "run.status", "源石錐、等級、分隊、IS特殊値", true, false, false, 260, 116),
+            new SukiOutputPartPreview("run", "ラン取得値", "run.status", "源石錐、等級、分隊、IS特殊値", true, false, false, 260, 116),
             new SukiOutputPartPreview("special", "IS固有値", "run.special", "思案、啓示、灯火などキャンペーン別の値", true, true, false, 300, 126),
             new SukiOutputPartPreview("recognition", "認識ステータス", "recognition.status", "デバッグ配布時のみ候補/信頼度を表示", false, true, false, 360, 92),
         ];
@@ -467,7 +467,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         "output" => "出力 / OBS",
         "runtime" => "ランタイム",
         "debug" => "デバッグ",
-        _ => "ラン基本値",
+        _ => "ラン取得値",
     };
 
     public string ChoiceTab
@@ -1441,7 +1441,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         if (WorkspaceTab == "run")
         {
-            yield return new SukiInspectorRow("基本値", $"{RunFieldPreviews.Count}項目", "runStatusFull");
+            yield return new SukiInspectorRow("共通取得値", $"{RunFieldPreviews.Count}項目", "runStatusFull");
             yield return new SukiInspectorRow("固有値", $"{SpecialValuePreviews.Count}項目", SelectedCampaign?.Id ?? "");
             yield break;
         }

@@ -2,7 +2,7 @@ export const controlV2ScreenOptions = [
   {
     id: "common",
     label: "共通設定",
-    description: "統合戦略、等級、分隊、ラン基本値をまとめて編集します。",
+    description: "統合戦略、源石錐、等級、分隊をまとめて編集します。",
     detachPath: "/control-v2?screen=common",
   },
   {
@@ -32,7 +32,7 @@ export const controlV2ScreenOptions = [
   {
     id: "sidecar",
     label: "サイドカー",
-    description: "配信外で使う確認、ADB/OCR取得、レビュー用の支援画面です。",
+    description: "配信外で使う確認、MAAFramework/OCR取得、レビュー用の支援画面です。",
     detachPath: "/sidecar",
   },
 ];
