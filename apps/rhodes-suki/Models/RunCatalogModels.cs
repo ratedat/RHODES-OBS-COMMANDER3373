@@ -83,6 +83,16 @@ public sealed record SukiRuntimeCapabilityPreview(
     public string InstallLabel => IsOptional ? "任意DL" : "必須";
 }
 
+public sealed record SukiRuntimeCapabilityContext(
+    string AdbState,
+    string AdbDetail,
+    IntegrationStatus MaaFrameworkStatus,
+    string MaaOcrState,
+    string MaaOcrDetail,
+    SukiOptionalRuntimeStatus GlmStatus,
+    SukiOptionalRuntimeStatus OllamaStatus,
+    SukiHypervisorStatus HypervisorStatus);
+
 public sealed record SukiInspectorRow(
     string Label,
     string Value,

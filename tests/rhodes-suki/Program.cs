@@ -38,6 +38,7 @@ var tests = new (string Name, Action Run)[]
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
+    ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
@@ -62,6 +63,7 @@ var tests = new (string Name, Action Run)[]
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
     ("Resource profiles use interface groups", ResourceProfilesUseInterfaceGroups),
     ("Resource profile task filtering follows interface presets", ResourceProfileTaskFilteringFollowsInterfacePresets),
+    ("Run field registry exposes retained base and campaign-specific fields", RunFieldRegistryRetainedFields),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
@@ -991,6 +993,26 @@ static void RhodesApiStatusParsing()
         localOperators: 2,
         localRelics: 1);
     Equal("差分あり", mismatchedMaster.State, "master mismatch state");
+}
+
+static void RuntimeCapabilityRegistry()
+{
+    var capabilities = RhodesRuntimeCapabilityRegistry.Build(new SukiRuntimeCapabilityContext(
+        AdbState: "選択済み",
+        AdbDetail: "MuMu Player / 127.0.0.1:16384 / MuMu高速撮影",
+        MaaFrameworkStatus: new IntegrationStatus("MAAFramework", "参照済み", "runtime OK", true),
+        MaaOcrState: "準備済み",
+        MaaOcrDetail: "43 task / runStatusFull",
+        GlmStatus: new SukiOptionalRuntimeStatus("GLM-OCR", "未導入", "optional", false, false),
+        OllamaStatus: new SukiOptionalRuntimeStatus("Ollama", "導入済み", "ready", true, false),
+        HypervisorStatus: new SukiHypervisorStatus("確認済み", "platform OK", true, false, "info"))).ToArray();
+
+    Equal("adb|maa|maa-ocr|glm|ollama|hyperv", string.Join("|", capabilities.Select(item => item.Id)), "runtime capability order");
+    Equal("CORE|CORE|OCR|OPTIONAL|OPTIONAL|PLATFORM", string.Join("|", capabilities.Select(item => item.Tag)), "runtime capability tags");
+    Equal(false, capabilities.Single(item => item.Id == "adb").IsOptional, "adb is required");
+    Equal(true, capabilities.Single(item => item.Id == "glm").IsOptional, "missing GLM is optional download");
+    Equal(false, capabilities.Single(item => item.Id == "ollama").IsOptional, "installed Ollama does not show as pending optional download");
+    Equal("認識", capabilities.Single(item => item.Id == "maa-ocr").PrimaryAction, "maa ocr action");
 }
 
 static void OcrEngineCatalog()
@@ -2094,6 +2116,45 @@ static void ResourceProfileTaskFilteringFollowsInterfacePresets()
         profile with { TaskEntries = ["RhodesMissingTask"] });
     Equal(false, missingPlan.CanRun, "missing preset task refuses execution");
     Equal(true, missingPlan.Error.Contains("RhodesMissingTask", StringComparison.Ordinal), "missing plan names task");
+}
+
+static void RunFieldRegistryRetainedFields()
+{
+    var state = new SukiRunStateSnapshot(
+        CampaignId: "is5_sarkaz",
+        SelectedOperatorIds: new HashSet<string>(StringComparer.Ordinal),
+        SelectedRelicIds: new HashSet<string>(StringComparer.Ordinal),
+        ExcludedOperatorIds: new HashSet<string>(StringComparer.Ordinal),
+        ExcludedRelicIds: new HashSet<string>(StringComparer.Ordinal),
+        OperatorShowSelectedFirst: false,
+        OperatorHideExcluded: false,
+        OperatorSelectedOnly: false,
+        RelicShowSelectedFirst: false,
+        RelicHideExcluded: false,
+        RelicSelectedOnly: false,
+        Squad: "破棘成金分隊",
+        SquadRandomEffect: "ブループリント分隊",
+        Difficulty: "18",
+        Ingot: 13,
+        Idea: 3,
+        SpecialFields:
+        [
+            new SukiSpecialFieldState("is5_sarkaz", "thought", "思案", "effectStackLoadout", "2個", "個数入力", "is5ThoughtFull", ""),
+            new SukiSpecialFieldState("is5_sarkaz", "idea", "構想", "number", "3", "数値", "run.idea.current", ""),
+            new SukiSpecialFieldState("is5_sarkaz", "age", "時代", "effectSelect", "溶魂の端緒", "候補選択", "is5AgeFull", ""),
+            new SukiSpecialFieldState("is4_sami", "collapseValue", "崩壊値", "number", "9", "数値", "is4CollapseValue", "")
+        ]);
+
+    var header = RhodesRunFieldRegistry.BuildHeaderStatusChips(state).ToArray();
+    Equal("源石錐|IS特殊値|等級|分隊", string.Join("|", header.Select(item => item.Label)), "run header field order");
+    Equal(true, header.Single(item => item.Label == "IS特殊値").Value.Contains("構想=3", StringComparison.Ordinal), "campaign special value summarized");
+    Equal(false, header.Any(item => item.Label == "構想"), "idea is not split into a separate header chip");
+
+    var previews = RhodesRunFieldRegistry.BuildRunFieldPreviews(state).ToArray();
+    Equal("源石錐|等級|分隊|IS特殊値", string.Join("|", previews.Select(item => item.Label)), "run preview field order");
+    Equal(true, previews.Single(item => item.Label == "IS特殊値").Value.Contains("時代=溶魂の端緒", StringComparison.Ordinal), "only current campaign special fields are summarized");
+    Equal(false, previews.Single(item => item.Label == "IS特殊値").Value.Contains("崩壊値", StringComparison.Ordinal), "other campaign special fields are not summarized");
+    Equal(false, previews.Any(item => item.Label is "希望" or "耐久値" or "シールド" or "指揮Lv"), "abandoned run fields are not surfaced");
 }
 
 static void RunCatalogLoadsChoices()
