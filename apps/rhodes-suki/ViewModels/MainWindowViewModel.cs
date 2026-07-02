@@ -1580,6 +1580,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunBusyAsync(async () =>
         {
+            if (string.IsNullOrWhiteSpace(AdbSerial) || string.IsNullOrWhiteSpace(AdbPath))
+                await DetectAdbLocallyCoreAsync();
+
             StatusMessage = "MAA Controller に接続しています。";
             var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
             SessionState = snapshot.State;
@@ -1885,69 +1888,45 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RefreshAdbDevicesAsync()
     {
-        await RunBusyAsync(async () =>
-        {
-            ReplaceAdbPathCandidates(BuildPresetAdbPathCandidates());
-            ReplaceAdbDevices([]);
-            AdbDetectionSummary = "ADB自動検出中";
-            AdbDetectionDetail = $"{SelectedAdbPreset?.Label ?? "手動"} / {AdbPath}";
-            var apiDetection = await RhodesAdbApiClient.DetectAsync(
-                RhodesApiUrl,
-                new RhodesAdbApiSettings(
-                    true,
-                    SelectedAdbPreset?.Id ?? "auto",
-                    AdbPath,
-                    AdbSerial));
-            if (apiDetection.Succeeded)
-            {
-                ReplaceAdbPathCandidates(MergeAdbPathCandidates(BuildPresetAdbPathCandidates(), apiDetection.AdbCandidates));
-                ReplaceAdbDevices(apiDetection.Devices);
+        await RunBusyAsync(DetectAdbLocallyCoreAsync);
+    }
 
-                var nextAdbPath = new[] { apiDetection.RuntimeAdbPath, apiDetection.SelectedAdbPath }
-                    .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
-                if (!string.IsNullOrWhiteSpace(nextAdbPath))
-                    AdbPath = nextAdbPath;
-                var nextSerial = FirstNonEmpty(
-                    apiDetection.RuntimeSerial,
-                    apiDetection.Devices.Count(device => device.IsUsable) == 1
-                        ? apiDetection.Devices.First(device => device.IsUsable).Serial
-                        : "");
-                if (!string.IsNullOrWhiteSpace(nextSerial))
-                    AdbSerial = nextSerial;
+    private async Task DetectAdbLocallyCoreAsync()
+    {
+        ReplaceAdbPathCandidates(BuildPresetAdbPathCandidates());
+        ReplaceAdbDevices([]);
+        AdbDetectionSummary = "ADB自動検出中";
+        AdbDetectionDetail = $"{SelectedAdbPreset?.Label ?? "手動"} / {AdbPath}";
+        var localDetection = await RhodesAdbLocalDetector.DetectAsync(
+            new RhodesAdbApiSettings(
+                true,
+                SelectedAdbPreset?.Id ?? "auto",
+                AdbPath,
+                AdbSerial));
 
-                _rhodesApiStatus = new SukiOptionalRuntimeStatus(
-                    "RHODES API",
-                    "接続済み",
-                    $"ADB検出API成功 / candidates={apiDetection.AdbCandidates.Count} / devices={apiDetection.Devices.Count}",
-                    true,
-                    false);
-                AdbDetectionSummary = $"API検出: ADB候補{AdbPathCandidates.Count}件 / 端末{AdbDevices.Count}件";
-                AdbDetectionDetail = string.IsNullOrWhiteSpace(AdbSerial)
-                    ? "端末候補から使用するserialを選択してください。"
-                    : $"選択中: {AdbPath} / {AdbSerial}";
-                StatusMessage = apiDetection.Devices.Count == 0
-                    ? $"ADB検出APIは端末0件でした。候補: {apiDetection.AdbCandidates.Count}件"
-                    : $"ADB検出APIで端末を取得しました: {apiDetection.Devices.Count}件";
-                RefreshRuntimeCapabilities();
-                RefreshInspectorRows();
-                return;
-            }
+        ReplaceAdbPathCandidates(localDetection.AdbCandidates);
+        ReplaceAdbDevices(localDetection.Devices);
+        if (!string.IsNullOrWhiteSpace(localDetection.RuntimeAdbPath))
+            AdbPath = localDetection.RuntimeAdbPath;
+        if (!string.IsNullOrWhiteSpace(localDetection.RuntimeSerial))
+            AdbSerial = localDetection.RuntimeSerial;
 
-            var devices = await RhodesAdbDeviceProbe.ListDevicesAsync(AdbPath);
-            ReplaceAdbDevices(devices);
-            if (string.IsNullOrWhiteSpace(AdbSerial) && devices.Count(device => device.IsUsable) == 1)
-                AdbSerial = devices.First(device => device.IsUsable).Serial;
-
-            AdbDetectionSummary = $"ローカルADB: ADB候補{AdbPathCandidates.Count}件 / 端末{AdbDevices.Count}件";
-            AdbDetectionDetail = devices.Count == 0
-                ? $"API検出失敗: {apiDetection.Error}"
-                : $"API検出失敗: {apiDetection.Error} / {AdbPath}";
-            StatusMessage = devices.Count == 0
-                ? $"ADB端末は見つかりませんでした。API検出失敗: {apiDetection.Error}"
-                : $"ローカルADBで端末を取得しました: {devices.Count}件 (API検出失敗: {apiDetection.Error})";
-            RefreshRuntimeCapabilities();
-            RefreshInspectorRows();
-        });
+        var connectDetail = localDetection.Connect is null
+            ? ""
+            : localDetection.Connect.Succeeded
+                ? $" / connect {localDetection.Connect.Address}"
+                : $" / connect失敗 {localDetection.Connect.Address}: {localDetection.Connect.Detail}";
+        AdbDetectionSummary = $"Sukiローカル検出: ADB候補{AdbPathCandidates.Count}件 / 端末{AdbDevices.Count}件";
+        AdbDetectionDetail = string.IsNullOrWhiteSpace(localDetection.Error)
+            ? $"選択中: {AdbPath} / {(string.IsNullOrWhiteSpace(AdbSerial) ? "serial未選択" : AdbSerial)}{connectDetail}"
+            : $"{localDetection.Error}{connectDetail}";
+        SessionState = localDetection.Succeeded ? "ADB検出OK" : "ADB検出失敗";
+        SessionDetail = AdbDetectionDetail;
+        StatusMessage = localDetection.Devices.Count == 0
+            ? $"ADB端末は見つかりませんでした。{AdbDetectionDetail}"
+            : $"Sukiローカル検出で端末を取得しました: {localDetection.Devices.Count}件";
+        RefreshRuntimeCapabilities();
+        RefreshInspectorRows();
     }
 
     private void ReplaceAdbPathCandidates(IEnumerable<MaaAdbPathCandidatePreview> candidates)
@@ -1971,25 +1950,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private IReadOnlyList<MaaAdbPathCandidatePreview> BuildPresetAdbPathCandidates()
     {
-        var candidates = AdbPresets
-            .Where(preset => !string.IsNullOrWhiteSpace(preset.AdbPath))
-            .Select(preset =>
-            {
-                var path = preset.AdbPath.Trim();
-                var isPathAdb = path.Equals("adb", StringComparison.OrdinalIgnoreCase);
-                var exists = isPathAdb || File.Exists(path);
-                return new MaaAdbPathCandidatePreview(path, preset.Id, preset.Id, exists, exists, "");
-            })
-            .ToList();
-
-        if (!string.IsNullOrWhiteSpace(AdbPath)
-            && !candidates.Any(candidate => PathsEqual(candidate.Path, AdbPath)))
-        {
-            var exists = AdbPath.Equals("adb", StringComparison.OrdinalIgnoreCase) || File.Exists(AdbPath);
-            candidates.Add(new MaaAdbPathCandidatePreview(AdbPath, "manual", SelectedAdbPreset?.Id ?? "custom", exists, exists, ""));
-        }
-
-        return NormalizeAdbPathCandidates(candidates);
+        return NormalizeAdbPathCandidates(
+            RhodesAdbPresetCatalog.CandidatePaths(AdbPath, SelectedAdbPreset?.Id ?? "auto"));
     }
 
     private static IReadOnlyList<MaaAdbPathCandidatePreview> MergeAdbPathCandidates(

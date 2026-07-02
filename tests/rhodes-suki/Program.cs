@@ -30,6 +30,8 @@ var tests = new (string Name, Action Run)[]
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("ADB detect API client parses runtime, candidates, and devices", AdbApiDetectionParsing),
     ("ADB test API client parses resolution and screenshot details", AdbApiTestParsing),
+    ("Suki local ADB detector connects Google Play Games TCP serial", SukiLocalAdbDetectGooglePlay),
+    ("Suki local ADB detector prefers explicit MuMu adb path", SukiLocalAdbDetectExplicitMumu),
     ("Preview URL builder normalizes RHODES app routes", PreviewUrlBuilder),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
@@ -793,6 +795,53 @@ static void AdbApiTestParsing()
     Equal(720, result.Height, "height");
     Equal(123456L, result.ScreenshotBytes, "screenshot bytes");
     Equal("O:/debug/adb-test.png", result.ScreenshotPath, "screenshot path");
+}
+
+static void SukiLocalAdbDetectGooglePlay()
+{
+    var calls = new List<string>();
+    var result = RhodesAdbLocalDetector.DetectAsync(
+        new RhodesAdbApiSettings(true, "google-play-games-dev", "", ""),
+        fileExists: _ => false,
+        runCommand: (adbPath, args, _) =>
+        {
+            calls.Add($"{adbPath} {string.Join(" ", args)}");
+            if (args[0] == "version")
+                return Task.FromResult(new RhodesAdbCommandResult(0, "Android Debug Bridge version 1.0.41", ""));
+            if (args[0] == "connect")
+                return Task.FromResult(new RhodesAdbCommandResult(0, "connected to 127.0.0.1:6520", ""));
+            if (args[0] == "devices")
+                return Task.FromResult(new RhodesAdbCommandResult(0, "List of devices attached\n127.0.0.1:6520 device product:gpg model:Google_Play_Games\n", ""));
+            throw new InvalidOperationException("unexpected command");
+        }).GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "local detect succeeded");
+    Equal("adb", result.SelectedAdbPath, "selected adb");
+    Equal("127.0.0.1:6520", result.RuntimeSerial, "runtime serial");
+    Equal("127.0.0.1:6520", result.Connect?.Address ?? "", "connect address");
+    Equal(true, calls.Any(call => call == "adb connect 127.0.0.1:6520"), "connect called");
+}
+
+static void SukiLocalAdbDetectExplicitMumu()
+{
+    var selectedPath = "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe";
+    var result = RhodesAdbLocalDetector.DetectAsync(
+        new RhodesAdbApiSettings(true, "auto", selectedPath, ""),
+        fileExists: path => path.Equals(selectedPath, StringComparison.OrdinalIgnoreCase),
+        runCommand: (adbPath, args, _) =>
+        {
+            if (args[0] == "version")
+                return Task.FromResult(new RhodesAdbCommandResult(0, "Android Debug Bridge version 1.0.41", ""));
+            if (args[0] == "connect")
+                return Task.FromResult(new RhodesAdbCommandResult(0, $"connected to {args[1]}", ""));
+            if (args[0] == "devices")
+                return Task.FromResult(new RhodesAdbCommandResult(0, "List of devices attached\n127.0.0.1:16384 device product:MuMu model:MuMu_Player\n", ""));
+            throw new InvalidOperationException("unexpected command");
+        }).GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "local detect succeeded");
+    Equal(selectedPath, result.SelectedAdbPath, "selected adb path");
+    Equal("127.0.0.1:16384", result.RuntimeSerial, "runtime serial");
 }
 
 static void SukiSettingsStore()

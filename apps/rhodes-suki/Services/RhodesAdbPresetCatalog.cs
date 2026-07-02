@@ -4,6 +4,18 @@ namespace RhodesSuki.Services;
 
 public static class RhodesAdbPresetCatalog
 {
+    private static readonly IReadOnlyDictionary<string, string[]> DefaultSerialsByPreset = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["bluestacks"] = ["127.0.0.1:5555", "127.0.0.1:5556", "127.0.0.1:5565", "127.0.0.1:5575", "127.0.0.1:5585", "127.0.0.1:5595", "127.0.0.1:5554"],
+        ["mumu"] = ["127.0.0.1:16384", "127.0.0.1:16416", "127.0.0.1:16448", "127.0.0.1:16480", "127.0.0.1:16512", "127.0.0.1:16544", "127.0.0.1:16576"],
+        ["ldplayer"] = ["emulator-5554", "emulator-5556", "emulator-5558", "emulator-5560", "127.0.0.1:5555", "127.0.0.1:5557", "127.0.0.1:5559", "127.0.0.1:5561"],
+        ["nox"] = ["127.0.0.1:62001", "127.0.0.1:59865"],
+        ["xyaz"] = ["127.0.0.1:21503"],
+        ["tencent"] = ["127.0.0.1:5555"],
+        ["wsa"] = ["127.0.0.1:58526"],
+        ["google-play-games-dev"] = ["127.0.0.1:6520"],
+    };
+
     public static IReadOnlyList<MaaAdbPresetPreview> DefaultPresets()
     {
         return
@@ -33,12 +45,77 @@ public static class RhodesAdbPresetCatalog
                 FirstExistingOrFallback(AndroidSdkAdbPathCandidates(), "adb"),
                 "emulator-5554"),
             new MaaAdbPresetPreview(
+                "bluestacks",
+                "BlueStacks",
+                "BlueStacks_nxtのHD-Adb.exeを優先します。多重起動時は端末候補から選んでください。",
+                FirstExistingOrFallback(BlueStacksAdbPathCandidates(), "adb"),
+                "127.0.0.1:5555"),
+            new MaaAdbPresetPreview(
+                "ldplayer",
+                "LDPlayer",
+                "LDPlayer 9のadb.exeを優先します。",
+                FirstExistingOrFallback(LdPlayerAdbPathCandidates(), "adb"),
+                "emulator-5554"),
+            new MaaAdbPresetPreview(
+                "nox",
+                "NoxPlayer",
+                "Noxのnox_adb.exeを優先します。",
+                FirstExistingOrFallback(NoxAdbPathCandidates(), "adb"),
+                "127.0.0.1:62001"),
+            new MaaAdbPresetPreview(
+                "xyaz",
+                "MEmu / 逍遥",
+                "MEmu / Microvirt系のadb.exeを優先します。",
+                FirstExistingOrFallback(MEmuAdbPathCandidates(), "adb"),
+                "127.0.0.1:21503"),
+            new MaaAdbPresetPreview(
+                "wsa",
+                "Windows Subsystem for Android",
+                "WSAの既定ADBポートを使います。",
+                "adb",
+                "127.0.0.1:58526"),
+            new MaaAdbPresetPreview(
                 "custom",
                 "手動",
                 "ADBパスとserialを手動入力します。",
                 "adb",
                 ""),
         ];
+    }
+
+    public static IReadOnlyList<MaaAdbPathCandidatePreview> CandidatePaths(string adbPath = "", string selectedPresetId = "auto")
+    {
+        var candidates = new List<MaaAdbPathCandidatePreview>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        PushCandidate(candidates, seen, adbPath, "settings", selectedPresetId);
+        PushCandidate(candidates, seen, Environment.GetEnvironmentVariable("ARKNIGHTS_ADB_PATH"), "env", "custom");
+
+        foreach (var candidate in AndroidSdkAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "known-path", "avd");
+        foreach (var candidate in MuMuAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "known-path", "mumu");
+        foreach (var candidate in BlueStacksAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "known-path", "bluestacks");
+        foreach (var candidate in LdPlayerAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "known-path", "ldplayer");
+        foreach (var candidate in NoxAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "known-path", "nox");
+        foreach (var candidate in MEmuAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "known-path", "xyaz");
+        foreach (var candidate in TencentAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "known-path", "tencent");
+        foreach (var candidate in GooglePlayGamesAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "known-path", "google-play-games-dev");
+
+        PushCandidate(candidates, seen, "adb", "path", "custom");
+        return candidates;
+    }
+
+    public static IReadOnlyList<string> DefaultSerials(string presetId)
+    {
+        return DefaultSerialsByPreset.TryGetValue(presetId, out var serials)
+            ? serials
+            : [];
     }
 
     private static IEnumerable<string> MuMuAdbPathCandidates()
@@ -49,6 +126,42 @@ public static class RhodesAdbPresetCatalog
             yield return Path.Combine(root, "Netease", "MuMu PlayerGlobal-12.0", "shell", "adb.exe");
             yield return Path.Combine(root, "MuMu Player 12", "shell", "adb.exe");
         }
+    }
+
+    private static IEnumerable<string> BlueStacksAdbPathCandidates()
+    {
+        foreach (var root in ProgramInstallRoots())
+        {
+            yield return Path.Combine(root, "BlueStacks_nxt", "HD-Adb.exe");
+            yield return Path.Combine(root, "BlueStacks_nxt", "Engine", "ProgramFiles", "HD-Adb.exe");
+        }
+    }
+
+    private static IEnumerable<string> LdPlayerAdbPathCandidates()
+    {
+        foreach (var root in ProgramInstallRoots())
+            yield return Path.Combine(root, "LDPlayer", "LDPlayer9", "adb.exe");
+    }
+
+    private static IEnumerable<string> NoxAdbPathCandidates()
+    {
+        foreach (var root in ProgramInstallRoots())
+        {
+            yield return Path.Combine(root, "Nox", "bin", "nox_adb.exe");
+            yield return Path.Combine(root, "Nox", "bin", "adb.exe");
+        }
+    }
+
+    private static IEnumerable<string> MEmuAdbPathCandidates()
+    {
+        foreach (var root in ProgramInstallRoots())
+            yield return Path.Combine(root, "Microvirt", "MEmu", "adb.exe");
+    }
+
+    private static IEnumerable<string> TencentAdbPathCandidates()
+    {
+        foreach (var root in ProgramInstallRoots())
+            yield return Path.Combine(root, "Tencent", "Androws", "Application", "adb.exe");
     }
 
     private static IEnumerable<string> GooglePlayGamesAdbPathCandidates()
@@ -125,5 +238,23 @@ public static class RhodesAdbPresetCatalog
         }
 
         return fallback;
+    }
+
+    private static void PushCandidate(
+        ICollection<MaaAdbPathCandidatePreview> candidates,
+        ISet<string> seen,
+        string? path,
+        string source,
+        string preset)
+    {
+        var normalized = string.IsNullOrWhiteSpace(path) ? "" : path.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+            return;
+
+        var key = normalized.Replace("\\.\\", "\\", StringComparison.Ordinal).Replace('\\', '/').ToLowerInvariant();
+        if (!seen.Add(key))
+            return;
+
+        candidates.Add(new MaaAdbPathCandidatePreview(normalized, source, string.IsNullOrWhiteSpace(preset) ? "custom" : preset, false, false, ""));
     }
 }
