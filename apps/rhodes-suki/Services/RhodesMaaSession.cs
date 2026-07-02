@@ -36,8 +36,17 @@ public sealed class RhodesMaaSession : IDisposable
         var options = DefaultAdbOptions();
         var resourceExists = Directory.Exists(options.ResourceRoot);
         var agentExists = Directory.Exists(options.AgentBinaryRoot);
-        var state = resourceExists ? "Resource検出" : "Resource未配置";
-        var detail = agentExists
+        var missingResources = resourceExists
+            ? RhodesMaaPaths.MissingRecognitionResourceFiles(options.ResourceRoot)
+            : Array.Empty<string>();
+        var state = !resourceExists
+            ? "Resource未配置"
+            : missingResources.Count > 0
+                ? "認識資産不足"
+                : "Resource検出";
+        var detail = missingResources.Count > 0
+            ? RhodesMaaPaths.RecognitionResourceStatusDetail(options.ResourceRoot)
+            : agentExists
             ? "MAA Resource と AgentBinary の探索パスを確認しました。"
             : "MAA Resource は作成済みです。AgentBinary は NuGet publish 出力で確認します。";
 
@@ -48,7 +57,7 @@ public sealed class RhodesMaaSession : IDisposable
             options.AgentBinaryRoot,
             resourceExists,
             agentExists,
-            resourceExists);
+            resourceExists && missingResources.Count == 0);
     }
 
     public async Task<MaaSessionSnapshot> InitializeAdbAsync(MaaSessionOptions options, CancellationToken cancellationToken = default)

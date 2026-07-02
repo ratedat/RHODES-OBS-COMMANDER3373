@@ -28,6 +28,24 @@
     <Content Include="..\..\assets\recognition\templates\run\*.png" Link="resource\base\image\run\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\third_party\maa\resource\ocr_config.json" Link="resource\base\ocr_config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\third_party\maa\resource\PaddleOCR\**\*.*" Link="resource\base\PaddleOCR\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\third_party\maa\resource\global\YoStarJP\resource\ocr_config.json" Link="resource\base\global\YoStarJP\resource\ocr_config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\third_party\maa\resource\global\YoStarJP\resource\recruitment.json" Link="resource\base\global\YoStarJP\resource\recruitment.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\third_party\maa\resource\global\YoStarJP\resource\PaddleOCR\**\*.*" Link="resource\base\global\YoStarJP\resource\PaddleOCR\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\third_party\maa\resource\template\Roguelike\base\RoguelikeRecruitOcrFlag.png" Link="resource\base\image\third_party\maa\resource\template\Roguelike\base\RoguelikeRecruitOcrFlag.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\assets\operators\**\*.png" Link="assets\operators\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

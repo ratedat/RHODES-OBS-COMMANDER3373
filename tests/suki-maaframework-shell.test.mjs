@@ -14,6 +14,10 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(csproj, /resource\\base\\pipeline\\rhodes-generated\.json/);
   assert.match(csproj, /interface\.json/);
   assert.match(csproj, /assets\\recognition\\templates\\run\\\*\.png/);
+  assert.match(csproj, /third_party\\maa\\resource\\ocr_config\.json/);
+  assert.match(csproj, /third_party\\maa\\resource\\PaddleOCR\\\*\*\\\*\.\*/);
+  assert.match(csproj, /third_party\\maa\\resource\\global\\YoStarJP\\resource\\PaddleOCR\\\*\*\\\*\.\*/);
+  assert.match(csproj, /RoguelikeRecruitOcrFlag\.png/);
   assert.match(csproj, /assets\\operators\\\*\*\\\*\.png/);
   assert.match(csproj, /assets\\relics\\\*\*\\\*\.png/);
   assert.match(csproj, /data\\campaigns\.json/);
@@ -56,6 +60,7 @@ test("Suki service tests cover MAA Resource detail conversion behavior", async (
 
 test("Suki shell keeps MAA session and probe code in thin RHODES-owned services", async () => {
   const session = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaSession.cs", "utf8");
+  const maaPaths = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaPaths.cs", "utf8");
   const optionalRuntimeProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesOptionalRuntimeProbe.cs", "utf8");
   const hypervisorProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesHypervisorProbe.cs", "utf8");
   const runtimeProbe = await fs.readFile("apps/rhodes-suki/Services/MaaFrameworkRuntimeProbe.cs", "utf8");
@@ -102,6 +107,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(session, /AppendTask/);
   assert.match(session, /GetRecognitionDetail/);
   assert.match(session, /RecognitionDetailJson/);
+  assert.match(session, /MissingRecognitionResourceFiles/);
+  assert.match(session, /認識資産不足/);
+  assert.match(maaPaths, /RequiredRecognitionResourceFiles/);
+  assert.match(maaPaths, /PaddleOCR\/det\/inference\.onnx/);
+  assert.match(maaPaths, /global\/YoStarJP\/resource\/PaddleOCR\/rec\/inference\.onnx/);
   assert.match(probe, /AppendRecognition/);
   assert.match(probe, /TemplateMatch/);
   assert.match(probe, /RecognitionDetailJson/);
@@ -133,6 +143,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runCatalog, /IsProjectRootStatePath/);
   assert.match(runCatalog, /ResolveLocalPath/);
   assert.match(runCatalog, /SukiRunStateSnapshot/);
+  assert.match(viewModel, /EnsureMaaOcrReadyForRecognition/);
+  assert.match(viewModel, /RecognitionResourceStatusDetail/);
   assert.match(bitmapPathConverter, /IValueConverter/);
   assert.match(bitmapPathConverter, /new Bitmap\(path\)/);
   assert.match(choiceFilter, /ShowSelectedFirst/);
@@ -241,7 +253,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /LoadSettings/);
   assert.match(viewModel, /ResourceTaskDiagnostics/);
   assert.match(viewModel, /MaaOcrStatusState/);
-  assert.match(viewModel, /Resource化済み/);
+  assert.match(viewModel, /準備済み/);
+  assert.match(viewModel, /認識資産不足/);
   assert.doesNotMatch(viewModel, /"MAA-OCR",\s*"移行対象"/);
   assert.match(viewModel, /RunAllProbesCommand/);
   assert.match(viewModel, /RunSelectedProfileRecognitionCommand/);
@@ -619,6 +632,11 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectedAdbInputMethod/);
   assert.match(xaml, /AdbMethodSummary/);
   assert.match(xaml, /AdbMethodDetail/);
+  assert.match(xaml, /StackPanel Grid\.Column="2" Spacing="8" Width="300"/);
+  assert.match(xaml, /<WrapPanel Classes="runtimeActions" HorizontalAlignment="Right">\s*<Button Content="保存"/s);
+  assert.doesNotMatch(xaml, /StackPanel Grid\.Column="2" Spacing="8" MinWidth="260"/);
+  assert.match(xaml, /<Grid RowDefinitions="Auto,Auto" RowSpacing="6">\s*<TextBlock Text="プレビュー \/ 結果"/s);
+  assert.match(xaml, /<WrapPanel Grid\.Row="1" Classes="runtimeActions">\s*<TextBlock Text="\{Binding CapturePixelSizeLabel\}"/s);
   const runtimeWorkspaceVisible = xaml.indexOf('IsVisible="{Binding IsRuntimeWorkspaceVisible}"');
   const runtimeWorkspaceStart = xaml.lastIndexOf("<ScrollViewer", runtimeWorkspaceVisible);
   const runtimeWorkspaceEnd = xaml.indexOf('IsVisible="{Binding IsDebugWorkspaceVisible}"');

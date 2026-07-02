@@ -41,6 +41,7 @@ var tests = new (string Name, Action Run)[]
     ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
+    ("MAA recognition resource paths diagnose OCR asset readiness", MaaRecognitionResourcePathDiagnostics),
     ("MAA recognition probe payloads target retained fields", RecognitionProbePayloadsTargetRetainedFields),
     ("MAA task diagnostics summarize counts and OCR previews", TaskDiagnostics),
     ("MAA OCR detail rows expose raw OCR result groups", OcrDetailRowsExposeRawGroups),
@@ -1089,6 +1090,33 @@ static void MaaFrameworkRuntimeDiagnostics()
     Equal("参照済み", ok.State, "ok state");
     Equal(true, ok.IsReady, "ok ready");
     Equal(true, ok.Detail.Contains("VC++ runtime OK", StringComparison.Ordinal), "ok vc detail");
+}
+
+static void MaaRecognitionResourcePathDiagnostics()
+{
+    var directory = Path.Combine(Path.GetTempPath(), $"rhodes-maa-resource-{Guid.NewGuid():N}");
+    try
+    {
+        var missing = RhodesMaaPaths.MissingRecognitionResourceFiles(directory);
+        Equal(true, missing.Contains("PaddleOCR/det/inference.onnx"), "missing detector model");
+        Equal(true, missing.Contains("global/YoStarJP/resource/PaddleOCR/rec/inference.onnx"), "missing jp rec model");
+        Equal(true, RhodesMaaPaths.RecognitionResourceStatusDetail(directory).Contains("missing=", StringComparison.Ordinal), "missing status detail");
+
+        foreach (var relative in missing)
+        {
+            var path = Path.Combine(directory, relative.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, "ok");
+        }
+
+        Equal(0, RhodesMaaPaths.MissingRecognitionResourceFiles(directory).Count, "all resource files present");
+        Equal(true, RhodesMaaPaths.RecognitionResourceStatusDetail(directory).Contains("asset OK", StringComparison.Ordinal), "ready status detail");
+    }
+    finally
+    {
+        if (Directory.Exists(directory))
+            Directory.Delete(directory, true);
+    }
 }
 
 static void RecognitionProbePayloadsTargetRetainedFields()

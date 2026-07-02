@@ -126,7 +126,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 "MAA-OCR",
                 MaaOcrStatusState(),
                 MaaOcrStatusDetail(),
-                _allResourceTasks.Count > 0),
+                IsMaaOcrReady()),
             new IntegrationStatus("GLM-OCR", "任意導入", "高精度検証用の別ランタイムとして維持", false),
         ];
 
@@ -1455,7 +1455,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private string MaaOcrStatusState()
     {
-        return _allResourceTasks.Count > 0 ? "Resource化済み" : "未生成";
+        if (_allResourceTasks.Count <= 0)
+            return "未生成";
+
+        return RhodesMaaPaths.MissingRecognitionResourceFiles().Count == 0 ? "準備済み" : "認識資産不足";
     }
 
     private string MaaOcrStatusDetail()
@@ -1464,7 +1467,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return "tools/generate-maa-resource.mjs でResourceを生成してください。";
 
         var profile = SelectedResourceProfile?.DisplayName ?? "プロファイル未選択";
-        return $"{_allResourceTasks.Count} task / {profile}";
+        var resourceDetail = RhodesMaaPaths.RecognitionResourceStatusDetail();
+        return $"{_allResourceTasks.Count} task / {profile} / {resourceDetail}";
+    }
+
+    private bool IsMaaOcrReady()
+    {
+        return _allResourceTasks.Count > 0 && RhodesMaaPaths.MissingRecognitionResourceFiles().Count == 0;
+    }
+
+    private bool EnsureMaaOcrReadyForRecognition()
+    {
+        if (IsMaaOcrReady())
+            return true;
+
+        var detail = _allResourceTasks.Count <= 0
+            ? "MAA Resource task が未生成です。"
+            : RhodesMaaPaths.RecognitionResourceStatusDetail();
+        SessionState = "認識準備不足";
+        SessionDetail = detail;
+        StatusMessage = $"MAA-OCRを実行できません: {detail}";
+        RefreshRuntimeCapabilities();
+        RefreshInspectorRows();
+        return false;
     }
 
     private void RefreshRuntimeCapabilities()
@@ -3389,6 +3414,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = plan.Summary;
             return;
         }
+        if (!EnsureMaaOcrReadyForRecognition())
+            return;
+
         _lastResourceExecutionPlan = plan;
         StatusMessage = $"MAA実行計画: {plan.Summary}";
         if (!await ForceCaptureAsync())

@@ -188,18 +188,18 @@
           </ScrollViewer>
         </StackPanel>
 
-        <StackPanel Grid.Column="2" Spacing="8" MinWidth="260">
+        <StackPanel Grid.Column="2" Spacing="8" Width="300">
           <Border CornerRadius="7" Padding="10,7" Background="#132021" BorderBrush="#2B4547" BorderThickness="1">
             <StackPanel Spacing="2">
               <TextBlock Text="{Binding AdbHeaderTitle}" FontSize="13" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding AdbHeaderDetail}" FontSize="10" Opacity="0.66" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding AdbHeaderDetail}" FontSize="10" Opacity="0.66" TextWrapping="Wrap" MaxHeight="30" />
             </StackPanel>
           </Border>
-          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+          <WrapPanel Classes="runtimeActions" HorizontalAlignment="Right">
             <Button Content="保存" Command="{Binding SaveSettingsCommand}" />
             <Button Content="接続" Command="{Binding ConnectCommand}" />
             <Button Content="撮影" Command="{Binding CaptureCommand}" />
-          </StackPanel>
+          </WrapPanel>
         </StackPanel>
       </Grid>
     </Border>
@@ -810,15 +810,15 @@
 
         <Border Grid.Row="1" CornerRadius="10" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
           <Grid RowDefinitions="Auto,155,Auto,*,Auto,*" RowSpacing="10">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
               <TextBlock Text="プレビュー / 結果" FontSize="18" FontWeight="SemiBold" />
-              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <WrapPanel Grid.Row="1" Classes="runtimeActions">
                 <TextBlock Text="{Binding CapturePixelSizeLabel}" FontFamily="Consolas" FontSize="11" VerticalAlignment="Center" Opacity="0.58" />
                 <TextBlock Text="{Binding RoiProjectionLabel}" FontFamily="Consolas" FontSize="11" VerticalAlignment="Center" Opacity="0.58" />
                 <CheckBox Content="ROI" IsChecked="{Binding ShowRoiOverlay, Mode=TwoWay}" VerticalAlignment="Center" />
                 <Button Content="候補を反映" Command="{Binding ApplyCandidateResultsCommand}" Padding="8,4" />
                 <TextBlock Text="{Binding LastCandidateApplySummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.58" />
-              </StackPanel>
+              </WrapPanel>
             </Grid>
 
             <Border Grid.Row="1" CornerRadius="7" Padding="8" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1">
