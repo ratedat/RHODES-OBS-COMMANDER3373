@@ -53,6 +53,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private MaaRoiDraftApplyResult _roiDraftApplyResult = MaaRoiDraftApplyResult.Failed("未確認");
     private MaaRoiBatchApplyResult _roiBatchApplyResult = MaaRoiBatchApplyResult.Failed("未確認");
     private MaaResourceGenerationResult _maaResourceGenerationResult = MaaResourceGenerationResult.Failed("未実行");
+    private MaaResourceContractSnapshot _maaResourceContract = RhodesMaaResourceCatalog.ValidateContract();
     private string _rhodesApiUrl = "http://127.0.0.1:5173";
     private string _statusMessage = "MAAFramework の検証準備ができています。";
     private string _roiSessionRestoreNotice = "ROI調整セッション未読込";
@@ -368,6 +369,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set
         {
             if (!SetProperty(ref _resourceTaskDiagnostics, value))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
+    public MaaResourceContractSnapshot MaaResourceContract
+    {
+        get => _maaResourceContract;
+        private set
+        {
+            if (!SetProperty(ref _maaResourceContract, value))
                 return;
             RefreshInspectorRows();
         }
@@ -1492,6 +1504,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 string.IsNullOrWhiteSpace(LastRoiSessionPath) ? $"{RoiBatchDrafts.Count}候補" : LastRoiSessionPath,
                 $"{RoiBatchApplyResult.Summary} / 保存{RoiAdjustmentSessions.Count}件");
             yield return new SukiInspectorRow("ROI比較", RoiRescanComparisonSummary, RoiRescanComparisonEvidenceSummary);
+            yield return new SukiInspectorRow("MAA契約", MaaResourceContract.Summary, MaaResourceContract.Detail);
             yield return new SukiInspectorRow("MAA Resource", MaaResourceGenerationResult.Message, MaaResourceGenerationResult.OutputPath);
             yield return new SukiInspectorRow(
                 "結果JSON",
@@ -3503,6 +3516,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         var selectedProfileId = SelectedResourceProfile?.Id;
         _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
+        MaaResourceContract = RhodesMaaResourceCatalog.ValidateContract();
         ReplaceCollection(ResourceProfiles, RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks));
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => string.Equals(profile.Id, selectedProfileId, StringComparison.Ordinal))
             ?? ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull")

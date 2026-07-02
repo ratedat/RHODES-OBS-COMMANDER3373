@@ -184,6 +184,24 @@ public sealed record MaaResourceProfilePreview(
     public string SourceSummary => string.IsNullOrWhiteSpace(Source) ? "source: local profile ids" : $"source: {Source}";
 }
 
+public sealed record MaaResourceContractSnapshot(
+    bool IsValid,
+    int TaskCount,
+    int GroupCount,
+    int PresetCount,
+    IReadOnlyList<string> Errors)
+{
+    public string State => IsValid ? "OK" : "NG";
+
+    public string Summary => IsValid
+        ? $"OK task={TaskCount} group={GroupCount} preset={PresetCount}"
+        : $"NG errors={Errors.Count} task={TaskCount} group={GroupCount} preset={PresetCount}";
+
+    public string Detail => Errors.Count == 0
+        ? "interface.json / resource/base/pipeline"
+        : string.Join(" / ", Errors.Take(3));
+}
+
 public sealed record MaaTaskRunResult(
     string Entry,
     string Status,

@@ -110,6 +110,124 @@ public static class RhodesMaaResourceCatalog
         return groups;
     }
 
+    public static MaaResourceContractSnapshot ValidateContract()
+    {
+        var errors = new List<string>();
+        var interfacePath = Path.Combine(AppContext.BaseDirectory, InterfaceSource);
+        if (!File.Exists(interfacePath))
+        {
+            errors.Add($"interface.json not found: {interfacePath}");
+            return new MaaResourceContractSnapshot(false, 0, 0, 0, errors);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(interfacePath));
+            var root = document.RootElement;
+            var pipelineEntries = PipelineEntries(errors);
+            var controllers = NamedSet(root, "controller");
+            var resources = NamedSet(root, "resource");
+            var groups = NamedSet(root, "group");
+            var tasks = ArrayItems(root, "task");
+            var presets = ArrayItems(root, "preset");
+            var taskNames = tasks
+                .Select(task => JsonString(task, "name"))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToHashSet(StringComparer.Ordinal);
+
+            AddDuplicateErrors(errors, ArrayItems(root, "controller").Select(item => JsonString(item, "name")), "controller");
+            AddDuplicateErrors(errors, ArrayItems(root, "resource").Select(item => JsonString(item, "name")), "resource");
+            AddDuplicateErrors(errors, ArrayItems(root, "group").Select(item => JsonString(item, "name")), "group");
+            AddDuplicateErrors(errors, tasks.Select(task => JsonString(task, "name")), "task name");
+            AddDuplicateErrors(errors, tasks.Select(task => JsonString(task, "entry")), "task entry");
+            AddDuplicateErrors(errors, presets.Select(preset => JsonString(preset, "name")), "preset");
+
+            foreach (var resource in ArrayItems(root, "resource"))
+            {
+                var resourceName = JsonString(resource, "name");
+                foreach (var controllerName in JsonStrings(resource, "controller"))
+                {
+                    if (!controllers.Contains(controllerName))
+                        errors.Add($"resource {resourceName} references unknown controller {controllerName}");
+                }
+                foreach (var resourcePath in JsonStrings(resource, "path"))
+                {
+                    var path = Path.Combine(AppContext.BaseDirectory, resourcePath.Replace('/', Path.DirectorySeparatorChar));
+                    if (!Directory.Exists(path))
+                        errors.Add($"resource {resourceName} path does not exist: {resourcePath}");
+                }
+            }
+
+            foreach (var task in tasks)
+            {
+                var taskName = JsonString(task, "name");
+                var entry = JsonString(task, "entry");
+                if (string.IsNullOrWhiteSpace(taskName))
+                    errors.Add("task is missing name");
+                if (string.IsNullOrWhiteSpace(entry))
+                    errors.Add($"task {DisplayName(taskName)} is missing entry");
+                else if (!pipelineEntries.Contains(entry))
+                    errors.Add($"task {DisplayName(taskName)} references unknown pipeline entry {entry}");
+
+                foreach (var controllerName in JsonStrings(task, "controller"))
+                {
+                    if (!controllers.Contains(controllerName))
+                        errors.Add($"task {DisplayName(taskName)} references unknown controller {controllerName}");
+                }
+                foreach (var resourceName in JsonStrings(task, "resource"))
+                {
+                    if (!resources.Contains(resourceName))
+                        errors.Add($"task {DisplayName(taskName)} references unknown resource {resourceName}");
+                }
+                foreach (var groupName in JsonStrings(task, "group"))
+                {
+                    if (!groups.Contains(groupName))
+                        errors.Add($"task {DisplayName(taskName)} references unknown group {groupName}");
+                }
+            }
+
+            foreach (var preset in presets)
+            {
+                var presetName = JsonString(preset, "name");
+                if (!groups.Contains(presetName))
+                    errors.Add($"preset {DisplayName(presetName)} has no matching group");
+                var presetTaskNames = PresetTaskNames(preset).ToHashSet(StringComparer.Ordinal);
+                var groupedTaskNames = tasks
+                    .Where(task => JsonStrings(task, "group").Contains(presetName, StringComparer.Ordinal))
+                    .Select(task => JsonString(task, "name"))
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .ToHashSet(StringComparer.Ordinal);
+
+                foreach (var taskName in presetTaskNames)
+                {
+                    if (!taskNames.Contains(taskName))
+                        errors.Add($"preset {presetName} references unknown task {taskName}");
+                }
+                if (groups.Contains(presetName) && !presetTaskNames.SetEquals(groupedTaskNames))
+                {
+                    var missing = groupedTaskNames.Except(presetTaskNames, StringComparer.Ordinal).ToArray();
+                    var extra = presetTaskNames.Except(groupedTaskNames, StringComparer.Ordinal).ToArray();
+                    if (missing.Length > 0)
+                        errors.Add($"preset {presetName} is missing grouped tasks: {string.Join(", ", missing)}");
+                    if (extra.Length > 0)
+                        errors.Add($"preset {presetName} contains non-group tasks: {string.Join(", ", extra)}");
+                }
+            }
+
+            return new MaaResourceContractSnapshot(
+                errors.Count == 0,
+                tasks.Count,
+                groups.Count,
+                presets.Count,
+                errors);
+        }
+        catch (Exception ex)
+        {
+            errors.Add(ex.Message);
+            return new MaaResourceContractSnapshot(false, 0, 0, 0, errors);
+        }
+    }
+
     public static bool TaskAppliesToProfile(MaaResourceTaskPreview task, MaaResourceProfilePreview? profile)
     {
         if (profile is null || profile.Id == "all")
@@ -292,6 +410,84 @@ public static class RhodesMaaResourceCatalog
         }
         var tokens = normalized.ToString().Split(['_', '.', '-'], StringSplitOptions.RemoveEmptyEntries);
         return !tokens.Any(token => AbandonedRunIdTokens.Contains(token));
+    }
+
+    private static HashSet<string> PipelineEntries(ICollection<string> errors)
+    {
+        var entries = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var relativePath in new[] { ManualPipelineSource, GeneratedPipelineSource })
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+            {
+                errors.Add($"pipeline not found: {relativePath}");
+                continue;
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                foreach (var node in document.RootElement.EnumerateObject())
+                    entries.Add(node.Name);
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{relativePath}: {ex.Message}");
+            }
+        }
+        return entries;
+    }
+
+    private static IReadOnlyList<JsonElement> ArrayItems(JsonElement root, string propertyName)
+    {
+        if (root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty(propertyName, out var property)
+            || property.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return property.EnumerateArray().ToArray();
+    }
+
+    private static HashSet<string> NamedSet(JsonElement root, string propertyName)
+    {
+        return ArrayItems(root, propertyName)
+            .Select(item => JsonString(item, "name"))
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static void AddDuplicateErrors(ICollection<string> errors, IEnumerable<string> values, string label)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var value in values.Where(value => !string.IsNullOrWhiteSpace(value)))
+        {
+            if (!seen.Add(value))
+                errors.Add($"duplicate {label}: {value}");
+        }
+    }
+
+    private static IEnumerable<string> PresetTaskNames(JsonElement preset)
+    {
+        if (preset.ValueKind != JsonValueKind.Object
+            || !preset.TryGetProperty("task", out var tasks)
+            || tasks.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        foreach (var task in tasks.EnumerateArray())
+        {
+            var name = JsonString(task, "name");
+            if (!string.IsNullOrWhiteSpace(name))
+                yield return name;
+        }
+    }
+
+    private static string DisplayName(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "<unknown>" : value;
     }
 
     private static string JsonString(JsonElement element, string propertyName)

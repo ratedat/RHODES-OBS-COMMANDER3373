@@ -52,6 +52,7 @@ var tests = new (string Name, Action Run)[]
     ("Evidence preview tree uses compact typed nodes", EvidencePreviewTreeUsesCompactTypedNodes),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
     ("Resource catalog reads checked-in pipeline nodes", ResourceCatalogReadsPipelineNodes),
+    ("Resource catalog validates MAA interface contract", ResourceCatalogValidatesInterfaceContract),
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
     ("Resource profiles use interface groups", ResourceProfilesUseInterfaceGroups),
     ("Resource profile task filtering follows interface presets", ResourceProfileTaskFilteringFollowsInterfacePresets),
@@ -1827,6 +1828,20 @@ static void ResourceCatalogReadsPipelineNodes()
     var generated = tasks.Single(task => task.Entry == "RhodesTemplate_operatorsFull_operator_card_name");
     Equal("scan-profiles.templateOcrRegions", generated.Source, "generated source");
     Equal("profiles: operatorsFull", generated.ProfileSummary, "generated card profile");
+}
+
+static void ResourceCatalogValidatesInterfaceContract()
+{
+    var contract = RhodesMaaResourceCatalog.ValidateContract();
+
+    Equal(true, contract.IsValid, "resource contract valid");
+    Equal("OK", contract.State, "resource contract state");
+    Equal(true, contract.TaskCount > 0, "resource contract task count");
+    Equal(true, contract.GroupCount >= 7, "resource contract group count");
+    Equal(true, contract.PresetCount >= 7, "resource contract preset count");
+    Equal(0, contract.Errors.Count, "resource contract errors");
+    Equal(true, contract.Summary.Contains("task=", StringComparison.Ordinal), "resource contract summary");
+    Equal(true, contract.Detail.Contains("interface.json", StringComparison.Ordinal), "resource contract detail");
 }
 
 static void ResourceProfileOrder()

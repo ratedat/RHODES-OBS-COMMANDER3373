@@ -99,6 +99,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(catalog, /JsonDocument\.Parse/);
   assert.match(catalog, /GeneratedTasks/);
   assert.match(catalog, /ProfileGroups/);
+  assert.match(catalog, /ValidateContract/);
   assert.match(catalog, /profileIds/);
   assert.match(adbPresets, /google-play-games-dev/);
   assert.match(adbPresets, /127\.0\.0\.1:6520/);
@@ -192,6 +193,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(models, /DiffSummary/);
   assert.match(models, /BackupSummary/);
   assert.match(models, /MaaResourceGenerationResult/);
+  assert.match(models, /MaaResourceContractSnapshot/);
   assert.match(models, /FromPreview/);
   assert.match(models, /SukiOptionalRuntimeStatus/);
   assert.match(models, /MaaCandidatePreview/);
@@ -305,6 +307,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /VisibleResourceRoiDrafts/);
   assert.match(viewModel, /RegenerateMaaResourceCommand/);
   assert.match(viewModel, /MaaResourceGenerationResult/);
+  assert.match(viewModel, /MaaResourceContract/);
+  assert.match(viewModel, /MAA契約/);
   assert.match(viewModel, /RoiDraftApplyResult/);
   assert.match(viewModel, /RoiBatchApplyResult/);
   assert.match(viewModel, /RoiBatchDrafts/);
