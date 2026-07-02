@@ -1,40 +1,17 @@
 using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace RhodesSuki.Services;
 
 public static class RhodesMaaRecognitionPolicy
 {
-    private static readonly HashSet<string> RetainedRunRecognitionIds = new(StringComparer.Ordinal)
-    {
-        "run.squad.info.panel",
-        "run.status.idea.icon",
-        "run.status.ingot.icon",
-        "run.operator.list",
-        "run.sarkaz.age.detail",
-        "run.map.footer",
-        "run.map.footer.relic",
-        "run.ingot",
-        "run.idea",
-        "run.idea.current",
-        "run.squad.card",
-        "run.squad.name",
-        "run.difficulty.grade",
-        "run.difficulty.block",
-    };
-
-    private static readonly HashSet<string> AbandonedRunFields = new(StringComparer.Ordinal)
-    {
-        "hope",
-        "maxHope",
-        "lifePoints",
-        "shield",
-        "commandLevel",
-    };
+    public const string TargetPolicySourcePath = "data/recognition/maa-recognition-target-policy.json";
+    private static readonly Lazy<TargetPolicy> Policy = new(LoadTargetPolicy);
 
     public static bool IsRetainedRecognitionSource(string? id, string? candidateField = "")
     {
         return !IsAbandonedRunRecognitionId(id)
-            && !AbandonedRunFields.Contains(candidateField ?? "");
+            && !Policy.Value.AbandonedRunFields.Contains(candidateField ?? "");
     }
 
     public static bool IsPublishableEntry(string? entry)
@@ -53,7 +30,7 @@ public static class RhodesMaaRecognitionPolicy
     {
         var retainedId = RetainedRunRecognitionId(id);
         return !string.IsNullOrWhiteSpace(retainedId)
-            && !RetainedRunRecognitionIds.Contains(retainedId);
+            && !Policy.Value.RetainedRunRecognitionIds.Contains(retainedId);
     }
 
     private static IReadOnlyList<string> IdTokens(string? value)
@@ -76,4 +53,49 @@ public static class RhodesMaaRecognitionPolicy
 
         return runIndex < 0 ? "" : string.Join(".", tokens.Skip(runIndex));
     }
+
+    private static TargetPolicy LoadTargetPolicy()
+    {
+        var path = ResolveTargetPolicyPath();
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        var runRecognition = root.TryGetProperty("runRecognition", out var value) ? value : default;
+        return new TargetPolicy(
+            ReadStringSet(runRecognition, "retainedIds"),
+            ReadStringSet(runRecognition, "abandonedFields"));
+    }
+
+    private static string ResolveTargetPolicyPath()
+    {
+        foreach (var origin in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() }.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var path = TargetPolicySourcePath
+                .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Aggregate(origin, Path.Combine);
+            if (File.Exists(path))
+                return path;
+        }
+
+        throw new FileNotFoundException("MAA recognition target policy was not found.", TargetPolicySourcePath);
+    }
+
+    private static HashSet<string> ReadStringSet(JsonElement parent, string propertyName)
+    {
+        if (parent.ValueKind != JsonValueKind.Object
+            || !parent.TryGetProperty(propertyName, out var array)
+            || array.ValueKind != JsonValueKind.Array)
+        {
+            return new HashSet<string>(StringComparer.Ordinal);
+        }
+
+        return array.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()?.Trim() ?? "")
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private sealed record TargetPolicy(
+        HashSet<string> RetainedRunRecognitionIds,
+        HashSet<string> AbandonedRunFields);
 }

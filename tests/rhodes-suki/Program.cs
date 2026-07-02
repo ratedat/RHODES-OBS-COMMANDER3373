@@ -1551,6 +1551,14 @@ static void MaaGeneratedResourceBuilder()
     Equal(false, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_shield"), "policy rejects discarded resource entries");
     Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_ingot"), "policy retains ingot resource entries");
     Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesRunStatusIdeaIcon"), "policy retains manual special icon entry");
+    Equal(true, File.Exists(Path.Combine(
+        Directory.GetCurrentDirectory(),
+        RhodesMaaRecognitionPolicy.TargetPolicySourcePath.Replace('/', Path.DirectorySeparatorChar))),
+        "target policy manifest exists");
+    Equal(true, File.Exists(Path.Combine(
+        AppContext.BaseDirectory,
+        RhodesMaaRecognitionPolicy.TargetPolicySourcePath.Replace('/', Path.DirectorySeparatorChar))),
+        "target policy manifest is copied to app output");
 
     var directory = Path.Combine(Path.GetTempPath(), $"rhodes-suki-generated-resource-{Guid.NewGuid():N}");
     Directory.CreateDirectory(directory);

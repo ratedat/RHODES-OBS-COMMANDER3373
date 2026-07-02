@@ -1,20 +1,13 @@
-export const abandonedRunFieldIds = Object.freeze(["hope", "maxHope", "lifePoints", "shield", "commandLevel"]);
-export const retainedRunRecognitionIds = Object.freeze([
-  "run.squad.info.panel",
-  "run.status.idea.icon",
-  "run.status.ingot.icon",
-  "run.operator.list",
-  "run.sarkaz.age.detail",
-  "run.map.footer",
-  "run.map.footer.relic",
-  "run.ingot",
-  "run.idea",
-  "run.idea.current",
-  "run.squad.card",
-  "run.squad.name",
-  "run.difficulty.grade",
-  "run.difficulty.block",
-]);
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+
+export const targetPolicyPath = fileURLToPath(new URL("../data/recognition/maa-recognition-target-policy.json", import.meta.url));
+
+const targetPolicy = JSON.parse(fs.readFileSync(targetPolicyPath, "utf8"));
+const runRecognitionPolicy = targetPolicy.runRecognition ?? {};
+
+export const abandonedRunFieldIds = Object.freeze(stringArray(runRecognitionPolicy.abandonedFields));
+export const retainedRunRecognitionIds = Object.freeze(stringArray(runRecognitionPolicy.retainedIds));
 
 const abandonedRunFieldSet = new Set(abandonedRunFieldIds);
 const retainedRunRecognitionIdSet = new Set(retainedRunRecognitionIds);
@@ -53,4 +46,8 @@ function retainedRunRecognitionId(id) {
   const tokens = maaRecognitionIdTokens(id);
   const runIndex = tokens.lastIndexOf("run");
   return runIndex < 0 ? "" : tokens.slice(runIndex).join(".");
+}
+
+function stringArray(value) {
+  return Array.isArray(value) ? value.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim()) : [];
 }

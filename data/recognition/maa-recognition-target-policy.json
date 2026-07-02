@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "description": "Authoritative RHODES MAA recognition target boundary. Run status values are intentionally limited to originium ingots, difficulty, squad, and IS-specific values. Hope, life points, shield, and command level are not recognition targets.",
+  "runRecognition": {
+    "retainedIds": [
+      "run.squad.info.panel",
+      "run.status.idea.icon",
+      "run.status.ingot.icon",
+      "run.operator.list",
+      "run.sarkaz.age.detail",
+      "run.map.footer",
+      "run.map.footer.relic",
+      "run.ingot",
+      "run.idea",
+      "run.idea.current",
+      "run.squad.card",
+      "run.squad.name",
+      "run.difficulty.grade",
+      "run.difficulty.block"
+    ],
+    "abandonedFields": [
+      "hope",
+      "maxHope",
+      "lifePoints",
+      "shield",
+      "commandLevel"
+    ]
+  }
+}

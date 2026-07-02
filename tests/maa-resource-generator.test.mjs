@@ -1,12 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import { generatePipeline } from "../tools/generate-maa-resource.mjs";
 import {
+  abandonedRunFieldIds,
   isAbandonedRunField,
   isAbandonedRunMaaEntry,
   isRetainedRecognitionSource,
   maaRecognitionIdTokens,
+  retainedRunRecognitionIds,
+  targetPolicyPath,
 } from "../tools/maa-recognition-policy.mjs";
 
 const ocrRecognition = {
@@ -21,6 +25,10 @@ const templateRegion = (idPrefix) => ({
 });
 
 test("MAA recognition policy defines the retained run target boundary once", () => {
+  const manifest = JSON.parse(fs.readFileSync(targetPolicyPath, "utf8"));
+  assert.equal(manifest.schemaVersion, 1);
+  assert.deepEqual(retainedRunRecognitionIds, manifest.runRecognition.retainedIds);
+  assert.deepEqual(abandonedRunFieldIds, manifest.runRecognition.abandonedFields);
   assert.deepEqual(maaRecognitionIdTokens("RhodesOcrRegion_run_command_level"), [
     "rhodes",
     "ocr",
