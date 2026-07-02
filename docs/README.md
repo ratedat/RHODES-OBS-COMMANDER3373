@@ -16,7 +16,7 @@ Do not place Codex/Stitch working notes, prompt handoff files, generated design 
 - `effect-calculation.md` - relic/squad effect calculation design
 - `maa-ocr-research.md` - ADB/OCR research notes that are useful to the implementation
 - `recognition-notes.md` - recognition implementation notes
-- `recognition-maa-migration.md` - MAA-style recognition seam and migration plan
+- `maaframework-family-roadmap.md` - MAAFramework/SukiUI migration roadmap and active recognition boundaries
 
 - [ONNXRuntime / FastDeploy OCR setup](onnxruntime-fastdeploy-setup.md)
 - [GLM-OCR optional verification setup](glm-ocr-setup.md)

@@ -59,7 +59,7 @@ flowchart LR
 - 接続済み: `/api/master` による master data 件数診断。Suki ローカルカタログとの差分をランタイム診断に表示する。
 - 接続済み: `/api/adb/detect` による MAA 風ADB候補/端末検出、`/api/adb/test` による解像度/スクリーンショット確認。
 - 接続済み: `/api/ocr/glm/status`、`/api/ocr/glm/install`、`/api/ocr/glm/uninstall`、`/api/ocr/glm/ollama/*` による任意 GLM-OCR/Ollama 管理。
-- 接続済み: `/api/recognition/scan/status` による実行中/直近スキャン進捗確認。Suki通常導線から旧 `/api/recognition/scan` 実行は削除し、MAAFramework native `Tasker` 実行を主経路にする。
+- 接続済み: `/api/recognition/scan/status` は互換の進捗確認口として残す。旧 `/api/recognition/scan`、`/api/recognition/scan/cancel`、`/trigger/scan/*` は 410 Gone とし、実行経路は MAAFramework native `Tasker` と `/api/recognition/maa-resource` に限定する。
 - 接続済み: Suki 側の保存操作から ADB path/serial/preset を `current-state.json` の既存 `adb` スキーマへ同期する。
 - 接続済み: Suki 側の保存操作からオペレーター/秘宝の選択、表示列、選択/除外フィルター、overlay scroll speed、Suki出力部品設定、OCR engine を既存 state/preference スキーマへ同期する。
 - 接続済み: Suki 側の現在ランIS切替と認識候補適用を API 優先で同期し、API不可時はローカル state へfallbackする。
@@ -119,6 +119,7 @@ flowchart LR
 - 接続済み: 基礎情報スキャンの取得対象を源石錐、等級、分隊、IS特殊値に絞り、希望、耐久値、シールド、指揮LvをMAA Resource生成元、Suki候補化、候補適用、旧状態JSON保存から外した。
 - 接続済み: 証跡ツリーのノード種別ごとにセクションをコンパクト表示し、プレビュー直後はSummaryまたは選択差分に対応する候補/task/logノードを既定選択する。
 - 接続済み: Windows OCR / 単体 PaddleOCR の旧アダプターとハイブリッドfallback経路を削除し、実行時OCR導線を MAA-OCR と任意 GLM-OCR に集約した。
+- 接続済み: Node側の旧 `scan-runner` / `maa-style-recognizer` と専用テストを削除し、旧scan APIは案内付きの終了応答へ移行した。
 
 ## First Milestone
 - SukiUI shell が起動する
