@@ -10650,7 +10650,7 @@
           "hiddenByDefault": false
         }
       ],
-      "error": "local observed Windows OCR drift: グ -> ク"
+      "error": "local observed OCR drift: グ -> ク"
     },
     {
       "index": 473,

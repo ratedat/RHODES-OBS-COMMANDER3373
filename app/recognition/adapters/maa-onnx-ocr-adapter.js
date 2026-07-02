@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { resolvePaddlePythonExecutable } from "./paddle-ocr-adapter.js";
+import { resolveOcrPythonExecutable } from "./ocr-python-resolver.js";
 import { resolveTemplateOcrRegions } from "./template-ocr-regions.js";
 
 const BRIDGE_SCRIPT = fileURLToPath(new URL("./maa-onnx-ocr-bridge.py", import.meta.url));
@@ -28,7 +28,7 @@ async function bridgeSource() {
 }
 
 function pythonExecutable() {
-  return resolvePaddlePythonExecutable();
+  return resolveOcrPythonExecutable();
 }
 
 export function runPythonMaaOnnxOcr({

@@ -99,7 +99,7 @@ The output includes `glmOcr.present`. `ocr:probe:strict` still checks the curren
 
 ## Notes
 
-- GLM-OCR is slow compared with ROI Windows OCR and MAA ONNX. Keep it as a verification or fallback engine.
+- GLM-OCR is slow compared with the active MAA ONNX route. Keep it as an optional verification engine, not the general default.
 - The bridge sends only fixed ROI crops by default. It does not submit the full screenshot when regions are available.
 - `RHODES_GLM_OCR_MAX_REGIONS` defaults to `12`; lower it when comparing only a few operator cards.
 - Cloud MaaS mode is intentionally not the default because it sends screenshots outside the PC.

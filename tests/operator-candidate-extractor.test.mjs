@@ -184,7 +184,7 @@ test("operator candidate extractor maps observed Japanese sniper recruitment OCR
   assert.ok(candidates.every((item) => item.source === "local-ocr-drift"));
 });
 
-test("operator candidate extractor maps observed Windows OCR drifts from sniper recruitment", async () => {
+test("operator candidate extractor maps observed OCR drifts from sniper recruitment", async () => {
   const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
   const candidates = await extractor({
     ocrResults: [
@@ -244,7 +244,7 @@ test("operator candidate extractor maps the Sarkaz operator list PMEY OCR drift 
   assert.equal(candidates[0].name, "司霆レイズ");
 });
 
-test("operator candidate extractor maps Leizi alter when Windows OCR drops the dakuten", async () => {
+test("operator candidate extractor maps Leizi alter when OCR drops the dakuten", async () => {
   const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
   const candidates = await extractor({
     ocrResults: [{ text: "司 霆 レ イ ス 、", regionId: "operator.name.left.1", roi: { x: 1333, y: 346, width: 260, height: 49 }, confidence: 0.7 }],
@@ -254,7 +254,7 @@ test("operator candidate extractor maps Leizi alter when Windows OCR drops the d
   assert.equal(candidates[0].name, "司霆レイズ");
 });
 
-test("operator candidate extractor maps normal Leizi when Windows OCR drops the dakuten", async () => {
+test("operator candidate extractor maps normal Leizi when OCR drops the dakuten", async () => {
   const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
   const candidates = await extractor({
     ocrResults: [{ text: "ー レ イ ス", regionId: "operator.name.left.1", roi: { x: 1333, y: 346, width: 260, height: 49 }, confidence: 0.7 }],
@@ -265,7 +265,7 @@ test("operator candidate extractor maps normal Leizi when Windows OCR drops the 
   assert.equal(candidates[0].source, "local-ocr-drift");
 });
 
-test("operator candidate extractor maps Executor alter when Windows OCR reads グ as ク", async () => {
+test("operator candidate extractor maps Executor alter when OCR reads グ as ク", async () => {
   const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
   const candidates = await extractor({
     ocrResults: [{ text: "聖 約 イ ク ゼ キ ュ タ ー", regionId: "operator.card.name.0", roi: { x: 1331, y: 351, width: 250, height: 32 }, confidence: 0.7 }],
@@ -275,7 +275,7 @@ test("operator candidate extractor maps Executor alter when Windows OCR reads �
   assert.equal(candidates[0].name, "聖約イグゼキュター");
 });
 
-test("operator candidate extractor maps Gummy when Windows OCR drops the dakuten", async () => {
+test("operator candidate extractor maps Gummy when OCR drops the dakuten", async () => {
   const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
   const candidates = await extractor({
     ocrResults: [{ text: "ー ク ム", regionId: "operator.card.name.0", roi: { x: 1331, y: 351, width: 120, height: 32 }, confidence: 0.7 }],

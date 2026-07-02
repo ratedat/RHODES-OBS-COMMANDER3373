@@ -2,6 +2,8 @@
 
 作成日: 2026-06-22
 
+注記: この文書は調査時点の履歴メモです。現在の実装方針は MAA-OCR を既定、GLM-OCR を任意検証とし、Windows OCR / 単体 PaddleOCR アダプターは通常ランタイムから削除しています。
+
 ## 対象
 
 - MaaAssistantArknights/MaaAssistantArknights dev-v2

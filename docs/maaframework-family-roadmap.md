@@ -116,6 +116,7 @@ flowchart LR
 - 接続済み: 既存の候補、Resource task、ログ一覧側の選択から証跡ツリー側の該当ノードを選択できる。
 - 接続済み: 基礎情報スキャンの取得対象を源石錐、等級、分隊、IS特殊値に絞り、希望、耐久値、シールド、指揮LvをMAA Resource生成元、Suki候補化、候補適用から外した。
 - 接続済み: 証跡ツリーのノード種別ごとにセクションをコンパクト表示し、プレビュー直後はSummaryまたは選択差分に対応する候補/task/logノードを既定選択する。
+- 接続済み: Windows OCR / 単体 PaddleOCR の旧アダプターとハイブリッドfallback経路を削除し、実行時OCR導線を MAA-OCR と任意 GLM-OCR に集約した。
 
 ## First Milestone
 - SukiUI shell が起動する

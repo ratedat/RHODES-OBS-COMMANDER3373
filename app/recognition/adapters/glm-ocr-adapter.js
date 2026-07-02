@@ -5,12 +5,12 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { resolvePaddlePythonExecutable } from "./paddle-ocr-adapter.js";
+import { resolveOcrPythonExecutable } from "./ocr-python-resolver.js";
 
 const BRIDGE_SCRIPT = fileURLToPath(new URL("./glm-ocr-bridge.py", import.meta.url));
 
 function pythonExecutable() {
-  return resolvePaddlePythonExecutable();
+  return resolveOcrPythonExecutable();
 }
 
 async function bridgeSource() {

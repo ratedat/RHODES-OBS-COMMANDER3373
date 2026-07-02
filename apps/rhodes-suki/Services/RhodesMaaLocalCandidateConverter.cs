@@ -115,7 +115,7 @@ public static class RhodesMaaLocalCandidateConverter
             if (string.IsNullOrWhiteSpace(textResult.Text))
                 continue;
 
-            var value = NumericValue(textResult.Text, allowRoman: field.Field == "commandLevel");
+            var value = NumericValue(textResult.Text);
             if (value is null || value < field.Min || value > field.Max)
                 continue;
 
@@ -879,7 +879,7 @@ public static class RhodesMaaLocalCandidateConverter
         return null;
     }
 
-    private static int? NumericValue(string value, bool allowRoman)
+    private static int? NumericValue(string value, bool allowRoman = false)
     {
         var text = NormalizeDigits(value, allowRoman);
         if (string.IsNullOrWhiteSpace(text))
