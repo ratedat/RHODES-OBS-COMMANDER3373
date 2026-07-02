@@ -597,7 +597,14 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RunSelectedProfileRecognitionCommand/);
   assert.match(xaml, /RunSelectedProfileRecognitionAndApplyCommand/);
   assert.match(xaml, /RunSelectedProfileAdbScanCommand/);
-  assert.match(xaml, /ADB API/);
+  assert.match(xaml, /旧ADBスキャンAPI/);
+  assert.doesNotMatch(xaml, /Content="ADB API"/);
+  const recognitionWorkspaceStart = xaml.indexOf('Text="認識ワークフロー"');
+  const debugWorkspaceStart = xaml.indexOf('Text="デバッグ"');
+  assert.ok(recognitionWorkspaceStart >= 0);
+  assert.ok(debugWorkspaceStart > recognitionWorkspaceStart);
+  const recognitionWorkspace = xaml.slice(recognitionWorkspaceStart, debugWorkspaceStart);
+  assert.doesNotMatch(recognitionWorkspace, /RunSelectedProfileAdbScanCommand/);
   assert.match(xaml, /SyncRunStateFromApiCommand/);
   assert.match(xaml, /API状態同期/);
   assert.match(xaml, /OpenRecognitionProfileCommand/);
