@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using RhodesSuki.Models;
 using RhodesSuki.ViewModels;
@@ -141,6 +142,28 @@ public partial class MainWindow : SukiWindow
         _roiDragSource = null;
         _roiResizeSource = null;
         e.Handled = true;
+    }
+
+    private async void BrowseAdbPathClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "ADB実行ファイルを選択",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("ADB executable")
+                {
+                    Patterns = OperatingSystem.IsWindows() ? ["adb.exe", "*.exe"] : ["adb", "*"],
+                },
+            ],
+        });
+        var path = files.FirstOrDefault()?.TryGetLocalPath();
+        if (!string.IsNullOrWhiteSpace(path))
+            viewModel.SetManualAdbPath(path);
     }
 
     private double RoiPointerX(PointerEventArgs e)

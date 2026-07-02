@@ -46,7 +46,33 @@ public sealed record MaaAdbPathCandidatePreview(
     string Preset,
     bool Exists,
     bool Available,
-    string Error);
+    string Error)
+{
+    public bool IsSelectable => !string.IsNullOrWhiteSpace(Path) && (Available || Exists);
+
+    public string StateLabel => Available
+        ? "使用可"
+        : Exists
+            ? "存在"
+            : "未検出";
+
+    public string PathSummary => string.IsNullOrWhiteSpace(Path) ? "adb" : Path;
+
+    public string SourceLabel => string.IsNullOrWhiteSpace(Source) ? "manual" : Source;
+
+    public string DisplayName => string.IsNullOrWhiteSpace(Preset)
+        ? $"{SourceLabel} / {PathSummary}"
+        : $"{Preset} / {PathSummary}";
+
+    public string Detail => string.Join(
+        " / ",
+        new[]
+        {
+            string.IsNullOrWhiteSpace(Source) ? "" : $"source:{Source}",
+            string.IsNullOrWhiteSpace(Preset) ? "" : $"preset:{Preset}",
+            string.IsNullOrWhiteSpace(Error) ? "" : Error,
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
+}
 
 public sealed record RhodesAdbApiSettings(
     bool AutoDetect,

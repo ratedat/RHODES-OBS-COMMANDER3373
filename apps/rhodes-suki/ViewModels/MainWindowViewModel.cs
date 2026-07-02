@@ -82,6 +82,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private MaaTaskRunResult? _selectedResourceTaskResult;
     private RhodesRecognitionScanLogRow? _selectedRecognitionScanLogRow;
     private MaaAdbPresetPreview? _selectedAdbPreset;
+    private MaaAdbPathCandidatePreview? _selectedAdbPathCandidate;
     private MaaResourceProfilePreview? _selectedResourceProfile;
     private MaaResourceExecutionPlan? _lastResourceExecutionPlan;
     private SukiOcrEngineOption? _selectedOcrEngine;
@@ -100,6 +101,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _showRoiOverlay = true;
     private int _roiSnapStep = 1;
     private bool _isBusy;
+    private string _adbDetectionSummary = "未検出";
+    private string _adbDetectionDetail = "自動検出を実行するとADB候補と接続端末を表示します。";
 
     public MainWindowViewModel(
         IntegrationStatus maaStatus,
@@ -171,6 +174,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ProbePayloads = new ObservableCollection<MaaProbePayloadPreview>(Services.RhodesRecognitionProbe.DefaultPayloads());
         ProbeResults = [];
         AdbPresets = new ObservableCollection<MaaAdbPresetPreview>(RhodesAdbPresetCatalog.DefaultPresets());
+        AdbPathCandidates = [];
         AdbDevices = [];
         OcrEngineOptions = new ObservableCollection<SukiOcrEngineOption>(SukiOcrEngineCatalog.Options);
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "auto") ?? AdbPresets.FirstOrDefault();
@@ -218,6 +222,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ConnectCommand = new AsyncRelayCommand(ConnectAsync);
         SaveSettingsCommand = new AsyncRelayCommand(SaveSettingsAsync);
         ApplyAdbPresetCommand = new AsyncRelayCommand(parameter => ApplyAdbPresetAsync(parameter as MaaAdbPresetPreview));
+        ApplyAdbPathCandidateCommand = new AsyncRelayCommand(parameter => ApplyAdbPathCandidateAsync(parameter as MaaAdbPathCandidatePreview));
         RefreshAdbDevicesCommand = new AsyncRelayCommand(RefreshAdbDevicesAsync);
         ApplyAdbDeviceCommand = new AsyncRelayCommand(parameter => ApplyAdbDeviceAsync(parameter as MaaAdbDevicePreview));
         RunAdbApiTestCommand = new AsyncRelayCommand(RunAdbApiTestAsync);
@@ -311,6 +316,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<MaaProbeResult> ProbeResults { get; }
 
     public ObservableCollection<MaaAdbPresetPreview> AdbPresets { get; }
+
+    public ObservableCollection<MaaAdbPathCandidatePreview> AdbPathCandidates { get; }
 
     public ObservableCollection<MaaAdbDevicePreview> AdbDevices { get; }
 
@@ -530,9 +537,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         get
         {
             var preset = SelectedAdbPreset?.Label ?? "手動";
-            return $"{preset} · MAAFramework · {BaseResolution.AspectRatioLabel}";
+            var serial = string.IsNullOrWhiteSpace(AdbSerial) ? "serial未選択" : AdbSerial;
+            return $"{preset} · {serial} · MAAFramework · {BaseResolution.AspectRatioLabel}";
         }
     }
+
+    public string AdbDetectionSummary
+    {
+        get => _adbDetectionSummary;
+        private set => SetProperty(ref _adbDetectionSummary, string.IsNullOrWhiteSpace(value) ? "未検出" : value);
+    }
+
+    public string AdbDetectionDetail
+    {
+        get => _adbDetectionDetail;
+        private set => SetProperty(ref _adbDetectionDetail, string.IsNullOrWhiteSpace(value) ? "自動検出を実行してください。" : value);
+    }
+
+    public string AdbPathCandidateSummary => $"{AdbPathCandidates.Count}件";
+
+    public string AdbDeviceSummary => $"{AdbDevices.Count}件";
 
     public string RunContextSummary
     {
@@ -1112,6 +1136,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public MaaAdbPathCandidatePreview? SelectedAdbPathCandidate
+    {
+        get => _selectedAdbPathCandidate;
+        set
+        {
+            if (!SetProperty(ref _selectedAdbPathCandidate, value))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
     public MaaResourceProfilePreview? SelectedResourceProfile
     {
         get => _selectedResourceProfile;
@@ -1147,6 +1182,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand SaveSettingsCommand { get; }
 
     public ICommand ApplyAdbPresetCommand { get; }
+
+    public ICommand ApplyAdbPathCandidateCommand { get; }
 
     public ICommand RefreshAdbDevicesCommand { get; }
 
@@ -1802,11 +1839,58 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return Task.CompletedTask;
     }
 
+    private Task ApplyAdbPathCandidateAsync(MaaAdbPathCandidatePreview? candidate)
+    {
+        if (candidate is null)
+        {
+            StatusMessage = "ADBパス候補が選択されていません。";
+            return Task.CompletedTask;
+        }
+
+        if (string.IsNullOrWhiteSpace(candidate.Path))
+        {
+            StatusMessage = "ADBパス候補にパスがありません。";
+            return Task.CompletedTask;
+        }
+
+        AdbPath = candidate.Path;
+        SelectedAdbPathCandidate = candidate;
+        if (!string.IsNullOrWhiteSpace(candidate.Preset))
+        {
+            SelectedAdbPreset = AdbPresets.FirstOrDefault(preset =>
+                preset.Id.Equals(candidate.Preset, StringComparison.OrdinalIgnoreCase)) ?? SelectedAdbPreset;
+        }
+        RefreshRuntimeCapabilities();
+        RefreshInspectorRows();
+        StatusMessage = $"ADBパスを適用しました: {candidate.Path}";
+        return Task.CompletedTask;
+    }
+
+    public void SetManualAdbPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        AdbPath = path.Trim();
+        SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "custom") ?? SelectedAdbPreset;
+        var manual = new MaaAdbPathCandidatePreview(AdbPath, "manual", "custom", File.Exists(AdbPath), File.Exists(AdbPath), "");
+        UpsertAdbPathCandidate(manual);
+        SelectedAdbPathCandidate = manual;
+        AdbDetectionSummary = "手動ADBパスを選択";
+        AdbDetectionDetail = AdbPath;
+        RefreshRuntimeCapabilities();
+        RefreshInspectorRows();
+        StatusMessage = $"ADBパスを手動選択しました: {AdbPath}";
+    }
+
     private async Task RefreshAdbDevicesAsync()
     {
         await RunBusyAsync(async () =>
         {
-            AdbDevices.Clear();
+            ReplaceAdbPathCandidates(BuildPresetAdbPathCandidates());
+            ReplaceAdbDevices([]);
+            AdbDetectionSummary = "ADB自動検出中";
+            AdbDetectionDetail = $"{SelectedAdbPreset?.Label ?? "手動"} / {AdbPath}";
             var apiDetection = await RhodesAdbApiClient.DetectAsync(
                 RhodesApiUrl,
                 new RhodesAdbApiSettings(
@@ -1816,17 +1900,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     AdbSerial));
             if (apiDetection.Succeeded)
             {
-                foreach (var device in apiDetection.Devices)
-                {
-                    AdbDevices.Add(device);
-                }
+                ReplaceAdbPathCandidates(MergeAdbPathCandidates(BuildPresetAdbPathCandidates(), apiDetection.AdbCandidates));
+                ReplaceAdbDevices(apiDetection.Devices);
 
                 var nextAdbPath = new[] { apiDetection.RuntimeAdbPath, apiDetection.SelectedAdbPath }
                     .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
                 if (!string.IsNullOrWhiteSpace(nextAdbPath))
                     AdbPath = nextAdbPath;
-                if (!string.IsNullOrWhiteSpace(apiDetection.RuntimeSerial))
-                    AdbSerial = apiDetection.RuntimeSerial;
+                var nextSerial = FirstNonEmpty(
+                    apiDetection.RuntimeSerial,
+                    apiDetection.Devices.Count(device => device.IsUsable) == 1
+                        ? apiDetection.Devices.First(device => device.IsUsable).Serial
+                        : "");
+                if (!string.IsNullOrWhiteSpace(nextSerial))
+                    AdbSerial = nextSerial;
 
                 _rhodesApiStatus = new SukiOptionalRuntimeStatus(
                     "RHODES API",
@@ -1834,6 +1921,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     $"ADB検出API成功 / candidates={apiDetection.AdbCandidates.Count} / devices={apiDetection.Devices.Count}",
                     true,
                     false);
+                AdbDetectionSummary = $"API検出: ADB候補{AdbPathCandidates.Count}件 / 端末{AdbDevices.Count}件";
+                AdbDetectionDetail = string.IsNullOrWhiteSpace(AdbSerial)
+                    ? "端末候補から使用するserialを選択してください。"
+                    : $"選択中: {AdbPath} / {AdbSerial}";
                 StatusMessage = apiDetection.Devices.Count == 0
                     ? $"ADB検出APIは端末0件でした。候補: {apiDetection.AdbCandidates.Count}件"
                     : $"ADB検出APIで端末を取得しました: {apiDetection.Devices.Count}件";
@@ -1843,17 +1934,110 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             var devices = await RhodesAdbDeviceProbe.ListDevicesAsync(AdbPath);
-            foreach (var device in devices)
-            {
-                AdbDevices.Add(device);
-            }
+            ReplaceAdbDevices(devices);
+            if (string.IsNullOrWhiteSpace(AdbSerial) && devices.Count(device => device.IsUsable) == 1)
+                AdbSerial = devices.First(device => device.IsUsable).Serial;
 
+            AdbDetectionSummary = $"ローカルADB: ADB候補{AdbPathCandidates.Count}件 / 端末{AdbDevices.Count}件";
+            AdbDetectionDetail = devices.Count == 0
+                ? $"API検出失敗: {apiDetection.Error}"
+                : $"API検出失敗: {apiDetection.Error} / {AdbPath}";
             StatusMessage = devices.Count == 0
                 ? $"ADB端末は見つかりませんでした。API検出失敗: {apiDetection.Error}"
                 : $"ローカルADBで端末を取得しました: {devices.Count}件 (API検出失敗: {apiDetection.Error})";
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         });
+    }
+
+    private void ReplaceAdbPathCandidates(IEnumerable<MaaAdbPathCandidatePreview> candidates)
+    {
+        ReplaceCollection(AdbPathCandidates, NormalizeAdbPathCandidates(candidates));
+        SelectedAdbPathCandidate = AdbPathCandidates.FirstOrDefault(candidate =>
+            PathsEqual(candidate.Path, AdbPath)) ?? AdbPathCandidates.FirstOrDefault(candidate => candidate.IsSelectable);
+        OnPropertyChanged(nameof(AdbPathCandidateSummary));
+    }
+
+    private void UpsertAdbPathCandidate(MaaAdbPathCandidatePreview candidate)
+    {
+        ReplaceAdbPathCandidates(MergeAdbPathCandidates(AdbPathCandidates, [candidate]));
+    }
+
+    private void ReplaceAdbDevices(IEnumerable<MaaAdbDevicePreview> devices)
+    {
+        ReplaceCollection(AdbDevices, devices);
+        OnPropertyChanged(nameof(AdbDeviceSummary));
+    }
+
+    private IReadOnlyList<MaaAdbPathCandidatePreview> BuildPresetAdbPathCandidates()
+    {
+        var candidates = AdbPresets
+            .Where(preset => !string.IsNullOrWhiteSpace(preset.AdbPath))
+            .Select(preset =>
+            {
+                var path = preset.AdbPath.Trim();
+                var isPathAdb = path.Equals("adb", StringComparison.OrdinalIgnoreCase);
+                var exists = isPathAdb || File.Exists(path);
+                return new MaaAdbPathCandidatePreview(path, preset.Id, preset.Id, exists, exists, "");
+            })
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(AdbPath)
+            && !candidates.Any(candidate => PathsEqual(candidate.Path, AdbPath)))
+        {
+            var exists = AdbPath.Equals("adb", StringComparison.OrdinalIgnoreCase) || File.Exists(AdbPath);
+            candidates.Add(new MaaAdbPathCandidatePreview(AdbPath, "manual", SelectedAdbPreset?.Id ?? "custom", exists, exists, ""));
+        }
+
+        return NormalizeAdbPathCandidates(candidates);
+    }
+
+    private static IReadOnlyList<MaaAdbPathCandidatePreview> MergeAdbPathCandidates(
+        IEnumerable<MaaAdbPathCandidatePreview> first,
+        IEnumerable<MaaAdbPathCandidatePreview> second)
+    {
+        return NormalizeAdbPathCandidates(first.Concat(second));
+    }
+
+    private static IReadOnlyList<MaaAdbPathCandidatePreview> NormalizeAdbPathCandidates(IEnumerable<MaaAdbPathCandidatePreview> candidates)
+    {
+        var ordered = new Dictionary<string, MaaAdbPathCandidatePreview>(StringComparer.OrdinalIgnoreCase);
+        foreach (var candidate in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate.Path))
+                continue;
+
+            var path = candidate.Path.Trim();
+            var key = path;
+            var existing = ordered.TryGetValue(key, out var value) ? value : null;
+            var normalized = candidate with
+            {
+                Path = path,
+                Exists = candidate.Exists || path.Equals("adb", StringComparison.OrdinalIgnoreCase) || File.Exists(path),
+                Available = candidate.Available,
+            };
+            if (existing is null || CandidatePriority(normalized) > CandidatePriority(existing))
+                ordered[key] = normalized;
+        }
+
+        return ordered.Values
+            .OrderByDescending(candidate => candidate.Available)
+            .ThenByDescending(candidate => candidate.Exists)
+            .ThenBy(candidate => candidate.Preset)
+            .ThenBy(candidate => candidate.Path)
+            .ToArray();
+    }
+
+    private static int CandidatePriority(MaaAdbPathCandidatePreview candidate)
+    {
+        return (candidate.Available ? 4 : 0)
+            + (candidate.Exists ? 2 : 0)
+            + (string.IsNullOrWhiteSpace(candidate.Error) ? 1 : 0);
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        return left.Trim().Equals(right.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task RefreshOptionalRuntimesAsync()

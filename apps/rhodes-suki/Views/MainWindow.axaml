@@ -572,36 +572,97 @@
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel Spacing="2">
                 <TextBlock Text="ランタイム" FontSize="20" FontWeight="SemiBold" />
-                <TextBlock Text="MAA ADB接続 · ADB · MAA · GLM-OCR · Ollama · Hyper-V" FontSize="12" Opacity="0.62" />
+                <TextBlock Text="MAAFramework ADB接続 · 端末検出 · MAA-OCR · 任意GLM/Ollama" FontSize="12" Opacity="0.62" />
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Button Content="端末一覧" Command="{Binding RefreshAdbDevicesCommand}" />
-                <Button Content="APIテスト" Command="{Binding RunAdbApiTestCommand}" />
-                <Button Content="状態確認" Command="{Binding RefreshOptionalRuntimesCommand}" />
-                <Button Content="接続" Command="{Binding ConnectCommand}" />
+                <Button Content="自動検出" Command="{Binding RefreshAdbDevicesCommand}" />
+                <Button Content="接続テスト" Command="{Binding RunAdbApiTestCommand}" />
+                <Button Content="MAA接続" Command="{Binding ConnectCommand}" />
                 <Button Content="撮影" Command="{Binding CaptureCommand}" />
+                <Button Content="状態確認" Command="{Binding RefreshOptionalRuntimesCommand}" />
               </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="92,*,Auto" RowSpacing="8" ColumnSpacing="8">
-              <TextBlock Text="プリセット" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-              <ComboBox Grid.Column="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}" ItemTemplate="{StaticResource AdbPresetComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbPresetSelectionTemplate}" />
-              <Button Grid.Column="2" Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
+            <Border Grid.Row="1" CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="116,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+                <TextBlock Text="プロファイル" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}" ItemTemplate="{StaticResource AdbPresetComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbPresetSelectionTemplate}" />
+                <Button Grid.Column="2" Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
+                <Button Grid.Column="3" Content="自動検出" Command="{Binding RefreshAdbDevicesCommand}" />
 
-              <TextBlock Grid.Row="1" Text="ADB" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-              <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbPath, Mode=TwoWay}" />
+                <TextBlock Grid.Row="1" Text="ADB実行ファイル" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="adb または adb.exe のフルパス" />
+                <Button Grid.Row="1" Grid.Column="2" Content="参照" Click="BrowseAdbPathClick" />
+                <Button Grid.Row="1" Grid.Column="3" Content="候補を使用" Command="{Binding ApplyAdbPathCandidateCommand}" CommandParameter="{Binding SelectedAdbPathCandidate}" />
 
-              <TextBlock Grid.Row="2" Text="接続先" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-              <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbSerial, Mode=TwoWay}" PlaceholderText="127.0.0.1:6520 / 127.0.0.1:16384 / emulator-5554" />
+                <TextBlock Grid.Row="2" Text="接続serial" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbSerial, Mode=TwoWay}" PlaceholderText="127.0.0.1:6520 / 127.0.0.1:16384 / emulator-5554" />
+                <Button Grid.Row="2" Grid.Column="3" Content="端末更新" Command="{Binding RefreshAdbDevicesCommand}" />
 
-              <TextBlock Grid.Row="3" Text="Config" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-              <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AdbConfigJson, Mode=TwoWay}" />
+                <TextBlock Grid.Row="3" Text="ADB Config" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding AdbConfigJson, Mode=TwoWay}" />
+                <TextBlock Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding AdbDetectionSummary}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
 
-              <TextBlock Grid.Row="4" Text="OCR" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-              <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
+                <TextBlock Grid.Row="4" Text="OCR" FontSize="12" VerticalAlignment="Center" Opacity="0.68" />
+                <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
+                <TextBlock Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding AdbDetectionDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+
+            <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
+              <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="ADB候補" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1" Text="{Binding AdbPathCandidateSummary}" FontSize="12" Opacity="0.62" VerticalAlignment="Center" />
+                  </Grid>
+                  <ScrollViewer Grid.Row="1" MaxHeight="170" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding AdbPathCandidates}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#101718" BorderBrush="#2B3638" BorderThickness="1">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                              <TextBlock Text="{Binding DisplayName}" FontFamily="Consolas" FontSize="12" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Text="{Binding StateLabel}" FontSize="11" Opacity="0.74" />
+                              <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.58" />
+                              <Button Grid.Row="1" Grid.Column="1" Content="使用" Command="{Binding DataContext.ApplyAdbPathCandidateCommand, ElementName=Root}" CommandParameter="{Binding}" IsEnabled="{Binding IsSelectable}" Padding="8,3" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Grid>
+              </Border>
+
+              <Border Grid.Column="1" CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="接続端末" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1" Text="{Binding AdbDeviceSummary}" FontSize="12" Opacity="0.62" VerticalAlignment="Center" />
+                  </Grid>
+                  <ScrollViewer Grid.Row="1" MaxHeight="170" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding AdbDevices}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#101718" BorderBrush="#2B3638" BorderThickness="1">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                              <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding Serial}" FontFamily="Consolas" FontSize="12" />
+                                <TextBlock Text="{Binding DisplayName}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                              </StackPanel>
+                              <Button Grid.Column="1" Content="使用" Command="{Binding DataContext.ApplyAdbDeviceCommand, ElementName=Root}" CommandParameter="{Binding}" IsEnabled="{Binding IsUsable}" VerticalAlignment="Center" Padding="8,3" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Grid>
+              </Border>
             </Grid>
 
-            <ItemsControl Grid.Row="2" ItemsSource="{Binding RuntimeCapabilities}">
+            <ItemsControl Grid.Row="3" ItemsSource="{Binding RuntimeCapabilities}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                   <WrapPanel />
@@ -623,7 +684,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <Border Grid.Row="3" CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+            <Border Grid.Row="4" CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
               <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
                 <TextBlock Text="任意OCR" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="GLM-OCR/Ollamaは必要な検証環境だけで導入します。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
@@ -638,27 +699,6 @@
                 </StackPanel>
               </Grid>
             </Border>
-
-            <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
-              <StackPanel Spacing="10">
-                <TextBlock Text="検出端末" FontSize="14" FontWeight="SemiBold" />
-                <ItemsControl ItemsSource="{Binding AdbDevices}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Border CornerRadius="7" Padding="10" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                          <StackPanel Spacing="2">
-                            <TextBlock Text="{Binding Serial}" FontFamily="Consolas" FontSize="12" />
-                            <TextBlock Text="{Binding DisplayName}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
-                          </StackPanel>
-                          <Button Grid.Column="1" Content="使用" Command="{Binding DataContext.ApplyAdbDeviceCommand, ElementName=Root}" CommandParameter="{Binding}" IsEnabled="{Binding IsUsable}" VerticalAlignment="Center" />
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-            </ScrollViewer>
           </Grid>
 
           <Grid RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding IsDebugWorkspaceVisible}">

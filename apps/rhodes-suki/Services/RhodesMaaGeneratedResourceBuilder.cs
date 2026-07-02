@@ -84,14 +84,18 @@ public static class RhodesMaaGeneratedResourceBuilder
                 ["expected"] = CloneOrNull(region, "expected"),
                 ["ocrReplace"] = CloneOrNull(region, "ocrReplace"),
             };
-            pipeline[NodeName("RhodesOcrRegion", JsonString(region, "id"))] = OcrNode(recognition, new JsonObject
+            var attach = new JsonObject
             {
                 ["generated"] = true,
                 ["source"] = "maa-tasks.ocrRegions",
                 ["id"] = JsonString(region, "id"),
                 ["profileIds"] = CloneOrEmptyArray(region, "profileIds"),
                 ["scale"] = CloneOrNull(region, "scale"),
-            });
+            };
+            if (region.TryGetProperty("numericFallback", out _))
+                attach["numericFallback"] = CloneOrNull(region, "numericFallback");
+
+            pipeline[NodeName("RhodesOcrRegion", JsonString(region, "id"))] = OcrNode(recognition, attach);
         }
 
         foreach (var profile in ArrayProperty(scanProfiles.RootElement, "profiles"))
