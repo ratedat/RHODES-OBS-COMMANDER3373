@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { isPublishableMaaEntry } from "./maa-recognition-policy.mjs";
+import { isPublishableMaaEntry, targetPolicyPath } from "./maa-recognition-policy.mjs";
 
 const root = process.cwd();
 const manualPipelinePath = path.join(root, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes.json");
@@ -10,8 +10,9 @@ const outputPath = path.join(root, "apps", "rhodes-suki", "interface.json");
 
 const CONTROLLER = "android_adb";
 const RESOURCE = "base";
+const TARGET_POLICY_SOURCE = path.relative(root, targetPolicyPath).replace(/\\/g, "/");
 const PROFILE_METADATA = [
-  ["runStatusFull", "基礎情報", "源石錐、等級、分隊、ISごとの特殊値を取得します。"],
+  ["runStatusFull", "基礎情報", `源石錐、等級、分隊、ISごとの特殊値を取得します。希望、耐久値、シールド、指揮Lvは取得対象外です。target policy: ${TARGET_POLICY_SOURCE}`],
   ["operatorsFull", "オペレーター", "招集済みオペレーターを取得します。"],
   ["relicsFull", "秘宝", "所持秘宝を取得します。"],
   ["is4RevelationFull", "啓示", "IS#4の啓示を取得します。"],
@@ -147,7 +148,7 @@ export function generateInterface({ manualPipeline, generatedPipeline }) {
     version: "0.1.0",
     github: "https://github.com/ratedat/RHODES-OBS-COMMANDER3373",
     license: "AGPL-3.0-only",
-    description: "MAAFramework resource shell for Arknights Integrated Strategies OCR and OBS support.",
+    description: `MAAFramework resource shell for Arknights Integrated Strategies OCR and OBS support. Fixed coordinate base: 1280x720. Target policy: ${TARGET_POLICY_SOURCE}.`,
     controller: [
       {
         name: CONTROLLER,

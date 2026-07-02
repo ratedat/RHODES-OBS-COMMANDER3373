@@ -6,7 +6,7 @@
   "version": "0.1.0",
   "github": "https://github.com/ratedat/RHODES-OBS-COMMANDER3373",
   "license": "AGPL-3.0-only",
-  "description": "MAAFramework resource shell for Arknights Integrated Strategies OCR and OBS support.",
+  "description": "MAAFramework resource shell for Arknights Integrated Strategies OCR and OBS support. Fixed coordinate base: 1280x720. Target policy: data/recognition/maa-recognition-target-policy.json.",
   "controller": [
     {
       "name": "android_adb",
@@ -32,7 +32,7 @@
     {
       "name": "runStatusFull",
       "label": "基礎情報",
-      "description": "源石錐、等級、分隊、ISごとの特殊値を取得します。",
+      "description": "源石錐、等級、分隊、ISごとの特殊値を取得します。希望、耐久値、シールド、指揮Lvは取得対象外です。target policy: data/recognition/maa-recognition-target-policy.json",
       "default_expand": true
     },
     {

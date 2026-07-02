@@ -15,6 +15,8 @@ test("MAA interface generator exposes every retained RHODES resource node as a t
   const taskEntries = new Set(projectInterface.task.map((task) => task.entry));
 
   assert.equal(projectInterface.interface_version, 2);
+  assert.match(projectInterface.description, /1280x720/);
+  assert.match(projectInterface.description, /maa-recognition-target-policy\.json/);
   assert.equal(projectInterface.controller[0].name, "android_adb");
   assert.equal(projectInterface.resource[0].name, "base");
   assert.ok(taskEntries.has("RhodesOperatorNameOcr"));
@@ -83,6 +85,8 @@ test("MAA interface generator groups tasks and presets by RHODES recognition pro
   ]);
   assert.equal(groups.get("runStatusFull").label, "基礎情報");
   assert.match(groups.get("runStatusFull").description, /源石錐/);
+  assert.match(groups.get("runStatusFull").description, /希望、耐久値、シールド、指揮Lvは取得対象外/);
+  assert.match(groups.get("runStatusFull").description, /maa-recognition-target-policy\.json/);
   assert.equal(groups.get("operatorsFull").label, "オペレーター");
   assert.equal(groups.get("is5ThoughtFull").default_expand, false);
 
