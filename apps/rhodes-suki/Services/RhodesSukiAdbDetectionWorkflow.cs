@@ -16,6 +16,16 @@ public sealed record RhodesSukiAdbDetectionSnapshot(
 
 public static class RhodesSukiAdbDetectionWorkflow
 {
+    public static string ResolveDetectedPresetId(string? currentPresetId, MaaAdbPathCandidatePreview? selectedCandidate)
+    {
+        var current = NormalizeCurrentPresetId(currentPresetId);
+        var detected = NormalizeDetectedPresetId(selectedCandidate?.Preset);
+        if (string.IsNullOrWhiteSpace(detected) || detected.Equals("custom", StringComparison.OrdinalIgnoreCase))
+            return current;
+
+        return current is "auto" or "custom" ? detected : current;
+    }
+
     public static async Task<RhodesSukiAdbDetectionSnapshot> DetectAsync(
         RhodesAdbApiSettings settings,
         Func<RhodesAdbApiSettings, CancellationToken, Task<RhodesAdbLocalDetectionResult>>? detectAsync = null,
@@ -65,5 +75,16 @@ public static class RhodesSukiAdbDetectionWorkflow
                 return value.Trim();
         }
         return "";
+    }
+
+    private static string NormalizeCurrentPresetId(string? value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value) ? "auto" : value.Trim().ToLowerInvariant();
+        return normalized;
+    }
+
+    private static string NormalizeDetectedPresetId(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "" : value.Trim().ToLowerInvariant();
     }
 }

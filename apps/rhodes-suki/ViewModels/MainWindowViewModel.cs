@@ -1863,6 +1863,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         AdbSerial = snapshot.AdbSerial;
         ReplaceAdbPathCandidates(snapshot.AdbCandidates);
         SelectedAdbPathCandidate = snapshot.SelectedAdbPathCandidate;
+        ApplyDetectedAdbPreset(snapshot.SelectedAdbPathCandidate);
         ReplaceAdbDevices(snapshot.Devices);
         AdbDetectionSummary = snapshot.DetectionSummary;
         AdbDetectionDetail = snapshot.DetectionDetail;
@@ -1901,6 +1902,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SukiAdbMethodCatalog.DefaultInputMethodIdForPreset(presetId));
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(
             SukiAdbMethodCatalog.DefaultScreencapMethodIdForPreset(presetId));
+    }
+
+    private void ApplyDetectedAdbPreset(MaaAdbPathCandidatePreview? selectedCandidate)
+    {
+        var detectedPresetId = RhodesSukiAdbDetectionWorkflow.ResolveDetectedPresetId(
+            SelectedAdbPreset?.Id,
+            selectedCandidate);
+        if (string.Equals(SelectedAdbPreset?.Id, detectedPresetId, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var detectedPreset = AdbPresets.FirstOrDefault(preset =>
+            preset.Id.Equals(detectedPresetId, StringComparison.OrdinalIgnoreCase));
+        if (detectedPreset is null)
+            return;
+
+        SelectedAdbPreset = detectedPreset;
+        ApplyAdbMethodsForPreset(detectedPresetId);
     }
 
     private async Task RefreshOptionalRuntimesAsync()

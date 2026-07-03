@@ -38,6 +38,7 @@ var tests = new (string Name, Action Run)[]
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("ADB candidate registry keeps the runtime picker focused", AdbCandidateRegistry),
     ("Suki ADB detection workflow summarizes selected runtime path and devices", SukiAdbDetectionWorkflow),
+    ("Suki ADB detection workflow promotes auto detected emulator presets", SukiAdbDetectionPresetPromotion),
     ("ADB detect API client parses runtime, candidates, and devices", AdbApiDetectionParsing),
     ("ADB test API client parses resolution and screenshot details", AdbApiTestParsing),
     ("Suki local ADB detector connects Google Play Games TCP serial", SukiLocalAdbDetectGooglePlay),
@@ -969,6 +970,20 @@ static void SukiAdbDetectionWorkflow()
     Equal("選択中: C:/Tools/MuMu/adb.exe / 127.0.0.1:16384 / connect 127.0.0.1:16384", snapshot.DetectionDetail, "workflow detail");
     Equal("ADB検出OK", snapshot.SessionState, "workflow session state");
     Equal("Sukiローカル検出で端末を取得しました: 1件", snapshot.StatusMessage, "workflow status");
+}
+
+static void SukiAdbDetectionPresetPromotion()
+{
+    var mumu = new MaaAdbPathCandidatePreview("C:/Tools/MuMu/adb.exe", "known-path", "mumu", true, true, "");
+    var googlePlay = new MaaAdbPathCandidatePreview("C:/Tools/Google/adb.exe", "known-path", "google-play-games-dev", true, true, "");
+    var custom = new MaaAdbPathCandidatePreview("C:/Tools/adb.exe", "manual", "custom", true, true, "");
+
+    Equal("mumu", RhodesSukiAdbDetectionWorkflow.ResolveDetectedPresetId("auto", mumu), "auto adopts mumu");
+    Equal("google-play-games-dev", RhodesSukiAdbDetectionWorkflow.ResolveDetectedPresetId("custom", googlePlay), "custom adopts google play");
+    Equal("google-play-games-dev", RhodesSukiAdbDetectionWorkflow.ResolveDetectedPresetId("", googlePlay), "empty adopts google play");
+    Equal("bluestacks", RhodesSukiAdbDetectionWorkflow.ResolveDetectedPresetId("bluestacks", mumu), "explicit preset is not overwritten");
+    Equal("auto", RhodesSukiAdbDetectionWorkflow.ResolveDetectedPresetId("auto", custom), "custom candidate does not change auto");
+    Equal("auto", RhodesSukiAdbDetectionWorkflow.ResolveDetectedPresetId("auto", null), "missing candidate keeps current");
 }
 
 static void AdbApiDetectionParsing()

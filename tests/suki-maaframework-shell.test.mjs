@@ -286,7 +286,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RefreshAdbDevicesCommand/);
   assert.match(viewModel, /ApplyAdbDeviceCommand/);
   assert.match(viewModel, /RhodesSukiAdbDetectionWorkflow\.DetectAsync/);
+  assert.match(viewModel, /ApplyDetectedAdbPreset\(snapshot\.SelectedAdbPathCandidate\)/);
+  assert.match(viewModel, /RhodesSukiAdbDetectionWorkflow\.ResolveDetectedPresetId/);
   assert.match(adbDetectionWorkflow, /RhodesAdbCandidateRegistry\.SelectDefault/);
+  assert.match(adbDetectionWorkflow, /ResolveDetectedPresetId/);
   assert.match(adbDetectionWorkflow, /Sukiローカル検出: ADB候補/);
   assert.doesNotMatch(viewModel, /localDetection\.Connect/);
   assert.match(viewModel, /RefreshOptionalRuntimesCommand/);
