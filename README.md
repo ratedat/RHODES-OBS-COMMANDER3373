@@ -41,7 +41,7 @@ See:
 
 The active desktop app is the Suki/Avalonia shell under `apps/rhodes-suki`.
 Electron and Tauri are not active build, launch, or distribution targets.
-The Node local server remains only for the HTTP API and OBS Browser Source URLs.
+The Node local server remains only for the HTTP API and OBS Browser Source URLs; it is not a desktop app fallback.
 
 For streamers and tournament staff, use the packaged Suki portable build when available: open `RhodesSuki.exe` from the release package.
 
@@ -78,22 +78,16 @@ Build a portable Windows package for distribution:
 npm.cmd run suki:publish:portable
 ```
 
-Start only the local HTTP/OBS server without the Suki desktop window as a fallback:
+Start only the local HTTP/OBS server when checking OBS URLs without the Suki desktop window:
 
 ```powershell
 cd O:\Arknights_Rogue_OBSTool
 npm.cmd run dev
 ```
 
-Open the control panel:
-
-- http://127.0.0.1:5173/control-v2
-
-`/control` is kept only as a compatibility URL and redirects to Control v2.
-
 The examples below use the default port `5173`. If you selected another port in the desktop app, replace `5173` with that port in OBS Browser Source URLs.
 
-Open the sidecar support window when you want a compact emulator-adjacent view for run state, effects, relics, operators, boss flags, and review queues:
+Open the sidecar support URL only when you need a browser-based OBS/debug check:
 
 - http://127.0.0.1:5173/sidecar
 

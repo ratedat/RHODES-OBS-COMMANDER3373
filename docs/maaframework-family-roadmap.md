@@ -23,7 +23,7 @@ flowchart LR
 ### 1. SukiUI Shell
 - `apps/rhodes-suki` を主UI候補として育てる
 - 設定、ランタイム状態、ADB接続、認識結果レビューを移植する
-- Electron/Tauri 版は正規の実行・配布経路から外し、必要な実装だけ SukiUI/Avalonia 側へ移す
+- Electron/Tauri 版と旧ブラウザ起動導線は正規の実行・配布経路から外し、必要な実装だけ SukiUI/Avalonia 側へ移す
 
 ### 2. MAAFramework Runtime
 - `Maa.Framework` NuGet で C# binding を導入する
@@ -64,7 +64,7 @@ flowchart LR
 - 接続済み: Suki 側の保存操作から ADB path/serial/preset を `current-state.json` の既存 `adb` スキーマへ同期する。
 - 接続済み: Suki 側の保存操作からオペレーター/秘宝の選択、表示列、選択/除外フィルター、overlay scroll speed、Suki出力部品設定、OCR engine を既存 state/preference スキーマへ同期する。
 - 接続済み: Suki 側の現在ランIS切替と認識候補適用を API 優先で同期し、API不可時はローカル state へfallbackする。
-- 接続済み: Suki の出力画面から Control/Sidecar/Overlay プレビューを既定ブラウザで開く。
+- 接続済み: Suki の出力画面から Sidecar/Overlay プレビューを既定ブラウザで開く。
 - 接続済み: MAAFramework native `Tasker` 結果を既存 recognition scan 形状の証跡JSONとして保存し、候補化後の candidate も同じ証跡へ含める。
 - 接続済み: MAAFramework native `Tasker` 実行前に cached screenshot を保存し、証跡JSONの `capture` log/event と `evidence.capture` へ紐付ける。
 - 接続済み: MAAFramework native `Tasker` の単発/一括実行は実行直前のfresh captureを使い、単発実行でも証跡JSONを保存する。

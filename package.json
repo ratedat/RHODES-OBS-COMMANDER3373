@@ -1,7 +1,7 @@
 {
   "name": "rhodes-obs-commander3373",
   "version": "0.1.0",
-  "description": "Desktop sidecar and OBS overlay tool for Arknights Integrated Strategies.",
+  "description": "Suki/Avalonia sidecar and OBS overlay API for Arknights Integrated Strategies.",
   "author": "ratedat",
   "private": true,
   "type": "module",
@@ -10,8 +10,6 @@
     "test": "node --test tests/*.test.mjs",
     "dev": "node app/server.mjs",
     "dev:5174": "node app/server.mjs --port 5174",
-    "app:web": "node app/launcher.mjs",
-    "app:web:5174": "node app/launcher.mjs --port 5174",
     "suki:build": "dotnet build apps/rhodes-suki/RhodesSuki.csproj",
     "suki:test": "dotnet run --project tests/rhodes-suki/RhodesSuki.ServiceTests.csproj",
     "suki:run": "dotnet run --project apps/rhodes-suki/RhodesSuki.csproj",

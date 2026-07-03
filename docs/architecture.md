@@ -71,20 +71,19 @@ Important constraints:
 For IS#4 No.001-018, IS#5 No.001-020, and IS#6 No.001-015, 多元化珍品 use `data/relic-effect-variants.json` layered over the base relic data. The state stores numeric `run.difficulty`; the app derives `run.difficultyTierId` from `data/difficulty-tiers.json` and selects the matching variant for display and calculation. If the difficulty is unknown, the base effect is shown with an unresolved-variant warning.
 ## Application Shell
 
-The active desktop shell is `apps/rhodes-suki`, built with Avalonia + SukiUI. Electron and Tauri are not active build, launch, or packaging targets. The local web server remains only for the HTTP API, OBS browser-source output, and migration fallback routes until their required workflow is fully represented in Suki/Avalonia.
+The active desktop shell is `apps/rhodes-suki`, built with Avalonia + SukiUI. Electron and Tauri are not active build, launch, or packaging targets. The local web server remains only for the HTTP API and OBS browser-source output; it is not a desktop app fallback.
 
 Responsibilities are intentionally separated:
 
 - `app/server.mjs` owns the local HTTP API, static file serving, and runtime state persistence.
-- `app/runtime/local-server.mjs` owns the shared server startup, readiness probe, URL building, and external browser opening helpers.
+- `app/runtime/local-server.mjs` owns shared port parsing, readiness probe, and URL building helpers.
 - `apps/rhodes-suki` owns the desktop window, runtime setup, ADB/MAA controls, recognition review, and operator/relic workspaces.
-- `app/launcher.mjs` remains a browser-based fallback for local web server and OBS URL checks.
 - `start-windows.vbs` and `tools/windows/start-app.ps1` provide a double-click source-folder launcher for non-technical Windows users.
 - OBS remains a browser-source consumer of `/overlay` URLs, so desktop packaging must not make OBS depend on an embedded runtime.
-- Human debugging should use the Suki/Avalonia shell as the primary surface. Plain browser tabs are fallback/debugging aids for the local web server and OBS URL checks.
+- Human debugging should use the Suki/Avalonia shell as the primary surface. Plain browser tabs are only for OBS URL checks.
 - Desktop-impacting changes should be verified with `npm run suki:check` and `npm run suki:build`.
 - Split OBS parts are routed under `/overlay/part/<part>`, currently `status`, `relics`, `operators`, `effects`, `bosses`, and `special`.
-- `/control-v2` is the primary editing surface for manual input, tournament review, OBS settings, Sidecar workflow, and future OCR/ADB suggestions. `/control` remains only as a compatibility URL that resolves to Control v2.
-- `/sidecar` is the compact emulator-adjacent support surface for run state, effects, selected relics/operators, boss flags, and review queues.
+- `/control-v2` and `/control` remain compatibility HTTP routes while their required workflows are moved into Suki/Avalonia. They are not the active desktop operation surface.
+- `/sidecar` remains a browser-check route for compact emulator-adjacent support output until the equivalent Suki panes fully cover it.
 
 Packaged builds wrap these same local URLs. Runtime state is stored outside the packaged app via `ARKNIGHTS_STATE_DIR`, while master data remains bundled with the app.
