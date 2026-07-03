@@ -920,7 +920,8 @@ static void AdbCandidateRegistry()
         new MaaAdbPathCandidatePreview("C:/Missing/Saved/adb.exe", "settings", "custom", false, false, ""),
         new MaaAdbPathCandidatePreview("C:/Tools/adb.exe", "path", "custom", false, false, "old failure"),
         new MaaAdbPathCandidatePreview("C:/Tools/adb.exe", "mumu", "mumu", true, true, ""),
-        new MaaAdbPathCandidatePreview("adb", "auto", "auto", false, false, "")
+        new MaaAdbPathCandidatePreview("adb", "path", "custom", false, false, "PATH lookup failed"),
+        new MaaAdbPathCandidatePreview("adb", "settings", "custom", false, false, "saved PATH lookup failed")
     };
 
     var normalized = RhodesAdbCandidateRegistry.Normalize(candidates, path =>
@@ -931,7 +932,8 @@ static void AdbCandidateRegistry()
         string.Join("|", normalized.Select(item => item.Path)),
         "focused candidate list");
     Equal(true, normalized[0].Available, "duplicate prefers available candidate");
-    Equal(true, normalized[1].Exists, "PATH adb remains selectable");
+    Equal("settings", normalized[1].Source, "explicit PATH adb remains visible for diagnostics");
+    Equal(false, normalized.Any(item => item.Source == "path" && item.Path.Equals("adb", StringComparison.OrdinalIgnoreCase)), "unavailable auto PATH adb is hidden");
     Equal(false, normalized.Any(item => item.Path.Contains("Missing/MuMu", StringComparison.Ordinal)), "missing auto probe is hidden");
 
     var selected = RhodesAdbCandidateRegistry.SelectDefault(normalized, "C:/Tools/adb.exe");

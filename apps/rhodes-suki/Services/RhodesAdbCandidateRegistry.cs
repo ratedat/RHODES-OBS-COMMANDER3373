@@ -61,6 +61,9 @@ public static class RhodesAdbCandidateRegistry
 
     private static bool ShouldShow(MaaAdbPathCandidatePreview candidate)
     {
+        if (IsUnavailableBarePathAdbProbe(candidate))
+            return false;
+
         if (candidate.Available || candidate.Exists || !string.IsNullOrWhiteSpace(candidate.Error))
             return true;
 
@@ -75,6 +78,16 @@ public static class RhodesAdbCandidateRegistry
         return (candidate.Available ? 4 : 0)
             + (candidate.Exists ? 2 : 0)
             + (string.IsNullOrWhiteSpace(candidate.Error) ? 1 : 0);
+    }
+
+    private static bool IsUnavailableBarePathAdbProbe(MaaAdbPathCandidatePreview candidate)
+    {
+        if (candidate.Available || !IsPathAdb(candidate.Path))
+            return false;
+
+        return candidate.Source.Equals("path", StringComparison.OrdinalIgnoreCase)
+            || candidate.Source.Equals("auto", StringComparison.OrdinalIgnoreCase)
+            || candidate.Source.Equals("known-path", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsPathAdb(string path)
