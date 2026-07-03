@@ -770,7 +770,6 @@ function renderLicensesPage() {
         <div><h1>ライセンス / 謝辞</h1><p>RHODES OBS COMMANDER3373 のソース提供と第三者表記</p></div>
       </div>
       <nav class="licenses-actions" aria-label="ライセンス画面ナビゲーション">
-        <a href="/control-v2" target="_self">Control</a>
         <a href="/sidecar" target="_self">Sidecar</a>
         <a href="/overlay" target="_blank" rel="noreferrer">Overlay</a>
       </nav>
@@ -1623,7 +1622,6 @@ function renderSidecar() {
       </div>
       <div class="sidecar-actions">
         <label>モード<select data-field="mode">${renderControlModeOptions()}</select></label>
-        <a href="/control-v2" target="_self">Control</a>
         <a href="/overlay" target="_blank">Overlay</a>
         <a href="/licenses" target="_self">ライセンス</a>
         <span class="save-status">${html(ui.saveStatus)}</span>
@@ -1668,15 +1666,15 @@ function renderSidecar() {
           <div class="sidecar-scroll sidecar-effect-scroll">${renderEffectList(activeEffects, "sidecar-effect-list", "分隊・演目・等級・秘宝の発動効果は未設定です。")}</div>
         </section>
         <section class="sidecar-panel">
-          <div class="sidecar-panel-head"><h2>所持秘宝</h2><a href="/control-v2?screen=relics" target="_self">編集</a></div>
+          <div class="sidecar-panel-head"><h2>所持秘宝</h2><span>${relics.length}</span></div>
           ${renderSidecarRelics(relics)}
         </section>
         <section class="sidecar-panel">
-          <div class="sidecar-panel-head"><h2>招集オペレーター</h2><a href="/control-v2?screen=operators" target="_self">編集</a></div>
+          <div class="sidecar-panel-head"><h2>招集オペレーター</h2><span>${operators.length}</span></div>
           ${renderSidecarOperators(operators)}
         </section>
         <section class="sidecar-panel">
-          <div class="sidecar-panel-head"><h2>レビュー</h2><a href="/control-v2?screen=sidecar" target="_self">詳細</a></div>
+          <div class="sidecar-panel-head"><h2>レビュー</h2><span>${(state.pendingSuggestions || []).length}</span></div>
           <div class="sidecar-review-list">${renderSidecarReviewQueue()}</div>
         </section>
       </div>

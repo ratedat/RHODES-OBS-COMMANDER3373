@@ -45,3 +45,13 @@ test("local web server does not advertise the retired Control shell as the defau
   assert.doesNotMatch(localServer, /view = "control-v2"/);
   assert.match(localServer, /view = "sidecar"/);
 });
+
+test("non-Control web pages do not link users back into the retired Control shell", async () => {
+  const app = await readFile(new URL("../app/app.js", import.meta.url), "utf8");
+  const licensesPage = app.slice(app.indexOf("function renderLicensesPage()"), app.indexOf("function renderInteractive()"));
+  const sidecarPage = app.slice(app.indexOf("function renderSidecar()"), app.indexOf("function renderOverlayContext()"));
+
+  assert.doesNotMatch(licensesPage, /href="\/control-v2/);
+  assert.doesNotMatch(sidecarPage, /href="\/control-v2/);
+  assert.doesNotMatch(sidecarPage, />Control</);
+});
