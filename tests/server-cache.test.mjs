@@ -16,12 +16,11 @@ test("app shell and module files are served with strict no-cache headers", async
 
     const legacyControl = await fetch(`http://127.0.0.1:${port}/control?tab=relics`, { redirect: "manual" });
     assert.equal(legacyControl.status, 302);
-    assert.equal(legacyControl.headers.get("location"), "/control-v2?screen=relics");
+    assert.equal(legacyControl.headers.get("location"), "/sidecar");
 
-    const controlV2 = await fetch(`http://127.0.0.1:${port}/control-v2`);
-    assert.equal(controlV2.status, 200);
-    assert.equal(controlV2.headers.get("cache-control"), "no-store, max-age=0, must-revalidate");
-    assert.equal(controlV2.headers.get("clear-site-data"), '"cache"');
+    const controlV2 = await fetch(`http://127.0.0.1:${port}/control-v2`, { redirect: "manual" });
+    assert.equal(controlV2.status, 302);
+    assert.equal(controlV2.headers.get("location"), "/sidecar");
 
     const licenses = await fetch(`http://127.0.0.1:${port}/licenses`);
     assert.equal(licenses.status, 200);

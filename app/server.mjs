@@ -490,19 +490,8 @@ async function serveFile(res, file) {
   }
 }
 
-function legacyControlRedirectLocation(url) {
-  const tabToScreen = new Map([
-    ["run", "common"],
-    ["relics", "relics"],
-    ["operators", "operators"],
-    ["flags", "sidecar"],
-    ["obs", "obs"],
-  ]);
-  const screen = tabToScreen.get(url.searchParams.get("tab")) || url.searchParams.get("screen");
-  const params = new URLSearchParams();
-  if (screen) params.set("screen", screen);
-  const query = params.toString();
-  return `/control-v2${query ? `?${query}` : ""}`;
+function legacyControlRedirectLocation() {
+  return "/sidecar";
 }
 
 export function createAppServer({
@@ -649,7 +638,7 @@ export function createAppServer({
       return res.end();
     }
 
-    if (url.pathname === "/control") {
+    if (url.pathname === "/control" || url.pathname === "/control-v2") {
       res.writeHead(302, { location: legacyControlRedirectLocation(url) });
       return res.end();
     }
