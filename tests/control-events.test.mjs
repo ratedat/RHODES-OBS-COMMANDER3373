@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import { getChoiceActive, getChoiceCount, registerControlEvents, syncControlV2UiAfterStateReplace } from "../app/control-events.js";
+import { getChoiceActive, markChoiceRenderDirtyAfterStateReplace, registerControlEvents } from "../app/control-events.js";
 import { toggleChoiceExcluded } from "../app/control-actions.js";
 
 test("template relics count as active choices even when not manually selected", () => {
@@ -12,27 +12,17 @@ test("template relics count as active choices even when not manually selected", 
   };
 
   assert.equal(getChoiceActive("relic", "is3_mizuki_relic_261", state, context), true);
-  assert.equal(getChoiceCount({ controlV2ChoiceTab: "relics" }, state, context), 2);
+  assert.equal(getChoiceActive("operator", "exusiai", { relics: [], operators: ["exusiai"] }), true);
 });
 
-test("state replacement keeps Control v2 choice screen and tab in sync", () => {
-  const ui = { controlV2Screen: "relics", controlV2ChoiceTab: "operators" };
+test("state replacement marks choice views dirty without reviving Control v2 screen state", () => {
+  const ui = {};
 
-  syncControlV2UiAfterStateReplace(ui);
+  markChoiceRenderDirtyAfterStateReplace(ui);
 
-  assert.equal(ui.controlV2Screen, "relics");
-  assert.equal(ui.controlV2ChoiceTab, "relics");
   assert.equal(ui.forceFullChoiceRender, true);
-});
-
-test("state replacement preserves non-choice screen but normalizes invalid choice tab", () => {
-  const ui = { controlV2Screen: "common", controlV2ChoiceTab: "unknown" };
-
-  syncControlV2UiAfterStateReplace(ui);
-
-  assert.equal(ui.controlV2Screen, "common");
-  assert.equal(ui.controlV2ChoiceTab, "operators");
-  assert.equal(ui.forceFullChoiceRender, true);
+  assert.equal("controlV2Screen" in ui, false);
+  assert.equal("controlV2ChoiceTab" in ui, false);
 });
 
 test("toggleChoiceExcluded stores operator and relic display exclusion ids", () => {
@@ -56,7 +46,7 @@ test("Control v2 no longer exposes the legacy scan execution path", async () => 
   assert.doesNotMatch(appJs, /getRecognitionScanActions/);
   assert.doesNotMatch(appJs, /trigger-recognition-scan/);
   assert.doesNotMatch(appJs, /cancel-recognition-scan/);
-  assert.match(appJs, /MAAFramework取得/);
+  assert.match(appJs, /MAAFramework版で実行/);
   assert.doesNotMatch(controlEvents, /recognitionScanUrl/);
   assert.doesNotMatch(controlEvents, /recognitionScanCancelUrl/);
   assert.doesNotMatch(controlEvents, /postRecognitionScan/);
@@ -73,7 +63,7 @@ test("reset state replaces state and schedules a sidecar reload", async () => {
   let replacedState = null;
   let notice = "";
   let reloads = 0;
-  const ui = { controlV2Screen: "common", controlV2ChoiceTab: "operators" };
+  const ui = {};
 
   globalThis.fetch = async (url, options) => {
     assert.equal(url, "/api/state/reset");

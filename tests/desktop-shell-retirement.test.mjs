@@ -67,10 +67,11 @@ test("runtime view guards no longer treat retired Control as an active interacti
   assert.doesNotMatch(controlEvents, /context\.view === "control-v2"/);
 });
 
-test("retired Control metadata does not publish detached Control routes", async () => {
-  const screenMeta = await readFile(new URL("../app/domain/control-v2-screens.js", import.meta.url), "utf8");
-
-  assert.doesNotMatch(screenMeta, /detachPath:\s*"\/control-v2/);
+test("retired Control screen metadata module has been removed", async () => {
+  await assert.rejects(
+    readFile(new URL("../app/domain/control-v2-screens.js", import.meta.url), "utf8"),
+    { code: "ENOENT" },
+  );
 });
 
 test("runtime event layer no longer handles retired Control screen switching actions", async () => {

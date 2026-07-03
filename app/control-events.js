@@ -1,7 +1,6 @@
 import * as controlActions from "./control-actions.js";
 import { clampCoinCount, normalizeCoinFace } from "./domain/special-values.js";
 import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, glmOcrInstallUrl, glmOcrOllamaInstallUrl, glmOcrOllamaStartUrl, glmOcrOllamaStatusUrl, glmOcrOllamaUninstallUrl, glmOcrStatusUrl, glmOcrUninstallUrl, hypervisorStatusUrl, resetStateUrl } from "./lib/api.js";
-import { normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 
 function parseImportDraft(ui) {
   if (!ui.importDraft.trim()) throw new Error("JSONが空です");
@@ -100,40 +99,19 @@ function startGlmOcrOllamaStatusPolling(context) {
   }, 2500);
 }
 
-function setChoicePressed(element, active) {
-  if (!element) return;
-  const row = element.closest?.(".operator-choice, .relic-choice") || element;
-  row.classList.toggle("active", active);
-  if (element.hasAttribute?.("aria-pressed")) element.setAttribute("aria-pressed", active ? "true" : "false");
-}
-
 export function getChoiceActive(type, id, state, context = {}) {
   if (typeof context.getChoiceActive === "function") return context.getChoiceActive(type, id);
   const key = type === "relic" ? "relics" : "operators";
   return (state[key] || []).includes(id);
 }
 
-export function getChoiceCount(ui, state, context = {}) {
-  const choiceTab = ui.controlV2ChoiceTab;
-  if (choiceTab === "relics") return typeof context.getEffectiveRelicCount === "function" ? context.getEffectiveRelicCount() : (state.relics || []).length;
-  if (choiceTab === "operators") return (state.operators || []).length;
-  return 0;
-}
-
-export function syncControlV2UiAfterStateReplace(ui) {
-  const screen = normalizeControlV2Screen(ui.controlV2Screen);
-  ui.controlV2Screen = screen;
-  if (screen === "operators" || screen === "relics") {
-    ui.controlV2ChoiceTab = screen;
-  } else if (ui.controlV2ChoiceTab !== "operators" && ui.controlV2ChoiceTab !== "relics") {
-    ui.controlV2ChoiceTab = "operators";
-  }
+export function markChoiceRenderDirtyAfterStateReplace(ui) {
   ui.forceFullChoiceRender = true;
 }
 
 function replaceControlState(context, nextState) {
   context.replaceState(nextState);
-  syncControlV2UiAfterStateReplace(context.ui);
+  markChoiceRenderDirtyAfterStateReplace(context.ui);
 }
 
 function reloadAfterReset(context) {
@@ -141,50 +119,9 @@ function reloadAfterReset(context) {
   setTimeout(() => context.reloadView(), 0);
 }
 
-function relicBadges(meta = {}) {
-  const autoOnly = meta.template && !meta.manual;
-  return [
-    autoOnly ? '<span class="item-badge template">自動</span>' : '',
-    meta.manual && meta.template ? '<span class="item-badge template">手動+自動</span>' : '',
-    meta.excluded ? '<span class="item-badge excluded">除外</span>' : '',
-  ].filter(Boolean).join("");
-}
-
-function updateRelicChoiceMeta(element, meta) {
-  if (!element || !meta) return;
-  const row = element.closest?.(".relic-choice") || element;
-  row.classList.toggle("template-active", Boolean(meta.template && !meta.manual));
-  const badges = row.querySelector(".item-badges");
-  if (badges) badges.innerHTML = relicBadges({ ...meta, excluded: row.classList.contains("choice-excluded") });
-}
-
-function refreshChoiceCountLabels(ui, state, context) {
-  document.querySelectorAll(".control-v2-relic-count").forEach((node) => {
-    node.textContent = node.textContent.replace(/所持\d+件/, `所持${context.getEffectiveRelicCount?.() ?? (state.relics || []).length}件`);
-  });
-  document.querySelectorAll(".control-v2-operator-count").forEach((node) => {
-    node.textContent = node.textContent.replace(/招集\d+名/, `招集${(state.operators || []).length}名`);
-  });
-}
-
 function toggleChoiceElement(element, type, id, context) {
-  if (context.view === "sidecar") {
-    context.mutate((state) => controlActions.toggleChoice(state, type, id));
-    return;
-  }
-  const preferences = context.getState().preferences || {};
-  const renderForFilters = type === "relic"
-    ? Boolean(preferences.relicSelectedOnly || preferences.relicShowSelectedFirst)
-    : Boolean(preferences.operatorSelectedOnly || preferences.operatorShowSelectedFirst);
-  const renderAfterToggle = Boolean(context.ui.forceFullChoiceRender || renderForFilters);
+  context.mutate((state) => controlActions.toggleChoice(state, type, id));
   context.ui.forceFullChoiceRender = false;
-  context.mutate((state) => controlActions.toggleChoice(state, type, id), { render: renderAfterToggle });
-  if (renderAfterToggle) return;
-  const state = context.getState();
-  const active = getChoiceActive(type, id, state, context);
-  setChoicePressed(element, active);
-  if (type === "relic") updateRelicChoiceMeta(element, context.getRelicChoiceMeta?.(id));
-  refreshChoiceCountLabels(context.ui, state, context);
 }
 
 function isControlView(context) {
@@ -545,9 +482,7 @@ export function registerControlEvents(app, context) {
     if (!target.matches("[data-ui]")) return;
     const key = target.dataset.ui;
     context.ui[key] = target.value;
-    if (key === "relicSearch") {
-      if (!event.isComposing && !context.refreshRelicListOnly()) context.renderControl();
-    }
+    if (key === "relicSearch" && !event.isComposing) context.renderControl();
   });
 
   app.addEventListener("compositionend", (event) => {
@@ -555,7 +490,7 @@ export function registerControlEvents(app, context) {
     const target = event.target;
     if (!target.matches('[data-ui="relicSearch"]')) return;
     context.ui.relicSearch = target.value;
-    if (!context.refreshRelicListOnly()) context.renderControl();
+    context.renderControl();
   });
 
   app.addEventListener("change", (event) => {
