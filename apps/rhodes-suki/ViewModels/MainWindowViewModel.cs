@@ -1499,6 +1499,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         yield return new SukiInspectorRow("ワークスペース", WorkspaceTitle, WorkspaceTab);
         yield return new SukiInspectorRow("IS", CampaignHeaderTitle, CampaignHeaderDetail);
+        yield return BuildProductSurfaceInspectorRow();
 
         if (WorkspaceTab == "run")
         {
@@ -1564,6 +1565,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         yield return new SukiInspectorRow("ログ", LastCapturePath, CaptureState);
         yield return new SukiInspectorRow("API", RhodesApiUrl, "候補化API");
+    }
+
+    private SukiInspectorRow BuildProductSurfaceInspectorRow()
+    {
+        var surfaces = RhodesProductSurfaceRegistry.ForWorkspace(WorkspaceTab);
+        var categories = surfaces
+            .Select(surface => surface.Category)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var outputCount = surfaces.Count(surface => surface.CanShowOnOutput);
+        var detail = categories.Length == 0
+            ? "未登録"
+            : $"{string.Join(" / ", categories)} / OBS={outputCount}";
+        return new SukiInspectorRow("サーフェス", $"{surfaces.Count}件", detail);
     }
 
     private async Task ConnectAsync()
