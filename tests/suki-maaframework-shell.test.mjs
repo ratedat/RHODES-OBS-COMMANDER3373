@@ -300,6 +300,18 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RefreshChoicesFromRunState/);
   assert.match(viewModel, /RhodesMaaCandidateApiClient\.ConvertAsync/);
   assert.match(viewModel, /RhodesMaaLocalCandidateConverter\.FromTaskResults/);
+  assert.match(
+    viewModel,
+    /private async Task RunAdbConnectionTestAsync\(\)[\s\S]*await DetectAdbLocallyCoreAsync\(\)[\s\S]*_session\.InitializeAdbAsync\(BuildSessionOptions\(\)\)[\s\S]*var capture = await CaptureCoreAsync\(\)/,
+  );
+  assert.match(
+    viewModel,
+    /private async Task RunSelectedProfileRecognitionAndApplyAsync\(\)[\s\S]*await RunAllResourceTasksCoreAsync\(\)[\s\S]*await ConvertResourceTaskResultsCoreAsync\(\)[\s\S]*await ApplyCandidateResultsCoreAsync\(\)/,
+  );
+  assert.match(
+    viewModel,
+    /private async Task ApplyCandidateResultsCoreAsync\(\)[\s\S]*SaveCandidateResultsToApiStateAsync\(\)[\s\S]*RhodesRunStateStore\.SaveCandidatesAsync\(CandidateResults\)[\s\S]*ReloadRunStateFromStore\(\)/,
+  );
   assert.match(candidateApiClient, /api\/recognition\/maa-resource/);
   assert.match(candidateApiClient, /ExtractCandidatePreviews/);
   assert.doesNotMatch(viewModel, /RhodesRecognitionScanApiClient\.RunAsync/);
