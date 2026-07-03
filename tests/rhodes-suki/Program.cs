@@ -47,6 +47,7 @@ var tests = new (string Name, Action Run)[]
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
+    ("Suki optional runtime action workflow reports runtime and API outcomes", SukiOptionalRuntimeActionWorkflow),
     ("Suki runtime probe workflow aggregates API, optional runtime, and Hyper-V statuses", SukiRuntimeProbeWorkflowAggregatesStatuses),
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
@@ -1171,6 +1172,33 @@ static void OptionalRuntimeStatusParsing()
         "Ollama");
     Equal("導入中", actionStatus.State, "action status installing");
     Equal(true, actionStatus.Installed, "action status installed");
+}
+
+static void SukiOptionalRuntimeActionWorkflow()
+{
+    var success = RhodesSukiOptionalRuntimeActionWorkflow.RunAsync(
+        "GLM-OCR導入",
+        (_, _) => Task.FromResult(new SukiOptionalRuntimeActionResult(
+            new SukiOptionalRuntimeStatus("GLM-OCR", "導入済み", "ready", true, false),
+            "")),
+        "http://127.0.0.1:5173").GetAwaiter().GetResult();
+
+    Equal("導入済み", success.RuntimeStatus.State, "success runtime state");
+    Equal("接続済み", success.ApiStatus.State, "success API state");
+    Equal(true, success.ApiStatus.Installed, "success API available flag");
+    Equal("GLM-OCR導入: 導入済み", success.StatusMessage, "success message");
+
+    var failure = RhodesSukiOptionalRuntimeActionWorkflow.RunAsync(
+        "Ollama起動",
+        (_, _) => Task.FromResult(new SukiOptionalRuntimeActionResult(
+            new SukiOptionalRuntimeStatus("Ollama", "操作失敗", "connection refused", false, false),
+            "connection refused")),
+        "http://127.0.0.1:5173").GetAwaiter().GetResult();
+
+    Equal("操作失敗", failure.RuntimeStatus.State, "failure runtime state");
+    Equal("接続失敗", failure.ApiStatus.State, "failure API state");
+    Equal(false, failure.ApiStatus.Installed, "failure API available flag");
+    Equal("Ollama起動失敗: connection refused", failure.StatusMessage, "failure message");
 }
 
 static void PreviewUrlBuilder()

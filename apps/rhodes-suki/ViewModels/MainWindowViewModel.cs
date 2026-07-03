@@ -1949,16 +1949,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = $"{label}を実行しています。";
-            var result = await action(RhodesApiUrl, null);
-            applyStatus(result.Status);
-            _rhodesApiStatus = result.Succeeded
-                ? new SukiOptionalRuntimeStatus("RHODES API", "接続済み", $"{label} API実行済み", true, false)
-                : new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", result.Error, false, false);
+            var snapshot = await RhodesSukiOptionalRuntimeActionWorkflow.RunAsync(label, action, RhodesApiUrl);
+            applyStatus(snapshot.RuntimeStatus);
+            _rhodesApiStatus = snapshot.ApiStatus;
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
-            StatusMessage = result.Succeeded
-                ? $"{label}: {result.Status.State}"
-                : $"{label}失敗: {result.Error}";
+            StatusMessage = snapshot.StatusMessage;
         });
     }
 
