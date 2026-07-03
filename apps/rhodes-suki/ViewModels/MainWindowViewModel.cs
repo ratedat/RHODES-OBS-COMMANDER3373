@@ -3094,7 +3094,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private Task OpenPreviewUrlAsync(object? parameter)
     {
         var path = parameter as string;
-        var url = RhodesPreviewUrlBuilder.Build(RhodesApiUrl, path ?? "/control-v2");
+        var url = RhodesPreviewUrlBuilder.Build(RhodesApiUrl, path ?? "/sidecar");
         try
         {
             Process.Start(new ProcessStartInfo

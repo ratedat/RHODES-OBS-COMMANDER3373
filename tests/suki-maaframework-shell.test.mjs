@@ -930,6 +930,10 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /秘宝/);
   assert.match(xaml, /RecognitionLayout\.Header\.Title/);
   assert.match(xaml, /出力 \/ OBS/);
+  assert.doesNotMatch(xaml, /Content="Control"/);
+  assert.doesNotMatch(xaml, /\/control-v2\?screen=obs/);
+  assert.match(xaml, /Content="Sidecar"/);
+  assert.match(xaml, /Content="Overlay"/);
   assert.match(xaml, /OutputParts/);
   assert.match(xaml, /OutputSeparateWindow/);
   assert.match(xaml, /OutputTournamentMode/);

@@ -572,7 +572,6 @@
                   <CheckBox Content="透過背景" IsChecked="{Binding OutputTransparentBackground, Mode=TwoWay}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                  <Button Content="Control" Command="{Binding OpenPreviewUrlCommand}" CommandParameter="/control-v2?screen=obs" />
                   <Button Content="Sidecar" Command="{Binding OpenPreviewUrlCommand}" CommandParameter="/sidecar" />
                   <Button Content="Overlay" Command="{Binding OpenPreviewUrlCommand}" CommandParameter="/overlay" />
                 </StackPanel>

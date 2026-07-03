@@ -1203,7 +1203,7 @@ static void SukiOptionalRuntimeActionWorkflow()
 
 static void PreviewUrlBuilder()
 {
-    Equal("http://127.0.0.1:5173/control-v2", RhodesPreviewUrlBuilder.Build("", ""), "default preview url");
+    Equal("http://127.0.0.1:5173/sidecar", RhodesPreviewUrlBuilder.Build("", ""), "default preview url");
     Equal("http://127.0.0.1:5173/sidecar", RhodesPreviewUrlBuilder.Build("http://127.0.0.1:5173/", "sidecar"), "sidecar url");
     Equal("http://localhost:8080/overlay?layout=compact", RhodesPreviewUrlBuilder.Build("http://localhost:8080", "/overlay?layout=compact"), "overlay url");
 }
