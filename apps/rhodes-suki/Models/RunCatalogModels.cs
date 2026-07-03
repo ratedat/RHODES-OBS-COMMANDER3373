@@ -132,6 +132,10 @@ public sealed record SukiWorkspaceActionDescriptor(
     public string StateWriteLabel => WritesState ? "state更新" : "read-only";
 }
 
+public sealed record SukiWorkspaceActionCommandSpec(
+    string CommandName,
+    string? CommandParameter);
+
 public sealed record SukiWorkspaceActionPreview(
     SukiWorkspaceActionDescriptor Descriptor,
     ICommand? Command,

@@ -217,6 +217,25 @@ public static class RhodesWorkspaceActionRegistry
             50),
     ];
 
+    private static readonly HashSet<string> SupportedCommandNames = new(StringComparer.Ordinal)
+    {
+        "SyncRunStateFromApiCommand",
+        "OpenRecognitionProfileCommand",
+        "ClearVisibleChoicesCommand",
+        "RunSelectedProfileRecognitionCommand",
+        "RunSelectedProfileRecognitionAndApplyCommand",
+        "ApplyCandidateResultsCommand",
+        "RefreshRecognitionScanHistoryCommand",
+        "OpenPreviewUrlCommand",
+        "SaveSettingsCommand",
+        "RefreshAdbDevicesCommand",
+        "RunAdbConnectionTestCommand",
+        "ConnectCommand",
+        "CaptureCommand",
+        "RefreshOptionalRuntimesCommand",
+        "RegenerateMaaResourceCommand",
+    };
+
     public static IReadOnlyList<SukiWorkspaceActionDescriptor> Items => Descriptors;
 
     public static IReadOnlyList<SukiWorkspaceActionDescriptor> ForWorkspace(string? workspaceId)
@@ -226,6 +245,22 @@ public static class RhodesWorkspaceActionRegistry
             .Where(item => string.Equals(item.WorkspaceId, normalized, StringComparison.Ordinal))
             .OrderBy(item => item.DisplayPriority)
             .ToArray();
+    }
+
+    public static SukiWorkspaceActionCommandSpec ParseCommandName(string? commandName)
+    {
+        var trimmed = commandName?.Trim() ?? "";
+        var open = trimmed.IndexOf('(', StringComparison.Ordinal);
+        if (open < 0)
+            return new SukiWorkspaceActionCommandSpec(trimmed, null);
+
+        var close = trimmed.LastIndexOf(')');
+        if (close != trimmed.Length - 1 || close <= open)
+            return new SukiWorkspaceActionCommandSpec(trimmed, null);
+
+        var name = trimmed[..open].Trim();
+        var parameter = trimmed[(open + 1)..close].Trim();
+        return new SukiWorkspaceActionCommandSpec(name, parameter);
     }
 
     public static IReadOnlyList<string> Validate()
@@ -249,6 +284,17 @@ public static class RhodesWorkspaceActionRegistry
                 errors.Add($"{item.Id}: label is blank");
             if (string.IsNullOrWhiteSpace(item.CommandName))
                 errors.Add($"{item.Id}: command name is blank");
+            else
+            {
+                var command = ParseCommandName(item.CommandName);
+                if (!SupportedCommandNames.Contains(command.CommandName))
+                    errors.Add($"{item.Id}: unsupported command {item.CommandName}");
+                if (item.CommandName.Contains('(', StringComparison.Ordinal)
+                    && string.IsNullOrWhiteSpace(command.CommandParameter))
+                {
+                    errors.Add($"{item.Id}: command parameter is blank or malformed");
+                }
+            }
             if (string.IsNullOrWhiteSpace(item.Workflow))
                 errors.Add($"{item.Id}: workflow is blank");
             if (string.IsNullOrWhiteSpace(item.Detail))

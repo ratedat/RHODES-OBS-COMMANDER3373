@@ -1529,10 +1529,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private SukiWorkspaceActionPreview CreateWorkspaceActionPreview(SukiWorkspaceActionDescriptor descriptor)
     {
-        var commandName = descriptor.CommandName;
-        var commandParameter = ExtractWorkspaceActionCommandParameter(commandName);
-        var commandKey = commandParameter is null ? commandName : commandName[..commandName.IndexOf('(', StringComparison.Ordinal)];
-        var command = commandKey switch
+        var commandSpec = RhodesWorkspaceActionRegistry.ParseCommandName(descriptor.CommandName);
+        var command = commandSpec.CommandName switch
         {
             nameof(SyncRunStateFromApiCommand) => SyncRunStateFromApiCommand,
             nameof(OpenRecognitionProfileCommand) => OpenRecognitionProfileCommand,
@@ -1552,17 +1550,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _ => null,
         };
 
-        return new SukiWorkspaceActionPreview(descriptor, command, commandParameter);
-    }
-
-    private static string? ExtractWorkspaceActionCommandParameter(string commandName)
-    {
-        var open = commandName.IndexOf('(', StringComparison.Ordinal);
-        var close = commandName.LastIndexOf(')');
-        if (open < 0 || close <= open)
-            return null;
-
-        return commandName[(open + 1)..close].Trim();
+        return new SukiWorkspaceActionPreview(descriptor, command, commandSpec.CommandParameter);
     }
 
     private IEnumerable<SukiInspectorRow> BuildInspectorRows()

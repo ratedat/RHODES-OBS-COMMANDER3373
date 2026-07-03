@@ -1338,6 +1338,10 @@ static void WorkspaceActionRegistry()
     var actions = RhodesWorkspaceActionRegistry.Items;
 
     Equal(0, RhodesWorkspaceActionRegistry.Validate().Count, "workspace action validation");
+    var profileCommand = RhodesWorkspaceActionRegistry.ParseCommandName("OpenRecognitionProfileCommand(runStatusFull)");
+    Equal("OpenRecognitionProfileCommand", profileCommand.CommandName, "workspace action command parser name");
+    Equal("runStatusFull", profileCommand.CommandParameter, "workspace action command parser parameter");
+    Equal(null, RhodesWorkspaceActionRegistry.ParseCommandName("CaptureCommand").CommandParameter, "workspace action command parser no parameter");
     Equal(
         "run|choices|recognition|output|runtime|debug",
         string.Join("|", actions.Select(item => item.WorkspaceId).Distinct()),

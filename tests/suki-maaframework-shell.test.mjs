@@ -174,6 +174,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(workspaceLayoutRegistry, /デバッグ/);
   assert.match(workspaceActionRegistry, /RhodesWorkspaceActionRegistry/);
   assert.match(workspaceActionRegistry, /SukiWorkspaceActionDescriptor/);
+  assert.match(workspaceActionRegistry, /SupportedCommandNames/);
+  assert.match(workspaceActionRegistry, /ParseCommandName/);
   assert.match(workspaceActionRegistry, /runtime\.auto-detect/);
   assert.match(workspaceActionRegistry, /maa-controller\.cached-screenshot/);
   assert.match(workspaceActionRegistry, /recognition\.run-and-apply/);
@@ -200,7 +202,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /WorkspaceActionCountLabel/);
   assert.match(viewModel, /RefreshWorkspaceActions\(\)/);
   assert.match(viewModel, /CreateWorkspaceActionPreview/);
-  assert.match(viewModel, /ExtractWorkspaceActionCommandParameter/);
+  assert.match(viewModel, /RhodesWorkspaceActionRegistry\.ParseCommandName/);
   assert.match(viewModel, /RhodesWorkspaceActionRegistry\.ForWorkspace\(WorkspaceTab\)/);
   assert.match(mainWindowAxaml, /ItemsSource="\{Binding WorkspaceActions\}"/);
   assert.match(mainWindowAxaml, /Command="\{Binding Command\}"/);
