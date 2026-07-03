@@ -2507,6 +2507,12 @@ static void EvidencePreviewTreeUsesCompactTypedNodes()
     Equal(true, nodes[0].PreviewText.Contains("executionPlan: 実行可能 / profile preset / tasks=1 / canRun=true", StringComparison.Ordinal), "summary execution plan");
     Equal(true, nodes[0].PreviewText.Contains("contract: OK / OK task=43 group=7 preset=7 / interface.json / resource/base/pipeline", StringComparison.Ordinal), "summary contract");
 
+    var contract = nodes.Single(node => node.NodeKind == "contract");
+    Equal("Contract · OK", contract.Title, "contract node title");
+    Equal(true, contract.HasVisibleDetail, "contract node detail visible");
+    Equal(true, contract.Detail.Contains("OK task=43 group=7 preset=7", StringComparison.Ordinal), "contract node summary");
+    Equal(true, contract.PreviewText.Contains("\"detail\": \"interface.json / resource/base/pipeline\"", StringComparison.Ordinal), "contract node raw detail");
+
     var candidates = nodes.Single(node => node.Title.StartsWith("Candidates", StringComparison.Ordinal));
     Equal("section", candidates.NodeKind, "candidate section kind");
     Equal("Candidates · 1", candidates.Title, "candidate section title");

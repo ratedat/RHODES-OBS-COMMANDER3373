@@ -2469,6 +2469,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 new MaaEvidencePreviewNode("Summary", "scan metadata", EvidenceSummary(root), NodeKind: "summary"),
             };
+            var contractNode = EvidenceContractNode(root);
+            if (contractNode is not null)
+                nodes.Add(contractNode);
             if (includeCandidates)
                 nodes.Add(EvidenceSection("Candidates", "candidate", candidates, CandidateEvidenceTitle, CandidateJsonKey, _ => ""));
             if (includeTasks)
@@ -2644,6 +2647,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             parts.Add($"errors={errorCount}");
 
         return string.Join(" / ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
+
+    private static MaaEvidencePreviewNode? EvidenceContractNode(JsonElement root)
+    {
+        var evidence = JsonObject(root, "evidence");
+        var contract = JsonObject(evidence, "contract");
+        if (contract.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        var state = FirstNonEmpty(JsonString(contract, "state"), JsonString(contract, "summary"), "contract");
+        return new MaaEvidencePreviewNode(
+            $"Contract · {state}",
+            EvidenceContract(root),
+            JsonSerializer.Serialize(contract, options),
+            NodeKind: "contract");
     }
 
     private static string EvidenceCounts(JsonElement root)
