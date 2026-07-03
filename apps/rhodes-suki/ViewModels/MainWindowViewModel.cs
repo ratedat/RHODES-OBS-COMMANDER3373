@@ -1570,17 +1570,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunBusyAsync(async () =>
         {
-            if (string.IsNullOrWhiteSpace(AdbSerial) || string.IsNullOrWhiteSpace(AdbPath))
-                await DetectAdbLocallyCoreAsync();
-
-            StatusMessage = "MAA Controller に接続しています。";
-            var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
-            SessionState = snapshot.State;
-            SessionDetail = snapshot.Detail;
-            RefreshRuntimeCapabilities();
-            RefreshInspectorRows();
-            StatusMessage = snapshot.IsReady ? "接続しました。" : "接続できませんでした。設定を確認してください。";
+            await EnsureMaaControllerReadyAsync(forceReconnect: true);
         });
+    }
+
+    private void ApplyMaaSessionSnapshot(MaaSessionSnapshot snapshot, string statusMessage)
+    {
+        SessionState = snapshot.State;
+        SessionDetail = snapshot.Detail;
+        StatusMessage = statusMessage;
+        RefreshRuntimeCapabilities();
+        RefreshInspectorRows();
     }
 
     private void LoadSettings()
@@ -4168,8 +4168,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StatusMessage = $"{payload.Name}: {result.Status}";
     }
 
+    private async Task<bool> EnsureMaaControllerReadyAsync(bool forceReconnect = false)
+    {
+        if (!forceReconnect && _session.IsControllerReady)
+            return true;
+
+        if (string.IsNullOrWhiteSpace(AdbSerial) || string.IsNullOrWhiteSpace(AdbPath))
+            await DetectAdbLocallyCoreAsync();
+
+        StatusMessage = "MAA Controller に接続しています。";
+        var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
+        ApplyMaaSessionSnapshot(
+            snapshot,
+            snapshot.IsReady
+                ? "MAA Controller に接続しました。"
+                : "MAA Controller に接続できませんでした。設定を確認してください。");
+        return snapshot.IsReady;
+    }
+
     private async Task<bool> EnsureCaptureAsync()
     {
+        if (!await EnsureMaaControllerReadyAsync())
+            return false;
+
         if (_lastCapture.Length > 0)
             return true;
 
@@ -4179,6 +4200,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<bool> ForceCaptureAsync()
     {
+        if (!await EnsureMaaControllerReadyAsync())
+            return false;
+
         var capture = await CaptureCoreAsync();
         return capture?.Succeeded == true;
     }

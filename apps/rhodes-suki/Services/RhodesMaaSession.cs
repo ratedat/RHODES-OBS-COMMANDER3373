@@ -14,6 +14,8 @@ public sealed class RhodesMaaSession : IDisposable
 
     public MaaTasker? Tasker => _tasker;
 
+    public bool IsControllerReady => _tasker?.Controller is { IsConnected: true };
+
     public static MaaSessionOptions DefaultAdbOptions(
         string adbPath = "adb",
         string adbSerial = "",
