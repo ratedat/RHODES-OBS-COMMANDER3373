@@ -88,6 +88,7 @@ public static class RhodesRecognitionScanHistory
                 logCount = JsonArrayCount(root, "log");
 
             var executionPlan = ExecutionPlan(root);
+            var contract = Contract(root);
             return new RhodesRecognitionScanHistoryItem(
                 ProfileId: JsonString(root, "profileId"),
                 ProfileLabel: JsonString(root, "profileLabel"),
@@ -104,6 +105,10 @@ public static class RhodesRecognitionScanHistory
                 ExecutionPlanSource: executionPlan.Source,
                 ExecutionPlanTaskCount: executionPlan.TaskCount,
                 ExecutionPlanError: executionPlan.Error,
+                ContractState: contract.State,
+                ContractSummary: contract.Summary,
+                ContractDetail: contract.Detail,
+                ContractErrorCount: contract.ErrorCount,
                 LogPath: path,
                 Error: JsonError(root),
                 SortTimestamp: observedAt);
@@ -175,6 +180,19 @@ public static class RhodesRecognitionScanHistory
                 JsonInt(plan, "taskCount"),
                 JsonString(plan, "error"))
             : ("", "", "", 0, "");
+    }
+
+    private static (string State, string Summary, string Detail, int ErrorCount) Contract(JsonElement root)
+    {
+        var evidence = ObjectProperty(root, "evidence");
+        var contract = ObjectProperty(evidence, "contract");
+        return contract.ValueKind == JsonValueKind.Object
+            ? (
+                JsonString(contract, "state"),
+                JsonString(contract, "summary"),
+                JsonString(contract, "detail"),
+                JsonArrayCount(contract, "errors"))
+            : ("", "", "", 0);
     }
 
     private static string JsonError(JsonElement root)

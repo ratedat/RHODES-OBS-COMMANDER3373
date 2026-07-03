@@ -2584,6 +2584,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             $"completedAt: {JsonString(root, "completedAt")}",
             $"counts: {EvidenceCounts(root)}",
             $"executionPlan: {EvidenceExecutionPlan(root)}",
+            $"contract: {EvidenceContract(root)}",
         };
         return string.Join(Environment.NewLine, summary);
     }
@@ -2614,6 +2615,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var error = JsonString(plan, "error");
         if (!string.IsNullOrWhiteSpace(error))
             parts.Add(error);
+
+        return string.Join(" / ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
+
+    private static string EvidenceContract(JsonElement root)
+    {
+        var evidence = JsonObject(root, "evidence");
+        var contract = JsonObject(evidence, "contract");
+        if (contract.ValueKind != JsonValueKind.Object)
+            return "-";
+
+        var parts = new List<string>
+        {
+            FirstNonEmpty(JsonString(contract, "state"), JsonString(contract, "summary")),
+        };
+
+        var summary = JsonString(contract, "summary");
+        if (!string.IsNullOrWhiteSpace(summary) && !summary.Equals(parts[0], StringComparison.Ordinal))
+            parts.Add(summary);
+
+        var detail = JsonString(contract, "detail");
+        if (!string.IsNullOrWhiteSpace(detail))
+            parts.Add(detail);
+
+        var errorCount = JsonArray(contract, "errors").Count;
+        if (errorCount > 0)
+            parts.Add($"errors={errorCount}");
 
         return string.Join(" / ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
     }

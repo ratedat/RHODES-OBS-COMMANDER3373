@@ -867,6 +867,10 @@ public sealed record RhodesRecognitionScanHistoryItem(
     string ExecutionPlanSource,
     int ExecutionPlanTaskCount,
     string ExecutionPlanError,
+    string ContractState,
+    string ContractSummary,
+    string ContractDetail,
+    int ContractErrorCount,
     string LogPath,
     string Error,
     DateTimeOffset SortTimestamp)
@@ -898,14 +902,36 @@ public sealed record RhodesRecognitionScanHistoryItem(
         }
     }
 
+    public string ContractStatusSummary
+    {
+        get
+        {
+            var parts = new List<string>
+            {
+                ContractState,
+                ContractSummary,
+            };
+            if (ContractErrorCount > 0)
+                parts.Add($"errors={ContractErrorCount}");
+            return string.Join("/", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+        }
+    }
+
     public string Summary => ResourceTaskCount > 0
-        ? string.IsNullOrWhiteSpace(ExecutionPlanSummary)
-            ? $"{SourceLabel} / candidates={CandidateCount} / tasks={ResourceTaskCount} / preset={PresetTaskCount} / log={LogCount}"
-            : $"{SourceLabel} / candidates={CandidateCount} / tasks={ResourceTaskCount} / preset={PresetTaskCount} / plan={ExecutionPlanSummary} / log={LogCount}"
+        ? string.Join(" / ", new[]
+            {
+                SourceLabel,
+                $"candidates={CandidateCount}",
+                $"tasks={ResourceTaskCount}",
+                $"preset={PresetTaskCount}",
+                string.IsNullOrWhiteSpace(ExecutionPlanSummary) ? "" : $"plan={ExecutionPlanSummary}",
+                string.IsNullOrWhiteSpace(ContractStatusSummary) ? "" : $"contract={ContractStatusSummary}",
+                $"log={LogCount}",
+            }.Where(part => !string.IsNullOrWhiteSpace(part)))
         : $"{SourceLabel} / candidates={CandidateCount} / log={LogCount}";
 
     public string Detail => string.IsNullOrWhiteSpace(Error)
-        ? LogPath
+        ? string.IsNullOrWhiteSpace(ContractDetail) ? LogPath : $"{ContractDetail} / {LogPath}"
         : $"{Error} / {LogPath}";
 }
 

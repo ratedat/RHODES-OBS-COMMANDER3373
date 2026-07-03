@@ -2382,7 +2382,8 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
                         new MaaResourceTaskPreview("RhodesOperatorNameOcr", "オペレーター名", "", ["operatorsFull"], "generated"),
                     ],
                     "",
-                    MaaResourceExecutionPlan.ReadyState)));
+                    MaaResourceExecutionPlan.ReadyState),
+                contract: new MaaResourceContractSnapshot(true, 43, 7, 7, [])));
         File.WriteAllText(Path.Combine(directory, "recognition-broken.json"), "{");
 
         var history = RhodesRecognitionScanHistory.LoadRecent(directory, limit: 8);
@@ -2399,10 +2400,17 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
         Equal("profile preset", history[0].ExecutionPlanSource, "native execution plan source");
         Equal(1, history[0].ExecutionPlanTaskCount, "native execution plan task count");
         Equal(true, history[0].Summary.Contains("plan=実行可能/profile preset/tasks=1", StringComparison.Ordinal), "native summary execution plan");
+        Equal("OK", history[0].ContractState, "native contract state");
+        Equal("OK task=43 group=7 preset=7", history[0].ContractSummary, "native contract summary");
+        Equal("interface.json / resource/base/pipeline", history[0].ContractDetail, "native contract detail");
+        Equal(0, history[0].ContractErrorCount, "native contract error count");
+        Equal(true, history[0].Summary.Contains("contract=OK/OK task=43 group=7 preset=7", StringComparison.Ordinal), "native summary contract");
+        Equal(true, history[0].Detail.Contains("interface.json / resource/base/pipeline", StringComparison.Ordinal), "native detail contract");
         Equal("秘宝スキャン", history[1].DisplayProfile, "api profile label");
         Equal(1, history[1].CandidateCount, "api candidate count");
         Equal(4, history[1].LogCount, "api log count");
         Equal("", history[1].ExecutionPlanSummary, "api execution plan omitted");
+        Equal("", history[1].ContractStatusSummary, "api contract omitted");
 
         var nativePayload = RhodesRecognitionScanHistory.LoadPayload(history[0].LogPath);
         Equal(true, nativePayload.Succeeded, "native payload succeeded");
@@ -2459,6 +2467,16 @@ static void EvidencePreviewTreeUsesCompactTypedNodes()
             "error": ""
           }
         },
+        "contract": {
+          "isValid": true,
+          "state": "OK",
+          "taskCount": 43,
+          "groupCount": 7,
+          "presetCount": 7,
+          "summary": "OK task=43 group=7 preset=7",
+          "detail": "interface.json / resource/base/pipeline",
+          "errors": []
+        },
         "taskResults": [
           {
             "entry": "RhodesOcrRegion_operator_name",
@@ -2487,6 +2505,7 @@ static void EvidencePreviewTreeUsesCompactTypedNodes()
     Equal("summary", nodes[0].NodeKind, "summary node kind");
     Equal(true, nodes[0].HasVisibleDetail, "summary detail visible");
     Equal(true, nodes[0].PreviewText.Contains("executionPlan: 実行可能 / profile preset / tasks=1 / canRun=true", StringComparison.Ordinal), "summary execution plan");
+    Equal(true, nodes[0].PreviewText.Contains("contract: OK / OK task=43 group=7 preset=7 / interface.json / resource/base/pipeline", StringComparison.Ordinal), "summary contract");
 
     var candidates = nodes.Single(node => node.Title.StartsWith("Candidates", StringComparison.Ordinal));
     Equal("section", candidates.NodeKind, "candidate section kind");
