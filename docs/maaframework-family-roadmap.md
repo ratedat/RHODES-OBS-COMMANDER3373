@@ -131,6 +131,7 @@ flowchart LR
 - 接続済み: MAA認識対象境界を `data/recognition/maa-recognition-target-policy.json` に集約し、JS生成/契約チェックとSuki C#側で同じmanifestを参照する。
 - 接続済み: `tools/check-maa-contract.mjs` で `interface.json` の controller/resource/group/task/preset と実pipeline entryの整合性を検証し、Suki portable publish前にも実行する。
 - 接続済み: Suki 側でも同じ `interface.json` / pipeline 契約を検証し、認識ワークスペースのインスペクタに `MAA契約` としてOK/NGサマリを表示する。
+- 接続済み: `ProductSurfaceRegistry` に Runtime の MAAFramework/MAA-OCR/GLM/Ollama/Hyper-V、Recognition の候補/証跡/ROI調整、Debug のログ/ROIセッションを登録し、画面要素のワークスペース所有・証跡・レビュー方針を明示する。
 
 ## First Milestone
 - SukiUI shell が起動する

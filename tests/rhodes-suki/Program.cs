@@ -1394,13 +1394,25 @@ static void ProductSurfaceRegistry()
         string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("choices").Select(item => item.Id)),
         "choice surfaces");
     Equal(
-        "recognition.profiles|recognition.candidates",
+        "recognition.profiles|recognition.candidates|recognition.evidence|recognition.roi-adjustment",
         string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("recognition").Select(item => item.Id)),
         "recognition surfaces");
     Equal(true, items.Single(item => item.Id == "runtime.adb").Provenance.Contains("MAAFramework", StringComparison.Ordinal), "adb provenance");
+    Equal(true, items.Single(item => item.Id == "runtime.maa-framework").Provenance.Contains("Maa.Framework", StringComparison.Ordinal), "maa framework provenance");
     Equal(true, items.Single(item => item.Id == "runtime.maa-ocr").Provenance.Contains("MAAFramework", StringComparison.Ordinal), "maa ocr provenance");
     Equal("optional", items.Single(item => item.Id == "runtime.glm-ocr").ReviewPolicy, "glm review policy");
+    Equal("optional", items.Single(item => item.Id == "runtime.ollama").ReviewPolicy, "ollama review policy");
+    Equal("platform-diagnostic", items.Single(item => item.Id == "runtime.hyper-v").ReviewPolicy, "hyper-v review policy");
+    Equal(
+        "runtime.adb|runtime.maa-framework|runtime.maa-ocr|runtime.glm-ocr|runtime.ollama|runtime.hyper-v",
+        string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("runtime").Select(item => item.Id)),
+        "runtime surfaces");
+    Equal(
+        "debug.evidence|debug.logs|debug.roi-sessions",
+        string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("debug").Select(item => item.Id)),
+        "debug surfaces");
     Equal(true, items.Single(item => item.Id == "output.obs-parts").CanShowOnOutput, "output surface");
+    Equal(false, items.Single(item => item.Id == "recognition.roi-adjustment").CanShowOnOutput, "roi adjustment is debugger only");
 }
 
 static void OutputPartRegistry()
