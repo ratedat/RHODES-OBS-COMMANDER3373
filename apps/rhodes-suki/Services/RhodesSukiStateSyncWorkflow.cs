@@ -82,6 +82,23 @@ public static class RhodesSukiStateSyncWorkflow
             "現在ISをAPIへ同期しました。");
     }
 
+    public static async Task<RhodesSukiStateSyncResult> SyncFromApiAsync(
+        Func<CancellationToken, Task<RhodesStateApiResult>> fetchApiStateAsync,
+        Func<string, CancellationToken, Task> replaceLocalStateJsonAsync,
+        CancellationToken cancellationToken = default)
+    {
+        var fetched = await fetchApiStateAsync(cancellationToken);
+        if (!fetched.Succeeded)
+            return Failure(fetched.Error, "API state取り込み");
+
+        await replaceLocalStateJsonAsync(fetched.StateJson, cancellationToken);
+        return new RhodesSukiStateSyncResult(
+            "",
+            RhodesApiStatusProbe.ParseStateJson(fetched.StateJson),
+            true,
+            "API stateをローカルへ取り込みました。");
+    }
+
     private static RhodesSukiStateSyncResult Failure(string error, string label)
     {
         return new RhodesSukiStateSyncResult(

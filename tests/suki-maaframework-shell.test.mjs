@@ -338,10 +338,12 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(scanResultParser, /RhodesMaaCandidateApiClient\.ExtractCandidatePreviews/);
   assert.match(stateApiClient, /api\/state/);
   assert.match(viewModel, /RhodesSukiStateSyncWorkflow\.SyncSettingsAsync/);
+  assert.match(viewModel, /RhodesSukiStateSyncWorkflow\.SyncFromApiAsync/);
   assert.match(stateSyncWorkflow, /RhodesStateApiClient\.ApplyChoicesToStateJson/);
   assert.match(stateSyncWorkflow, /RhodesStateApiClient\.ApplyAdbSettingsToStateJson/);
   assert.match(stateSyncWorkflow, /RhodesStateApiClient\.ApplySukiPreferencesToStateJson/);
   assert.match(stateSyncWorkflow, /RhodesStateApiClient\.ApplyRunContextToStateJson/);
+  assert.match(stateSyncWorkflow, /public static async Task<RhodesSukiStateSyncResult> SyncFromApiAsync/);
   assert.match(stateSyncWorkflow, /RhodesApiStatusProbe\.ParseStateJson/);
   assert.doesNotMatch(viewModel, /RhodesStateApiClient\.ApplyAdbSettingsToStateJson/);
   assert.doesNotMatch(viewModel, /RhodesStateApiClient\.ApplySukiPreferencesToStateJson/);

@@ -85,6 +85,8 @@ var tests = new (string Name, Action Run)[]
     ("Suki state sync workflow reports API failures without local state replacement", SukiStateSyncWorkflowSettingsFailure),
     ("Suki state sync workflow saves current IS context through API state", SukiStateSyncWorkflowRunContextSuccess),
     ("Suki state sync workflow reports IS context API failures without replacement", SukiStateSyncWorkflowRunContextFailure),
+    ("Suki state sync workflow imports API state into local storage", SukiStateSyncWorkflowImportSuccess),
+    ("Suki state sync workflow reports API import failures without replacement", SukiStateSyncWorkflowImportFailure),
     ("State API client can apply Suki display preferences into current state JSON", StateApiSukiPreferencesApply),
     ("State API client can apply selected choices into current state JSON", StateApiChoicesApply),
     ("State API client can apply current campaign into current state JSON", StateApiRunContextApply),
@@ -2905,6 +2907,43 @@ static void SukiStateSyncWorkflowRunContextFailure()
     Equal(false, result.ShouldReloadRunState, "run context failure avoids reload");
     Equal("timeout", result.Error, "run context failure error");
     Equal("接続失敗", result.ApiStatus.State, "run context failure api status");
+}
+
+static void SukiStateSyncWorkflowImportSuccess()
+{
+    var apiState =
+        """
+        {
+          "version": 1,
+          "run": { "campaignId": "is5_sarkaz", "special": { "is5_sarkaz": { "idea": 7 } } },
+          "operators": ["gummy"]
+        }
+        """;
+    var replacedState = "";
+    var result = RhodesSukiStateSyncWorkflow.SyncFromApiAsync(
+        _ => Task.FromResult(new RhodesStateApiResult(apiState, "")),
+        (stateJson, _) =>
+        {
+            replacedState = stateJson;
+            return Task.CompletedTask;
+        }).GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "api import succeeds");
+    Equal(true, result.ShouldReloadRunState, "api import reloads state");
+    Equal("接続済み", result.ApiStatus.State, "api import status");
+    Equal(apiState, replacedState, "api import replaced state");
+}
+
+static void SukiStateSyncWorkflowImportFailure()
+{
+    var result = RhodesSukiStateSyncWorkflow.SyncFromApiAsync(
+        _ => Task.FromResult(new RhodesStateApiResult("", "state endpoint unavailable")),
+        (_, _) => throw new InvalidOperationException("replace should not run")).GetAwaiter().GetResult();
+
+    Equal(false, result.Succeeded, "api import failure state");
+    Equal(false, result.ShouldReloadRunState, "api import failure avoids reload");
+    Equal("state endpoint unavailable", result.Error, "api import failure error");
+    Equal("接続失敗", result.ApiStatus.State, "api import failure api status");
 }
 
 static void StateApiSukiPreferencesApply()

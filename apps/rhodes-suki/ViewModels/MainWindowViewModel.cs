@@ -3151,19 +3151,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<string> SyncRunStateFromApiCoreAsync()
     {
-        var result = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
-        if (!result.Succeeded)
-        {
-            _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", result.Error, false, false);
-            RefreshRuntimeCapabilities();
-            return result.Error;
-        }
+        var result = await RhodesSukiStateSyncWorkflow.SyncFromApiAsync(
+            cancellationToken => RhodesStateApiClient.FetchAsync(RhodesApiUrl, cancellationToken: cancellationToken),
+            (stateJson, _) => RhodesRunStateStore.ReplaceStateJsonAsync(stateJson));
 
-        await RhodesRunStateStore.ReplaceStateJsonAsync(result.StateJson);
-        _rhodesApiStatus = RhodesApiStatusProbe.ParseStateJson(result.StateJson);
+        _rhodesApiStatus = result.ApiStatus;
         RefreshRuntimeCapabilities();
-        ReloadRunStateFromStore();
-        return "";
+        if (result.ShouldReloadRunState)
+            ReloadRunStateFromStore();
+        return result.Error;
     }
 
     private async Task RunAllResourceTasksCoreAsync()
