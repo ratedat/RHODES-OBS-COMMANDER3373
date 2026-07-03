@@ -379,6 +379,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<MaaResourceTaskPreview> ResourceTasks { get; }
 
+    public MaaResourceExecutionPlan CurrentResourceExecutionPlan => RhodesMaaResourceCatalog.BuildExecutionPlan(_allResourceTasks, SelectedResourceProfile);
+
     public ObservableCollection<MaaTaskRunResult> ResourceTaskResults { get; }
 
     public ObservableCollection<MaaCandidatePreview> CandidateResults { get; }
@@ -1576,7 +1578,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         if (WorkspaceTab == "recognition")
         {
+            var plan = CurrentResourceExecutionPlan;
             yield return new SukiInspectorRow("認識プロファイル", SelectedResourceProfile?.DisplayName ?? "-", SelectedResourceProfile?.ProfileSummary ?? "");
+            yield return new SukiInspectorRow("実行計画", $"{plan.StateLabel} / {plan.Tasks.Count} task", plan.Summary);
             yield return new SukiInspectorRow(
                 "履歴",
                 $"{RecognitionScanHistory.Count}件",
@@ -3262,7 +3266,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<bool> RunAllResourceTasksCoreAsync()
     {
-        var plan = RhodesMaaResourceCatalog.BuildExecutionPlan(_allResourceTasks, SelectedResourceProfile);
+        var plan = CurrentResourceExecutionPlan;
         _lastResourceExecutionPlan = null;
         ClearRoiRescanComparison();
         ResourceTaskResults.Clear();
@@ -3598,6 +3602,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             ResourceTasks.Add(task);
         }
+        OnPropertyChanged(nameof(CurrentResourceExecutionPlan));
         RefreshInspectorRows();
     }
 

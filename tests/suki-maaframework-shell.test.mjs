@@ -196,6 +196,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(workspaceLayoutRegistry, /1280x720/);
   assert.match(viewModel, /EnsureMaaOcrReadyForRecognition/);
   assert.match(viewModel, /RecognitionResourceStatusDetail/);
+  assert.match(viewModel, /CurrentResourceExecutionPlan/);
+  assert.match(viewModel, /実行計画/);
   assert.match(viewModel, /BuildWorkspaceActionInspectorRow/);
   assert.match(runModels, /SukiWorkspaceActionPreview/);
   assert.match(viewModel, /ObservableCollection<SukiWorkspaceActionPreview> WorkspaceActions/);

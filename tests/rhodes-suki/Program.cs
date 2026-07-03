@@ -369,6 +369,9 @@ static void RecognitionWorkflowRunsResourceTasks()
             new MaaResourceTaskPreview("TaskB", "B", "second"),
         ],
         "");
+    Equal(MaaResourceExecutionPlan.ReadyState, plan.State, "execution plan defaults ready");
+    Equal("実行可能", plan.StateLabel, "execution plan ready label");
+    Equal(true, plan.Summary.StartsWith("実行可能:", StringComparison.Ordinal), "execution plan summary includes state");
     var invoked = new List<string>();
     var observed = new List<string>();
 
@@ -2590,18 +2593,30 @@ static void ResourceProfileTaskFilteringFollowsInterfacePresets()
 
     var plan = RhodesMaaResourceCatalog.BuildExecutionPlan([operatorName, ingot], profile);
     Equal(true, plan.CanRun, "preset execution plan runnable");
+    Equal(MaaResourceExecutionPlan.ReadyState, plan.State, "preset execution plan ready state");
     Equal("RhodesOcrRegion_run_ingot", plan.Tasks.Single().Entry, "preset execution plan follows preset entries");
     Equal("RhodesOcrRegion_run_ingot", plan.TaskEntries.Single(), "preset execution plan records preset entries");
 
     var allPlan = RhodesMaaResourceCatalog.BuildExecutionPlan([operatorName, ingot], new MaaResourceProfilePreview("all", "すべて", 2));
     Equal(false, allPlan.CanRun, "all profile is display only");
+    Equal(MaaResourceExecutionPlan.DisplayOnlyState, allPlan.State, "all profile state");
+    Equal(true, allPlan.IsDisplayOnly, "all profile display flag");
     Equal(true, allPlan.Error.Contains("一覧表示用", StringComparison.Ordinal), "all plan explains display only");
 
     var missingPlan = RhodesMaaResourceCatalog.BuildExecutionPlan(
         [operatorName, ingot],
         profile with { TaskEntries = ["RhodesMissingTask"] });
     Equal(false, missingPlan.CanRun, "missing preset task refuses execution");
+    Equal(MaaResourceExecutionPlan.MissingTaskState, missingPlan.State, "missing preset task state");
     Equal(true, missingPlan.Error.Contains("RhodesMissingTask", StringComparison.Ordinal), "missing plan names task");
+
+    var unselectedPlan = RhodesMaaResourceCatalog.BuildExecutionPlan([operatorName, ingot], null);
+    Equal(MaaResourceExecutionPlan.UnselectedState, unselectedPlan.State, "unselected profile state");
+
+    var emptyPlan = RhodesMaaResourceCatalog.BuildExecutionPlan(
+        [operatorName, ingot],
+        new MaaResourceProfilePreview("futureProfile", "将来", 0));
+    Equal(MaaResourceExecutionPlan.EmptyState, emptyPlan.State, "empty profile state");
 }
 
 static void RunFieldRegistryRetainedFields()

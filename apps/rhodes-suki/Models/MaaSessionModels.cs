@@ -414,12 +414,34 @@ public sealed record MaaResourceExecutionPlan(
     string Source,
     IReadOnlyList<string> TaskEntries,
     IReadOnlyList<MaaResourceTaskPreview> Tasks,
-    string Error)
+    string Error,
+    string State = "ready")
 {
-    public bool CanRun => string.IsNullOrWhiteSpace(Error) && Tasks.Count > 0;
+    public const string ReadyState = "ready";
+    public const string UnselectedState = "unselected";
+    public const string DisplayOnlyState = "display-only";
+    public const string MissingTaskState = "missing-task";
+    public const string EmptyState = "empty";
+    public const string ErrorState = "error";
+
+    public bool CanRun => string.Equals(State, ReadyState, StringComparison.Ordinal)
+        && string.IsNullOrWhiteSpace(Error)
+        && Tasks.Count > 0;
+
+    public bool IsDisplayOnly => string.Equals(State, DisplayOnlyState, StringComparison.Ordinal);
+
+    public string StateLabel => State switch
+    {
+        ReadyState => "実行可能",
+        UnselectedState => "未選択",
+        DisplayOnlyState => "一覧用",
+        MissingTaskState => "task欠落",
+        EmptyState => "空",
+        _ => "エラー",
+    };
 
     public string Summary => CanRun
-        ? $"{ProfileLabel} / tasks={Tasks.Count} / {Source}"
+        ? $"{StateLabel}: {ProfileLabel} / tasks={Tasks.Count} / {Source}"
         : string.IsNullOrWhiteSpace(Error) ? "実行対象がありません。" : Error;
 }
 

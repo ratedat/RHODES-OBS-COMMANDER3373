@@ -230,9 +230,9 @@ public static class RhodesMaaResourceCatalog
         MaaResourceProfilePreview? profile)
     {
         if (profile is null)
-            return ExecutionPlanError("認識プロファイルが選択されていません。");
+            return ExecutionPlanError("認識プロファイルが選択されていません。", state: MaaResourceExecutionPlan.UnselectedState);
         if (profile.Id == "all")
-            return ExecutionPlanError("「すべて」は一覧表示用です。認識実行では具体的なプロファイルを選択してください。", profile);
+            return ExecutionPlanError("「すべて」は一覧表示用です。認識実行では具体的なプロファイルを選択してください。", profile, MaaResourceExecutionPlan.DisplayOnlyState);
 
         if (profile.TaskEntries is { Count: > 0 })
         {
@@ -250,9 +250,9 @@ public static class RhodesMaaResourceCatalog
             }
 
             if (missing.Count > 0)
-                return ExecutionPlanError($"preset taskがResource catalogに存在しません: {string.Join(", ", missing)}", profile);
+                return ExecutionPlanError($"preset taskがResource catalogに存在しません: {string.Join(", ", missing)}", profile, MaaResourceExecutionPlan.MissingTaskState);
             if (selected.Count == 0)
-                return ExecutionPlanError("選択プロファイルのpresetに実行可能なResource taskがありません。", profile);
+                return ExecutionPlanError("選択プロファイルのpresetに実行可能なResource taskがありません。", profile, MaaResourceExecutionPlan.EmptyState);
 
             return new MaaResourceExecutionPlan(
                 profile.Id,
@@ -260,24 +260,29 @@ public static class RhodesMaaResourceCatalog
                 string.IsNullOrWhiteSpace(profile.Source) ? "profile preset" : profile.Source,
                 profile.TaskEntries,
                 selected,
-                "");
+                "",
+                MaaResourceExecutionPlan.ReadyState);
         }
 
         var fallbackTasks = tasks
             .Where(task => TaskAppliesToProfile(task, profile.Id))
             .ToArray();
         return fallbackTasks.Length == 0
-            ? ExecutionPlanError("選択プロファイルに実行可能なResource taskがありません。", profile)
+            ? ExecutionPlanError("選択プロファイルに実行可能なResource taskがありません。", profile, MaaResourceExecutionPlan.EmptyState)
             : new MaaResourceExecutionPlan(
                 profile.Id,
                 profile.Label,
                 "resource profile ids",
                 fallbackTasks.Select(task => task.Entry).ToArray(),
                 fallbackTasks,
-                "");
+                "",
+                MaaResourceExecutionPlan.ReadyState);
     }
 
-    private static MaaResourceExecutionPlan ExecutionPlanError(string error, MaaResourceProfilePreview? profile = null)
+    private static MaaResourceExecutionPlan ExecutionPlanError(
+        string error,
+        MaaResourceProfilePreview? profile = null,
+        string state = MaaResourceExecutionPlan.ErrorState)
     {
         return new MaaResourceExecutionPlan(
             profile?.Id ?? "",
@@ -285,7 +290,8 @@ public static class RhodesMaaResourceCatalog
             profile?.Source ?? "",
             profile?.TaskEntries ?? [],
             [],
-            error);
+            error,
+            state);
     }
 
     private static IReadOnlyList<MaaResourceTaskPreview> ManualTasks(IReadOnlyDictionary<string, TaskMetadata> interfaceTaskMetadata)
