@@ -2148,7 +2148,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var path = await SaveResourceTaskResultsAsync(
                 ResourceTaskResults,
                 SelectedResourceProfile?.Id,
-                CandidateResults);
+                CandidateResults,
+                executionPlan: CurrentResourceExecutionPlan);
             LastResourceTaskResultsPath = path;
             StatusMessage = $"MAA scan証跡を保存しました: {path}";
         });
@@ -2290,7 +2291,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var beforeEvidencePath = await SaveResourceTaskResultsAsync(
                 beforeTaskResults,
                 SelectedResourceProfile?.Id,
-                beforeCandidates);
+                beforeCandidates,
+                executionPlan: CurrentResourceExecutionPlan);
             if (!await RunAllResourceTasksCoreAsync())
                 return;
             if (!await ConvertResourceTaskResultsCoreAsync())
@@ -3314,7 +3316,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 plan.ProfileId,
                 localCandidates,
                 plan.ProfileLabel,
-                plan.TaskEntries);
+                plan.TaskEntries,
+                plan);
             StatusMessage = $"MAA scan証跡を保存しました: {LastResourceTaskResultsPath}";
         }
         return ResourceTaskResults.Any();
@@ -3346,7 +3349,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             profileId,
             CandidateResults,
             evidencePlan?.ProfileLabel,
-            evidencePlan?.TaskEntries);
+            evidencePlan?.TaskEntries,
+            evidencePlan);
         StatusMessage = conversion.StatusMessage;
         return CandidateResults.Count > 0;
     }
@@ -3400,7 +3404,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                 ResourceTaskResults,
                 SelectedResourceProfile?.Id,
-                RhodesMaaLocalCandidateConverter.FromTaskResults(CandidateApiProfileId(), ResourceTaskResults));
+                RhodesMaaLocalCandidateConverter.FromTaskResults(CandidateApiProfileId(), ResourceTaskResults),
+                executionPlan: CurrentResourceExecutionPlan);
             StatusMessage = $"{task.Entry}: {result.Status} / 証跡保存: {LastResourceTaskResultsPath}";
         });
     }
@@ -4377,7 +4382,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         string? profileId,
         IEnumerable<MaaCandidatePreview>? candidates = null,
         string? profileLabel = null,
-        IEnumerable<string>? presetTaskEntries = null)
+        IEnumerable<string>? presetTaskEntries = null,
+        MaaResourceExecutionPlan? executionPlan = null)
     {
         var selectedMatches = string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal);
         return await RhodesMaaRecognitionEvidenceLog.SaveAsync(
@@ -4389,7 +4395,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             captureBytes: _lastCapture.Length,
             profileLabel: profileLabel ?? (selectedMatches ? SelectedResourceProfile?.Label : null),
             presetTaskEntries: presetTaskEntries ?? (selectedMatches ? SelectedResourceProfile?.TaskEntries : null),
-            runtime: BuildRecognitionRuntimeEvidence());
+            runtime: BuildRecognitionRuntimeEvidence(),
+            executionPlan: executionPlan);
     }
 
     private MaaRecognitionRuntimeEvidence BuildRecognitionRuntimeEvidence()

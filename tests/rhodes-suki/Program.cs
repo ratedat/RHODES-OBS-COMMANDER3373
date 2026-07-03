@@ -2267,7 +2267,18 @@ static void MaaNativeEvidenceLog()
             1280,
             720,
             "1280x720 (16:9)",
-            true));
+            true),
+        new MaaResourceExecutionPlan(
+            "operatorsFull",
+            "オペレーター",
+            "profile preset",
+            ["RhodesOperatorNameOcr", "RhodesOcrRegion_operator_name"],
+            [
+                new MaaResourceTaskPreview("RhodesOperatorNameOcr", "オペレーター", "", ["operatorsFull"], "manual"),
+                new MaaResourceTaskPreview("RhodesOcrRegion_operator_name", "オペレーター名", "", ["operatorsFull"], "generated"),
+            ],
+            "",
+            MaaResourceExecutionPlan.ReadyState));
 
     var root = JsonNode.Parse(json)!.AsObject();
     Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
@@ -2288,6 +2299,13 @@ static void MaaNativeEvidenceLog()
     Equal("operatorsFull", evidence["profile"]!.AsObject()["id"]!.GetValue<string>(), "evidence profile object id");
     Equal("オペレーター", evidence["profile"]!.AsObject()["label"]!.GetValue<string>(), "evidence profile object label");
     Equal(2, evidence["profile"]!.AsObject()["presetTaskEntries"]!.AsArray().Count, "evidence preset entries");
+    var executionPlan = evidence["profile"]!.AsObject()["executionPlan"]!.AsObject();
+    Equal(MaaResourceExecutionPlan.ReadyState, executionPlan["state"]!.GetValue<string>(), "evidence execution plan state");
+    Equal("実行可能", executionPlan["stateLabel"]!.GetValue<string>(), "evidence execution plan state label");
+    Equal(true, executionPlan["canRun"]!.GetValue<bool>(), "evidence execution plan can run");
+    Equal("profile preset", executionPlan["source"]!.GetValue<string>(), "evidence execution plan source");
+    Equal(2, executionPlan["taskCount"]!.GetValue<int>(), "evidence execution plan task count");
+    Equal(2, executionPlan["taskEntries"]!.AsArray().Count, "evidence execution plan entries");
     Equal("O:/debug/native-capture.png", evidence["capture"]!.AsObject()["path"]!.GetValue<string>(), "evidence capture path");
     var runtime = evidence["runtime"]!.AsObject();
     Equal("mumu", runtime["adbPresetId"]!.GetValue<string>(), "evidence runtime adb preset");

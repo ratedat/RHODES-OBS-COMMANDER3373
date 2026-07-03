@@ -24,7 +24,8 @@ public static class RhodesMaaRecognitionEvidenceLog
         long captureBytes = 0,
         string? profileLabel = null,
         IEnumerable<string>? presetTaskEntries = null,
-        MaaRecognitionRuntimeEvidence? runtime = null)
+        MaaRecognitionRuntimeEvidence? runtime = null,
+        MaaResourceExecutionPlan? executionPlan = null)
     {
         var resultList = taskResults.ToArray();
         var candidateList = candidates.ToArray();
@@ -100,6 +101,18 @@ public static class RhodesMaaRecognitionEvidenceLog
                     id = normalizedProfile,
                     label = normalizedProfileLabel,
                     presetTaskEntries = presetEntries,
+                    executionPlan = executionPlan is null
+                        ? null
+                        : new
+                        {
+                            state = executionPlan.State,
+                            stateLabel = executionPlan.StateLabel,
+                            executionPlan.CanRun,
+                            source = executionPlan.Source,
+                            taskCount = executionPlan.Tasks.Count,
+                            taskEntries = executionPlan.TaskEntries,
+                            error = executionPlan.Error,
+                        },
                 },
                 capture = new
                 {
@@ -127,7 +140,8 @@ public static class RhodesMaaRecognitionEvidenceLog
         long captureBytes = 0,
         string? profileLabel = null,
         IEnumerable<string>? presetTaskEntries = null,
-        MaaRecognitionRuntimeEvidence? runtime = null)
+        MaaRecognitionRuntimeEvidence? runtime = null,
+        MaaResourceExecutionPlan? executionPlan = null)
     {
         Directory.CreateDirectory(directory);
         var completed = completedAt ?? DateTimeOffset.UtcNow;
@@ -135,7 +149,7 @@ public static class RhodesMaaRecognitionEvidenceLog
         var requestId = Guid.NewGuid().ToString("D");
         var normalizedProfile = NormalizeProfile(profileId) ?? "all";
         var file = Path.Combine(directory, $"recognition-{TimestampForFile(started)}-{SanitizeFilePart(normalizedProfile)}-{SanitizeFilePart(requestId)}.json");
-        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes, profileLabel, presetTaskEntries, runtime);
+        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes, profileLabel, presetTaskEntries, runtime, executionPlan);
         await File.WriteAllTextAsync(file, $"{json}{Environment.NewLine}");
         return file;
     }
