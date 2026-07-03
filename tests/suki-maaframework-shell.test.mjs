@@ -71,6 +71,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const adbDeviceProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbDeviceProbe.cs", "utf8");
   const adbCandidateRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbCandidateRegistry.cs", "utf8");
   const adbDetectionWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiAdbDetectionWorkflow.cs", "utf8");
+  const adbConnectionTestWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiAdbConnectionTestWorkflow.cs", "utf8");
   const settingsStore = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiSettingsStore.cs", "utf8");
   const diagnostics = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaTaskDiagnostics.cs", "utf8");
   const ocrDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaOcrDetailRows.cs", "utf8");
@@ -322,8 +323,12 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesMaaLocalCandidateConverter\.FromTaskResults/);
   assert.match(
     viewModel,
-    /private async Task RunAdbConnectionTestAsync\(\)[\s\S]*await DetectAdbLocallyCoreAsync\(\)[\s\S]*_session\.InitializeAdbAsync\(BuildSessionOptions\(\)\)[\s\S]*var capture = await CaptureCoreAsync\(\)/,
+    /private async Task RunAdbConnectionTestAsync\(\)[\s\S]*await DetectAdbLocallyCoreAsync\(\)[\s\S]*RhodesSukiAdbConnectionTestWorkflow\.FromController[\s\S]*RhodesSukiAdbConnectionTestWorkflow\.FromCapture/,
   );
+  assert.match(viewModel, /ApplyAdbConnectionTestSnapshot/);
+  assert.match(adbConnectionTestWorkflow, /NoAvailableAdb/);
+  assert.match(adbConnectionTestWorkflow, /FromController/);
+  assert.match(adbConnectionTestWorkflow, /FromCapture/);
   assert.match(
     viewModel,
     /private async Task RunSelectedProfileRecognitionAndApplyAsync\(\)[\s\S]*await RunAllResourceTasksCoreAsync\(\)[\s\S]*await ConvertResourceTaskResultsCoreAsync\(\)[\s\S]*await ApplyCandidateResultsCoreAsync\(\)/,

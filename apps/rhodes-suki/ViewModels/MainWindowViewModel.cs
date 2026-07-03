@@ -1916,43 +1916,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await DetectAdbLocallyCoreAsync();
             if (AdbPathCandidates.All(candidate => !candidate.Available))
             {
-                SessionState = "ADB接続テスト失敗";
-                SessionDetail = AdbDetectionDetail;
-                StatusMessage = $"利用可能なADBが見つかりません: {AdbDetectionDetail}";
-                RefreshRuntimeCapabilities();
-                RefreshInspectorRows();
+                ApplyAdbConnectionTestSnapshot(RhodesSukiAdbConnectionTestWorkflow.NoAvailableAdb(AdbDetectionDetail));
                 return;
             }
 
             StatusMessage = "MAA Controller でADB接続を確認しています。";
             var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
-            SessionState = snapshot.IsReady ? "ADB接続OK" : "ADB接続テスト失敗";
-            SessionDetail = snapshot.Detail;
+            ApplyAdbConnectionTestSnapshot(RhodesSukiAdbConnectionTestWorkflow.FromController(snapshot));
             if (!snapshot.IsReady)
-            {
-                StatusMessage = $"ADB接続テスト失敗: {snapshot.Detail}";
-                RefreshRuntimeCapabilities();
-                RefreshInspectorRows();
                 return;
-            }
 
             var capture = await CaptureCoreAsync();
-            if (capture?.Succeeded == true)
-            {
-                SessionState = "ADB接続OK";
-                SessionDetail = $"{AdbSerial} / {CapturePixelSizeLabel}";
-                StatusMessage = $"ADB接続テスト成功: {CapturePixelSizeLabel}";
-            }
-            else
-            {
-                SessionState = "ADB接続OK / 撮影失敗";
-                SessionDetail = capture?.Detail ?? snapshot.Detail;
-                StatusMessage = $"ADB接続は成功しましたが撮影に失敗しました: {SessionDetail}";
-            }
-
-            RefreshRuntimeCapabilities();
-            RefreshInspectorRows();
+            ApplyAdbConnectionTestSnapshot(
+                RhodesSukiAdbConnectionTestWorkflow.FromCapture(capture, AdbSerial, CapturePixelSizeLabel, snapshot.Detail));
         });
+    }
+
+    private void ApplyAdbConnectionTestSnapshot(RhodesSukiAdbConnectionTestSnapshot snapshot)
+    {
+        SessionState = snapshot.SessionState;
+        SessionDetail = snapshot.SessionDetail;
+        StatusMessage = snapshot.StatusMessage;
+        RefreshRuntimeCapabilities();
+        RefreshInspectorRows();
     }
 
     private async Task RunOptionalRuntimeActionAsync(

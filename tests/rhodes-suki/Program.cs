@@ -42,6 +42,7 @@ var tests = new (string Name, Action Run)[]
     ("ADB test API client parses resolution and screenshot details", AdbApiTestParsing),
     ("Suki local ADB detector connects Google Play Games TCP serial", SukiLocalAdbDetectGooglePlay),
     ("Suki local ADB detector prefers explicit MuMu adb path", SukiLocalAdbDetectExplicitMumu),
+    ("Suki ADB connection test workflow reports controller and capture outcomes", SukiAdbConnectionTestWorkflow),
     ("Preview URL builder normalizes RHODES app routes", PreviewUrlBuilder),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
@@ -1081,6 +1082,36 @@ static void SukiLocalAdbDetectExplicitMumu()
     Equal(true, result.Succeeded, "local detect succeeded");
     Equal(selectedPath, result.SelectedAdbPath, "selected adb path");
     Equal("127.0.0.1:16384", result.RuntimeSerial, "runtime serial");
+}
+
+static void SukiAdbConnectionTestWorkflow()
+{
+    var noAdb = RhodesSukiAdbConnectionTestWorkflow.NoAvailableAdb("候補なし");
+    Equal("ADB接続テスト失敗", noAdb.SessionState, "no adb state");
+    Equal("候補なし", noAdb.SessionDetail, "no adb detail");
+    Equal("利用可能なADBが見つかりません: 候補なし", noAdb.StatusMessage, "no adb status");
+
+    var controllerFailure = RhodesSukiAdbConnectionTestWorkflow.FromController(
+        new MaaSessionSnapshot("failed", "DLL was not found", "", "", false, false, false));
+    Equal("ADB接続テスト失敗", controllerFailure.SessionState, "controller failure state");
+    Equal("ADB接続テスト失敗: DLL was not found", controllerFailure.StatusMessage, "controller failure status");
+
+    var captureSuccess = RhodesSukiAdbConnectionTestWorkflow.FromCapture(
+        new MaaCaptureResult("Succeeded", true, "750,914 bytes", [1, 2, 3]),
+        "127.0.0.1:16384",
+        "1280x720 (16:9)",
+        "controller OK");
+    Equal("ADB接続OK", captureSuccess.SessionState, "capture success state");
+    Equal("127.0.0.1:16384 / 1280x720 (16:9)", captureSuccess.SessionDetail, "capture success detail");
+    Equal("ADB接続テスト成功: 1280x720 (16:9)", captureSuccess.StatusMessage, "capture success status");
+
+    var captureFailure = RhodesSukiAdbConnectionTestWorkflow.FromCapture(
+        new MaaCaptureResult("Failed", false, "Cached image を取得できませんでした。", []),
+        "127.0.0.1:16384",
+        "-",
+        "controller OK");
+    Equal("ADB接続OK / 撮影失敗", captureFailure.SessionState, "capture failure state");
+    Equal("Cached image を取得できませんでした。", captureFailure.SessionDetail, "capture failure detail");
 }
 
 static void SukiSettingsStore()
