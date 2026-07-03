@@ -40,6 +40,7 @@ var tests = new (string Name, Action Run)[]
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
+    ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
     ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
@@ -1044,6 +1045,19 @@ static void RuntimeCapabilityRegistry()
     Equal(true, capabilities.Single(item => item.Id == "glm").IsOptional, "missing GLM is optional download");
     Equal(false, capabilities.Single(item => item.Id == "ollama").IsOptional, "installed Ollama does not show as pending optional download");
     Equal("認識", capabilities.Single(item => item.Id == "maa-ocr").PrimaryAction, "maa ocr action");
+}
+
+static void WorkspaceRegistry()
+{
+    var items = RhodesWorkspaceRegistry.Items;
+
+    Equal("run|choices|recognition|output|runtime|debug", string.Join("|", items.Select(item => item.Id)), "workspace order");
+    Equal("ランタイム", RhodesWorkspaceRegistry.TitleFor("runtime"), "runtime title");
+    Equal("ラン取得値", RhodesWorkspaceRegistry.TitleFor("unknown"), "unknown title fallback");
+    Equal("choices", RhodesWorkspaceRegistry.Normalize("choices"), "known workspace normalize");
+    Equal("run", RhodesWorkspaceRegistry.Normalize("bad"), "unknown workspace fallback");
+    Equal(true, RhodesWorkspaceRegistry.IsKnown("recognition"), "known workspace");
+    Equal(false, RhodesWorkspaceRegistry.IsKnown("legacy"), "unknown workspace");
 }
 
 static void OcrEngineCatalog()

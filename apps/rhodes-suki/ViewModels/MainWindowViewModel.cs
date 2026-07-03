@@ -141,15 +141,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         var runCatalog = RhodesRunCatalog.LoadDefault();
         _runState = runCatalog.Current;
-        WorkspaceNav =
-        [
-            new SukiWorkspaceNavItem("run", "ラン", "RUN", "取得値とIS固有値"),
-            new SukiWorkspaceNavItem("choices", "選択", "CHOICES", "オペレーターと秘宝"),
-            new SukiWorkspaceNavItem("recognition", "認識", "RECOGNITION", "OCR/テンプレート候補"),
-            new SukiWorkspaceNavItem("output", "出力", "OUTPUT", "OBS表示構成"),
-            new SukiWorkspaceNavItem("runtime", "ランタイム", "RUNTIME", "ADB/MAA/GLM/Ollama"),
-            new SukiWorkspaceNavItem("debug", "デバッグ", "DEBUG", "ログと検証情報"),
-        ];
+        WorkspaceNav = new ObservableCollection<SukiWorkspaceNavItem>(RhodesWorkspaceRegistry.Items);
         HeaderStatusChips = new ObservableCollection<SukiStatusChip>(BuildHeaderStatusChips());
         RunFieldPreviews = new ObservableCollection<SukiRunFieldPreview>(BuildRunFieldPreviews(runCatalog.Current));
         CampaignPreviews = [];
@@ -489,15 +481,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsDebugWorkspaceVisible => WorkspaceTab == "debug";
 
-    public string WorkspaceTitle => WorkspaceTab switch
-    {
-        "choices" => "選択カタログ",
-        "recognition" => "認識ワークフロー",
-        "output" => "出力 / OBS",
-        "runtime" => "ランタイム",
-        "debug" => "デバッグ",
-        _ => "ラン取得値",
-    };
+    public string WorkspaceTitle => RhodesWorkspaceRegistry.TitleFor(WorkspaceTab);
 
     public string ChoiceTab
     {
@@ -1694,9 +1678,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private Task SetWorkspaceAsync(object? parameter)
     {
         var tab = parameter as string;
-        WorkspaceTab = tab is "run" or "choices" or "recognition" or "output" or "runtime" or "debug"
-            ? tab
-            : "run";
+        WorkspaceTab = RhodesWorkspaceRegistry.Normalize(tab);
         StatusMessage = $"{WorkspaceTitle}を表示しています。";
         return Task.CompletedTask;
     }

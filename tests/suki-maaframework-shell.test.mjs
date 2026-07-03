@@ -82,6 +82,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const roiSelectionMatcher = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaRoiSelectionMatcher.cs", "utf8");
   const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
   const runCatalog = await fs.readFile("apps/rhodes-suki/Services/RhodesRunCatalog.cs", "utf8");
+  const workspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceRegistry.cs", "utf8");
   const runFieldRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRunFieldRegistry.cs", "utf8");
   const runtimeCapabilityRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRuntimeCapabilityRegistry.cs", "utf8");
   const bitmapPathConverter = await fs.readFile("apps/rhodes-suki/Services/RhodesBitmapPathConverter.cs", "utf8");
@@ -152,6 +153,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runCatalog, /IsProjectRootStatePath/);
   assert.match(runCatalog, /ResolveLocalPath/);
   assert.match(runCatalog, /SukiRunStateSnapshot/);
+  assert.match(workspaceRegistry, /RhodesWorkspaceRegistry/);
+  assert.match(workspaceRegistry, /SukiWorkspaceNavItem/);
+  assert.match(workspaceRegistry, /Normalize/);
+  assert.match(workspaceRegistry, /TitleFor/);
   assert.match(viewModel, /EnsureMaaOcrReadyForRecognition/);
   assert.match(viewModel, /RecognitionResourceStatusDetail/);
   assert.match(bitmapPathConverter, /IValueConverter/);
@@ -555,6 +560,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(generatedResourceBuilder, /RegenerateFileAsync/);
   assert.match(viewModel, /Campaigns/);
   assert.match(viewModel, /SelectedCampaign/);
+  assert.match(viewModel, /RhodesWorkspaceRegistry\.Items/);
+  assert.match(viewModel, /RhodesWorkspaceRegistry\.TitleFor/);
+  assert.match(viewModel, /RhodesWorkspaceRegistry\.Normalize/);
   assert.match(runFieldRegistry, /RhodesRunFieldRegistry/);
   assert.match(runFieldRegistry, /BuildHeaderStatusChips/);
   assert.match(runFieldRegistry, /BuildRunFieldPreviews/);
