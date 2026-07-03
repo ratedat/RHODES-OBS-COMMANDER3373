@@ -8,20 +8,14 @@ public sealed class MaaFrameworkRuntimeProbe
 {
     public IntegrationStatus Probe()
     {
+        return ProbeAppBaseDirectory(AppContext.BaseDirectory);
+    }
+
+    public static IntegrationStatus ProbeAppBaseDirectory(string appBaseDirectory)
+    {
         try
         {
-            var bindingAssembly = typeof(MaaToolkit).Assembly.GetName();
-            var facts = new MaaFrameworkRuntimeProbeFacts(
-                bindingAssembly.Name ?? "MaaFramework.Binding",
-                bindingAssembly.Version?.ToString() ?? "unknown",
-                CurrentRuntimeIdentifier(),
-                NativeRuntimeDirectory(AppContext.BaseDirectory),
-                MissingNativeFiles(AppContext.BaseDirectory),
-                OperatingSystem.IsWindows(),
-                OperatingSystem.IsWindows()
-                    ? MissingVisualCppRuntimeFiles(AppContext.BaseDirectory, NativeRuntimeDirectory(AppContext.BaseDirectory))
-                    : []);
-            return BuildStatus(facts);
+            return BuildStatus(BuildFacts(appBaseDirectory));
         }
         catch (DllNotFoundException ex)
         {
@@ -47,6 +41,25 @@ public sealed class MaaFrameworkRuntimeProbe
                 ex.Message,
                 false);
         }
+    }
+
+    public static MaaFrameworkRuntimeProbeFacts BuildFacts(string appBaseDirectory)
+    {
+        var bindingAssembly = typeof(MaaToolkit).Assembly.GetName();
+        var baseDirectory = string.IsNullOrWhiteSpace(appBaseDirectory)
+            ? AppContext.BaseDirectory
+            : appBaseDirectory;
+        var nativeRuntimeDirectory = NativeRuntimeDirectory(baseDirectory);
+        return new MaaFrameworkRuntimeProbeFacts(
+            bindingAssembly.Name ?? "MaaFramework.Binding",
+            bindingAssembly.Version?.ToString() ?? "unknown",
+            CurrentRuntimeIdentifier(),
+            nativeRuntimeDirectory,
+            MissingNativeFiles(baseDirectory),
+            OperatingSystem.IsWindows(),
+            OperatingSystem.IsWindows()
+                ? MissingVisualCppRuntimeFiles(baseDirectory, nativeRuntimeDirectory)
+                : []);
     }
 
     public static IntegrationStatus BuildStatus(MaaFrameworkRuntimeProbeFacts facts)

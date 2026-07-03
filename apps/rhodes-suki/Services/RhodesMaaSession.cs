@@ -63,6 +63,11 @@ public sealed class RhodesMaaSession : IDisposable
     public async Task<MaaSessionSnapshot> InitializeAdbAsync(MaaSessionOptions options, CancellationToken cancellationToken = default)
     {
         DisposeCurrent();
+
+        var runtimeStatus = MaaFrameworkRuntimeProbe.ProbeAppBaseDirectory(AppContext.BaseDirectory);
+        if (!runtimeStatus.IsReady)
+            return Snapshot($"MAAFramework {runtimeStatus.State}", runtimeStatus.Detail, options, false);
+
         EnsureNativeRuntimeDirectory();
 
         if (!Directory.Exists(options.ResourceRoot))

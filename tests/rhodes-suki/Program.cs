@@ -1094,8 +1094,13 @@ static void SukiAdbConnectionTestWorkflow()
 
     var controllerFailure = RhodesSukiAdbConnectionTestWorkflow.FromController(
         new MaaSessionSnapshot("failed", "DLL was not found", "", "", false, false, false));
-    Equal("ADB接続テスト失敗", controllerFailure.SessionState, "controller failure state");
-    Equal("ADB接続テスト失敗: DLL was not found", controllerFailure.StatusMessage, "controller failure status");
+    Equal("MAAFramework未準備", controllerFailure.SessionState, "controller framework failure state");
+    Equal("ADB接続前にMAAFramework runtimeを確認してください: DLL was not found", controllerFailure.StatusMessage, "controller framework failure status");
+
+    var nativePreflightFailure = RhodesSukiAdbConnectionTestWorkflow.FromController(
+        new MaaSessionSnapshot("MAAFramework ネイティブ未配置", "runtime=win-x64; missing=MaaFramework.dll", "", "", false, false, false));
+    Equal("MAAFramework未準備", nativePreflightFailure.SessionState, "preflight failure state");
+    Equal(true, nativePreflightFailure.StatusMessage.Contains("missing=MaaFramework.dll", StringComparison.Ordinal), "preflight failure detail");
 
     var captureSuccess = RhodesSukiAdbConnectionTestWorkflow.FromCapture(
         new MaaCaptureResult("Succeeded", true, "750,914 bytes", [1, 2, 3]),
@@ -1412,6 +1417,24 @@ static void HypervisorStatusParsing()
 
 static void MaaFrameworkRuntimeDiagnostics()
 {
+    var tempBase = Path.Combine(Path.GetTempPath(), "rhodes-maa-runtime-probe", Guid.NewGuid().ToString("N"));
+    try
+    {
+        Directory.CreateDirectory(tempBase);
+        var facts = MaaFrameworkRuntimeProbe.BuildFacts(tempBase);
+        Equal(true, facts.NativeRuntimeDirectory.Contains(Path.Combine("runtimes", "win-x64", "native"), StringComparison.OrdinalIgnoreCase), "facts native directory");
+        Equal(true, facts.MissingNativeFiles.Count > 0, "facts missing native files");
+
+        var status = MaaFrameworkRuntimeProbe.ProbeAppBaseDirectory(tempBase);
+        Equal("ネイティブ未配置", status.State, "base directory missing native state");
+        Equal(false, status.IsReady, "base directory missing native ready");
+    }
+    finally
+    {
+        if (Directory.Exists(tempBase))
+            Directory.Delete(tempBase, true);
+    }
+
     var missingNative = MaaFrameworkRuntimeProbe.BuildStatus(new MaaFrameworkRuntimeProbeFacts(
         "MaaFramework.Binding",
         "5.8.0.0",
