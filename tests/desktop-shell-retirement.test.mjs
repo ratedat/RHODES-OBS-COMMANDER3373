@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
 test("package exposes Suki/Avalonia as the only active desktop app", async () => {
@@ -32,6 +32,24 @@ test("package exposes Suki/Avalonia as the only active desktop app", async () =>
   assert.equal("@tauri-apps/cli" in devDependencies, false);
   assert.equal("electron" in devDependencies, false);
   assert.equal("electron-builder" in devDependencies, false);
+
+  const lock = JSON.parse(await readFile(new URL("../package-lock.json", import.meta.url), "utf8"));
+  const lockedPackages = new Set(Object.keys(lock.packages ?? {}).map((name) => name.replace(/^node_modules\//, "")));
+  assert.equal(lockedPackages.has("@tauri-apps/cli"), false);
+  assert.equal(lockedPackages.has("electron"), false);
+  assert.equal(lockedPackages.has("electron-builder"), false);
+  assert.equal([...lockedPackages].some((name) => name.startsWith("@tauri-apps/")), false);
+});
+
+test("retired Electron and Tauri project scaffolds are absent", async () => {
+  await assert.rejects(stat(new URL("../src-tauri", import.meta.url)), { code: "ENOENT" });
+  await assert.rejects(stat(new URL("../electron", import.meta.url)), { code: "ENOENT" });
+
+  const entries = await readdir(new URL("../", import.meta.url), { withFileTypes: true });
+  const activeTopLevel = entries
+    .map((entry) => entry.name)
+    .filter((name) => !["node_modules", "dist", "dist-debugger", "outputs"].includes(name));
+  assert.equal(activeTopLevel.some((name) => /(?:electron|tauri)/iu.test(name)), false);
 });
 
 test("local web server does not advertise the retired Control shell as the default", async () => {
