@@ -239,8 +239,8 @@
           <Grid RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding IsRunWorkspaceVisible}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel Spacing="2">
-                <TextBlock Text="ラン取得値" FontSize="20" FontWeight="SemiBold" />
-                <TextBlock Text="源石錐・等級・分隊とIS固有値をここでレビューします。" FontSize="12" Opacity="0.62" />
+                <TextBlock Text="{Binding RunLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding RunLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <Button Content="API状態同期" Command="{Binding SyncRunStateFromApiCommand}" />
@@ -274,7 +274,7 @@
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                   <Border CornerRadius="8" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
                     <StackPanel Spacing="8">
-                      <TextBlock Text="IS固有値" FontSize="16" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding RunSpecialSection.Title}" FontSize="16" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding CampaignHeaderTitle}" FontSize="12" Opacity="0.66" />
                       <ItemsControl ItemsSource="{Binding SpecialValuePreviews}">
                         <ItemsControl.ItemTemplate>
@@ -302,7 +302,7 @@
 
                   <Border Grid.Column="1" CornerRadius="8" Padding="14" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
                     <StackPanel Spacing="8">
-                      <TextBlock Text="IS切替 / 現在のラン構成" FontSize="16" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding RunCampaignSection.Title}" FontSize="16" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding RunContextSummary}" FontSize="12" TextWrapping="Wrap" Opacity="0.72" />
                       <ItemsControl ItemsSource="{Binding CampaignPreviews}">
                         <ItemsControl.ItemTemplate>
@@ -335,8 +335,8 @@
           <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12" IsVisible="{Binding IsChoicesWorkspaceVisible}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel Spacing="2">
-                <TextBlock Text="選択カタログ" FontSize="20" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding RunContextSummary}" FontSize="12" Opacity="0.62" />
+                <TextBlock Text="{Binding ChoicesLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding ChoicesLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <Button Content="オペレーター" Command="{Binding SetChoiceTabCommand}" CommandParameter="operators" />
@@ -560,8 +560,8 @@
 
           <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12" IsVisible="{Binding IsOutputWorkspaceVisible}">
             <StackPanel Spacing="2">
-              <TextBlock Text="出力 / OBS" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="サイドカーや大会向け表示で使う表示部品をここへ集約します。" FontSize="12" Opacity="0.62" />
+              <TextBlock Text="{Binding OutputLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding OutputLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
             </StackPanel>
 
             <Border Grid.Row="1" CornerRadius="8" Padding="12" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
@@ -576,7 +576,7 @@
                   <Button Content="Overlay" Command="{Binding OpenPreviewUrlCommand}" CommandParameter="/overlay" />
                 </StackPanel>
                 <TextBox Grid.Column="2" Text="{Binding OutputScrollSpeed, Mode=TwoWay}" HorizontalContentAlignment="Right" />
-                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="OBSプレビュー、ブラウザソース、サイドカー表示で共通の表示部品を管理します。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding OutputPartsSection.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
                 <TextBlock Grid.Row="1" Grid.Column="2" Text="px/s" FontSize="11" HorizontalAlignment="Right" Opacity="0.58" />
               </Grid>
             </Border>
@@ -792,8 +792,8 @@
 
           <Grid RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding IsDebugWorkspaceVisible}">
             <StackPanel Spacing="2">
-              <TextBlock Text="デバッグ" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="検証用ログ、スクリーンショット、Resource task結果を確認します。" FontSize="12" Opacity="0.62" />
+              <TextBlock Text="{Binding DebugLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding DebugLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
             </StackPanel>
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel Spacing="12">
@@ -805,7 +805,7 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <TextBlock Text="移行メモ" FontSize="14" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding DebugMigrationSection.Title}" FontSize="14" FontWeight="SemiBold" />
                 <ItemsControl ItemsSource="{Binding MigrationSteps}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>

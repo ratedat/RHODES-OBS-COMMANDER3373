@@ -52,6 +52,7 @@ var tests = new (string Name, Action Run)[]
     ("Suki runtime probe workflow aggregates API, optional runtime, and Hyper-V statuses", SukiRuntimeProbeWorkflowAggregatesStatuses),
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
+    ("Workspace layout registry covers every Suki workspace", WorkspaceLayoutRegistry),
     ("Product surface registry assigns every major app element to a workspace", ProductSurfaceRegistry),
     ("Output part registry defines OBS sidecar display blocks", OutputPartRegistry),
     ("Runtime workspace registry exposes focused setup sections", RuntimeWorkspaceRegistry),
@@ -1314,6 +1315,21 @@ static void WorkspaceRegistry()
     Equal("run", RhodesWorkspaceRegistry.Normalize("bad"), "unknown workspace fallback");
     Equal(true, RhodesWorkspaceRegistry.IsKnown("recognition"), "known workspace");
     Equal(false, RhodesWorkspaceRegistry.IsKnown("legacy"), "unknown workspace");
+}
+
+static void WorkspaceLayoutRegistry()
+{
+    var layouts = RhodesWorkspaceLayoutRegistry.Items;
+
+    Equal("run|choices|recognition|output|runtime|debug", string.Join("|", layouts.Select(item => item.WorkspaceId)), "layout workspace order");
+    Equal(0, RhodesWorkspaceLayoutRegistry.Validate().Count, "workspace layout validation");
+    Equal("ラン取得値", RhodesWorkspaceLayoutRegistry.For("run").Header.Title, "run header title");
+    Equal("values|special|campaign", string.Join("|", RhodesWorkspaceLayoutRegistry.For("run").Sections.Select(item => item.Id)), "run sections");
+    Equal("catalog|filters|selection", string.Join("|", RhodesWorkspaceLayoutRegistry.For("choices").Sections.Select(item => item.Id)), "choices sections");
+    Equal("parts|preview", string.Join("|", RhodesWorkspaceLayoutRegistry.For("output").Sections.Select(item => item.Id)), "output sections");
+    Equal("logs|migration", string.Join("|", RhodesWorkspaceLayoutRegistry.For("debug").Sections.Select(item => item.Id)), "debug sections");
+    Equal("connection|detection|diagnostics|optional", string.Join("|", RhodesWorkspaceLayoutRegistry.Runtime.Sections.Select(item => item.Id)), "runtime sections");
+    Equal("profile|execution|review|evidence", string.Join("|", RhodesWorkspaceLayoutRegistry.Recognition.Sections.Select(item => item.Id)), "recognition sections");
 }
 
 static void ProductSurfaceRegistry()

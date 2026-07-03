@@ -109,6 +109,11 @@ public sealed record SukiProductSurfaceDescriptor(
     bool CanShowOnOutput,
     int DisplayPriority);
 
+public sealed record SukiWorkspaceLayout(
+    string WorkspaceId,
+    SukiWorkspaceSectionPreview Header,
+    IReadOnlyList<SukiWorkspaceSectionPreview> Sections);
+
 public sealed record SukiRuntimeWorkspaceLayout(
     SukiWorkspaceSectionPreview Header,
     SukiWorkspaceSectionPreview Connection,

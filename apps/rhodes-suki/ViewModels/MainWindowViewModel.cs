@@ -142,6 +142,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var runCatalog = RhodesRunCatalog.LoadDefault();
         _runState = runCatalog.Current;
         WorkspaceNav = new ObservableCollection<SukiWorkspaceNavItem>(RhodesWorkspaceRegistry.Items);
+        RunLayout = RhodesWorkspaceLayoutRegistry.For("run");
+        ChoicesLayout = RhodesWorkspaceLayoutRegistry.For("choices");
+        OutputLayout = RhodesWorkspaceLayoutRegistry.For("output");
+        DebugLayout = RhodesWorkspaceLayoutRegistry.For("debug");
+        RunSpecialSection = WorkspaceSection(RunLayout, "special");
+        RunCampaignSection = WorkspaceSection(RunLayout, "campaign");
+        OutputPartsSection = WorkspaceSection(OutputLayout, "parts");
+        DebugMigrationSection = WorkspaceSection(DebugLayout, "migration");
         RuntimeLayout = RhodesRuntimeWorkspaceRegistry.Layout;
         RecognitionLayout = RhodesRecognitionWorkspaceRegistry.Layout;
         HeaderStatusChips = new ObservableCollection<SukiStatusChip>(BuildHeaderStatusChips());
@@ -284,6 +292,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string Subtitle { get; } = "Suki/Avalonia + MAAFramework workbench";
 
     public ObservableCollection<SukiWorkspaceNavItem> WorkspaceNav { get; }
+
+    public SukiWorkspaceLayout RunLayout { get; }
+
+    public SukiWorkspaceLayout ChoicesLayout { get; }
+
+    public SukiWorkspaceLayout OutputLayout { get; }
+
+    public SukiWorkspaceLayout DebugLayout { get; }
+
+    public SukiWorkspaceSectionPreview RunSpecialSection { get; }
+
+    public SukiWorkspaceSectionPreview RunCampaignSection { get; }
+
+    public SukiWorkspaceSectionPreview OutputPartsSection { get; }
+
+    public SukiWorkspaceSectionPreview DebugMigrationSection { get; }
 
     public SukiRuntimeWorkspaceLayout RuntimeLayout { get; }
 
@@ -4135,6 +4159,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return value.Trim();
         }
         return "";
+    }
+
+    private static SukiWorkspaceSectionPreview WorkspaceSection(SukiWorkspaceLayout layout, string id)
+    {
+        return layout.Sections.First(section => string.Equals(section.Id, id, StringComparison.Ordinal));
     }
 
     private static void ReplaceCollection<T>(ObservableCollection<T> target, IEnumerable<T> source)
