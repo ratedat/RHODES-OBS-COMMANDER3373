@@ -2583,8 +2583,39 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             $"startedAt: {JsonString(root, "startedAt")}",
             $"completedAt: {JsonString(root, "completedAt")}",
             $"counts: {EvidenceCounts(root)}",
+            $"executionPlan: {EvidenceExecutionPlan(root)}",
         };
         return string.Join(Environment.NewLine, summary);
+    }
+
+    private static string EvidenceExecutionPlan(JsonElement root)
+    {
+        var evidence = JsonObject(root, "evidence");
+        var profile = JsonObject(evidence, "profile");
+        var plan = JsonObject(profile, "executionPlan");
+        if (plan.ValueKind != JsonValueKind.Object)
+            return "-";
+
+        var parts = new List<string>
+        {
+            FirstNonEmpty(JsonString(plan, "stateLabel"), JsonString(plan, "state")),
+        };
+        var source = JsonString(plan, "source");
+        if (!string.IsNullOrWhiteSpace(source))
+            parts.Add(source);
+
+        var taskCount = JsonInt(plan, "taskCount");
+        if (taskCount > 0)
+            parts.Add($"tasks={taskCount}");
+
+        if (JsonBool(plan, "canRun") == true)
+            parts.Add("canRun=true");
+
+        var error = JsonString(plan, "error");
+        if (!string.IsNullOrWhiteSpace(error))
+            parts.Add(error);
+
+        return string.Join(" / ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
     }
 
     private static string EvidenceCounts(JsonElement root)
@@ -2629,6 +2660,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             && property.ValueKind == JsonValueKind.Array
             ? property.EnumerateArray().ToArray()
             : [];
+    }
+
+    private static JsonElement JsonObject(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.Object
+            ? property
+            : default;
     }
 
     private static IReadOnlyList<JsonElement> EvidenceTaskResults(JsonElement root)
@@ -2676,6 +2716,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             && property.ValueKind == JsonValueKind.String
             ? property.GetString() ?? ""
             : "";
+    }
+
+    private static int JsonInt(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.Number
+            && property.TryGetInt32(out var value)
+            ? value
+            : 0;
+    }
+
+    private static bool? JsonBool(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            ? property.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => null,
+            }
+            : null;
     }
 
     private static string TruncateEvidencePreview(string text)

@@ -2421,6 +2421,20 @@ static void EvidencePreviewTreeUsesCompactTypedNodes()
         { "kind": "operator", "label": "グム", "value": "gummy", "operatorId": "gummy", "confidence": 0.91 }
       ],
       "evidence": {
+        "profile": {
+          "id": "operatorsFull",
+          "label": "オペレーター",
+          "presetTaskEntries": ["RhodesOcrRegion_operator_name"],
+          "executionPlan": {
+            "state": "ready",
+            "stateLabel": "実行可能",
+            "canRun": true,
+            "source": "profile preset",
+            "taskCount": 1,
+            "taskEntries": ["RhodesOcrRegion_operator_name"],
+            "error": ""
+          }
+        },
         "taskResults": [
           {
             "entry": "RhodesOcrRegion_operator_name",
@@ -2448,6 +2462,7 @@ static void EvidencePreviewTreeUsesCompactTypedNodes()
 
     Equal("summary", nodes[0].NodeKind, "summary node kind");
     Equal(true, nodes[0].HasVisibleDetail, "summary detail visible");
+    Equal(true, nodes[0].PreviewText.Contains("executionPlan: 実行可能 / profile preset / tasks=1 / canRun=true", StringComparison.Ordinal), "summary execution plan");
 
     var candidates = nodes.Single(node => node.Title.StartsWith("Candidates", StringComparison.Ordinal));
     Equal("section", candidates.NodeKind, "candidate section kind");
