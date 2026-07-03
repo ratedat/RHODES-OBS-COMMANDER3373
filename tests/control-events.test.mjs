@@ -65,7 +65,7 @@ test("Control v2 no longer exposes the legacy scan execution path", async () => 
 });
 
 
-test("reset state replaces state and schedules a control view reload", async () => {
+test("reset state replaces state and schedules a sidecar reload", async () => {
   const originalFetch = globalThis.fetch;
   const originalConfirm = globalThis.confirm;
   const nextState = { run: { campaignId: "is5_sarkaz" }, relics: [], operators: [] };
@@ -88,7 +88,7 @@ test("reset state replaces state and schedules a control view reload", async () 
     },
   };
   const context = {
-    view: "control-v2",
+    view: "sidecar",
     ui,
     replaceState(state) { replacedState = state; },
     reloadView() { reloads += 1; },

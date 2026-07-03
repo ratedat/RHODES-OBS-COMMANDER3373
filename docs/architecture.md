@@ -83,7 +83,7 @@ Responsibilities are intentionally separated:
 - Human debugging should use the Suki/Avalonia shell as the primary surface. Plain browser tabs are only for OBS URL checks.
 - Desktop-impacting changes should be verified with `npm run suki:check` and `npm run suki:build`.
 - Split OBS parts are routed under `/overlay/part/<part>`, currently `status`, `relics`, `operators`, `effects`, `bosses`, and `special`.
-- `/control-v2` and `/control` remain compatibility HTTP routes while their required workflows are moved into Suki/Avalonia. They are not the active desktop operation surface.
+- `/control-v2` and `/control` are retired HTTP routes that redirect to `/sidecar`; their required workflows are moved into Suki/Avalonia.
 - `/sidecar` remains a browser-check route for compact emulator-adjacent support output until the equivalent Suki panes fully cover it.
 
 Packaged builds wrap these same local URLs. Runtime state is stored outside the packaged app via `ARKNIGHTS_STATE_DIR`, while master data remains bundled with the app.

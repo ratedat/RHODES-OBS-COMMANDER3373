@@ -755,7 +755,7 @@ function ensureStateShape() {
 
 
 function isInteractiveView() {
-  return view === "control-v2" || view === "sidecar" || view === "licenses";
+  return view === "sidecar" || view === "licenses";
 }
 
 function renderLicensesPage() {
@@ -808,8 +808,7 @@ function renderLicensesPage() {
 
 function renderInteractive() {
   if (view === "licenses") return renderLicensesPage();
-  if (view === "sidecar") return renderSidecar();
-  return renderControlV2();
+  return renderSidecar();
 }
 function setNotice(text) {
   ui.notice = text;

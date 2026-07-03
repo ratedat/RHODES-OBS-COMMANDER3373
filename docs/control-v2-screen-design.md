@@ -2,7 +2,7 @@
 
 ## 目的
 
-`/control-v2` は旧Web操作面の設計記録です。現在の主操作面は Suki/Avalonia であり、`/control` と `/control-v2` は互換HTTPルートとして残すだけにします。ここに残す内容は、Suki/Avaloniaへ移設済み/移設予定のUI要件の参照です。
+`/control-v2` は旧Web操作面の設計記録です。現在の主操作面は Suki/Avalonia であり、`/control` と `/control-v2` は `/sidecar` へ転送されます。ここに残す内容は、Suki/Avaloniaへ移設済み/移設予定のUI要件の参照です。
 
 ## 1360x920 一画面ワイヤー
 

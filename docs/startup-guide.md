@@ -67,7 +67,7 @@ npm.cmd run dev -- --port 5174
 | Sidecar | `http://127.0.0.1:5173/sidecar` |
 | OBS overlay | `http://127.0.0.1:5173/overlay` |
 
-`/control` と `/control-v2` は旧ブックマーク互換用です。通常操作はSuki/Avaloniaアプリで行います。
+`/control` と `/control-v2` は退役済みの旧Web操作面です。アクセスした場合は `/sidecar` へ転送されます。通常操作はSuki/Avaloniaアプリで行います。
 
 ## OBS Browser Source用URL
 

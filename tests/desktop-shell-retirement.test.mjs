@@ -55,3 +55,14 @@ test("non-Control web pages do not link users back into the retired Control shel
   assert.doesNotMatch(sidecarPage, /href="\/control-v2/);
   assert.doesNotMatch(sidecarPage, />Control</);
 });
+
+test("runtime view guards no longer treat retired Control as an active interactive shell", async () => {
+  const [app, controlEvents] = await Promise.all([
+    readFile(new URL("../app/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/control-events.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(app, /view === "control-v2"/);
+  assert.doesNotMatch(app, /return renderControlV2\(\)/);
+  assert.doesNotMatch(controlEvents, /context\.view === "control-v2"/);
+});
