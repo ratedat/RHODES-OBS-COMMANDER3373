@@ -234,7 +234,7 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" CornerRadius="10" Padding="14" Background="#111718" BorderBrush="#2B3638" BorderThickness="1">
+      <Border Grid.Column="1" ClipToBounds="True" MinWidth="0" CornerRadius="10" Padding="14" Background="#111718" BorderBrush="#2B3638" BorderThickness="1">
         <Grid>
           <Grid RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding IsRunWorkspaceVisible}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -605,13 +605,13 @@
           </Grid>
 
           <ScrollViewer IsVisible="{Binding IsRuntimeWorkspaceVisible}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ClipToBounds="True">
-            <StackPanel Spacing="12">
+            <StackPanel Spacing="12" HorizontalAlignment="Stretch">
             <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding RuntimeLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding RuntimeLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
               </StackPanel>
-              <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Right">
+              <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">
                 <Button Content="保存" Command="{Binding SaveSettingsCommand}" />
                 <Button Content="自動検出" Command="{Binding RefreshAdbDevicesCommand}" />
                 <Button Content="接続テスト" Command="{Binding RunAdbConnectionTestCommand}" />
@@ -628,7 +628,7 @@
                     <TextBlock Text="{Binding RuntimeLayout.Connection.Title}" FontSize="15" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding RuntimeLayout.Connection.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
                   </StackPanel>
-                  <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Right">
+                  <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">
                     <Button Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
                     <Button Content="参照" Click="BrowseAdbPathClick" />
                     <Button Content="候補を使用" Command="{Binding ApplyAdbPathCandidateCommand}" CommandParameter="{Binding SelectedAdbPathCandidate}" />
@@ -774,11 +774,11 @@
               <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="10" RowSpacing="8">
                 <TextBlock Text="{Binding RuntimeLayout.OptionalRuntime.Title}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="{Binding RuntimeLayout.OptionalRuntime.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
-                <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Classes="runtimeActions" HorizontalAlignment="Right">
+                <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Classes="runtimeActions" HorizontalAlignment="Left">
                   <Button Content="GLM導入" Command="{Binding InstallGlmOcrCommand}" />
                   <Button Content="GLM削除" Command="{Binding UninstallGlmOcrCommand}" />
                 </WrapPanel>
-                <WrapPanel Grid.Row="2" Grid.ColumnSpan="2" Classes="runtimeActions" HorizontalAlignment="Right">
+                <WrapPanel Grid.Row="2" Grid.ColumnSpan="2" Classes="runtimeActions" HorizontalAlignment="Left">
                   <Button Content="Ollama導入" Command="{Binding InstallOllamaCommand}" />
                   <Button Content="Ollama起動" Command="{Binding StartOllamaCommand}" />
                   <Button Content="Ollama削除" Command="{Binding UninstallOllamaCommand}" />

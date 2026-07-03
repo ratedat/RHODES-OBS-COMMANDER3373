@@ -760,6 +760,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /StackPanel Grid\.Column="2" Spacing="8" Width="300"/);
   assert.match(xaml, /<WrapPanel Classes="runtimeActions" HorizontalAlignment="Right">\s*<Button Content="保存"/s);
   assert.doesNotMatch(xaml, /StackPanel Grid\.Column="2" Spacing="8" MinWidth="260"/);
+  assert.match(xaml, /<Border Grid\.Column="1"[^>]+ClipToBounds="True"[^>]+MinWidth="0"/);
   assert.match(xaml, /<Grid RowDefinitions="Auto,Auto" RowSpacing="6">\s*<TextBlock Text="プレビュー \/ 結果"/s);
   assert.match(xaml, /<WrapPanel Grid\.Row="1" Classes="runtimeActions">\s*<TextBlock Text="\{Binding CapturePixelSizeLabel\}"/s);
   const runtimeWorkspaceVisible = xaml.indexOf('IsVisible="{Binding IsRuntimeWorkspaceVisible}"');
@@ -769,10 +770,12 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.ok(runtimeWorkspaceEnd > runtimeWorkspaceStart);
   const runtimeWorkspace = xaml.slice(runtimeWorkspaceStart, runtimeWorkspaceEnd);
   assert.match(runtimeWorkspace, /<ScrollViewer[^>]+VerticalScrollBarVisibility="Auto"[^>]+HorizontalScrollBarVisibility="Disabled"/);
-  assert.match(runtimeWorkspace, /WrapPanel[^>]+Classes="runtimeActions"/);
+  assert.match(runtimeWorkspace, /<StackPanel Spacing="12" HorizontalAlignment="Stretch">/);
+  assert.match(runtimeWorkspace, /WrapPanel[^>]+Classes="runtimeActions"[^>]+HorizontalAlignment="Left"/);
+  assert.doesNotMatch(runtimeWorkspace, /Classes="runtimeActions" HorizontalAlignment="Right"/);
   assert.doesNotMatch(runtimeWorkspace, /<Grid ColumnDefinitions="\*,Auto" ColumnSpacing="12">\s*<StackPanel Spacing="2">\s*<TextBlock Text="\{Binding RuntimeLayout\.Connection\.Title\}"/s);
   assert.match(runtimeWorkspace, /<Grid RowDefinitions="Auto,Auto" RowSpacing="8">\s*<StackPanel Spacing="2">\s*<TextBlock Text="\{Binding RuntimeLayout\.Connection\.Title\}"/s);
-  assert.match(runtimeWorkspace, /<WrapPanel Grid\.Row="1" Classes="runtimeActions" HorizontalAlignment="Right">[\s\S]*<Button Content="候補を使用"/);
+  assert.match(runtimeWorkspace, /<WrapPanel Grid\.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">[\s\S]*<Button Content="候補を使用"/);
   assert.ok((runtimeWorkspace.match(/Height="236"/g) ?? []).length >= 2);
   assert.match(runtimeWorkspace, /AdbPathCandidates[\s\S]*MaxLines="2"/);
   assert.match(runtimeWorkspace, /AdbDevices[\s\S]*MaxLines="2"/);
