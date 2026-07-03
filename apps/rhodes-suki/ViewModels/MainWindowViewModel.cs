@@ -4285,7 +4285,42 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             capturePath: LastCapturePath,
             captureBytes: _lastCapture.Length,
             profileLabel: profileLabel ?? (selectedMatches ? SelectedResourceProfile?.Label : null),
-            presetTaskEntries: presetTaskEntries ?? (selectedMatches ? SelectedResourceProfile?.TaskEntries : null));
+            presetTaskEntries: presetTaskEntries ?? (selectedMatches ? SelectedResourceProfile?.TaskEntries : null),
+            runtime: BuildRecognitionRuntimeEvidence());
+    }
+
+    private MaaRecognitionRuntimeEvidence BuildRecognitionRuntimeEvidence()
+    {
+        var options = BuildSessionOptions();
+        var preset = SelectedAdbPreset;
+        var input = SelectedAdbInputMethod ?? SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodId);
+        var screencap = SelectedAdbScreencapMethod ?? SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodId);
+        var ocr = SelectedOcrEngine ?? SukiOcrEngineCatalog.Options.First(option => option.Id == SukiOcrEngineCatalog.DefaultId);
+        return new MaaRecognitionRuntimeEvidence(
+            preset?.Id ?? "manual",
+            preset?.Label ?? "手動",
+            options.AdbPath,
+            options.AdbSerial,
+            options.AdbConfigJson,
+            input.Id,
+            input.Label,
+            input.Detail,
+            options.InputMethod.ToString(),
+            screencap.Id,
+            screencap.Label,
+            screencap.Detail,
+            options.ScreencapMethod.ToString(),
+            ocr.Id,
+            ocr.Label,
+            ocr.Detail,
+            SessionState,
+            SessionDetail,
+            options.ResourceRoot,
+            options.AgentBinaryRoot,
+            BaseResolution.Width,
+            BaseResolution.Height,
+            BaseResolution.AspectRatioLabel,
+            _session.IsControllerReady);
     }
 
     private static string ResolveMaaTasksSourcePath()

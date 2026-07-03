@@ -23,7 +23,8 @@ public static class RhodesMaaRecognitionEvidenceLog
         string? capturePath = null,
         long captureBytes = 0,
         string? profileLabel = null,
-        IEnumerable<string>? presetTaskEntries = null)
+        IEnumerable<string>? presetTaskEntries = null,
+        MaaRecognitionRuntimeEvidence? runtime = null)
     {
         var resultList = taskResults.ToArray();
         var candidateList = candidates.ToArray();
@@ -105,6 +106,7 @@ public static class RhodesMaaRecognitionEvidenceLog
                     path = normalizedCapturePath,
                     bytes = Math.Max(0, captureBytes),
                 },
+                runtime,
                 diagnostics,
                 taskResults = resultList,
             },
@@ -124,7 +126,8 @@ public static class RhodesMaaRecognitionEvidenceLog
         string? capturePath = null,
         long captureBytes = 0,
         string? profileLabel = null,
-        IEnumerable<string>? presetTaskEntries = null)
+        IEnumerable<string>? presetTaskEntries = null,
+        MaaRecognitionRuntimeEvidence? runtime = null)
     {
         Directory.CreateDirectory(directory);
         var completed = completedAt ?? DateTimeOffset.UtcNow;
@@ -132,7 +135,7 @@ public static class RhodesMaaRecognitionEvidenceLog
         var requestId = Guid.NewGuid().ToString("D");
         var normalizedProfile = NormalizeProfile(profileId) ?? "all";
         var file = Path.Combine(directory, $"recognition-{TimestampForFile(started)}-{SanitizeFilePart(normalizedProfile)}-{SanitizeFilePart(requestId)}.json");
-        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes, profileLabel, presetTaskEntries);
+        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes, profileLabel, presetTaskEntries, runtime);
         await File.WriteAllTextAsync(file, $"{json}{Environment.NewLine}");
         return file;
     }

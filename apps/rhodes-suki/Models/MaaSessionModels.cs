@@ -321,6 +321,32 @@ public sealed record MaaSessionSnapshot(
     bool AgentBinaryRootExists,
     bool IsReady);
 
+public sealed record MaaRecognitionRuntimeEvidence(
+    string AdbPresetId,
+    string AdbPresetLabel,
+    string AdbPath,
+    string AdbSerial,
+    string AdbConfigJson,
+    string AdbInputMethodId,
+    string AdbInputMethodLabel,
+    string AdbInputMethodDetail,
+    string AdbInputMethodValue,
+    string AdbScreencapMethodId,
+    string AdbScreencapMethodLabel,
+    string AdbScreencapMethodDetail,
+    string AdbScreencapMethodValue,
+    string OcrEngineId,
+    string OcrEngineLabel,
+    string OcrEngineDetail,
+    string SessionState,
+    string SessionDetail,
+    string ResourceRoot,
+    string AgentBinaryRoot,
+    int BaseWidth,
+    int BaseHeight,
+    string BaseResolution,
+    bool IsControllerReady);
+
 public sealed record MaaFrameworkRuntimeProbeFacts(
     string BindingAssemblyName,
     string BindingAssemblyVersion,

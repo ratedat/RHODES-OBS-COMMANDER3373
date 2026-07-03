@@ -2173,7 +2173,32 @@ static void MaaNativeEvidenceLog()
         "O:/debug/native-capture.png",
         12345,
         "オペレーター",
-        ["RhodesOperatorNameOcr", "RhodesOcrRegion_operator_name"]);
+        ["RhodesOperatorNameOcr", "RhodesOcrRegion_operator_name"],
+        new MaaRecognitionRuntimeEvidence(
+            "mumu",
+            "MuMu Player",
+            "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe",
+            "127.0.0.1:16384",
+            "{}",
+            "emulator-fast",
+            "MuMu高速入力",
+            "EmulatorExtras",
+            "EmulatorExtras, Maatouch, MinitouchAndAdbKey, AdbShell",
+            "emulator-fast",
+            "MuMu/LD高速撮影",
+            "EmulatorExtras",
+            "EmulatorExtras, RawWithGzip, Encode, EncodeToFileAndPull",
+            "maa-ocr",
+            "MAA-OCR",
+            "MAAFramework系OCRを使います。",
+            "接続済み",
+            "MAA Controller LinkStart: Succeeded",
+            "resource",
+            "agent",
+            1280,
+            720,
+            "1280x720 (16:9)",
+            true));
 
     var root = JsonNode.Parse(json)!.AsObject();
     Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
@@ -2195,6 +2220,14 @@ static void MaaNativeEvidenceLog()
     Equal("オペレーター", evidence["profile"]!.AsObject()["label"]!.GetValue<string>(), "evidence profile object label");
     Equal(2, evidence["profile"]!.AsObject()["presetTaskEntries"]!.AsArray().Count, "evidence preset entries");
     Equal("O:/debug/native-capture.png", evidence["capture"]!.AsObject()["path"]!.GetValue<string>(), "evidence capture path");
+    var runtime = evidence["runtime"]!.AsObject();
+    Equal("mumu", runtime["adbPresetId"]!.GetValue<string>(), "evidence runtime adb preset");
+    Equal("127.0.0.1:16384", runtime["adbSerial"]!.GetValue<string>(), "evidence runtime serial");
+    Equal("emulator-fast", runtime["adbScreencapMethodId"]!.GetValue<string>(), "evidence runtime screencap");
+    Equal("emulator-fast", runtime["adbInputMethodId"]!.GetValue<string>(), "evidence runtime input");
+    Equal("maa-ocr", runtime["ocrEngineId"]!.GetValue<string>(), "evidence runtime OCR");
+    Equal("1280x720 (16:9)", runtime["baseResolution"]!.GetValue<string>(), "evidence runtime base resolution");
+    Equal(true, runtime["isControllerReady"]!.GetValue<bool>(), "evidence runtime controller ready");
     Equal(2, evidence["diagnostics"]!.AsObject()["total"]!.GetValue<int>(), "evidence diagnostics");
 }
 
