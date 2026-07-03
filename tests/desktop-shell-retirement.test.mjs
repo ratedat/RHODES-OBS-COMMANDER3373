@@ -72,3 +72,10 @@ test("retired Control metadata does not publish detached Control routes", async 
 
   assert.doesNotMatch(screenMeta, /detachPath:\s*"\/control-v2/);
 });
+
+test("runtime event layer no longer handles retired Control screen switching actions", async () => {
+  const controlEvents = await readFile(new URL("../app/control-events.js", import.meta.url), "utf8");
+
+  assert.doesNotMatch(controlEvents, /action === "control-v2-screen"/);
+  assert.doesNotMatch(controlEvents, /action === "control-v2-choice-tab"/);
+});

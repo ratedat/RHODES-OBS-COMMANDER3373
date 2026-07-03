@@ -277,20 +277,6 @@ export function registerControlEvents(app, context) {
       }
       return;
     }
-    if (action === "control-v2-screen") {
-      const screen = normalizeControlV2Screen(button.dataset.screen);
-      context.ui.controlV2Screen = screen;
-      if (screen === "operators" || screen === "relics") context.ui.controlV2ChoiceTab = screen;
-      context.renderControl();
-      return;
-    }
-    if (action === "control-v2-choice-tab") {
-      const choiceTab = button.dataset.choiceTab === "relics" ? "relics" : "operators";
-      context.ui.controlV2ChoiceTab = choiceTab;
-      context.ui.controlV2Screen = choiceTab;
-      context.renderControl();
-      return;
-    }
     if (action === "toggle-relic") { toggleChoiceElement(button, "relic", id, context); return; }
     if (action === "toggle-operator") { toggleChoiceElement(button, "operator", id, context); return; }
     if (action === "toggle-relic-excluded") { context.mutate((state) => controlActions.toggleChoiceExcluded(state, "relic", id)); return; }
