@@ -81,6 +81,8 @@ var tests = new (string Name, Action Run)[]
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
     ("Run state store can replace state from API JSON", StateApiReplacement),
     ("State API client can apply Suki ADB settings into current state JSON", StateApiAdbSettingsApply),
+    ("Suki state sync workflow saves choices, ADB, and output preferences through API state", SukiStateSyncWorkflowSettingsSuccess),
+    ("Suki state sync workflow reports API failures without local state replacement", SukiStateSyncWorkflowSettingsFailure),
     ("State API client can apply Suki display preferences into current state JSON", StateApiSukiPreferencesApply),
     ("State API client can apply selected choices into current state JSON", StateApiChoicesApply),
     ("State API client can apply current campaign into current state JSON", StateApiRunContextApply),
@@ -2766,6 +2768,88 @@ static void StateApiAdbSettingsApply()
     Equal("is5_sarkaz", updated["run"]!.AsObject()["campaignId"]!.GetValue<string>(), "run preserved");
     Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "adb settings prune abandoned run value");
     Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "operators preserved");
+}
+
+static void SukiStateSyncWorkflowSettingsSuccess()
+{
+    var op = new SukiChoiceItem("operator", "gummy", "グム", "重装", "重装", "守護者", "", "", 4, 10, false)
+    {
+        IsSelected = true
+    };
+    var relic = new SukiChoiceItem("relic", "is5_sarkaz_relic_001", "No.1", "秘宝", "", "", "is5_sarkaz", "秘宝", 0, 1, false)
+    {
+        IsSelected = true
+    };
+    var savedState = "";
+    var replacedState = "";
+    var result = RhodesSukiStateSyncWorkflow.SyncSettingsAsync(
+        new RhodesSukiStateSyncRequest(
+            [op],
+            [relic],
+            new SukiChoicePersistenceOptions(true, false, false, false, true, false, 4, 4),
+            new RhodesAdbApiSettings(true, "mumu", "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe", "127.0.0.1:16384"),
+            new SukiOutputPreferences(
+                true,
+                true,
+                true,
+                12,
+                [new SukiOutputPartState("operators", true, false, true, 360, 140)]),
+            "glm-ocr"),
+        _ => Task.FromResult(new RhodesStateApiResult(
+            """
+            {
+              "version": 1,
+              "mode": "casual",
+              "run": { "campaignId": "is5_sarkaz", "hope": 3 },
+              "operators": [],
+              "relics": []
+            }
+            """,
+            "")),
+        (stateJson, _) =>
+        {
+            savedState = stateJson;
+            return Task.FromResult(new RhodesStateApiResult(stateJson, ""));
+        },
+        (stateJson, _) =>
+        {
+            replacedState = stateJson;
+            return Task.CompletedTask;
+        }).GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "sync workflow succeeds");
+    Equal(true, result.ShouldReloadRunState, "sync workflow reloads state");
+    Equal("接続済み", result.ApiStatus.State, "sync workflow api status");
+    Equal(savedState, replacedState, "sync workflow replaces saved state locally");
+    var updated = JsonNode.Parse(savedState)!.AsObject();
+    Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "sync workflow operator selection");
+    Equal("is5_sarkaz_relic_001", updated["relics"]!.AsArray()[0]!.GetValue<string>(), "sync workflow relic selection");
+    Equal("mumu", updated["adb"]!.AsObject()["connectionPreset"]!.GetValue<string>(), "sync workflow adb preset");
+    Equal("127.0.0.1:16384", updated["adb"]!.AsObject()["serial"]!.GetValue<string>(), "sync workflow adb serial");
+    Equal("glm-ocr", updated["preferences"]!.AsObject()["ocrEngine"]!.GetValue<string>(), "sync workflow ocr engine");
+    Equal(true, updated["preferences"]!.AsObject()["sukiOutputSeparateWindow"]!.GetValue<bool>(), "sync workflow output window");
+    Equal("tournament", updated["mode"]!.GetValue<string>(), "sync workflow tournament mode");
+    Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "sync workflow prunes abandoned values");
+}
+
+static void SukiStateSyncWorkflowSettingsFailure()
+{
+    var result = RhodesSukiStateSyncWorkflow.SyncSettingsAsync(
+        new RhodesSukiStateSyncRequest(
+            [],
+            [],
+            new SukiChoicePersistenceOptions(false, false, false, false, false, false, 2, 2),
+            new RhodesAdbApiSettings(true, "auto", "adb", ""),
+            new SukiOutputPreferences(false, false, false, 0, []),
+            "maa-ocr"),
+        _ => Task.FromResult(new RhodesStateApiResult("", "connection refused")),
+        (_, _) => throw new InvalidOperationException("save should not run"),
+        (_, _) => throw new InvalidOperationException("replace should not run")).GetAwaiter().GetResult();
+
+    Equal(false, result.Succeeded, "sync workflow failure state");
+    Equal(false, result.ShouldReloadRunState, "sync workflow failure avoids reload");
+    Equal("connection refused", result.Error, "sync workflow failure error");
+    Equal("接続失敗", result.ApiStatus.State, "sync workflow failure api status");
 }
 
 static void StateApiSukiPreferencesApply()

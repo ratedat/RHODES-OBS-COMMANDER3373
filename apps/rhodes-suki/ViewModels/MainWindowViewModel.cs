@@ -1604,56 +1604,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<string> SaveAdbSettingsToApiStateAsync()
     {
-        var fetched = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
-        if (!fetched.Succeeded)
-        {
-            _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", fetched.Error, false, false);
-            RefreshRuntimeCapabilities();
-            return fetched.Error;
-        }
-
         var choiceOptions = BuildChoicePersistenceOptions();
-        var updated = RhodesStateApiClient.ApplyChoicesToStateJson(
-            fetched.StateJson,
-            _allOperators,
-            _allRelics,
-            choiceOptions);
-        updated = RhodesStateApiClient.ApplyAdbSettingsToStateJson(
-            updated,
-            new RhodesAdbApiSettings(
-                true,
-                SelectedAdbPreset?.Id ?? "auto",
-                AdbPath,
-                AdbSerial));
-        updated = RhodesStateApiClient.ApplySukiPreferencesToStateJson(
-            updated,
-            choiceOptions,
-            new SukiOutputPreferences(
-                OutputSeparateWindow,
-                OutputTournamentMode,
-                OutputTransparentBackground,
-                OutputScrollSpeed,
-                OutputParts.Select(part => new SukiOutputPartState(
-                    part.Id,
-                    part.Enabled,
-                    part.ScrollEnabled,
-                    part.HideExcluded,
-                    part.Width,
-                    part.Height)).ToArray()),
-            SelectedOcrEngine?.Id ?? _runState.OcrEngine);
-        var saved = await RhodesStateApiClient.SaveAsync(RhodesApiUrl, updated);
-        if (!saved.Succeeded)
-        {
-            _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", saved.Error, false, false);
-            RefreshRuntimeCapabilities();
-            return saved.Error;
-        }
+        var result = await RhodesSukiStateSyncWorkflow.SyncSettingsAsync(
+            new RhodesSukiStateSyncRequest(
+                _allOperators,
+                _allRelics,
+                choiceOptions,
+                new RhodesAdbApiSettings(
+                    true,
+                    SelectedAdbPreset?.Id ?? "auto",
+                    AdbPath,
+                    AdbSerial),
+                BuildOutputPreferences(),
+                SelectedOcrEngine?.Id ?? _runState.OcrEngine),
+            cancellationToken => RhodesStateApiClient.FetchAsync(RhodesApiUrl, cancellationToken: cancellationToken),
+            (stateJson, cancellationToken) => RhodesStateApiClient.SaveAsync(RhodesApiUrl, stateJson, cancellationToken: cancellationToken),
+            (stateJson, _) => RhodesRunStateStore.ReplaceStateJsonAsync(stateJson));
 
-        _rhodesApiStatus = RhodesApiStatusProbe.ParseStateJson(saved.StateJson);
-        await RhodesRunStateStore.ReplaceStateJsonAsync(saved.StateJson);
-        ReloadRunStateFromStore();
+        _rhodesApiStatus = result.ApiStatus;
+        if (result.ShouldReloadRunState)
+            ReloadRunStateFromStore();
         RefreshRuntimeCapabilities();
-        return "";
+        return result.Error;
     }
 
     private async Task<string> SaveRunContextToApiStateAsync(string campaignId)
@@ -3651,6 +3623,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RelicSelectedOnly,
             OperatorPaneColumns,
             RelicPaneColumns);
+    }
+
+    private SukiOutputPreferences BuildOutputPreferences()
+    {
+        return new SukiOutputPreferences(
+            OutputSeparateWindow,
+            OutputTournamentMode,
+            OutputTransparentBackground,
+            OutputScrollSpeed,
+            OutputParts.Select(part => new SukiOutputPartState(
+                part.Id,
+                part.Enabled,
+                part.ScrollEnabled,
+                part.HideExcluded,
+                part.Width,
+                part.Height)).ToArray());
     }
 
     private SukiChoiceCatalogFilterState OperatorChoiceFilterState()
