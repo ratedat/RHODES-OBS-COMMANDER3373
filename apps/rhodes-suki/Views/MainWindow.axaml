@@ -623,12 +623,12 @@
 
             <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
               <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{Binding RuntimeLayout.Connection.Title}" FontSize="15" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding RuntimeLayout.Connection.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
                   </StackPanel>
-                  <WrapPanel Grid.Column="1" Classes="runtimeActions" HorizontalAlignment="Right">
+                  <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Right">
                     <Button Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
                     <Button Content="参照" Click="BrowseAdbPathClick" />
                     <Button Content="候補を使用" Command="{Binding ApplyAdbPathCandidateCommand}" CommandParameter="{Binding SelectedAdbPathCandidate}" />
