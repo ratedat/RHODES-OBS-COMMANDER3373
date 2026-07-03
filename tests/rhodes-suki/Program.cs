@@ -1350,9 +1350,14 @@ static void WorkspaceActionRegistry()
         true,
         RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Single(item => item.Id == "runtime.capture").RequiresMaaSession,
         "capture uses maa");
+    Equal(
+        "MAA",
+        RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Single(item => item.Id == "runtime.capture").MaaRequirementLabel,
+        "capture maa label");
     var runAndApply = RhodesWorkspaceActionRegistry.ForWorkspace("recognition").Single(item => item.Id == "recognition.run-and-apply");
     Equal(true, runAndApply.RequiresMaaSession, "run and apply uses maa");
     Equal(true, runAndApply.WritesState, "run and apply writes state");
+    Equal("state更新", runAndApply.StateWriteLabel, "run and apply state label");
     Equal("maa-resource.tasker+state-api.apply", runAndApply.Workflow, "run and apply workflow");
     Equal(
         false,

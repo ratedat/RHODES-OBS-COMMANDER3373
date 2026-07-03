@@ -158,6 +158,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SpecialValuePreviews = [];
         RuntimeCapabilities = new ObservableCollection<SukiRuntimeCapabilityPreview>(BuildRuntimeCapabilities());
         InspectorRows = [];
+        WorkspaceActions = [];
         OutputParts = new ObservableCollection<SukiOutputPartPreview>(RhodesOutputPartRegistry.BuildDefaultPreviews());
         foreach (var outputPart in OutputParts)
         {
@@ -281,6 +282,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshSpecialValuePreviews();
         RefreshRecognitionScanHistory();
         RefreshRoiAdjustmentSessions();
+        RefreshWorkspaceActions();
         RefreshInspectorRows();
         LoadSettings();
     }
@@ -324,6 +326,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<SukiRuntimeCapabilityPreview> RuntimeCapabilities { get; }
 
     public ObservableCollection<SukiInspectorRow> InspectorRows { get; }
+
+    public ObservableCollection<SukiWorkspaceActionDescriptor> WorkspaceActions { get; }
+
+    public string WorkspaceActionCountLabel => $"{WorkspaceActions.Count}件";
 
     public ObservableCollection<SukiOutputPartPreview> OutputParts { get; }
 
@@ -470,6 +476,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(IsRuntimeWorkspaceVisible));
             OnPropertyChanged(nameof(IsDebugWorkspaceVisible));
             OnPropertyChanged(nameof(WorkspaceTitle));
+            RefreshWorkspaceActions();
             RefreshInspectorRows();
         }
     }
@@ -1512,6 +1519,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ReplaceCollection(InspectorRows, BuildInspectorRows());
     }
 
+    private void RefreshWorkspaceActions()
+    {
+        ReplaceCollection(WorkspaceActions, RhodesWorkspaceActionRegistry.ForWorkspace(WorkspaceTab));
+        OnPropertyChanged(nameof(WorkspaceActionCountLabel));
+    }
+
     private IEnumerable<SukiInspectorRow> BuildInspectorRows()
     {
         yield return new SukiInspectorRow("ワークスペース", WorkspaceTitle, WorkspaceTab);
@@ -1601,7 +1614,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private SukiInspectorRow BuildWorkspaceActionInspectorRow()
     {
-        var actions = RhodesWorkspaceActionRegistry.ForWorkspace(WorkspaceTab);
+        var actions = WorkspaceActions;
         if (actions.Count == 0)
             return new SukiInspectorRow("操作", "未登録", "ワークスペース操作定義なし");
 

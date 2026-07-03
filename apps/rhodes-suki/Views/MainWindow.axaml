@@ -827,19 +827,50 @@
               <TextBlock Grid.Column="1" Text="{Binding ResourceTaskDiagnostics.Summary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
             </Grid>
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <ItemsControl ItemsSource="{Binding InspectorRows}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                      <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="100,*" ColumnSpacing="8">
-                        <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.58" />
-                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.52" />
-                      </Grid>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+              <StackPanel Spacing="8">
+                <ItemsControl ItemsSource="{Binding InspectorRows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="100,*" ColumnSpacing="8">
+                          <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.58" />
+                          <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.52" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                  <TextBlock Text="操作" FontSize="13" FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="1" Text="{Binding WorkspaceActionCountLabel}" FontFamily="Consolas" FontSize="11" VerticalAlignment="Center" Opacity="0.58" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding WorkspaceActions}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#0C1011" BorderBrush="#273335" BorderThickness="1">
+                        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="5">
+                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Grid.Column="1" Text="{Binding SectionId}" FontFamily="Consolas" FontSize="10" VerticalAlignment="Center" Opacity="0.54" />
+                          </Grid>
+                          <TextBlock Grid.Row="1" Text="{Binding Workflow}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.64" />
+                          <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6">
+                            <Border CornerRadius="5" Padding="6,2" Background="#132629" BorderBrush="#315154" BorderThickness="1">
+                              <TextBlock Text="{Binding MaaRequirementLabel}" FontSize="10" />
+                            </Border>
+                            <Border Grid.Column="1" CornerRadius="5" Padding="6,2" Background="#1E2115" BorderBrush="#4B4A2C" BorderThickness="1">
+                              <TextBlock Text="{Binding StateWriteLabel}" FontSize="10" />
+                            </Border>
+                            <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.52" />
+                          </Grid>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
             </ScrollViewer>
 
             <TextBlock Grid.Row="2" Text="診断" FontSize="13" FontWeight="SemiBold" />

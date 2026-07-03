@@ -124,7 +124,12 @@ public sealed record SukiWorkspaceActionDescriptor(
     string Detail,
     bool RequiresMaaSession,
     bool WritesState,
-    int DisplayPriority);
+    int DisplayPriority)
+{
+    public string MaaRequirementLabel => RequiresMaaSession ? "MAA" : "local/API";
+
+    public string StateWriteLabel => WritesState ? "state更新" : "read-only";
+}
 
 public sealed record SukiRuntimeWorkspaceLayout(
     SukiWorkspaceSectionPreview Header,
