@@ -98,6 +98,17 @@ public sealed record SukiWorkspaceSectionPreview(
     string Title,
     string Detail);
 
+public sealed record SukiProductSurfaceDescriptor(
+    string Id,
+    string Category,
+    string WorkspaceId,
+    string StatePath,
+    string Provenance,
+    string InspectorKind,
+    string ReviewPolicy,
+    bool CanShowOnOutput,
+    int DisplayPriority);
+
 public sealed record SukiRuntimeWorkspaceLayout(
     SukiWorkspaceSectionPreview Header,
     SukiWorkspaceSectionPreview Connection,

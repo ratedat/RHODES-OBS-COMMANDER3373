@@ -52,6 +52,7 @@ var tests = new (string Name, Action Run)[]
     ("Suki runtime probe workflow aggregates API, optional runtime, and Hyper-V statuses", SukiRuntimeProbeWorkflowAggregatesStatuses),
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
+    ("Product surface registry assigns every major app element to a workspace", ProductSurfaceRegistry),
     ("Runtime workspace registry exposes focused setup sections", RuntimeWorkspaceRegistry),
     ("Recognition workspace registry exposes the MAA action flow", RecognitionWorkspaceRegistry),
     ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
@@ -1312,6 +1313,33 @@ static void WorkspaceRegistry()
     Equal("run", RhodesWorkspaceRegistry.Normalize("bad"), "unknown workspace fallback");
     Equal(true, RhodesWorkspaceRegistry.IsKnown("recognition"), "known workspace");
     Equal(false, RhodesWorkspaceRegistry.IsKnown("legacy"), "unknown workspace");
+}
+
+static void ProductSurfaceRegistry()
+{
+    var items = RhodesProductSurfaceRegistry.Items;
+
+    Equal(0, RhodesProductSurfaceRegistry.Validate().Count, "surface registry validation");
+    Equal(
+        "run|choices|recognition|output|runtime|debug",
+        string.Join("|", items.Select(item => item.WorkspaceId).Distinct()),
+        "surface workspace coverage");
+    Equal(
+        "run.base|run.special",
+        string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("run").Select(item => item.Id)),
+        "run surfaces");
+    Equal(
+        "choices.operators|choices.relics",
+        string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("choices").Select(item => item.Id)),
+        "choice surfaces");
+    Equal(
+        "recognition.profiles|recognition.candidates",
+        string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("recognition").Select(item => item.Id)),
+        "recognition surfaces");
+    Equal(true, items.Single(item => item.Id == "runtime.adb").Provenance.Contains("MAAFramework", StringComparison.Ordinal), "adb provenance");
+    Equal(true, items.Single(item => item.Id == "runtime.maa-ocr").Provenance.Contains("MAAFramework", StringComparison.Ordinal), "maa ocr provenance");
+    Equal("optional", items.Single(item => item.Id == "runtime.glm-ocr").ReviewPolicy, "glm review policy");
+    Equal(true, items.Single(item => item.Id == "output.obs-parts").CanShowOnOutput, "output surface");
 }
 
 static void RuntimeWorkspaceRegistry()

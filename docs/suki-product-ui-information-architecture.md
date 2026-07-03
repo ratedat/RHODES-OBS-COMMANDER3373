@@ -140,6 +140,7 @@ The UI should converge on these modules:
 - Recognition result registry: maps MAA/GLM/template results to candidate types and review actions.
 - Output part registry: maps state slices to OBS/sidecar display blocks.
 - Runtime capability registry: maps external tools to install/status/test/uninstall controls.
+- Product surface registry: maps every major app element to a workspace, state path, provenance, inspector kind, review policy, and output eligibility before UI placement.
 
 These modules should be deep: callers ask for "render this workspace from the active state" or "convert this recognition result to review items" instead of knowing every campaign and field type.
 
