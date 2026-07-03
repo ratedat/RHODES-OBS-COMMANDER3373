@@ -25,8 +25,6 @@
     "data:update:plan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1 -PlanOnly",
     "data:diff": "node tools/compare-data-update.mjs --before data --after data --out review/update-runs/manual-compare",
     "verify:desktop": "npm run suki:check && npm run suki:build",
-    "ocr:probe": "node tools/probe-ocr-runtime.mjs",
-    "ocr:probe:strict": "node tools/probe-ocr-runtime.mjs --strict",
     "ocr:sync-maa": "node tools/sync-maa-ocr-assets.mjs",
     "ocr:sync-maa:models": "node tools/sync-maa-ocr-assets.mjs --models",
     "ocr:sync-maa-operator": "node tools/sync-maa-operator-ocr-map.mjs"

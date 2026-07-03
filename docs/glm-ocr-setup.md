@@ -89,17 +89,9 @@ For fixed ROI verification, the bridge passes each crop directly to Ollama throu
 This avoids the GLM-OCR SDK document-layout detector, which is unnecessary for small game UI crops.
 The generated SDK config is still written for reference and future whole-document comparisons.
 
-## Runtime probe
-
-```powershell
-npm run ocr:probe
-```
-
-The output includes `glmOcr.present`. `ocr:probe:strict` still checks the current MAA/Paddle prerequisites and does not require GLM-OCR.
-
 ## Notes
 
-- GLM-OCR is slow compared with the active MAA ONNX route. Keep it as an optional verification engine, not the general default.
+- GLM-OCR is slow compared with the active MAAFramework/MAA-OCR route. Keep it as an optional verification engine, not the general default.
 - The bridge sends only fixed ROI crops by default. It does not submit the full screenshot when regions are available.
 - `RHODES_GLM_OCR_MAX_REGIONS` defaults to `12`; lower it when comparing only a few operator cards.
 - Cloud MaaS mode is intentionally not the default because it sends screenshots outside the PC.

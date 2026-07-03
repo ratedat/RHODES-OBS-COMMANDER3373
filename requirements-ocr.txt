@@ -1,5 +1,0 @@
-# Optional OCR runtime for ADB recognition.
-# Active local OCR routes are MAA-OCR by default and GLM-OCR as an optional runtime.
-onnxruntime>=1.20.0
-numpy>=1.26.0
-Pillow>=10.0.0

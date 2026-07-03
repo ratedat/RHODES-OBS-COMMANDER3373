@@ -6,7 +6,6 @@ import {
   normalizeGlmOcrPayload,
   parseGlmOcrStdout,
 } from "../app/recognition/adapters/glm-ocr-adapter.js";
-import { createDefaultOcrTextExtractor } from "../app/recognition/adapters/ocr-text-extractor.js";
 
 test("GLM OCR stdout parser decodes UTF-8 Japanese JSON from the final base64 line", () => {
   const payload = {
@@ -57,8 +56,4 @@ test("GLM OCR extractor can use an injected runner and returns OCR text", async 
   assert.equal(frame.ocrEngine, "glm-ocr");
   assert.equal(frame.text, "グム");
   assert.equal(frame.ocrResults[0].source, "glm-ocr");
-});
-
-test("default OCR selector exposes GLM OCR engines for opt-in verification", () => {
-  assert.equal(typeof createDefaultOcrTextExtractor({ engine: "glm-ocr" }).extract, "function");
 });
