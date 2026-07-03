@@ -50,7 +50,7 @@ Manual setup is still available for developers who want to compare a custom envi
 py -3.12 -m venv .venv-glm-ocr
 .\.venv-glm-ocr\Scripts\python.exe -m pip install --upgrade pip
 .\.venv-glm-ocr\Scripts\python.exe -m pip install -r requirements-glm-ocr.txt
-$env:RHODES_PYTHON = 'O:\Arknights_Rogue_OBSTool\.venv-glm-ocr\Scripts\python.exe'
+$env:RHODES_GLM_OCR_PYTHON = 'O:\Arknights_Rogue_OBSTool\.venv-glm-ocr\Scripts\python.exe'
 $env:RHODES_OCR_ENGINE = 'glm-ocr'
 ```
 
