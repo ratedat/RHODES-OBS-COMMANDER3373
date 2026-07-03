@@ -2278,7 +2278,8 @@ static void MaaNativeEvidenceLog()
                 new MaaResourceTaskPreview("RhodesOcrRegion_operator_name", "オペレーター名", "", ["operatorsFull"], "generated"),
             ],
             "",
-            MaaResourceExecutionPlan.ReadyState));
+            MaaResourceExecutionPlan.ReadyState),
+        new MaaResourceContractSnapshot(true, 43, 7, 7, []));
 
     var root = JsonNode.Parse(json)!.AsObject();
     Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
@@ -2307,6 +2308,13 @@ static void MaaNativeEvidenceLog()
     Equal(2, executionPlan["taskCount"]!.GetValue<int>(), "evidence execution plan task count");
     Equal(2, executionPlan["taskEntries"]!.AsArray().Count, "evidence execution plan entries");
     Equal("O:/debug/native-capture.png", evidence["capture"]!.AsObject()["path"]!.GetValue<string>(), "evidence capture path");
+    var contract = evidence["contract"]!.AsObject();
+    Equal(true, contract["isValid"]!.GetValue<bool>(), "evidence contract valid");
+    Equal("OK", contract["state"]!.GetValue<string>(), "evidence contract state");
+    Equal(43, contract["taskCount"]!.GetValue<int>(), "evidence contract task count");
+    Equal(7, contract["groupCount"]!.GetValue<int>(), "evidence contract group count");
+    Equal(7, contract["presetCount"]!.GetValue<int>(), "evidence contract preset count");
+    Equal(0, contract["errors"]!.AsArray().Count, "evidence contract errors");
     var runtime = evidence["runtime"]!.AsObject();
     Equal("mumu", runtime["adbPresetId"]!.GetValue<string>(), "evidence runtime adb preset");
     Equal("127.0.0.1:16384", runtime["adbSerial"]!.GetValue<string>(), "evidence runtime serial");

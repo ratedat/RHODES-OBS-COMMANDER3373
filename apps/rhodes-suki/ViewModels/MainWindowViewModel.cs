@@ -4459,7 +4459,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             profileLabel: profileLabel ?? (selectedMatches ? SelectedResourceProfile?.Label : null),
             presetTaskEntries: presetTaskEntries ?? (selectedMatches ? SelectedResourceProfile?.TaskEntries : null),
             runtime: BuildRecognitionRuntimeEvidence(),
-            executionPlan: executionPlan);
+            executionPlan: executionPlan,
+            contract: MaaResourceContract);
     }
 
     private MaaRecognitionRuntimeEvidence BuildRecognitionRuntimeEvidence()
