@@ -53,6 +53,7 @@ var tests = new (string Name, Action Run)[]
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
     ("Product surface registry assigns every major app element to a workspace", ProductSurfaceRegistry),
+    ("Output part registry defines OBS sidecar display blocks", OutputPartRegistry),
     ("Runtime workspace registry exposes focused setup sections", RuntimeWorkspaceRegistry),
     ("Recognition workspace registry exposes the MAA action flow", RecognitionWorkspaceRegistry),
     ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
@@ -1340,6 +1341,27 @@ static void ProductSurfaceRegistry()
     Equal(true, items.Single(item => item.Id == "runtime.maa-ocr").Provenance.Contains("MAAFramework", StringComparison.Ordinal), "maa ocr provenance");
     Equal("optional", items.Single(item => item.Id == "runtime.glm-ocr").ReviewPolicy, "glm review policy");
     Equal(true, items.Single(item => item.Id == "output.obs-parts").CanShowOnOutput, "output surface");
+}
+
+static void OutputPartRegistry()
+{
+    var descriptors = RhodesOutputPartRegistry.Descriptors;
+    var previews = RhodesOutputPartRegistry.BuildDefaultPreviews();
+
+    Equal(
+        "operators|relics|run|special|recognition",
+        string.Join("|", descriptors.Select(item => item.Id)),
+        "output part order");
+    Equal(
+        "choices.operators|choices.relics|run.base|run.special|recognition.candidates",
+        string.Join("|", descriptors.Select(item => item.BindingPath)),
+        "output part binding paths");
+    Equal(0, RhodesOutputPartRegistry.Validate().Count, "output part validation");
+    Equal("招集オペレーター", previews[0].Label, "operator output label");
+    Equal(true, previews[0].Enabled, "operator output enabled");
+    Equal(true, previews[1].ScrollEnabled, "relic output scroll enabled");
+    Equal(260, previews.Single(item => item.Id == "run").Width, "run output width");
+    Equal(false, previews.Single(item => item.Id == "recognition").Enabled, "recognition output disabled by default");
 }
 
 static void RuntimeWorkspaceRegistry()

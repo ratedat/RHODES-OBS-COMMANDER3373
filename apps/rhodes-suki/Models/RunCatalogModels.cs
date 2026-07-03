@@ -146,6 +146,32 @@ public sealed record SukiInspectorRow(
     string Value,
     string Detail);
 
+public sealed record SukiOutputPartDescriptor(
+    string Id,
+    string Label,
+    string BindingPath,
+    string Detail,
+    bool DefaultEnabled,
+    bool DefaultScrollEnabled,
+    bool DefaultHideExcluded,
+    int DefaultWidth,
+    int DefaultHeight)
+{
+    public SukiOutputPartPreview ToPreview()
+    {
+        return new SukiOutputPartPreview(
+            Id,
+            Label,
+            BindingPath,
+            Detail,
+            DefaultEnabled,
+            DefaultScrollEnabled,
+            DefaultHideExcluded,
+            DefaultWidth,
+            DefaultHeight);
+    }
+}
+
 public sealed class SukiOutputPartPreview : INotifyPropertyChanged
 {
     private bool _enabled;
