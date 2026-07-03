@@ -45,6 +45,7 @@ var tests = new (string Name, Action Run)[]
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
+    ("Suki runtime probe workflow aggregates API, optional runtime, and Hyper-V statuses", SukiRuntimeProbeWorkflowAggregatesStatuses),
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
     ("Runtime workspace registry exposes focused setup sections", RuntimeWorkspaceRegistry),
@@ -1179,6 +1180,27 @@ static void RhodesApiStatusParsing()
         localOperators: 2,
         localRelics: 1);
     Equal("差分あり", mismatchedMaster.State, "master mismatch state");
+}
+
+static void SukiRuntimeProbeWorkflowAggregatesStatuses()
+{
+    var snapshot = RhodesSukiRuntimeProbeWorkflow.ProbeAsync(
+        _ => Task.FromResult(new SukiOptionalRuntimeStatus("RHODES API", "接続済み", "api OK", true, false)),
+        _ => Task.FromResult(new SukiOptionalRuntimeStatus("Master Data", "一致", "master OK", true, false)),
+        _ => Task.FromResult(new SukiOptionalRuntimeProbeSnapshot(
+            new SukiOptionalRuntimeStatus("GLM-OCR", "導入済み", "glm OK", true, false),
+            new SukiOptionalRuntimeStatus("Ollama", "未導入", "ollama optional", false, false))),
+        _ => Task.FromResult(new SukiHypervisorStatus("確認済み", "hyperv OK", true, false, "info"))).GetAwaiter().GetResult();
+
+    Equal("接続済み", snapshot.Api.State, "runtime workflow api");
+    Equal("一致", snapshot.Master.State, "runtime workflow master");
+    Equal("導入済み", snapshot.Glm.State, "runtime workflow glm");
+    Equal("未導入", snapshot.Ollama.State, "runtime workflow ollama");
+    Equal("確認済み", snapshot.Hypervisor.State, "runtime workflow hypervisor");
+    Equal(
+        "ランタイム状態: API=接続済み, Master=一致, GLM=導入済み, Ollama=未導入, Hyper-V=確認済み",
+        snapshot.StatusMessage,
+        "runtime workflow message");
 }
 
 static void RuntimeCapabilityRegistry()

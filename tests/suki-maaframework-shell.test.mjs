@@ -64,6 +64,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const optionalRuntimeProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesOptionalRuntimeProbe.cs", "utf8");
   const hypervisorProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesHypervisorProbe.cs", "utf8");
   const runtimeProbe = await fs.readFile("apps/rhodes-suki/Services/MaaFrameworkRuntimeProbe.cs", "utf8");
+  const runtimeProbeWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiRuntimeProbeWorkflow.cs", "utf8");
   const probe = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionProbe.cs", "utf8");
   const catalog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResourceCatalog.cs", "utf8");
   const adbPresets = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbPresetCatalog.cs", "utf8");
@@ -282,11 +283,15 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RefreshAdbDevicesCommand/);
   assert.match(viewModel, /ApplyAdbDeviceCommand/);
   assert.match(viewModel, /RefreshOptionalRuntimesCommand/);
+  assert.match(viewModel, /RhodesSukiRuntimeProbeWorkflow\.ProbeAsync/);
+  assert.match(runtimeProbeWorkflow, /Task\.WhenAll\(apiTask, masterTask, optionalTask, hypervisorTask\)/);
+  assert.match(runtimeProbeWorkflow, /ランタイム状態: API=/);
+  assert.doesNotMatch(viewModel, /Task\.WhenAll\(apiTask, masterTask, optionalTask, hypervisorTask\)/);
   assert.match(viewModel, /RhodesOptionalRuntimeProbe\.ProbeAsync/);
   assert.match(viewModel, /_maaFrameworkStatus/);
   assert.match(runtimeCapabilityRegistry, /context\.MaaFrameworkStatus\.State/);
   assert.match(runtimeCapabilityRegistry, /context\.MaaFrameworkStatus\.Detail/);
-  assert.match(viewModel, /_rhodesApiStatus\.State/);
+  assert.match(viewModel, /_rhodesApiStatus = snapshot\.Api/);
   assert.match(viewModel, /RHODES API/);
   assert.match(viewModel, /SaveSettingsCommand/);
   assert.match(viewModel, /LoadSettings/);

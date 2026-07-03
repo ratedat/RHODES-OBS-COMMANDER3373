@@ -1910,20 +1910,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "ランタイム状態を確認しています。";
-            var apiTask = RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
-            var masterTask = RhodesApiStatusProbe.ProbeMasterAsync(RhodesApiUrl, Campaigns.Count, _allOperators.Count, _allRelics.Count);
-            var optionalTask = RhodesOptionalRuntimeProbe.ProbeAsync(RhodesApiUrl);
-            var hypervisorTask = RhodesHypervisorProbe.ProbeAsync(RhodesApiUrl);
-            await Task.WhenAll(apiTask, masterTask, optionalTask, hypervisorTask);
-            var snapshot = optionalTask.Result;
-            _rhodesApiStatus = apiTask.Result;
-            _masterDataStatus = masterTask.Result;
+            var snapshot = await RhodesSukiRuntimeProbeWorkflow.ProbeAsync(
+                cancellationToken => RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl, cancellationToken: cancellationToken),
+                cancellationToken => RhodesApiStatusProbe.ProbeMasterAsync(RhodesApiUrl, Campaigns.Count, _allOperators.Count, _allRelics.Count, cancellationToken: cancellationToken),
+                cancellationToken => RhodesOptionalRuntimeProbe.ProbeAsync(RhodesApiUrl),
+                cancellationToken => RhodesHypervisorProbe.ProbeAsync(RhodesApiUrl));
+            _rhodesApiStatus = snapshot.Api;
+            _masterDataStatus = snapshot.Master;
             _glmRuntimeStatus = snapshot.Glm;
             _ollamaRuntimeStatus = snapshot.Ollama;
-            _hypervisorStatus = hypervisorTask.Result;
+            _hypervisorStatus = snapshot.Hypervisor;
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
-            StatusMessage = $"ランタイム状態: API={_rhodesApiStatus.State}, Master={_masterDataStatus.State}, GLM={snapshot.Glm.State}, Ollama={snapshot.Ollama.State}, Hyper-V={_hypervisorStatus.State}";
+            StatusMessage = snapshot.StatusMessage;
         });
     }
 
