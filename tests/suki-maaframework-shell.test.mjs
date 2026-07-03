@@ -83,6 +83,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const resultPreview = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResultPreview.cs", "utf8");
   const runCatalog = await fs.readFile("apps/rhodes-suki/Services/RhodesRunCatalog.cs", "utf8");
   const workspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceRegistry.cs", "utf8");
+  const runtimeWorkspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRuntimeWorkspaceRegistry.cs", "utf8");
   const runFieldRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRunFieldRegistry.cs", "utf8");
   const runtimeCapabilityRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRuntimeCapabilityRegistry.cs", "utf8");
   const bitmapPathConverter = await fs.readFile("apps/rhodes-suki/Services/RhodesBitmapPathConverter.cs", "utf8");
@@ -157,6 +158,12 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(workspaceRegistry, /SukiWorkspaceNavItem/);
   assert.match(workspaceRegistry, /Normalize/);
   assert.match(workspaceRegistry, /TitleFor/);
+  assert.match(runtimeWorkspaceRegistry, /RhodesRuntimeWorkspaceRegistry/);
+  assert.match(runtimeWorkspaceRegistry, /SukiRuntimeWorkspaceLayout/);
+  assert.match(runtimeWorkspaceRegistry, /接続設定/);
+  assert.match(runtimeWorkspaceRegistry, /検出結果/);
+  assert.match(runtimeWorkspaceRegistry, /診断/);
+  assert.match(runtimeWorkspaceRegistry, /任意OCR/);
   assert.match(viewModel, /EnsureMaaOcrReadyForRecognition/);
   assert.match(viewModel, /RecognitionResourceStatusDetail/);
   assert.match(bitmapPathConverter, /IValueConverter/);
@@ -563,6 +570,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesWorkspaceRegistry\.Items/);
   assert.match(viewModel, /RhodesWorkspaceRegistry\.TitleFor/);
   assert.match(viewModel, /RhodesWorkspaceRegistry\.Normalize/);
+  assert.match(viewModel, /RhodesRuntimeWorkspaceRegistry\.Layout/);
+  assert.match(viewModel, /RuntimeLayout/);
   assert.match(runFieldRegistry, /RhodesRunFieldRegistry/);
   assert.match(runFieldRegistry, /BuildHeaderStatusChips/);
   assert.match(runFieldRegistry, /BuildRunFieldPreviews/);
@@ -574,6 +583,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runtimeCapabilityRegistry, /"MAAFramework"/);
   assert.match(runtimeCapabilityRegistry, /"MAA-OCR"/);
   assert.match(runModels, /SukiRuntimeCapabilityContext/);
+  assert.match(runModels, /SukiRuntimeSectionPreview/);
+  assert.match(runModels, /SukiRuntimeWorkspaceLayout/);
   assert.match(viewModel, /RhodesRunFieldRegistry\.BuildHeaderStatusChips/);
   assert.match(viewModel, /RhodesRunFieldRegistry\.BuildRunFieldPreviews/);
   assert.match(viewModel, /RhodesRuntimeCapabilityRegistry\.Build/);
@@ -664,9 +675,15 @@ test("MAA resource generator output is checked into the Suki shell", () => {
 
 test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   const xaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const runtimeWorkspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRuntimeWorkspaceRegistry.cs", "utf8");
 
-  assert.match(xaml, /MAA ADB接続/);
-  assert.match(xaml, /MuMu高速撮影/);
+  assert.match(runtimeWorkspaceRegistry, /MAA ADB接続/);
+  assert.match(runtimeWorkspaceRegistry, /MuMu高速撮影/);
+  assert.match(xaml, /RuntimeLayout\.Header\.Title/);
+  assert.match(xaml, /RuntimeLayout\.Connection\.Title/);
+  assert.match(xaml, /RuntimeLayout\.Detection\.Title/);
+  assert.match(xaml, /RuntimeLayout\.Diagnostics\.Title/);
+  assert.match(xaml, /RuntimeLayout\.OptionalRuntime\.Title/);
   assert.match(xaml, /AdbPath/);
   assert.match(xaml, /AdbSerial/);
   assert.match(xaml, /AdbPresets/);
@@ -848,7 +865,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ScrollEnabled/);
   assert.match(xaml, /HideExcluded/);
   assert.match(xaml, /BindingPath/);
-  assert.match(xaml, /ランタイム/);
+  assert.match(xaml, /RuntimeLayout\.Header\.Title/);
   assert.match(xaml, /RuntimeCapabilities/);
   assert.match(xaml, /InstallLabel/);
   assert.match(xaml, /状態確認/);

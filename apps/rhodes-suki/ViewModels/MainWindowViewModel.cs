@@ -142,6 +142,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var runCatalog = RhodesRunCatalog.LoadDefault();
         _runState = runCatalog.Current;
         WorkspaceNav = new ObservableCollection<SukiWorkspaceNavItem>(RhodesWorkspaceRegistry.Items);
+        RuntimeLayout = RhodesRuntimeWorkspaceRegistry.Layout;
         HeaderStatusChips = new ObservableCollection<SukiStatusChip>(BuildHeaderStatusChips());
         RunFieldPreviews = new ObservableCollection<SukiRunFieldPreview>(BuildRunFieldPreviews(runCatalog.Current));
         CampaignPreviews = [];
@@ -289,6 +290,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string Subtitle { get; } = "MAAFramework family desktop shell";
 
     public ObservableCollection<SukiWorkspaceNavItem> WorkspaceNav { get; }
+
+    public SukiRuntimeWorkspaceLayout RuntimeLayout { get; }
 
     public ObservableCollection<SukiStatusChip> HeaderStatusChips { get; }
 

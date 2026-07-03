@@ -41,6 +41,7 @@ var tests = new (string Name, Action Run)[]
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
+    ("Runtime workspace registry exposes focused setup sections", RuntimeWorkspaceRegistry),
     ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
@@ -1058,6 +1059,20 @@ static void WorkspaceRegistry()
     Equal("run", RhodesWorkspaceRegistry.Normalize("bad"), "unknown workspace fallback");
     Equal(true, RhodesWorkspaceRegistry.IsKnown("recognition"), "known workspace");
     Equal(false, RhodesWorkspaceRegistry.IsKnown("legacy"), "unknown workspace");
+}
+
+static void RuntimeWorkspaceRegistry()
+{
+    var layout = RhodesRuntimeWorkspaceRegistry.Layout;
+
+    Equal("ランタイム", layout.Header.Title, "runtime header title");
+    Equal("connection|detection|diagnostics|optional", string.Join("|", layout.Sections.Select(item => item.Id)), "runtime section order");
+    Equal("接続設定", layout.Connection.Title, "connection title");
+    Equal("検出結果", layout.Detection.Title, "detection title");
+    Equal("診断", layout.Diagnostics.Title, "diagnostics title");
+    Equal("任意OCR", layout.OptionalRuntime.Title, "optional title");
+    Equal(true, layout.Connection.Detail.Contains("ADB", StringComparison.Ordinal), "connection explains ADB");
+    Equal(true, layout.Diagnostics.Detail.Contains("MAA", StringComparison.Ordinal), "diagnostics explains MAA");
 }
 
 static void OcrEngineCatalog()
