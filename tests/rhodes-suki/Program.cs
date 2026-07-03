@@ -30,6 +30,7 @@ var tests = new (string Name, Action Run)[]
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB method catalog maps emulator presets to fast lossless MAA methods", AdbMethodCatalog),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
+    ("ADB candidate registry keeps the runtime picker focused", AdbCandidateRegistry),
     ("ADB detect API client parses runtime, candidates, and devices", AdbApiDetectionParsing),
     ("ADB test API client parses resolution and screenshot details", AdbApiTestParsing),
     ("Suki local ADB detector connects Google Play Games TCP serial", SukiLocalAdbDetectGooglePlay),
@@ -750,6 +751,35 @@ static void AdbDeviceParsing()
     Equal(true, devices[0].IsUsable, "first usable");
     Equal("offline", devices[1].State, "second state");
     Equal(false, devices[1].IsUsable, "second usable");
+}
+
+static void AdbCandidateRegistry()
+{
+    var candidates = new[]
+    {
+        new MaaAdbPathCandidatePreview("C:/Missing/MuMu/adb.exe", "known-path", "mumu", false, false, ""),
+        new MaaAdbPathCandidatePreview("C:/Missing/Saved/adb.exe", "settings", "custom", false, false, ""),
+        new MaaAdbPathCandidatePreview("C:/Tools/adb.exe", "path", "custom", false, false, "old failure"),
+        new MaaAdbPathCandidatePreview("C:/Tools/adb.exe", "mumu", "mumu", true, true, ""),
+        new MaaAdbPathCandidatePreview("adb", "auto", "auto", false, false, "")
+    };
+
+    var normalized = RhodesAdbCandidateRegistry.Normalize(candidates, path =>
+        path.Equals("C:/Tools/adb.exe", StringComparison.OrdinalIgnoreCase));
+
+    Equal(
+        "C:/Tools/adb.exe|adb|C:/Missing/Saved/adb.exe",
+        string.Join("|", normalized.Select(item => item.Path)),
+        "focused candidate list");
+    Equal(true, normalized[0].Available, "duplicate prefers available candidate");
+    Equal(true, normalized[1].Exists, "PATH adb remains selectable");
+    Equal(false, normalized.Any(item => item.Path.Contains("Missing/MuMu", StringComparison.Ordinal)), "missing auto probe is hidden");
+
+    var selected = RhodesAdbCandidateRegistry.SelectDefault(normalized, "C:/Tools/adb.exe");
+    Equal("C:/Tools/adb.exe", selected?.Path ?? "", "current path selection");
+
+    selected = RhodesAdbCandidateRegistry.SelectDefault(normalized, "C:/Other/adb.exe");
+    Equal("C:/Tools/adb.exe", selected?.Path ?? "", "first selectable fallback");
 }
 
 static void AdbApiDetectionParsing()

@@ -1927,15 +1927,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void ReplaceAdbPathCandidates(IEnumerable<MaaAdbPathCandidatePreview> candidates)
     {
-        ReplaceCollection(AdbPathCandidates, NormalizeAdbPathCandidates(candidates));
-        SelectedAdbPathCandidate = AdbPathCandidates.FirstOrDefault(candidate =>
-            PathsEqual(candidate.Path, AdbPath)) ?? AdbPathCandidates.FirstOrDefault(candidate => candidate.IsSelectable);
+        ReplaceCollection(AdbPathCandidates, RhodesAdbCandidateRegistry.Normalize(candidates));
+        SelectedAdbPathCandidate = RhodesAdbCandidateRegistry.SelectDefault(AdbPathCandidates, AdbPath);
         OnPropertyChanged(nameof(AdbPathCandidateSummary));
     }
 
     private void UpsertAdbPathCandidate(MaaAdbPathCandidatePreview candidate)
     {
-        ReplaceAdbPathCandidates(MergeAdbPathCandidates(AdbPathCandidates, [candidate]));
+        ReplaceAdbPathCandidates(RhodesAdbCandidateRegistry.Merge(AdbPathCandidates, [candidate]));
     }
 
     private void ReplaceAdbDevices(IEnumerable<MaaAdbDevicePreview> devices)
@@ -1946,63 +1945,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private IReadOnlyList<MaaAdbPathCandidatePreview> BuildPresetAdbPathCandidates()
     {
-        return NormalizeAdbPathCandidates(
+        return RhodesAdbCandidateRegistry.Normalize(
             RhodesAdbPresetCatalog.CandidatePaths(AdbPath, SelectedAdbPreset?.Id ?? "auto"));
-    }
-
-    private static IReadOnlyList<MaaAdbPathCandidatePreview> MergeAdbPathCandidates(
-        IEnumerable<MaaAdbPathCandidatePreview> first,
-        IEnumerable<MaaAdbPathCandidatePreview> second)
-    {
-        return NormalizeAdbPathCandidates(first.Concat(second));
-    }
-
-    private static IReadOnlyList<MaaAdbPathCandidatePreview> NormalizeAdbPathCandidates(IEnumerable<MaaAdbPathCandidatePreview> candidates)
-    {
-        var ordered = new Dictionary<string, MaaAdbPathCandidatePreview>(StringComparer.OrdinalIgnoreCase);
-        foreach (var candidate in candidates)
-        {
-            if (string.IsNullOrWhiteSpace(candidate.Path))
-                continue;
-
-            var path = candidate.Path.Trim();
-            var key = path;
-            var existing = ordered.TryGetValue(key, out var value) ? value : null;
-            var normalized = candidate with
-            {
-                Path = path,
-                Exists = candidate.Exists || path.Equals("adb", StringComparison.OrdinalIgnoreCase) || File.Exists(path),
-                Available = candidate.Available,
-            };
-            if (existing is null || CandidatePriority(normalized) > CandidatePriority(existing))
-                ordered[key] = normalized;
-        }
-
-        return ordered.Values
-            .Where(ShouldShowAdbPathCandidate)
-            .OrderByDescending(candidate => candidate.Available)
-            .ThenByDescending(candidate => candidate.Exists)
-            .ThenBy(candidate => candidate.Preset)
-            .ThenBy(candidate => candidate.Path)
-            .ToArray();
-    }
-
-    private static int CandidatePriority(MaaAdbPathCandidatePreview candidate)
-    {
-        return (candidate.Available ? 4 : 0)
-            + (candidate.Exists ? 2 : 0)
-            + (string.IsNullOrWhiteSpace(candidate.Error) ? 1 : 0);
-    }
-
-    private static bool ShouldShowAdbPathCandidate(MaaAdbPathCandidatePreview candidate)
-    {
-        if (candidate.Available || candidate.Exists || !string.IsNullOrWhiteSpace(candidate.Error))
-            return true;
-
-        return candidate.Source.Equals("settings", StringComparison.OrdinalIgnoreCase)
-            || candidate.Source.Equals("manual", StringComparison.OrdinalIgnoreCase)
-            || candidate.Source.Equals("env", StringComparison.OrdinalIgnoreCase)
-            || candidate.Source.Equals("path", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ApplyAdbMethodsForPreset(string? presetId)
@@ -2011,11 +1955,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SukiAdbMethodCatalog.DefaultInputMethodIdForPreset(presetId));
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(
             SukiAdbMethodCatalog.DefaultScreencapMethodIdForPreset(presetId));
-    }
-
-    private static bool PathsEqual(string left, string right)
-    {
-        return left.Trim().Equals(right.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task RefreshOptionalRuntimesAsync()

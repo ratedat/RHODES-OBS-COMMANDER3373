@@ -68,6 +68,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const catalog = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaResourceCatalog.cs", "utf8");
   const adbPresets = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbPresetCatalog.cs", "utf8");
   const adbDeviceProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbDeviceProbe.cs", "utf8");
+  const adbCandidateRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbCandidateRegistry.cs", "utf8");
   const settingsStore = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiSettingsStore.cs", "utf8");
   const diagnostics = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaTaskDiagnostics.cs", "utf8");
   const ocrDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaOcrDetailRows.cs", "utf8");
@@ -129,6 +130,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(adbPresets, /127\.0\.0\.1:16384/);
   assert.match(adbDeviceProbe, /devices/);
   assert.match(adbDeviceProbe, /ParseDevices/);
+  assert.match(adbCandidateRegistry, /RhodesAdbCandidateRegistry/);
+  assert.match(adbCandidateRegistry, /Normalize/);
+  assert.match(adbCandidateRegistry, /SelectDefault/);
+  assert.match(adbCandidateRegistry, /ShouldShow/);
+  assert.match(adbCandidateRegistry, /CandidatePriority/);
   assert.match(settingsStore, /suki-settings\.json/);
   assert.match(settingsStore, /RhodesSukiSettings/);
   assert.match(diagnostics, /RhodesMaaTaskDiagnostics/);
@@ -563,6 +569,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesRunFieldRegistry\.BuildHeaderStatusChips/);
   assert.match(viewModel, /RhodesRunFieldRegistry\.BuildRunFieldPreviews/);
   assert.match(viewModel, /RhodesRuntimeCapabilityRegistry\.Build/);
+  assert.match(viewModel, /RhodesAdbCandidateRegistry\.Normalize/);
+  assert.match(viewModel, /RhodesAdbCandidateRegistry\.SelectDefault/);
+  assert.doesNotMatch(viewModel, /ShouldShowAdbPathCandidate/);
+  assert.doesNotMatch(viewModel, /CandidatePriority\(MaaAdbPathCandidatePreview/);
   assert.doesNotMatch(viewModel, /new SukiRunFieldPreview\("源石錐"/);
   assert.doesNotMatch(viewModel, /new SukiRuntimeCapabilityPreview\("adb"/);
   assert.doesNotMatch(viewModel, /new SukiStatusChip\("構想"/);
