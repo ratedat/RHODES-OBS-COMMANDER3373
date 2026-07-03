@@ -644,7 +644,12 @@ export function createAppServer({
       return sendText(res, 405, "Method not allowed");
     }
 
-    if (url.pathname === "/" || url.pathname === "/control") {
+    if (url.pathname === "/") {
+      res.writeHead(302, { location: "/sidecar" });
+      return res.end();
+    }
+
+    if (url.pathname === "/control") {
       res.writeHead(302, { location: legacyControlRedirectLocation(url) });
       return res.end();
     }
@@ -675,7 +680,7 @@ export function startServer({ port = PORT, host = "127.0.0.1", adbDetector, adbT
       const address = server.address();
       const actualPort = typeof address === "object" && address ? address.port : port;
       console.log(`RHODES OBS COMMANDER3373`);
-      console.log(`Control: http://${host}:${actualPort}/control-v2`);
+      console.log(`Sidecar: http://${host}:${actualPort}/sidecar`);
       console.log(`Overlay: http://${host}:${actualPort}/overlay`);
       resolve({ server, port: actualPort, host });
     });

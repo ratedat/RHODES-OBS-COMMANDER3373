@@ -10,6 +10,10 @@ test("app shell and module files are served with strict no-cache headers", async
     assert.equal(appJs.headers.get("pragma"), "no-cache");
     assert.equal(appJs.headers.get("expires"), "0");
 
+    const root = await fetch(`http://127.0.0.1:${port}/`, { redirect: "manual" });
+    assert.equal(root.status, 302);
+    assert.equal(root.headers.get("location"), "/sidecar");
+
     const legacyControl = await fetch(`http://127.0.0.1:${port}/control?tab=relics`, { redirect: "manual" });
     assert.equal(legacyControl.status, 302);
     assert.equal(legacyControl.headers.get("location"), "/control-v2?screen=relics");

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { isAppShellPath, resolveAppView } from "../app/lib/view-route.js";
 
 test("resolveAppView maps app routes to stable view ids", () => {
+  assert.equal(resolveAppView("/", ""), "sidecar");
   assert.equal(resolveAppView("/control", ""), "control-v2");
   assert.equal(resolveAppView("/control-v2", ""), "control-v2");
   assert.equal(resolveAppView("/sidecar", ""), "sidecar");
@@ -15,7 +16,7 @@ test("resolveAppView lets query view override neutral paths", () => {
   assert.equal(resolveAppView("/", "?view=control-v2"), "control-v2");
   assert.equal(resolveAppView("/", "?view=sidecar"), "sidecar");
   assert.equal(resolveAppView("/", "?view=licenses"), "licenses");
-  assert.equal(resolveAppView("/", "?view=unknown"), "control-v2");
+  assert.equal(resolveAppView("/", "?view=unknown"), "sidecar");
 });
 
 test("isAppShellPath keeps /control as a Control v2 compatibility path", () => {

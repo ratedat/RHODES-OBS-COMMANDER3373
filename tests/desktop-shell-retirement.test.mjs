@@ -33,3 +33,15 @@ test("package exposes Suki/Avalonia as the only active desktop shell", async () 
   assert.equal("electron" in devDependencies, false);
   assert.equal("electron-builder" in devDependencies, false);
 });
+
+test("local web server does not advertise the retired Control shell as the default", async () => {
+  const [server, localServer] = await Promise.all([
+    readFile(new URL("../app/server.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../app/runtime/local-server.mjs", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(server, /Control: http:\/\/\$\{host\}:\$\{actualPort\}\/control-v2/);
+  assert.match(server, /Sidecar: http:\/\/\$\{host\}:\$\{actualPort\}\/sidecar/);
+  assert.doesNotMatch(localServer, /view = "control-v2"/);
+  assert.match(localServer, /view = "sidecar"/);
+});
