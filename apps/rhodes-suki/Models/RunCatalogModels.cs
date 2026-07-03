@@ -114,6 +114,18 @@ public sealed record SukiWorkspaceLayout(
     SukiWorkspaceSectionPreview Header,
     IReadOnlyList<SukiWorkspaceSectionPreview> Sections);
 
+public sealed record SukiWorkspaceActionDescriptor(
+    string Id,
+    string WorkspaceId,
+    string SectionId,
+    string Label,
+    string CommandName,
+    string Workflow,
+    string Detail,
+    bool RequiresMaaSession,
+    bool WritesState,
+    int DisplayPriority);
+
 public sealed record SukiRuntimeWorkspaceLayout(
     SukiWorkspaceSectionPreview Header,
     SukiWorkspaceSectionPreview Connection,

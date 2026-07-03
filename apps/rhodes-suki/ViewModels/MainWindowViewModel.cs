@@ -1517,6 +1517,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         yield return new SukiInspectorRow("ワークスペース", WorkspaceTitle, WorkspaceTab);
         yield return new SukiInspectorRow("IS", CampaignHeaderTitle, CampaignHeaderDetail);
         yield return BuildProductSurfaceInspectorRow();
+        yield return BuildWorkspaceActionInspectorRow();
 
         if (WorkspaceTab == "run")
         {
@@ -1596,6 +1597,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ? "未登録"
             : $"{string.Join(" / ", categories)} / OBS={outputCount}";
         return new SukiInspectorRow("サーフェス", $"{surfaces.Count}件", detail);
+    }
+
+    private SukiInspectorRow BuildWorkspaceActionInspectorRow()
+    {
+        var actions = RhodesWorkspaceActionRegistry.ForWorkspace(WorkspaceTab);
+        if (actions.Count == 0)
+            return new SukiInspectorRow("操作", "未登録", "ワークスペース操作定義なし");
+
+        var requiresMaaCount = actions.Count(action => action.RequiresMaaSession);
+        var writesStateCount = actions.Count(action => action.WritesState);
+        var workflows = actions
+            .Select(action => action.Workflow)
+            .Distinct(StringComparer.Ordinal)
+            .Take(3)
+            .ToArray();
+        return new SukiInspectorRow(
+            "操作",
+            $"{actions.Count}件",
+            $"MAA={requiresMaaCount} / state更新={writesStateCount} / {string.Join(" / ", workflows)}");
     }
 
     private async Task ConnectAsync()

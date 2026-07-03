@@ -88,6 +88,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const runCatalog = await fs.readFile("apps/rhodes-suki/Services/RhodesRunCatalog.cs", "utf8");
   const workspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceRegistry.cs", "utf8");
   const workspaceLayoutRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceLayoutRegistry.cs", "utf8");
+  const workspaceActionRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceActionRegistry.cs", "utf8");
   const runtimeWorkspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRuntimeWorkspaceRegistry.cs", "utf8");
   const recognitionWorkspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionWorkspaceRegistry.cs", "utf8");
   const runFieldRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRunFieldRegistry.cs", "utf8");
@@ -171,6 +172,13 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(workspaceLayoutRegistry, /選択カタログ/);
   assert.match(workspaceLayoutRegistry, /出力 \/ OBS/);
   assert.match(workspaceLayoutRegistry, /デバッグ/);
+  assert.match(workspaceActionRegistry, /RhodesWorkspaceActionRegistry/);
+  assert.match(workspaceActionRegistry, /SukiWorkspaceActionDescriptor/);
+  assert.match(workspaceActionRegistry, /runtime\.auto-detect/);
+  assert.match(workspaceActionRegistry, /maa-controller\.cached-screenshot/);
+  assert.match(workspaceActionRegistry, /recognition\.run-and-apply/);
+  assert.match(workspaceActionRegistry, /maa-resource\.tasker\+state-api\.apply/);
+  assert.doesNotMatch(workspaceActionRegistry, /RunSelectedProfileAdbScanCommand/);
   assert.match(runtimeWorkspaceRegistry, /RhodesRuntimeWorkspaceRegistry/);
   assert.match(runtimeWorkspaceRegistry, /SukiRuntimeWorkspaceLayout/);
   assert.match(workspaceLayoutRegistry, /接続設定/);
@@ -186,6 +194,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(workspaceLayoutRegistry, /1280x720/);
   assert.match(viewModel, /EnsureMaaOcrReadyForRecognition/);
   assert.match(viewModel, /RecognitionResourceStatusDetail/);
+  assert.match(viewModel, /BuildWorkspaceActionInspectorRow/);
+  assert.match(viewModel, /RhodesWorkspaceActionRegistry\.ForWorkspace\(WorkspaceTab\)/);
   assert.match(bitmapPathConverter, /IValueConverter/);
   assert.match(bitmapPathConverter, /new Bitmap\(path\)/);
   assert.match(choiceFilter, /ShowSelectedFirst/);

@@ -53,6 +53,7 @@ var tests = new (string Name, Action Run)[]
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
     ("Workspace layout registry covers every Suki workspace", WorkspaceLayoutRegistry),
+    ("Workspace action registry maps UI commands to workflows", WorkspaceActionRegistry),
     ("Product surface registry assigns every major app element to a workspace", ProductSurfaceRegistry),
     ("Output part registry defines OBS sidecar display blocks", OutputPartRegistry),
     ("Runtime workspace registry exposes focused setup sections", RuntimeWorkspaceRegistry),
@@ -1330,6 +1331,33 @@ static void WorkspaceLayoutRegistry()
     Equal("logs|migration", string.Join("|", RhodesWorkspaceLayoutRegistry.For("debug").Sections.Select(item => item.Id)), "debug sections");
     Equal("connection|detection|diagnostics|optional", string.Join("|", RhodesWorkspaceLayoutRegistry.Runtime.Sections.Select(item => item.Id)), "runtime sections");
     Equal("profile|execution|review|evidence", string.Join("|", RhodesWorkspaceLayoutRegistry.Recognition.Sections.Select(item => item.Id)), "recognition sections");
+}
+
+static void WorkspaceActionRegistry()
+{
+    var actions = RhodesWorkspaceActionRegistry.Items;
+
+    Equal(0, RhodesWorkspaceActionRegistry.Validate().Count, "workspace action validation");
+    Equal(
+        "run|choices|recognition|output|runtime|debug",
+        string.Join("|", actions.Select(item => item.WorkspaceId).Distinct()),
+        "action workspace coverage");
+    Equal(
+        "runtime.save-settings|runtime.auto-detect|runtime.connection-test|runtime.connect|runtime.capture|runtime.probe-status",
+        string.Join("|", RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Select(item => item.Id)),
+        "runtime actions");
+    Equal(
+        true,
+        RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Single(item => item.Id == "runtime.capture").RequiresMaaSession,
+        "capture uses maa");
+    var runAndApply = RhodesWorkspaceActionRegistry.ForWorkspace("recognition").Single(item => item.Id == "recognition.run-and-apply");
+    Equal(true, runAndApply.RequiresMaaSession, "run and apply uses maa");
+    Equal(true, runAndApply.WritesState, "run and apply writes state");
+    Equal("maa-resource.tasker+state-api.apply", runAndApply.Workflow, "run and apply workflow");
+    Equal(
+        false,
+        actions.Any(item => item.CommandName.Contains("RunSelectedProfileAdbScanCommand", StringComparison.Ordinal)),
+        "retired adb scan command is not exposed");
 }
 
 static void ProductSurfaceRegistry()
