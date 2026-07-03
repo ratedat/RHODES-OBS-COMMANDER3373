@@ -851,9 +851,15 @@
                     <DataTemplate>
                       <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#0C1011" BorderBrush="#273335" BorderThickness="1">
                         <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="5">
-                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                             <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
                             <TextBlock Grid.Column="1" Text="{Binding SectionId}" FontFamily="Consolas" FontSize="10" VerticalAlignment="Center" Opacity="0.54" />
+                            <Button Grid.Column="2"
+                                    Content="{Binding ActionButtonLabel}"
+                                    Command="{Binding Command}"
+                                    CommandParameter="{Binding CommandParameter}"
+                                    IsEnabled="{Binding IsExecutable}"
+                                    Padding="8,3" />
                           </Grid>
                           <TextBlock Grid.Row="1" Text="{Binding Workflow}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.64" />
                           <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6">

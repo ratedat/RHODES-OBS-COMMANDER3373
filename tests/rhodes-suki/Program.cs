@@ -1359,6 +1359,10 @@ static void WorkspaceActionRegistry()
     Equal(true, runAndApply.WritesState, "run and apply writes state");
     Equal("state更新", runAndApply.StateWriteLabel, "run and apply state label");
     Equal("maa-resource.tasker+state-api.apply", runAndApply.Workflow, "run and apply workflow");
+    var preview = new SukiWorkspaceActionPreview(runAndApply, new AsyncRelayCommand(() => Task.CompletedTask), null);
+    Equal("認識して反映", preview.Label, "workspace action preview label");
+    Equal("実行", preview.ActionButtonLabel, "workspace action preview executable label");
+    Equal("未接続", new SukiWorkspaceActionPreview(runAndApply, null, null).ActionButtonLabel, "workspace action preview missing command label");
     Equal(
         false,
         actions.Any(item => item.CommandName.Contains("RunSelectedProfileAdbScanCommand", StringComparison.Ordinal)),

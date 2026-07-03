@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace RhodesSuki.Models;
 
@@ -129,6 +130,38 @@ public sealed record SukiWorkspaceActionDescriptor(
     public string MaaRequirementLabel => RequiresMaaSession ? "MAA" : "local/API";
 
     public string StateWriteLabel => WritesState ? "state更新" : "read-only";
+}
+
+public sealed record SukiWorkspaceActionPreview(
+    SukiWorkspaceActionDescriptor Descriptor,
+    ICommand? Command,
+    object? CommandParameter)
+{
+    public string Id => Descriptor.Id;
+
+    public string WorkspaceId => Descriptor.WorkspaceId;
+
+    public string SectionId => Descriptor.SectionId;
+
+    public string Label => Descriptor.Label;
+
+    public string CommandName => Descriptor.CommandName;
+
+    public string Workflow => Descriptor.Workflow;
+
+    public string Detail => Descriptor.Detail;
+
+    public bool RequiresMaaSession => Descriptor.RequiresMaaSession;
+
+    public bool WritesState => Descriptor.WritesState;
+
+    public string MaaRequirementLabel => Descriptor.MaaRequirementLabel;
+
+    public string StateWriteLabel => Descriptor.StateWriteLabel;
+
+    public bool IsExecutable => Command is not null;
+
+    public string ActionButtonLabel => IsExecutable ? "実行" : "未接続";
 }
 
 public sealed record SukiRuntimeWorkspaceLayout(

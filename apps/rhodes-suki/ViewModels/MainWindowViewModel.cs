@@ -327,7 +327,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiInspectorRow> InspectorRows { get; }
 
-    public ObservableCollection<SukiWorkspaceActionDescriptor> WorkspaceActions { get; }
+    public ObservableCollection<SukiWorkspaceActionPreview> WorkspaceActions { get; }
 
     public string WorkspaceActionCountLabel => $"{WorkspaceActions.Count}件";
 
@@ -1521,8 +1521,48 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshWorkspaceActions()
     {
-        ReplaceCollection(WorkspaceActions, RhodesWorkspaceActionRegistry.ForWorkspace(WorkspaceTab));
+        ReplaceCollection(
+            WorkspaceActions,
+            RhodesWorkspaceActionRegistry.ForWorkspace(WorkspaceTab).Select(CreateWorkspaceActionPreview));
         OnPropertyChanged(nameof(WorkspaceActionCountLabel));
+    }
+
+    private SukiWorkspaceActionPreview CreateWorkspaceActionPreview(SukiWorkspaceActionDescriptor descriptor)
+    {
+        var commandName = descriptor.CommandName;
+        var commandParameter = ExtractWorkspaceActionCommandParameter(commandName);
+        var commandKey = commandParameter is null ? commandName : commandName[..commandName.IndexOf('(', StringComparison.Ordinal)];
+        var command = commandKey switch
+        {
+            nameof(SyncRunStateFromApiCommand) => SyncRunStateFromApiCommand,
+            nameof(OpenRecognitionProfileCommand) => OpenRecognitionProfileCommand,
+            nameof(ClearVisibleChoicesCommand) => ClearVisibleChoicesCommand,
+            nameof(RunSelectedProfileRecognitionCommand) => RunSelectedProfileRecognitionCommand,
+            nameof(RunSelectedProfileRecognitionAndApplyCommand) => RunSelectedProfileRecognitionAndApplyCommand,
+            nameof(ApplyCandidateResultsCommand) => ApplyCandidateResultsCommand,
+            nameof(RefreshRecognitionScanHistoryCommand) => RefreshRecognitionScanHistoryCommand,
+            nameof(OpenPreviewUrlCommand) => OpenPreviewUrlCommand,
+            nameof(SaveSettingsCommand) => SaveSettingsCommand,
+            nameof(RefreshAdbDevicesCommand) => RefreshAdbDevicesCommand,
+            nameof(RunAdbConnectionTestCommand) => RunAdbConnectionTestCommand,
+            nameof(ConnectCommand) => ConnectCommand,
+            nameof(CaptureCommand) => CaptureCommand,
+            nameof(RefreshOptionalRuntimesCommand) => RefreshOptionalRuntimesCommand,
+            nameof(RegenerateMaaResourceCommand) => RegenerateMaaResourceCommand,
+            _ => null,
+        };
+
+        return new SukiWorkspaceActionPreview(descriptor, command, commandParameter);
+    }
+
+    private static string? ExtractWorkspaceActionCommandParameter(string commandName)
+    {
+        var open = commandName.IndexOf('(', StringComparison.Ordinal);
+        var close = commandName.LastIndexOf(')');
+        if (open < 0 || close <= open)
+            return null;
+
+        return commandName[(open + 1)..close].Trim();
     }
 
     private IEnumerable<SukiInspectorRow> BuildInspectorRows()
