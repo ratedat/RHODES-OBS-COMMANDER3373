@@ -23,7 +23,7 @@ flowchart LR
 ### 1. SukiUI Shell
 - `apps/rhodes-suki` を主UI候補として育てる
 - 設定、ランタイム状態、ADB接続、認識結果レビューを移植する
-- Electron/Tauri 版は移行完了まで検証済み実装として残す
+- Electron/Tauri 版は正規の実行・配布経路から外し、必要な実装だけ SukiUI/Avalonia 側へ移す
 
 ### 2. MAAFramework Runtime
 - `Maa.Framework` NuGet で C# binding を導入する

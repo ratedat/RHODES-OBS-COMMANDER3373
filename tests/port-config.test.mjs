@@ -9,24 +9,24 @@ import {
 } from "../app/runtime/port-config.mjs";
 
 test("explicitPortValue prefers --port over env PORT", () => {
-  assert.equal(explicitPortValue(["electron", ".", "--port", "5188"], { PORT: "5174" }), "5188");
+  assert.equal(explicitPortValue(["rhodes", "--port", "5188"], { PORT: "5174" }), "5188");
 });
 
 test("explicitPortValue falls back to env PORT", () => {
-  assert.equal(explicitPortValue(["electron", "."], { PORT: "5174" }), "5174");
+  assert.equal(explicitPortValue(["rhodes"], { PORT: "5174" }), "5174");
 });
 
 test("shouldPromptForPort prompts only when no explicit port exists", () => {
-  assert.equal(shouldPromptForPort(["electron", "."], {}, { smokeTest: false }), true);
-  assert.equal(shouldPromptForPort(["electron", ".", "--port", "5174"], {}, { smokeTest: false }), false);
-  assert.equal(shouldPromptForPort(["electron", "."], { PORT: "5175" }, { smokeTest: false }), false);
-  assert.equal(shouldPromptForPort(["electron", "."], {}, { smokeTest: true }), false);
+  assert.equal(shouldPromptForPort(["rhodes"], {}, { smokeTest: false }), true);
+  assert.equal(shouldPromptForPort(["rhodes", "--port", "5174"], {}, { smokeTest: false }), false);
+  assert.equal(shouldPromptForPort(["rhodes"], { PORT: "5175" }, { smokeTest: false }), false);
+  assert.equal(shouldPromptForPort(["rhodes"], {}, { smokeTest: true }), false);
 });
 
 test("resolveStartupPort uses explicit, saved, then default values", () => {
-  assert.equal(resolveStartupPort({ args: ["electron", ".", "--port", "5188"], savedPort: 5174 }), 5188);
-  assert.equal(resolveStartupPort({ args: ["electron", "."], env: {}, savedPort: 5174 }), 5174);
-  assert.equal(resolveStartupPort({ args: ["electron", "."], env: {}, savedPort: null, defaultPort: 5190 }), 5190);
+  assert.equal(resolveStartupPort({ args: ["rhodes", "--port", "5188"], savedPort: 5174 }), 5188);
+  assert.equal(resolveStartupPort({ args: ["rhodes"], env: {}, savedPort: 5174 }), 5174);
+  assert.equal(resolveStartupPort({ args: ["rhodes"], env: {}, savedPort: null, defaultPort: 5190 }), 5190);
 });
 
 test("desktop settings parsing tolerates malformed input", () => {

@@ -136,13 +136,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "ADB接続とスクリーンショット取得をMAAFrameworkへ移管",
             "基本情報・オペレーター・秘宝OCRをMAAタスク化",
             "GLM-OCRを任意DLの高精度補助として接続",
-            "Electron/Tauri版の機能をSukiUI版へ順次移植",
+            "SukiUI/Avalonia版を正規デスクトップとして固定",
         ];
 
         var runCatalog = RhodesRunCatalog.LoadDefault();
         _runState = runCatalog.Current;
         WorkspaceNav = new ObservableCollection<SukiWorkspaceNavItem>(RhodesWorkspaceRegistry.Items);
         RuntimeLayout = RhodesRuntimeWorkspaceRegistry.Layout;
+        RecognitionLayout = RhodesRecognitionWorkspaceRegistry.Layout;
         HeaderStatusChips = new ObservableCollection<SukiStatusChip>(BuildHeaderStatusChips());
         RunFieldPreviews = new ObservableCollection<SukiRunFieldPreview>(BuildRunFieldPreviews(runCatalog.Current));
         CampaignPreviews = [];
@@ -292,6 +293,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<SukiWorkspaceNavItem> WorkspaceNav { get; }
 
     public SukiRuntimeWorkspaceLayout RuntimeLayout { get; }
+
+    public SukiRecognitionWorkspaceLayout RecognitionLayout { get; }
 
     public ObservableCollection<SukiStatusChip> HeaderStatusChips { get; }
 

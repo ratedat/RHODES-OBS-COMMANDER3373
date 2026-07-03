@@ -1,6 +1,6 @@
 # Suki Product UI Information Architecture
 
-This document records the product UI coverage needed before the Suki/Avalonia shell can replace the current Electron Control v2 surface.
+This document records the product UI coverage needed as the Suki/Avalonia shell replaces the former Control v2 desktop surface.
 
 The Japanese design philosophy summary is recorded in `docs/suki-design-philosophy-ja.md`.
 

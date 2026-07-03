@@ -51,31 +51,31 @@ The first launch may run a one-time setup if dependencies are missing. After tha
 
 The desktop app uses a single-instance guard. Launching it again brings the existing window to the front instead of starting another local server. The web launcher also reuses an already-running server on the selected port and exits after opening the existing URL.
 
-Developer Electron workflow:
+Developer Suki/Avalonia workflow:
 
-Human debugging should use the Electron app window, not a standalone browser tab. The browser URLs remain useful for OBS Browser Source setup and fallback checks, but normal UI/UX verification should start here:
+Human debugging should use the Suki/Avalonia app window, not a standalone browser tab. The browser URLs remain useful for OBS Browser Source setup and fallback checks, but normal UI/UX verification should start here:
 
 ```powershell
 cd O:\Arknights_Rogue_OBSTool
-npm.cmd run app:debug
+npm.cmd run suki:run
 ```
 
-Run the Electron startup smoke test on a secondary port:
+Run the Suki service checks:
 
 ```powershell
-npm.cmd run app:smoke
+npm.cmd run suki:test
 ```
 
-After code changes, run the desktop verification command. It runs the test suite and compiles the Electron app directory build:
+After code changes, run the desktop verification command. It runs the Suki/MAA checks and compiles the Avalonia app:
 
 ```powershell
 npm.cmd run verify:desktop
 ```
 
-Build a portable Windows exe for distribution:
+Build a portable Windows package for distribution:
 
 ```powershell
-npm.cmd run dist:win
+npm.cmd run suki:publish:portable
 ```
 
 Start only the local server without the desktop window as a fallback:

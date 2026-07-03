@@ -1,7 +1,0 @@
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Default capability for RHODES OBS COMMANDER3373 desktop windows.",
-  "windows": ["main"],
-  "permissions": ["core:default"]
-}

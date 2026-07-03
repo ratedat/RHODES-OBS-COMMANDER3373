@@ -20,7 +20,6 @@ import { controlModeOptions, getControlMode, normalizeControlMode } from "./doma
 import { controlV2ScreenOptions, getControlV2ScreenMeta, normalizeControlV2Screen } from "./domain/control-v2-screens.js";
 import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
 import { createSaveRequestTracker } from "./lib/save-request-tracker.js";
-import { readTauriStorageTarget } from "./lib/tauri-bridge.js";
 import { asCoinEntries, asSpecialArray, asSpecialObject, clampSpecialNumber } from "./domain/special-values.js";
 import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
@@ -63,8 +62,6 @@ const ui = {
   glmOcrStatusTimer: null,
   ollamaStatus: null,
   ollamaStatusTimer: null,
-  tauriStorageTarget: null,
-  tauriStorageError: "",
 };
 
 let master = null;
@@ -630,23 +627,6 @@ function renderLocalConfigPanel() {
         <div><strong>ADB</strong><span>接続構成 / パス / serial</span></div>
         <div><strong>OBS</strong><span>スクロール速度 / 表示設定</span></div>
         <div><strong>Reset</strong><span>ラン状態のみ初期化</span></div>
-      </div>
-    </section>
-  `;
-}
-
-function renderTauriStoragePanel() {
-  const target = ui.tauriStorageTarget;
-  if (!target && !ui.tauriStorageError) return "";
-  const mode = target?.isPackaged ? "packaged" : "development";
-  return `
-    <section class="control-v2-panel control-v2-obs-panel control-v2-local-config-panel">
-      <div class="control-v2-panel-head"><h2>Tauri実行情報</h2><span>${html(target ? mode : "error")}</span></div>
-      <div class="control-v2-panel-body local-config-summary">
-        ${ui.tauriStorageError ? `<div><strong>取得失敗</strong><span>${html(ui.tauriStorageError)}</span></div>` : ""}
-        ${target ? `<div><strong>App</strong><span>${html(target.appRoot || "-")}</span></div>` : ""}
-        ${target ? `<div><strong>Storage</strong><span>${html(target.storageDir || "-")}</span></div>` : ""}
-        ${target ? `<div><strong>State</strong><span>${html(target.stateDir || "-")}</span></div>` : ""}
       </div>
     </section>
   `;
@@ -1424,12 +1404,11 @@ function renderControlV2ObsScreen() {
         </div>
       </section>
       ${renderLocalConfigPanel()}
-      ${renderTauriStoragePanel()}
       <section class="control-v2-panel control-v2-obs-panel control-v2-obs-sidecar-note">
         <div class="control-v2-panel-head"><h2>サイドカー / 大会運用</h2><span>operator review workflow</span></div>
         <div class="control-v2-panel-body obs-part-list">
           <div><strong>Sidecar</strong><span>配信外で参照する支援画面。上部のサイドカーボタンから開きます。</span></div>
-          <div><strong>別ウィンドウ化</strong><span>オペレーター・秘宝は次段階でElectronの専用ウィンドウとして分離し、大会スタッフ入力に使える導線へ拡張します。</span></div>
+          <div><strong>別ウィンドウ化</strong><span>オペレーター・秘宝はSuki/Avalonia側で大会スタッフ入力に使える導線へ拡張します。</span></div>
           <div><strong>OBS設定</strong><span>この画面は共通設定から独立しており、アンカー移動ではなくControl v2内の画面切り替えで扱います。</span></div>
         </div>
       </section>
@@ -1820,22 +1799,6 @@ function getControlEventContext() {
 }
 
 registerControlEvents(app, getControlEventContext());
-function shouldRenderTauriStorageUpdate() {
-  return view === "control-v2" && getControlV2Screen() === "obs";
-}
-
-async function refreshTauriStorageTarget({ render = true } = {}) {
-  try {
-    const target = await readTauriStorageTarget();
-    if (!target) return;
-    ui.tauriStorageTarget = target;
-    ui.tauriStorageError = "";
-  } catch (error) {
-    ui.tauriStorageTarget = null;
-    ui.tauriStorageError = error.message;
-  }
-  if (render && shouldRenderTauriStorageUpdate()) renderInteractive();
-}
 
 async function pollOverlay() {
   try {
@@ -1868,7 +1831,6 @@ async function boot() {
     } else {
       ui.saveStatus = "保存済み";
       renderInteractive();
-      refreshTauriStorageTarget().catch(() => {});
     }
   } catch (error) {
     app.dataset.loading = "false";

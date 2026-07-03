@@ -25,25 +25,26 @@ function Show-Message($message, $title = "RHODES OBS COMMANDER3373", $icon = 64)
 
 Stop-StaleLocalServers
 
-if (-not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
-  Show-Message "Node.js / npm が見つかりません。配布版の exe を使うか、開発用に Node.js をインストールしてください。" "起動できません" 16
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+  Show-Message ".NET SDK/Runtime が見つかりません。配布版の exe を使うか、開発用に .NET 8 SDK をインストールしてください。" "起動できません" 16
   exit 1
 }
 
-if (-not (Test-Path (Join-Path $root "node_modules\.bin\electron.cmd"))) {
-  $shell.Popup("初回セットアップを行います。数分かかる場合があります。完了するとアプリが起動します。", 5, "RHODES OBS COMMANDER3373", 64) | Out-Null
-  $install = Start-Process -FilePath "npm.cmd" -ArgumentList @("install") -WorkingDirectory $root -Wait -PassThru -WindowStyle Hidden
-  if ($install.ExitCode -ne 0) {
-    Show-Message "初回セットアップに失敗しました。ネットワーク接続と Node.js の状態を確認してください。" "セットアップ失敗" 16
-    exit $install.ExitCode
-  }
-}
+$project = Join-Path $root "apps\rhodes-suki\RhodesSuki.csproj"
+$exe = Join-Path $root "apps\rhodes-suki\bin\Debug\net8.0\RhodesSuki.exe"
 
-$appArgs = @("run", "app")
 if ($SmokeTest) {
-  $appArgs += @("--", "--port", "5200", "--smoke-test")
-  $run = Start-Process -FilePath "npm.cmd" -ArgumentList $appArgs -WorkingDirectory $root -Wait -PassThru -WindowStyle Hidden
+  $run = Start-Process -FilePath "dotnet" -ArgumentList @("build", $project) -WorkingDirectory $root -Wait -PassThru -WindowStyle Hidden
   exit $run.ExitCode
 }
 
-Start-Process -FilePath "npm.cmd" -ArgumentList $appArgs -WorkingDirectory $root -WindowStyle Hidden
+if (-not (Test-Path $exe)) {
+  $shell.Popup("Suki/Avaloniaアプリをビルドしています。完了するとアプリが起動します。", 5, "RHODES OBS COMMANDER3373", 64) | Out-Null
+  $build = Start-Process -FilePath "dotnet" -ArgumentList @("build", $project) -WorkingDirectory $root -Wait -PassThru -WindowStyle Hidden
+  if ($build.ExitCode -ne 0) {
+    Show-Message "Suki/Avaloniaアプリのビルドに失敗しました。.NET 8 SDK とリポジトリ状態を確認してください。" "ビルド失敗" 16
+    exit $build.ExitCode
+  }
+}
+
+Start-Process -FilePath $exe -WorkingDirectory $root

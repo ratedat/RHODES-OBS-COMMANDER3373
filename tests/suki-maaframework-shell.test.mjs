@@ -84,6 +84,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const runCatalog = await fs.readFile("apps/rhodes-suki/Services/RhodesRunCatalog.cs", "utf8");
   const workspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceRegistry.cs", "utf8");
   const runtimeWorkspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRuntimeWorkspaceRegistry.cs", "utf8");
+  const recognitionWorkspaceRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionWorkspaceRegistry.cs", "utf8");
   const runFieldRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRunFieldRegistry.cs", "utf8");
   const runtimeCapabilityRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesRuntimeCapabilityRegistry.cs", "utf8");
   const bitmapPathConverter = await fs.readFile("apps/rhodes-suki/Services/RhodesBitmapPathConverter.cs", "utf8");
@@ -164,6 +165,13 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runtimeWorkspaceRegistry, /検出結果/);
   assert.match(runtimeWorkspaceRegistry, /診断/);
   assert.match(runtimeWorkspaceRegistry, /任意OCR/);
+  assert.match(recognitionWorkspaceRegistry, /RhodesRecognitionWorkspaceRegistry/);
+  assert.match(recognitionWorkspaceRegistry, /SukiRecognitionWorkspaceLayout/);
+  assert.match(recognitionWorkspaceRegistry, /プロファイル選択/);
+  assert.match(recognitionWorkspaceRegistry, /候補確認/);
+  assert.match(recognitionWorkspaceRegistry, /検証情報/);
+  assert.match(recognitionWorkspaceRegistry, /MAA Resource task/);
+  assert.match(recognitionWorkspaceRegistry, /1280x720/);
   assert.match(viewModel, /EnsureMaaOcrReadyForRecognition/);
   assert.match(viewModel, /RecognitionResourceStatusDetail/);
   assert.match(bitmapPathConverter, /IValueConverter/);
@@ -583,7 +591,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesWorkspaceRegistry\.TitleFor/);
   assert.match(viewModel, /RhodesWorkspaceRegistry\.Normalize/);
   assert.match(viewModel, /RhodesRuntimeWorkspaceRegistry\.Layout/);
+  assert.match(viewModel, /RhodesRecognitionWorkspaceRegistry\.Layout/);
   assert.match(viewModel, /RuntimeLayout/);
+  assert.match(viewModel, /RecognitionLayout/);
   assert.match(runFieldRegistry, /RhodesRunFieldRegistry/);
   assert.match(runFieldRegistry, /BuildHeaderStatusChips/);
   assert.match(runFieldRegistry, /BuildRunFieldPreviews/);
@@ -595,8 +605,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runtimeCapabilityRegistry, /"MAAFramework"/);
   assert.match(runtimeCapabilityRegistry, /"MAA-OCR"/);
   assert.match(runModels, /SukiRuntimeCapabilityContext/);
-  assert.match(runModels, /SukiRuntimeSectionPreview/);
+  assert.match(runModels, /SukiWorkspaceSectionPreview/);
   assert.match(runModels, /SukiRuntimeWorkspaceLayout/);
+  assert.match(runModels, /SukiRecognitionWorkspaceLayout/);
   assert.match(viewModel, /RhodesRunFieldRegistry\.BuildHeaderStatusChips/);
   assert.match(viewModel, /RhodesRunFieldRegistry\.BuildRunFieldPreviews/);
   assert.match(viewModel, /RhodesRuntimeCapabilityRegistry\.Build/);
@@ -739,7 +750,13 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.doesNotMatch(xaml, /RunSelectedProfileAdbScanCommand/);
   assert.doesNotMatch(xaml, /旧ADBスキャンAPI/);
   assert.doesNotMatch(xaml, /Content="ADB API"/);
-  const recognitionWorkspaceStart = xaml.indexOf('Text="認識ワークフロー"');
+  assert.match(xaml, /RecognitionLayout\.Header\.Title/);
+  assert.match(xaml, /RecognitionLayout\.Profile\.Title/);
+  assert.match(xaml, /RecognitionLayout\.Execution\.Title/);
+  assert.match(xaml, /RecognitionLayout\.Review\.Title/);
+  assert.match(xaml, /RecognitionLayout\.Evidence\.Title/);
+  assert.match(xaml, /ApplyCandidateResultsCommand/);
+  const recognitionWorkspaceStart = xaml.indexOf('IsVisible="{Binding IsRecognitionWorkspaceVisible}"');
   const debugWorkspaceStart = xaml.indexOf('Text="デバッグ"');
   assert.ok(recognitionWorkspaceStart >= 0);
   assert.ok(debugWorkspaceStart > recognitionWorkspaceStart);
@@ -871,7 +888,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /選択カタログ/);
   assert.match(xaml, /オペレーター/);
   assert.match(xaml, /秘宝/);
-  assert.match(xaml, /認識ワークフロー/);
+  assert.match(xaml, /RecognitionLayout\.Header\.Title/);
   assert.match(xaml, /出力 \/ OBS/);
   assert.match(xaml, /OutputParts/);
   assert.match(xaml, /OutputSeparateWindow/);

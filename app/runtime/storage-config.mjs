@@ -46,7 +46,7 @@ export function storageTarget({ mode = "portable", storageDir = "", appRoot, exe
     storageDir: baseDir,
     settingsFile: path.join(baseDir, "desktop-settings.json"),
     stateDir: normalizedMode === "custom" ? baseDir : path.join(baseDir, "state"),
-    userDataDir: normalizedMode === "custom" ? path.join(baseDir, "electron") : path.join(baseDir, "electron"),
+    userDataDir: path.join(baseDir, "profile"),
   };
 }
 

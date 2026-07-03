@@ -40,24 +40,24 @@ PowerShellで作業する場合は、まずリポジトリへ移動します。
 cd O:\Arknights_Rogue_OBSTool
 ```
 
-Control v2をElectronアプリで開く標準デバッグ起動です。
+Suki/Avaloniaアプリを開く標準デバッグ起動です。
 
 ```powershell
-npm.cmd run app:debug
+npm.cmd run suki:run
 ```
 
-内部的には `ARKNIGHTS_STATE_DIR=data` を使い、`http://127.0.0.1:5173/control-v2` を開きます。人間デバッグはブラウザ単体ではなく、基本的にこのElectronアプリ側で行います。
+人間デバッグはブラウザ単体ではなく、基本的にSuki/Avaloniaアプリ側で行います。OBS表示の確認や旧Web UIの確認が必要な場合だけ、ローカルWebサーバーを別途起動します。
+
+ローカルWebサーバーだけ起動したい場合は次です。
+
+```powershell
+npm.cmd run dev
+```
 
 ポートを明示して起動したい場合は、次の形を使います。
 
 ```powershell
-npm.cmd run app -- --view control-v2 --port 5173
-```
-
-Electronを使わず、ローカルWebサーバーだけ起動したい場合は次です。
-
-```powershell
-npm.cmd run dev
+npm.cmd run dev -- --port 5174
 ```
 
 この場合はブラウザで各URLを開きます。
@@ -117,11 +117,11 @@ http://127.0.0.1:5173/overlay/part/special
 
 ## ADB連携作業時の起動
 
-ADB連携の確認も、基本はElectronアプリを起動して行います。
+ADB連携の確認も、基本はSuki/Avaloniaアプリを起動して行います。
 
 ```powershell
 cd O:\Arknights_Rogue_OBSTool
-npm.cmd run app:debug
+npm.cmd run suki:run
 ```
 
 MAAFramework取得はブラウザのHTMLだけでは端末操作できません。アプリ内のローカル実行環境がADB接続、スクリーンショット、MAA-OCRを担当します。
@@ -151,22 +151,22 @@ $env:ARKNIGHTS_ADB_SERIAL = "127.0.0.1:16384"
 npm.cmd test
 ```
 
-Electronの起動確認だけ行います。
+Suki/Avaloniaのサービステストを行います。
 
 ```powershell
-npm.cmd run app:smoke
+npm.cmd run suki:test
 ```
 
-テストとElectronディレクトリビルドをまとめて行います。
+Suki/MAAチェックとAvaloniaビルドをまとめて行います。
 
 ```powershell
 npm.cmd run verify:desktop
 ```
 
-配布用portable exeを作ります。
+配布用portableパッケージを作ります。
 
 ```powershell
-npm.cmd run dist:win
+npm.cmd run suki:publish:portable
 ```
 
 ## 保存先と状態ファイル
@@ -180,7 +180,7 @@ npm.cmd run dist:win
 
 保存先は、アプリ上部メニューの `操作` → `保存先設定` から変更できます。変更後は再起動すると反映されます。
 
-開発起動の `npm.cmd run app:debug` / `npm.cmd run app:smoke` は、検証を安定させるため内部的に `ARKNIGHTS_STATE_DIR=data` を使います。この場合、主な状態ファイルは次です。
+開発起動で `ARKNIGHTS_STATE_DIR=data` を指定した場合、主な状態ファイルは次です。
 
 ```text
 data/current-state.json

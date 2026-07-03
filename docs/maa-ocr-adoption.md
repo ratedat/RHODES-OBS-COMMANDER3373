@@ -12,7 +12,7 @@ Vendored reference files are under `third_party/maa`. The generated local rules 
 
 ## What remains local
 
-- The Electron UI, HTTP API, candidate-review workflow, and overlay state model remain RHODES OBS COMMANDER3373 code.
+- The Suki/Avalonia UI, HTTP API, candidate-review workflow, and overlay state model remain RHODES OBS COMMANDER3373 code.
 - OCR engine invocation is a local adapter: active scan profiles route to MAA-OCR, and GLM-OCR is available only as an optional verification engine.
 - Recognition output is still candidate-based; OCR does not directly mutate overlay state.
 

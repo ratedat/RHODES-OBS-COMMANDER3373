@@ -4,7 +4,7 @@ RHODES OBS COMMANDER3373 uses the MAA-compatible ONNXRuntime recognizer as the a
 
 ## Windows app policy
 
-FastDeploy itself is **not** a required runtime dependency for RHODES OBS COMMANDER3373. The current upstream FastDeploy v2 line is Linux-focused and is now positioned primarily as a PaddlePaddle LLM/VLM deployment toolkit. For this Windows Electron app, the safer path is to reuse MAA-compatible OCR assets (`inference.onnx` + `keys.txt`) and execute them directly through ONNXRuntime.
+FastDeploy itself is **not** a required runtime dependency for RHODES OBS COMMANDER3373. The current upstream FastDeploy v2 line is Linux-focused and is now positioned primarily as a PaddlePaddle LLM/VLM deployment toolkit. For the Windows Suki/Avalonia app, the safer path is to reuse MAA-compatible OCR assets (`inference.onnx` + `keys.txt`) and execute them directly through ONNXRuntime.
 
 If we later need full PPOCR detection/parsing behavior, treat FastDeploy as a separate optional research track instead of mixing it into the default OCR venv.
 
@@ -62,7 +62,7 @@ The recognizer is available as the explicit `maa-ocr` engine:
 ```powershell
 $env:RHODES_OCR_ENGINE = 'maa-ocr'
 $env:RHODES_PYTHON = 'O:\Arknights_Rogue_OBSTool\.venv-ocr\Scripts\python.exe'
-npm run app:debug
+npm run suki:run
 ```
 
 Aliases accepted by the app are `maa-onnx`, `maa`, and `onnx`; they normalize to `maa-ocr`.

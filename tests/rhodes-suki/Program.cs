@@ -42,6 +42,7 @@ var tests = new (string Name, Action Run)[]
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
     ("Runtime workspace registry exposes focused setup sections", RuntimeWorkspaceRegistry),
+    ("Recognition workspace registry exposes the MAA action flow", RecognitionWorkspaceRegistry),
     ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
@@ -1073,6 +1074,21 @@ static void RuntimeWorkspaceRegistry()
     Equal("任意OCR", layout.OptionalRuntime.Title, "optional title");
     Equal(true, layout.Connection.Detail.Contains("ADB", StringComparison.Ordinal), "connection explains ADB");
     Equal(true, layout.Diagnostics.Detail.Contains("MAA", StringComparison.Ordinal), "diagnostics explains MAA");
+}
+
+static void RecognitionWorkspaceRegistry()
+{
+    var layout = RhodesRecognitionWorkspaceRegistry.Layout;
+
+    Equal("認識ワークフロー", layout.Header.Title, "recognition header title");
+    Equal("profile|execution|review|evidence", string.Join("|", layout.Sections.Select(item => item.Id)), "recognition section order");
+    Equal("プロファイル選択", layout.Profile.Title, "profile title");
+    Equal("実行", layout.Execution.Title, "execution title");
+    Equal("候補確認", layout.Review.Title, "review title");
+    Equal("検証情報", layout.Evidence.Title, "evidence title");
+    Equal(true, layout.Header.Detail.Contains("MAA Resource task", StringComparison.Ordinal), "header explains MAA Resource task");
+    Equal(true, layout.Profile.Detail.Contains("1280x720", StringComparison.Ordinal), "profile explains base resolution");
+    Equal(true, layout.Execution.Detail.Contains("候補化API", StringComparison.Ordinal), "execution explains candidate API");
 }
 
 static void OcrEngineCatalog()

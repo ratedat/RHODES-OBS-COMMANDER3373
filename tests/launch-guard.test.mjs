@@ -43,13 +43,13 @@ test("isLocalServerReady returns false when the local server is unavailable", as
   assert.equal(await isLocalServerReady(appUrl(port, "control-v2"), 1), false);
 });
 
-test("launchRequestData normalizes port and view for second Electron launches", () => {
+test("launchRequestData normalizes port and view for repeated desktop launches", () => {
   assert.deepEqual(launchRequestData({ port: "5188", view: "sidecar" }), { port: 5188, view: "sidecar" });
   assert.deepEqual(launchRequestData({ port: "bad", view: "unknown" }), { port: 5173, view: "control-v2" });
 });
 
-test("resolveSecondInstanceView prefers Electron additionalData before command line args", () => {
-  assert.equal(resolveSecondInstanceView(["electron", ".", "--view", "overlay"], { view: "sidecar" }, "control-v2"), "sidecar");
-  assert.equal(resolveSecondInstanceView(["electron", ".", "--view", "overlay"], {}, "control-v2"), "overlay");
-  assert.equal(resolveSecondInstanceView(["electron", "."], {}, "sidecar"), "sidecar");
+test("resolveSecondInstanceView prefers launch metadata before command line args", () => {
+  assert.equal(resolveSecondInstanceView(["rhodes", "--view", "overlay"], { view: "sidecar" }, "control-v2"), "sidecar");
+  assert.equal(resolveSecondInstanceView(["rhodes", "--view", "overlay"], {}, "control-v2"), "overlay");
+  assert.equal(resolveSecondInstanceView(["rhodes"], {}, "sidecar"), "sidecar");
 });

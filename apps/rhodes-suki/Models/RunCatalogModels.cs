@@ -93,24 +93,40 @@ public sealed record SukiRuntimeCapabilityContext(
     SukiOptionalRuntimeStatus OllamaStatus,
     SukiHypervisorStatus HypervisorStatus);
 
-public sealed record SukiRuntimeSectionPreview(
+public sealed record SukiWorkspaceSectionPreview(
     string Id,
     string Title,
     string Detail);
 
 public sealed record SukiRuntimeWorkspaceLayout(
-    SukiRuntimeSectionPreview Header,
-    SukiRuntimeSectionPreview Connection,
-    SukiRuntimeSectionPreview Detection,
-    SukiRuntimeSectionPreview Diagnostics,
-    SukiRuntimeSectionPreview OptionalRuntime)
+    SukiWorkspaceSectionPreview Header,
+    SukiWorkspaceSectionPreview Connection,
+    SukiWorkspaceSectionPreview Detection,
+    SukiWorkspaceSectionPreview Diagnostics,
+    SukiWorkspaceSectionPreview OptionalRuntime)
 {
-    public IReadOnlyList<SukiRuntimeSectionPreview> Sections =>
+    public IReadOnlyList<SukiWorkspaceSectionPreview> Sections =>
     [
         Connection,
         Detection,
         Diagnostics,
         OptionalRuntime
+    ];
+}
+
+public sealed record SukiRecognitionWorkspaceLayout(
+    SukiWorkspaceSectionPreview Header,
+    SukiWorkspaceSectionPreview Profile,
+    SukiWorkspaceSectionPreview Execution,
+    SukiWorkspaceSectionPreview Review,
+    SukiWorkspaceSectionPreview Evidence)
+{
+    public IReadOnlyList<SukiWorkspaceSectionPreview> Sections =>
+    [
+        Profile,
+        Execution,
+        Review,
+        Evidence
     ];
 }
 

@@ -42,7 +42,7 @@ test("web launcher reuses an already running local server", async () => {
   }
 });
 
-test("server direct run accepts Windows namespace paths from packaged Tauri", () => {
+test("server direct run accepts Windows namespace paths from packaged desktop launchers", () => {
   const serverPath = path.join(ROOT, "app", "server.mjs");
   const argvPath = process.platform === "win32" ? `\\\\?\\${serverPath}` : serverPath;
   assert.equal(isDirectServerRun(argvPath, pathToFileURL(serverPath).href), true);
