@@ -127,7 +127,7 @@ flowchart LR
 - 接続済み: `interface.json` に認識プロファイル単位の `group` / `preset` を生成し、外部MAAFramework系ツールでも基礎情報、オペレーター、秘宝、IS特殊値のまとまりでタスクを選べるようにする。
 - 接続済み: Suki のResource profile表示も `interface.json` の `group` metadataを読み、外部MAAFramework系ツールと同じラベル/説明/順序を使う。
 - 接続済み: Suki のResource task一覧と一括実行対象も `interface.json` の `preset` task集合を優先し、外部MAAFramework系ツールのプロファイル実行単位と一致させる。
-- 接続済み: MAA Resource証跡JSONにprofile label、preset task entry集合、実行計画state/source/task数を保存し、履歴一覧と証跡プレビューで確認できるようにする。
+- 接続済み: MAA Resource証跡JSONにprofile label、preset task entry集合、実行計画state/source/task数、MAA interface/pipeline契約スナップショットを保存し、履歴一覧と証跡プレビューで確認できるようにする。
 - 接続済み: MAA認識対象境界を `data/recognition/maa-recognition-target-policy.json` に集約し、JS生成/契約チェックとSuki C#側で同じmanifestを参照する。
 - 接続済み: `tools/check-maa-contract.mjs` で `interface.json` の controller/resource/group/task/preset と実pipeline entryの整合性を検証し、Suki portable publish前にも実行する。
 - 接続済み: Suki 側でも同じ `interface.json` / pipeline 契約を検証し、認識ワークスペースのインスペクタに `MAA契約` としてOK/NGサマリを表示する。
