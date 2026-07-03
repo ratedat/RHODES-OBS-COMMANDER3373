@@ -4,21 +4,17 @@
 
 ## まず使う人向け
 
-配布版がある場合は、次の exe を起動します。
+配布版がある場合は、Suki/Avalonia portable内の次の exe を起動します。
 
 ```text
-dist\RHODES OBS COMMANDER3373-0.1.0-x64.exe
+RhodesSuki.exe
 ```
 
-展開済みディレクトリから直接起動する場合は、次の exe でも起動できます。
-
-```text
-dist\win-unpacked\RHODES OBS COMMANDER3373.exe
-```
+Electron/Tauri版は現在の配布・起動対象ではありません。OBS用のローカルHTTPサーバーは残しますが、操作アプリ本体はSuki/Avaloniaです。
 
 初回起動時に、設定とスクリーンショットの保存先を選びます。迷った場合は `実行ファイル側に保存（推奨）` を選んでください。配布exeの隣に `RHODES OBS COMMANDER3373 Data` フォルダを作るため、アンインストールや削除がしやすくなります。
 
-その後、ローカルサーバーのポート番号を聞かれます。通常は既定値の `5173` のままで問題ありません。OBS Browser Source のURLもこのポート番号を使います。
+OBS Browser Source はローカルHTTPサーバーのURLを使います。通常は既定値の `5173` のままで問題ありません。
 
 ## ソースフォルダから起動する場合
 
@@ -28,7 +24,7 @@ dist\win-unpacked\RHODES OBS COMMANDER3373.exe
 start-windows.vbs
 ```
 
-初回のみ、依存関係が不足していれば自動で `npm install` が走ります。完了後にデスクトップアプリが起動します。
+必要に応じてSuki/Avaloniaアプリをビルドしてから起動します。
 
 この起動方法では、古い `5173` / `5174` / `5200` のローカルサーバーが残っている場合に停止してから起動します。
 
@@ -46,7 +42,7 @@ Suki/Avaloniaアプリを開く標準デバッグ起動です。
 npm.cmd run suki:run
 ```
 
-人間デバッグはブラウザ単体ではなく、基本的にSuki/Avaloniaアプリ側で行います。OBS表示の確認や旧Web UIの確認が必要な場合だけ、ローカルWebサーバーを別途起動します。
+人間デバッグはブラウザ単体ではなく、基本的にSuki/Avaloniaアプリ側で行います。OBS表示の確認やローカルHTTP APIの確認が必要な場合だけ、ローカルWebサーバーを別途起動します。
 
 ローカルWebサーバーだけ起動したい場合は次です。
 

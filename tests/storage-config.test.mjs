@@ -11,27 +11,27 @@ import {
 } from "../app/runtime/storage-config.mjs";
 
 test("portable storage sits beside the executable in packaged builds", () => {
-  const dir = portableStorageDir({ isPackaged: true, execPath: "D:/Apps/RHODES/RHODES OBS COMMANDER3373.exe", appRoot: "O:/dev" });
+  const dir = portableStorageDir({ isPackaged: true, execPath: "D:/Apps/RHODES/RhodesSuki.exe", appRoot: "O:/dev" });
   assert.equal(dir, path.join("D:/Apps/RHODES", "RHODES OBS COMMANDER3373 Data"));
 });
 
 test("portable storage follows the original portable executable path", () => {
   const dir = portableStorageDir({
     isPackaged: true,
-    execPath: "C:/Users/owner/AppData/Local/Temp/.mount/RHODES OBS COMMANDER3373.exe",
+    execPath: "C:/Users/owner/AppData/Local/Temp/.mount/RhodesSuki.exe",
     appRoot: "O:/dev",
-    env: { PORTABLE_EXECUTABLE_FILE: "E:/Tools/RHODES OBS COMMANDER3373-0.1.0-x64.exe" },
+    env: { PORTABLE_EXECUTABLE_FILE: "E:/Tools/RhodesSuki.exe" },
   });
   assert.equal(dir, path.join("E:/Tools", "RHODES OBS COMMANDER3373 Data"));
 });
 
-test("portable storage treats win-unpacked as a build output folder", () => {
+test("portable storage stays beside the Suki portable executable", () => {
   const dir = portableStorageDir({
     isPackaged: true,
-    execPath: "O:/Arknights_Rogue_OBSTool/dist/win-unpacked/RHODES OBS COMMANDER3373.exe",
+    execPath: "O:/Arknights_Rogue_OBSTool/outputs/suki-portable/RhodesSuki.exe",
     appRoot: "O:/Arknights_Rogue_OBSTool",
   });
-  assert.equal(dir, path.join("O:/Arknights_Rogue_OBSTool/dist", "RHODES OBS COMMANDER3373 Data"));
+  assert.equal(dir, path.join("O:/Arknights_Rogue_OBSTool/outputs/suki-portable", "RHODES OBS COMMANDER3373 Data"));
 });
 
 test("development portable storage stays inside the project root", () => {
@@ -54,9 +54,9 @@ test("storage target exposes bundled portable runtime state beside the original 
   const target = storageTarget({
     mode: "portable",
     appRoot: "O:/dev",
-    execPath: "C:/Users/owner/AppData/Local/Temp/.mount/RHODES OBS COMMANDER3373.exe",
+    execPath: "C:/Users/owner/AppData/Local/Temp/.mount/RhodesSuki.exe",
     isPackaged: true,
-    env: { PORTABLE_EXECUTABLE_FILE: "E:/Tools/RHODES OBS COMMANDER3373-0.1.0-x64.exe" },
+    env: { PORTABLE_EXECUTABLE_FILE: "E:/Tools/RhodesSuki.exe" },
   });
   assert.equal(target.stateDir, path.join("E:/Tools", "RHODES OBS COMMANDER3373 Data", "state"));
 });
@@ -73,10 +73,10 @@ test("targetFromStoredSelection resolves saved documents mode", () => {
 
 test("targetFromStoredSelection refreshes saved portable paths for the current executable", () => {
   const target = targetFromStoredSelection(
-    { mode: "portable", storageDir: "O:/Arknights_Rogue_OBSTool/dist/win-unpacked/RHODES OBS COMMANDER3373 Data" },
+    { mode: "portable", storageDir: "O:/Arknights_Rogue_OBSTool/outputs/suki-portable/RHODES OBS COMMANDER3373 Data" },
     {
       appRoot: "O:/Arknights_Rogue_OBSTool",
-      execPath: "E:/Tools/RHODES OBS COMMANDER3373-0.1.0-x64.exe",
+      execPath: "E:/Tools/RhodesSuki.exe",
       isPackaged: true,
     },
   );

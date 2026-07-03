@@ -24,7 +24,6 @@ function portableExecutableDir({ env = {}, execPath = process.execPath } = {}) {
   const envFile = cleanPath(env.PORTABLE_EXECUTABLE_FILE);
   if (envFile) return path.dirname(envFile);
   const execDir = cleanPath(execPath) ? path.dirname(execPath) : "";
-  if (path.basename(execDir).toLowerCase() === "win-unpacked") return path.dirname(execDir);
   return execDir;
 }
 

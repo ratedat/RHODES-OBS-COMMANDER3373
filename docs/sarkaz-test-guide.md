@@ -11,7 +11,7 @@
 
 ## 起動
 
-1. `RHODES OBS COMMANDER3373-0.1.0-x64.exe` を実行します。
+1. Suki/Avalonia portable配布内の `RhodesSuki.exe` を実行します。
 2. Windows SmartScreenが出た場合は、内容を確認してから `詳細情報` -> `実行` を選びます。
 3. 初回起動時の保存先は、迷ったら `実行ファイル側` を選んでください。EXEの横に `RHODES OBS COMMANDER3373 Data` フォルダが作られ、削除しやすくなります。
 4. ポート番号は通常そのままで構いません。既に使われている場合だけ別番号にしてください。

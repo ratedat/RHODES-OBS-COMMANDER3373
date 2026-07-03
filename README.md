@@ -37,19 +37,19 @@ See:
 - `data/operator-images.json` for the operator image sync audit
 - `assets/operators/wikiru/img` for mirrored operator image files referenced by `data/operators.json`
 
-## Local MVP App
+## Suki/Avalonia App
 
-The first manual-first MVP is implemented as a dependency-free Node app.
+The active desktop app is the Suki/Avalonia shell under `apps/rhodes-suki`.
+Electron and Tauri are not active build, launch, or distribution targets.
+The Node local server remains only for the HTTP API and OBS Browser Source URLs.
 
-For streamers and tournament staff, use the Windows desktop app build when available: download `RHODES OBS COMMANDER3373.exe` from the release package and double-click it.
+For streamers and tournament staff, use the packaged Suki portable build when available: open `RhodesSuki.exe` from the release package.
 
 When running from the source folder on Windows, double-click this file instead of typing commands:
 
 - `start-windows.vbs`
 
-The first launch may run a one-time setup if dependencies are missing. After that, the desktop app asks which local server port to use before starting. The default is `5173`, and the last selected port is reused on the next launch. The top menu can switch between Control and Overlay Preview, and can open common OBS overlay URLs in the system browser.
-
-The desktop app uses a single-instance guard. Launching it again brings the existing window to the front instead of starting another local server. The web launcher also reuses an already-running server on the selected port and exits after opening the existing URL.
+The source-folder launcher builds and starts the Suki/Avalonia app. It also stops stale local servers on known development ports before launch.
 
 Developer Suki/Avalonia workflow:
 
@@ -78,7 +78,7 @@ Build a portable Windows package for distribution:
 npm.cmd run suki:publish:portable
 ```
 
-Start only the local server without the desktop window as a fallback:
+Start only the local HTTP/OBS server without the Suki desktop window as a fallback:
 
 ```powershell
 cd O:\Arknights_Rogue_OBSTool
@@ -101,7 +101,7 @@ Use this URL as an OBS Browser Source:
 
 - http://127.0.0.1:5173/overlay
 
-The desktop shell is intentionally thin: OBS still uses browser-source URLs, while the app window is the sidecar for control, review, and future recognition support. The default overlay is the compact stream layout. The vertical and horizontal variants use auto-scrolling relic/operator panes so entries are not omitted:
+OBS still uses browser-source URLs, while Suki/Avalonia is the control, review, ADB, MAAFramework, and recognition shell. The default overlay is the compact stream layout. The vertical and horizontal variants use auto-scrolling relic/operator panes so entries are not omitted:
 
 - http://127.0.0.1:5173/overlay?layout=vertical&size=small
 - http://127.0.0.1:5173/overlay?layout=vertical&size=medium

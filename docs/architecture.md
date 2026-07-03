@@ -71,7 +71,7 @@ Important constraints:
 For IS#4 No.001-018, IS#5 No.001-020, and IS#6 No.001-015, 多元化珍品 use `data/relic-effect-variants.json` layered over the base relic data. The state stores numeric `run.difficulty`; the app derives `run.difficultyTierId` from `data/difficulty-tiers.json` and selects the matching variant for display and calculation. If the difficulty is unknown, the base effect is shown with an unresolved-variant warning.
 ## Application Shell
 
-The active desktop shell is `apps/rhodes-suki`, built with Avalonia + SukiUI. The local web app remains for OBS browser-source output and legacy manual review routes, but Electron and Tauri are no longer active desktop packaging targets.
+The active desktop shell is `apps/rhodes-suki`, built with Avalonia + SukiUI. Electron and Tauri are not active build, launch, or packaging targets. The local web server remains only for the HTTP API, OBS browser-source output, and migration fallback routes until their required workflow is fully represented in Suki/Avalonia.
 
 Responsibilities are intentionally separated:
 
