@@ -626,7 +626,7 @@
                 <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{Binding RuntimeLayout.Connection.Title}" FontSize="15" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding RuntimeLayout.Connection.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                    <TextBlock Text="{Binding RuntimeLayout.Connection.Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
                   </StackPanel>
                   <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">
                     <Button Content="適用" Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}" />
@@ -636,48 +636,58 @@
                   </WrapPanel>
                 </Grid>
 
-                <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                <Grid Grid.Row="1" ColumnDefinitions="240,*,260" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
                   <Grid RowDefinitions="Auto,Auto" RowSpacing="4">
                     <TextBlock Text="プロファイル" FontSize="12" Opacity="0.68" />
                     <ComboBox Grid.Row="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}" ItemTemplate="{StaticResource AdbPresetComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbPresetSelectionTemplate}" />
                   </Grid>
                   <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="4">
-                    <TextBlock Text="撮影方式" FontSize="12" Opacity="0.68" />
-                    <ComboBox Grid.Row="1" ItemsSource="{Binding AdbScreencapMethodOptions}" SelectedItem="{Binding SelectedAdbScreencapMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
-                  </Grid>
-
-                  <Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="4">
                     <TextBlock Text="ADB実行ファイル" FontSize="12" Opacity="0.68" />
                     <TextBox Grid.Row="1" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="adb または adb.exe のフルパス" />
                   </Grid>
-                  <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="4">
-                    <TextBlock Text="入力方式" FontSize="12" Opacity="0.68" />
-                    <ComboBox Grid.Row="1" ItemsSource="{Binding AdbInputMethodOptions}" SelectedItem="{Binding SelectedAdbInputMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
-                  </Grid>
-
-                  <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="4">
+                  <Grid Grid.Column="2" RowDefinitions="Auto,Auto" RowSpacing="4">
                     <TextBlock Text="接続serial" FontSize="12" Opacity="0.68" />
-                    <TextBox Grid.Row="1" Text="{Binding AdbSerial, Mode=TwoWay}" PlaceholderText="127.0.0.1:6520 / 127.0.0.1:16384 / emulator-5554" />
-                  </Grid>
-                  <Grid Grid.Row="2" Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="4">
-                    <TextBlock Text="OCR" FontSize="12" Opacity="0.68" />
-                    <ComboBox Grid.Row="1" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
+                    <TextBox Grid.Row="1" Text="{Binding AdbSerial, Mode=TwoWay}" PlaceholderText="127.0.0.1:16384 / emulator-5554" />
                   </Grid>
 
-                  <Grid Grid.Row="3" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto" RowSpacing="4">
+                  <Grid Grid.Row="1" Grid.ColumnSpan="3" RowDefinitions="Auto,Auto" RowSpacing="4">
                     <TextBlock Text="ADB Config" FontSize="12" Opacity="0.68" />
                     <TextBox Grid.Row="1" Text="{Binding AdbConfigJson, Mode=TwoWay}" />
                   </Grid>
                 </Grid>
 
-                <Border Grid.Row="2" CornerRadius="7" Padding="9" Background="#101718" BorderBrush="#2B3638" BorderThickness="1">
-                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="4">
-                    <TextBlock Text="{Binding AdbDetectionSummary}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1" Text="{Binding AdbMethodSummary}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Row="1" Text="{Binding AdbDetectionDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AdbMethodDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                <TextBlock Grid.Row="2" Text="{Binding AdbDetectionDetail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
+              </Grid>
+            </Border>
+
+            <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+              <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="MAA接続方式" FontSize="15" FontWeight="SemiBold" />
+                  <TextBlock Text="MAAFrameworkのADB撮影・入力・OCR方式を選びます。MuMu/LDは高速方式を優先し、Google Play Gamesなどは標準または互換方式で確認します。" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
+                </StackPanel>
+
+                <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                  <Grid RowDefinitions="Auto,Auto" RowSpacing="4">
+                    <TextBlock Text="撮影方式" FontSize="12" Opacity="0.68" />
+                    <ComboBox Grid.Row="1" ItemsSource="{Binding AdbScreencapMethodOptions}" SelectedItem="{Binding SelectedAdbScreencapMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
                   </Grid>
-                </Border>
+                  <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="4">
+                    <TextBlock Text="入力方式" FontSize="12" Opacity="0.68" />
+                    <ComboBox Grid.Row="1" ItemsSource="{Binding AdbInputMethodOptions}" SelectedItem="{Binding SelectedAdbInputMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
+                  </Grid>
+                  <Grid Grid.Column="2" RowDefinitions="Auto,Auto" RowSpacing="4">
+                    <TextBlock Text="OCR" FontSize="12" Opacity="0.68" />
+                    <ComboBox Grid.Row="1" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
+                  </Grid>
+                </Grid>
+
+                <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="4">
+                  <TextBlock Text="{Binding AdbDetectionSummary}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding AdbMethodSummary}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Row="1" Text="{Binding AdbDetectionDetail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AdbMethodDetail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
+                </Grid>
               </Grid>
             </Border>
 
@@ -763,7 +773,7 @@
                       <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
                       <TextBlock Grid.Column="1" Text="{Binding Tag}" FontSize="10" Opacity="0.58" />
                       <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding State}" FontSize="12" Opacity="0.78" />
-                      <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.58" />
+                      <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="3" Opacity="0.58" />
                       <TextBlock Grid.Row="3" Text="{Binding PrimaryAction}" FontSize="10" Opacity="0.68" />
                       <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding InstallLabel}" FontSize="10" Opacity="0.46" />
                     </Grid>
@@ -775,7 +785,7 @@
             <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
               <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="10" RowSpacing="8">
                 <TextBlock Text="{Binding RuntimeLayout.OptionalRuntime.Title}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{Binding RuntimeLayout.OptionalRuntime.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding RuntimeLayout.OptionalRuntime.Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" VerticalAlignment="Center" />
                 <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Classes="runtimeActions" HorizontalAlignment="Left">
                   <Button Content="GLM導入" Command="{Binding InstallGlmOcrCommand}" />
                   <Button Content="GLM削除" Command="{Binding UninstallGlmOcrCommand}" />

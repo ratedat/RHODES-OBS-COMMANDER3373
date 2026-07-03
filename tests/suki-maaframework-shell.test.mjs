@@ -842,6 +842,11 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.doesNotMatch(runtimeWorkspace, /<Grid ColumnDefinitions="\*,Auto" ColumnSpacing="12">\s*<StackPanel Spacing="2">\s*<TextBlock Text="\{Binding RuntimeLayout\.Connection\.Title\}"/s);
   assert.match(runtimeWorkspace, /<Grid RowDefinitions="Auto,Auto" RowSpacing="8">\s*<StackPanel Spacing="2">\s*<TextBlock Text="\{Binding RuntimeLayout\.Connection\.Title\}"/s);
   assert.match(runtimeWorkspace, /<WrapPanel Grid\.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">[\s\S]*<Button Content="候補を使用"/);
+  assert.match(runtimeWorkspace, /Text="MAA接続方式"/);
+  assert.match(runtimeWorkspace, /Text="撮影方式"[\s\S]*AdbScreencapMethodOptions/);
+  assert.match(runtimeWorkspace, /Text="入力方式"[\s\S]*AdbInputMethodOptions/);
+  assert.match(runtimeWorkspace, /AdbMethodDetail[^>]+MaxLines="2"/);
+  assert.match(runtimeWorkspace, /RuntimeLayout\.OptionalRuntime\.Detail[^>]+MaxLines="2"/);
   assert.ok((runtimeWorkspace.match(/Height="236"/g) ?? []).length >= 2);
   assert.match(runtimeWorkspace, /AdbPathCandidates[\s\S]*MaxLines="2"/);
   assert.match(runtimeWorkspace, /AdbDevices[\s\S]*MaxLines="2"/);
