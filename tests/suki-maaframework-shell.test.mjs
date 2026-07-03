@@ -95,6 +95,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const runStateStore = await fs.readFile("apps/rhodes-suki/Services/RhodesRunStateStore.cs", "utf8");
   const candidateApplier = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionCandidateApplier.cs", "utf8");
   const candidateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaCandidateApiClient.cs", "utf8");
+  const recognitionWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionWorkflow.cs", "utf8");
   const scanResultParser = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanApiClient.cs", "utf8");
   const scanHistory = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanHistory.cs", "utf8");
   const debugPaths = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiDebugPaths.cs", "utf8");
@@ -322,6 +323,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   );
   assert.match(candidateApiClient, /api\/recognition\/maa-resource/);
   assert.match(candidateApiClient, /ExtractCandidatePreviews/);
+  assert.match(viewModel, /RhodesRecognitionWorkflow\.RunResourceTasksAsync/);
+  assert.match(viewModel, /RhodesRecognitionWorkflow\.ConvertCandidates/);
+  assert.match(recognitionWorkflow, /RhodesMaaLocalCandidateConverter\.FromTaskResults/);
+  assert.match(recognitionWorkflow, /RhodesMaaCandidateMerger\.Merge/);
   assert.doesNotMatch(viewModel, /RhodesRecognitionScanApiClient\.RunAsync/);
   assert.doesNotMatch(scanResultParser, /PostAsJsonAsync/);
   assert.doesNotMatch(scanResultParser, /api\/recognition\/scan/);
@@ -335,11 +340,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /CandidateApiProfileId/);
   assert.doesNotMatch(viewModel, /RunSelectedProfileAdbScanCommand/);
   assert.doesNotMatch(viewModel, /SelectedResourceProfile\?\.Id == "all" \? "runStatusFull"/);
-  assert.match(viewModel, /RhodesMaaResultPreview\.FromTaskResults/);
+  assert.match(recognitionWorkflow, /RhodesMaaResultPreview\.FromTaskResults/);
   assert.match(viewModel, /CandidateResults/);
   assert.match(viewModel, /RunResourceTaskCommand/);
   assert.match(viewModel, /ForceCaptureAsync/);
-  assert.match(viewModel, /LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync\(\s*ResourceTaskResults,\s*SelectedResourceProfile\?\.Id,\s*RhodesMaaLocalCandidateConverter\.FromTaskResults/s);
+  assert.match(viewModel, /LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync\(\s*ResourceTaskResults,\s*plan\.ProfileId,\s*localCandidates,\s*plan\.ProfileLabel,\s*plan\.TaskEntries/s);
   assert.match(viewModel, /RecognitionScanHistory/);
   assert.match(viewModel, /RecognitionScanLogRows/);
   assert.match(viewModel, /RefreshRecognitionScanHistoryCommand/);

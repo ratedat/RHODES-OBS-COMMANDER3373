@@ -17,6 +17,9 @@ var tests = new (string Name, Action Run)[]
     ("Recognition scan API extraction preserves profile status and candidates", RecognitionScanApiExtraction),
     ("MAA candidate merger supplements missing local candidates safely", CandidateMergerSupplementsLocalCandidates),
     ("MAA candidate merger keeps campaign-specific run status fields", CandidateMergerKeepsCampaignRunStatusFields),
+    ("Recognition workflow runs resource tasks in plan order", RecognitionWorkflowRunsResourceTasks),
+    ("Recognition workflow converts API and local candidates behind one seam", RecognitionWorkflowConvertsCandidates),
+    ("Recognition workflow falls back to local candidates when API is unavailable", RecognitionWorkflowLocalFallback),
     ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
     ("Local MAA candidate converter keeps the best duplicate run status field", LocalCandidateConverterRunStatusBestDuplicate),
     ("Local MAA candidate converter extracts random squad effect candidates", LocalCandidateConverterRunStatusSquadRandomEffect),
@@ -374,6 +377,73 @@ static void CandidateMergerKeepsCampaignRunStatusFields()
         "ingot::20|difficulty:is4_sami:12|difficulty:is5_sarkaz:18",
         string.Join("|", merged.Where(item => item.Kind == "runStatus").Select(item => $"{item.Field}:{item.CampaignId}:{item.Value}")),
         "campaign-specific run status fields");
+}
+
+static void RecognitionWorkflowRunsResourceTasks()
+{
+    var plan = new MaaResourceExecutionPlan(
+        "runStatusFull",
+        "基礎情報",
+        "interface preset",
+        ["TaskA", "TaskB"],
+        [
+            new MaaResourceTaskPreview("TaskA", "A", "first"),
+            new MaaResourceTaskPreview("TaskB", "B", "second"),
+        ],
+        "");
+    var invoked = new List<string>();
+    var observed = new List<string>();
+
+    var result = RhodesRecognitionWorkflow.RunResourceTasksAsync(
+        plan,
+        (entry, _) =>
+        {
+            invoked.Add(entry);
+            return Task.FromResult(new MaaTaskRunResult(entry, "Succeeded", true, $"detail:{entry}"));
+        },
+        taskResult => observed.Add(taskResult.Entry)).GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "workflow task execution succeeds");
+    Equal("TaskA|TaskB", string.Join("|", invoked), "workflow invokes tasks in plan order");
+    Equal("TaskA|TaskB", string.Join("|", observed), "workflow reports tasks in plan order");
+    Equal("TaskA|TaskB", string.Join("|", result.TaskResults.Select(item => item.Entry)), "workflow returns task results");
+    Equal("基礎情報 / tasks=2 / interface preset", result.Summary, "workflow execution summary");
+}
+
+static void RecognitionWorkflowConvertsCandidates()
+{
+    var apiResult = new RhodesMaaCandidateApiResult(
+        [new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.94, Field: "ingot")],
+        "");
+    var taskResults = new[]
+    {
+        OcrTask("RhodesOcrRegion_run_difficulty_grade", "18", 0.93),
+    };
+
+    var conversion = RhodesRecognitionWorkflow.ConvertCandidates("runStatusFull", taskResults, apiResult);
+
+    Equal("api+local", conversion.Source, "workflow conversion source");
+    Equal(1, conversion.ApiCandidateCount, "workflow api candidate count");
+    Equal(1, conversion.LocalCandidateCount, "workflow local candidate count");
+    Equal(1, conversion.SupplementalCandidateCount, "workflow supplemental candidate count");
+    Equal("ingot|difficulty", string.Join("|", conversion.Candidates.Select(item => item.Field)), "workflow merged fields");
+    Equal("候補化しました: 2件 (ローカル補完 +1)", conversion.StatusMessage, "workflow merged status message");
+}
+
+static void RecognitionWorkflowLocalFallback()
+{
+    var apiResult = new RhodesMaaCandidateApiResult([], "connection refused");
+    var taskResults = new[]
+    {
+        OcrTask("RhodesTemplate_runStatusFull_run_ingot", "2O", 0.96),
+    };
+
+    var conversion = RhodesRecognitionWorkflow.ConvertCandidates("runStatusFull", taskResults, apiResult);
+
+    Equal("local", conversion.Source, "workflow local fallback source");
+    Equal("ingot", conversion.Candidates.Single().Field, "workflow local fallback field");
+    Equal("20", conversion.Candidates.Single().Value, "workflow local fallback value");
+    Equal("候補化APIに接続できないためローカル候補化しました: 1件", conversion.StatusMessage, "workflow local fallback message");
 }
 
 static void LocalCandidateConverterRunStatus()
@@ -3120,6 +3190,18 @@ static string NormalizeTaskEntry(string entry)
         normalized.Append(char.ToLowerInvariant(character));
     }
     return string.Join("_", normalized.ToString().Split(['_', '.', '-'], StringSplitOptions.RemoveEmptyEntries));
+}
+
+static MaaTaskRunResult OcrTask(string entry, string text, double score)
+{
+    return new MaaTaskRunResult(
+        entry,
+        "Succeeded",
+        true,
+        "detail",
+        $"TaskId=1; detail={{\"best\":{{\"text\":\"{text}\",\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}}}",
+        "OCR",
+        true);
 }
 
 static void Equal<T>(T expected, T actual, string label)

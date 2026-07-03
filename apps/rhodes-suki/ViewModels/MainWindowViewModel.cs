@@ -3267,12 +3267,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!await ForceCaptureAsync())
             return;
 
-        foreach (var task in plan.Tasks)
+        var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
+            plan,
+            (entry, cancellationToken) => _session.RunResourceTaskAsync(entry, "{}", cancellationToken),
+            result =>
+            {
+                ResourceTaskResults.Add(result);
+                RefreshResourceTaskDiagnostics();
+                StatusMessage = $"{result.Entry}: {result.Status}";
+            });
+        if (!execution.Succeeded)
         {
-            var result = await _session.RunResourceTaskAsync(task.Entry);
-            ResourceTaskResults.Add(result);
-            RefreshResourceTaskDiagnostics();
-            StatusMessage = $"{task.Entry}: {result.Status}";
+            StatusMessage = execution.Error;
+            RefreshInspectorRows();
+            return;
         }
         RefreshInspectorRows();
         if (ResourceTaskResults.Any())
@@ -3298,76 +3306,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        CandidateResults.Clear();
         var profileId = CandidateApiProfileId();
         var evidencePlan = CurrentEvidencePlan(profileId);
         var apiResult = await RhodesMaaCandidateApiClient.ConvertAsync(
             RhodesApiUrl,
             profileId,
             ResourceTaskResults);
-        var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
-            profileId,
-            ResourceTaskResults);
+        var conversion = RhodesRecognitionWorkflow.ConvertCandidates(profileId, ResourceTaskResults, apiResult);
 
-        if (apiResult.HasCandidates)
-        {
-            var mergedCandidates = RhodesMaaCandidateMerger.Merge(apiResult.Candidates, localCandidates);
-            foreach (var candidate in mergedCandidates)
-            {
-                CandidateResults.Add(candidate);
-            }
-            RefreshInspectorRows();
-            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
-                ResourceTaskResults,
-                profileId,
-                CandidateResults,
-                evidencePlan?.ProfileLabel,
-                evidencePlan?.TaskEntries);
-            var supplementalCount = CandidateResults.Count - apiResult.Candidates.Count;
-            StatusMessage = supplementalCount > 0
-                ? $"候補化しました: {CandidateResults.Count}件 (ローカル補完 +{supplementalCount})"
-                : $"候補化しました: {CandidateResults.Count}件";
-            return;
-        }
-        if (localCandidates.Count > 0)
-        {
-            foreach (var candidate in localCandidates)
-            {
-                CandidateResults.Add(candidate);
-            }
-
-            RefreshInspectorRows();
-            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
-                ResourceTaskResults,
-                profileId,
-                CandidateResults,
-                evidencePlan?.ProfileLabel,
-                evidencePlan?.TaskEntries);
-            StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
-                ? $"ローカル候補化しました: {CandidateResults.Count}件"
-                : $"候補化APIに接続できないためローカル候補化しました: {CandidateResults.Count}件";
-            return;
-        }
-
-        foreach (var candidate in RhodesMaaResultPreview.FromTaskResults(ResourceTaskResults))
-        {
+        CandidateResults.Clear();
+        foreach (var candidate in conversion.Candidates)
             CandidateResults.Add(candidate);
-        }
-
-        if (CandidateResults.Count > 0)
-        {
-            RefreshInspectorRows();
-            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
-                ResourceTaskResults,
-                profileId,
-                CandidateResults,
-                evidencePlan?.ProfileLabel,
-                evidencePlan?.TaskEntries);
-            StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
-                ? $"候補化APIは0件だったためローカルMAAプレビューを表示しました: {CandidateResults.Count}件"
-                : $"候補化APIに接続できないためローカルMAAプレビューを表示しました: {CandidateResults.Count}件";
-            return;
-        }
 
         RefreshInspectorRows();
         LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
@@ -3376,9 +3325,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             CandidateResults,
             evidencePlan?.ProfileLabel,
             evidencePlan?.TaskEntries);
-        StatusMessage = string.IsNullOrWhiteSpace(apiResult.Error)
-            ? "候補は0件です。"
-            : $"候補化API失敗: {apiResult.Error}";
+        StatusMessage = conversion.StatusMessage;
     }
 
     private string? CandidateApiProfileId()
