@@ -20,6 +20,9 @@ var tests = new (string Name, Action Run)[]
     ("Recognition workflow runs resource tasks in plan order", RecognitionWorkflowRunsResourceTasks),
     ("Recognition workflow converts API and local candidates behind one seam", RecognitionWorkflowConvertsCandidates),
     ("Recognition workflow falls back to local candidates when API is unavailable", RecognitionWorkflowLocalFallback),
+    ("Recognition workflow applies candidates through API state first", RecognitionWorkflowApplyCandidatesViaApi),
+    ("Recognition workflow falls back to local candidate apply when API fails", RecognitionWorkflowApplyCandidatesLocalFallback),
+    ("Recognition workflow handles empty candidate apply without API calls", RecognitionWorkflowApplyCandidatesEmpty),
     ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
     ("Local MAA candidate converter keeps the best duplicate run status field", LocalCandidateConverterRunStatusBestDuplicate),
     ("Local MAA candidate converter extracts random squad effect candidates", LocalCandidateConverterRunStatusSquadRandomEffect),
@@ -444,6 +447,79 @@ static void RecognitionWorkflowLocalFallback()
     Equal("ingot", conversion.Candidates.Single().Field, "workflow local fallback field");
     Equal("20", conversion.Candidates.Single().Value, "workflow local fallback value");
     Equal("候補化APIに接続できないためローカル候補化しました: 1件", conversion.StatusMessage, "workflow local fallback message");
+}
+
+static void RecognitionWorkflowApplyCandidatesViaApi()
+{
+    var savedState = "";
+    var replacedState = "";
+    var localFallbackCount = 0;
+    var result = RhodesRecognitionWorkflow.ApplyCandidatesAsync(
+        [new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.9, Field: "ingot")],
+        _ => Task.FromResult(new RhodesStateApiResult("""{ "version": 1, "run": { "campaignId": "is5_sarkaz" } }""", "")),
+        (stateJson, _) =>
+        {
+            savedState = stateJson;
+            return Task.FromResult(new RhodesStateApiResult(stateJson, ""));
+        },
+        (stateJson, _) =>
+        {
+            replacedState = stateJson;
+            return Task.CompletedTask;
+        },
+        (_, _) =>
+        {
+            localFallbackCount++;
+            return Task.FromResult(SukiCandidateApplySummary.Empty);
+        }).GetAwaiter().GetResult();
+
+    Equal(1, result.Summary.AppliedCount, "workflow api apply count");
+    Equal(false, result.LocalFallbackUsed, "workflow api apply avoids local fallback");
+    Equal(true, result.ShouldReloadRunState, "workflow api apply reloads state");
+    Equal("1件: ingot", result.LastCandidateApplySummary, "workflow api last summary");
+    Equal("状態へ反映し、APIへ同期しました: 1件 (ingot)", result.StatusMessage, "workflow api status message");
+    Equal(0, localFallbackCount, "workflow api local fallback calls");
+    Equal(true, savedState.Contains("\"ingot\":20", StringComparison.Ordinal), "workflow api saved ingot");
+    Equal(savedState, replacedState, "workflow api replaced local state");
+    Equal("接続済み", result.ApiStatus?.State, "workflow api status");
+}
+
+static void RecognitionWorkflowApplyCandidatesLocalFallback()
+{
+    var localFallbackCount = 0;
+    var result = RhodesRecognitionWorkflow.ApplyCandidatesAsync(
+        [new MaaCandidatePreview("runStatus", "源石錐", "20", "20", 0.9, Field: "ingot")],
+        _ => Task.FromResult(new RhodesStateApiResult("", "connection refused")),
+        (_, _) => throw new InvalidOperationException("save should not run"),
+        (_, _) => throw new InvalidOperationException("replace should not run"),
+        (_, _) =>
+        {
+            localFallbackCount++;
+            return Task.FromResult(new SukiCandidateApplySummary(1, 0, ["ingot"]));
+        }).GetAwaiter().GetResult();
+
+    Equal(1, result.Summary.AppliedCount, "workflow fallback apply count");
+    Equal(true, result.LocalFallbackUsed, "workflow fallback flag");
+    Equal(true, result.ShouldReloadRunState, "workflow fallback reloads state");
+    Equal("connection refused", result.ApiError, "workflow fallback api error");
+    Equal("接続失敗", result.ApiStatus?.State, "workflow fallback api status");
+    Equal(1, localFallbackCount, "workflow fallback calls local apply");
+    Equal("状態へ反映しました: 1件 (ingot) / API同期失敗: connection refused", result.StatusMessage, "workflow fallback message");
+}
+
+static void RecognitionWorkflowApplyCandidatesEmpty()
+{
+    var result = RhodesRecognitionWorkflow.ApplyCandidatesAsync(
+        [],
+        _ => throw new InvalidOperationException("fetch should not run"),
+        (_, _) => throw new InvalidOperationException("save should not run"),
+        (_, _) => throw new InvalidOperationException("replace should not run"),
+        (_, _) => throw new InvalidOperationException("local should not run")).GetAwaiter().GetResult();
+
+    Equal(0, result.Summary.AppliedCount, "workflow empty apply count");
+    Equal(false, result.ShouldReloadRunState, "workflow empty does not reload");
+    Equal("反映なし: 候補0件", result.LastCandidateApplySummary, "workflow empty last summary");
+    Equal("反映する候補がありません。", result.StatusMessage, "workflow empty status");
 }
 
 static void LocalCandidateConverterRunStatus()

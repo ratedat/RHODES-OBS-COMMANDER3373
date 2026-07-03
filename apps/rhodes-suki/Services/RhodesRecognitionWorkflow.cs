@@ -27,6 +27,17 @@ public sealed record RhodesRecognitionCandidateConversionResult(
     public bool HasCandidates => Candidates.Count > 0;
 }
 
+public sealed record RhodesCandidateApplyWorkflowResult(
+    SukiCandidateApplySummary Summary,
+    string ApiError,
+    bool LocalFallbackUsed,
+    SukiOptionalRuntimeStatus? ApiStatus,
+    string LastCandidateApplySummary,
+    string StatusMessage)
+{
+    public bool ShouldReloadRunState => Summary.AppliedCount > 0;
+}
+
 public static class RhodesRecognitionWorkflow
 {
     public static async Task<RhodesRecognitionTaskExecutionResult> RunResourceTasksAsync(
@@ -129,5 +140,88 @@ public static class RhodesRecognitionWorkflow
             0,
             0,
             apiResult.Error);
+    }
+
+    public static async Task<RhodesCandidateApplyWorkflowResult> ApplyCandidatesAsync(
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        Func<CancellationToken, Task<RhodesStateApiResult>> fetchApiStateAsync,
+        Func<string, CancellationToken, Task<RhodesStateApiResult>> saveApiStateAsync,
+        Func<string, CancellationToken, Task> replaceLocalStateJsonAsync,
+        Func<IReadOnlyList<MaaCandidatePreview>, CancellationToken, Task<SukiCandidateApplySummary>> saveLocalCandidatesAsync,
+        CancellationToken cancellationToken = default)
+    {
+        if (candidates.Count == 0)
+        {
+            return new RhodesCandidateApplyWorkflowResult(
+                SukiCandidateApplySummary.Empty,
+                "",
+                false,
+                null,
+                "反映なし: 候補0件",
+                "反映する候補がありません。");
+        }
+
+        var fetched = await fetchApiStateAsync(cancellationToken);
+        if (!fetched.Succeeded)
+            return await ApplyLocalFallbackAsync(candidates, fetched.Error, saveLocalCandidatesAsync, cancellationToken);
+
+        var applied = RhodesStateApiClient.ApplyCandidatesToStateJson(fetched.StateJson, candidates);
+        if (applied.Summary.AppliedCount <= 0)
+            return NotAppliedResult(applied.Summary, "");
+
+        var saved = await saveApiStateAsync(applied.StateJson, cancellationToken);
+        if (!saved.Succeeded)
+            return await ApplyLocalFallbackAsync(candidates, saved.Error, saveLocalCandidatesAsync, cancellationToken);
+
+        await replaceLocalStateJsonAsync(saved.StateJson, cancellationToken);
+        return AppliedResult(applied.Summary, "", false, RhodesApiStatusProbe.ParseStateJson(saved.StateJson));
+    }
+
+    private static async Task<RhodesCandidateApplyWorkflowResult> ApplyLocalFallbackAsync(
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        string apiError,
+        Func<IReadOnlyList<MaaCandidatePreview>, CancellationToken, Task<SukiCandidateApplySummary>> saveLocalCandidatesAsync,
+        CancellationToken cancellationToken)
+    {
+        var summary = await saveLocalCandidatesAsync(candidates, cancellationToken);
+        var apiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", apiError, false, false);
+        return summary.AppliedCount <= 0
+            ? NotAppliedResult(summary, apiError, apiStatus, localFallbackUsed: true)
+            : AppliedResult(summary, apiError, localFallbackUsed: true, apiStatus);
+    }
+
+    private static RhodesCandidateApplyWorkflowResult AppliedResult(
+        SukiCandidateApplySummary summary,
+        string apiError,
+        bool localFallbackUsed,
+        SukiOptionalRuntimeStatus? apiStatus)
+    {
+        var fields = string.Join(", ", summary.AppliedFields);
+        return new RhodesCandidateApplyWorkflowResult(
+            summary,
+            apiError,
+            localFallbackUsed,
+            apiStatus,
+            $"{summary.AppliedCount}件: {fields}",
+            string.IsNullOrWhiteSpace(apiError)
+                ? $"状態へ反映し、APIへ同期しました: {summary.AppliedCount}件 ({fields})"
+                : $"状態へ反映しました: {summary.AppliedCount}件 ({fields}) / API同期失敗: {apiError}");
+    }
+
+    private static RhodesCandidateApplyWorkflowResult NotAppliedResult(
+        SukiCandidateApplySummary summary,
+        string apiError,
+        SukiOptionalRuntimeStatus? apiStatus = null,
+        bool localFallbackUsed = false)
+    {
+        return new RhodesCandidateApplyWorkflowResult(
+            summary,
+            apiError,
+            localFallbackUsed,
+            apiStatus,
+            $"反映なし: 無視 {summary.IgnoredCount}件",
+            string.IsNullOrWhiteSpace(apiError)
+                ? $"状態へ反映できる候補はありませんでした。無視: {summary.IgnoredCount}件"
+                : $"状態へ反映できる候補はありませんでした。API同期は失敗: {apiError}");
     }
 }

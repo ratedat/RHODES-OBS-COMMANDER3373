@@ -319,14 +319,17 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   );
   assert.match(
     viewModel,
-    /private async Task ApplyCandidateResultsCoreAsync\(\)[\s\S]*SaveCandidateResultsToApiStateAsync\(\)[\s\S]*RhodesRunStateStore\.SaveCandidatesAsync\(CandidateResults\)[\s\S]*ReloadRunStateFromStore\(\)/,
+    /private async Task ApplyCandidateResultsCoreAsync\(\)[\s\S]*RhodesRecognitionWorkflow\.ApplyCandidatesAsync[\s\S]*RhodesStateApiClient\.FetchAsync[\s\S]*RhodesStateApiClient\.SaveAsync[\s\S]*RhodesRunStateStore\.ReplaceStateJsonAsync[\s\S]*RhodesRunStateStore\.SaveCandidatesAsync[\s\S]*ReloadRunStateFromStore\(\)/,
   );
   assert.match(candidateApiClient, /api\/recognition\/maa-resource/);
   assert.match(candidateApiClient, /ExtractCandidatePreviews/);
   assert.match(viewModel, /RhodesRecognitionWorkflow\.RunResourceTasksAsync/);
   assert.match(viewModel, /RhodesRecognitionWorkflow\.ConvertCandidates/);
+  assert.match(viewModel, /RhodesRecognitionWorkflow\.ApplyCandidatesAsync/);
   assert.match(recognitionWorkflow, /RhodesMaaLocalCandidateConverter\.FromTaskResults/);
   assert.match(recognitionWorkflow, /RhodesMaaCandidateMerger\.Merge/);
+  assert.match(recognitionWorkflow, /RhodesStateApiClient\.ApplyCandidatesToStateJson/);
+  assert.match(recognitionWorkflow, /RhodesApiStatusProbe\.ParseStateJson/);
   assert.doesNotMatch(viewModel, /RhodesRecognitionScanApiClient\.RunAsync/);
   assert.doesNotMatch(scanResultParser, /PostAsJsonAsync/);
   assert.doesNotMatch(scanResultParser, /api\/recognition\/scan/);
