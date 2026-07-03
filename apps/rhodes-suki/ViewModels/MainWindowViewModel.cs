@@ -288,7 +288,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string Title { get; } = "RHODES OBS COMMANDER3373";
 
-    public string Subtitle { get; } = "MAAFramework family desktop shell";
+    public string Subtitle { get; } = "Suki/Avalonia + MAAFramework workbench";
 
     public ObservableCollection<SukiWorkspaceNavItem> WorkspaceNav { get; }
 
@@ -1577,6 +1577,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
             SessionState = snapshot.State;
             SessionDetail = snapshot.Detail;
+            RefreshRuntimeCapabilities();
+            RefreshInspectorRows();
             StatusMessage = snapshot.IsReady ? "接続しました。" : "接続できませんでした。設定を確認してください。";
         });
     }

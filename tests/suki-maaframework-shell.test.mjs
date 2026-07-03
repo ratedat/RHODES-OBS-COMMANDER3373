@@ -336,6 +336,16 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
     viewModel,
     /private async Task RunAdbConnectionTestAsync\(\)[\s\S]*await DetectAdbLocallyCoreAsync\(\)[\s\S]*RhodesSukiAdbConnectionTestWorkflow\.FromController[\s\S]*RhodesSukiAdbConnectionTestWorkflow\.FromCapture/,
   );
+  const connectStart = viewModel.indexOf("private async Task ConnectAsync()");
+  const connectEnd = viewModel.indexOf("private void LoadSettings()", connectStart);
+  assert.ok(connectStart >= 0);
+  assert.ok(connectEnd > connectStart);
+  const connectBody = viewModel.slice(connectStart, connectEnd);
+  assert.match(connectBody, /_session\.InitializeAdbAsync\(BuildSessionOptions\(\)\)/);
+  assert.match(connectBody, /SessionState = snapshot\.State;/);
+  assert.match(connectBody, /SessionDetail = snapshot\.Detail;/);
+  assert.match(connectBody, /RefreshRuntimeCapabilities\(\);/);
+  assert.match(connectBody, /RefreshInspectorRows\(\);/);
   assert.match(viewModel, /ApplyAdbConnectionTestSnapshot/);
   assert.match(adbConnectionTestWorkflow, /NoAvailableAdb/);
   assert.match(adbConnectionTestWorkflow, /FromController/);
