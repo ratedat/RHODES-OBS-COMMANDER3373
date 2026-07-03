@@ -1630,27 +1630,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<string> SaveRunContextToApiStateAsync(string campaignId)
     {
-        var fetched = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
-        if (!fetched.Succeeded)
-        {
-            _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", fetched.Error, false, false);
-            RefreshRuntimeCapabilities();
-            return fetched.Error;
-        }
+        var result = await RhodesSukiStateSyncWorkflow.SyncRunContextAsync(
+            campaignId,
+            cancellationToken => RhodesStateApiClient.FetchAsync(RhodesApiUrl, cancellationToken: cancellationToken),
+            (stateJson, cancellationToken) => RhodesStateApiClient.SaveAsync(RhodesApiUrl, stateJson, cancellationToken: cancellationToken),
+            (stateJson, _) => RhodesRunStateStore.ReplaceStateJsonAsync(stateJson));
 
-        var updated = RhodesStateApiClient.ApplyRunContextToStateJson(fetched.StateJson, campaignId);
-        var saved = await RhodesStateApiClient.SaveAsync(RhodesApiUrl, updated);
-        if (!saved.Succeeded)
-        {
-            _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", saved.Error, false, false);
-            RefreshRuntimeCapabilities();
-            return saved.Error;
-        }
-
-        await RhodesRunStateStore.ReplaceStateJsonAsync(saved.StateJson);
-        _rhodesApiStatus = RhodesApiStatusProbe.ParseStateJson(saved.StateJson);
+        _rhodesApiStatus = result.ApiStatus;
         RefreshRuntimeCapabilities();
-        return "";
+        return result.Error;
     }
 
     private Task SetWorkspaceAsync(object? parameter)

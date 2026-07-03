@@ -83,6 +83,8 @@ var tests = new (string Name, Action Run)[]
     ("State API client can apply Suki ADB settings into current state JSON", StateApiAdbSettingsApply),
     ("Suki state sync workflow saves choices, ADB, and output preferences through API state", SukiStateSyncWorkflowSettingsSuccess),
     ("Suki state sync workflow reports API failures without local state replacement", SukiStateSyncWorkflowSettingsFailure),
+    ("Suki state sync workflow saves current IS context through API state", SukiStateSyncWorkflowRunContextSuccess),
+    ("Suki state sync workflow reports IS context API failures without replacement", SukiStateSyncWorkflowRunContextFailure),
     ("State API client can apply Suki display preferences into current state JSON", StateApiSukiPreferencesApply),
     ("State API client can apply selected choices into current state JSON", StateApiChoicesApply),
     ("State API client can apply current campaign into current state JSON", StateApiRunContextApply),
@@ -2850,6 +2852,59 @@ static void SukiStateSyncWorkflowSettingsFailure()
     Equal(false, result.ShouldReloadRunState, "sync workflow failure avoids reload");
     Equal("connection refused", result.Error, "sync workflow failure error");
     Equal("接続失敗", result.ApiStatus.State, "sync workflow failure api status");
+}
+
+static void SukiStateSyncWorkflowRunContextSuccess()
+{
+    var savedState = "";
+    var replacedState = "";
+    var result = RhodesSukiStateSyncWorkflow.SyncRunContextAsync(
+        "is4_sami",
+        _ => Task.FromResult(new RhodesStateApiResult(
+            """
+            {
+              "version": 1,
+              "run": {
+                "campaignId": "is5_sarkaz",
+                "special": { "is5_sarkaz": { "idea": 4 } }
+              },
+              "operators": ["gummy"]
+            }
+            """,
+            "")),
+        (stateJson, _) =>
+        {
+            savedState = stateJson;
+            return Task.FromResult(new RhodesStateApiResult(stateJson, ""));
+        },
+        (stateJson, _) =>
+        {
+            replacedState = stateJson;
+            return Task.CompletedTask;
+        }).GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "run context sync succeeds");
+    Equal(true, result.ShouldReloadRunState, "run context sync reloads state");
+    Equal("接続済み", result.ApiStatus.State, "run context sync api status");
+    Equal(savedState, replacedState, "run context replaces saved state locally");
+    var updated = JsonNode.Parse(savedState)!.AsObject();
+    Equal("is4_sami", updated["run"]!.AsObject()["campaignId"]!.GetValue<string>(), "run context campaign");
+    Equal(false, updated["run"]!.AsObject().ContainsKey("special"), "run context clears stale special state");
+    Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "run context preserves operators");
+}
+
+static void SukiStateSyncWorkflowRunContextFailure()
+{
+    var result = RhodesSukiStateSyncWorkflow.SyncRunContextAsync(
+        "is4_sami",
+        _ => Task.FromResult(new RhodesStateApiResult("", "timeout")),
+        (_, _) => throw new InvalidOperationException("save should not run"),
+        (_, _) => throw new InvalidOperationException("replace should not run")).GetAwaiter().GetResult();
+
+    Equal(false, result.Succeeded, "run context failure state");
+    Equal(false, result.ShouldReloadRunState, "run context failure avoids reload");
+    Equal("timeout", result.Error, "run context failure error");
+    Equal("接続失敗", result.ApiStatus.State, "run context failure api status");
 }
 
 static void StateApiSukiPreferencesApply()

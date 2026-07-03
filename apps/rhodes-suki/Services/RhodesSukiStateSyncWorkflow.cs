@@ -32,7 +32,7 @@ public static class RhodesSukiStateSyncWorkflow
     {
         var fetched = await fetchApiStateAsync(cancellationToken);
         if (!fetched.Succeeded)
-            return Failure(fetched.Error);
+            return Failure(fetched.Error, "ADB API設定");
 
         var updated = RhodesStateApiClient.ApplyChoicesToStateJson(
             fetched.StateJson,
@@ -48,7 +48,7 @@ public static class RhodesSukiStateSyncWorkflow
 
         var saved = await saveApiStateAsync(updated, cancellationToken);
         if (!saved.Succeeded)
-            return Failure(saved.Error);
+            return Failure(saved.Error, "ADB API設定");
 
         await replaceLocalStateJsonAsync(saved.StateJson, cancellationToken);
         return new RhodesSukiStateSyncResult(
@@ -58,12 +58,36 @@ public static class RhodesSukiStateSyncWorkflow
             "Suki設定とADB API設定を同期しました。");
     }
 
-    private static RhodesSukiStateSyncResult Failure(string error)
+    public static async Task<RhodesSukiStateSyncResult> SyncRunContextAsync(
+        string campaignId,
+        Func<CancellationToken, Task<RhodesStateApiResult>> fetchApiStateAsync,
+        Func<string, CancellationToken, Task<RhodesStateApiResult>> saveApiStateAsync,
+        Func<string, CancellationToken, Task> replaceLocalStateJsonAsync,
+        CancellationToken cancellationToken = default)
+    {
+        var fetched = await fetchApiStateAsync(cancellationToken);
+        if (!fetched.Succeeded)
+            return Failure(fetched.Error, "IS切替");
+
+        var updated = RhodesStateApiClient.ApplyRunContextToStateJson(fetched.StateJson, campaignId);
+        var saved = await saveApiStateAsync(updated, cancellationToken);
+        if (!saved.Succeeded)
+            return Failure(saved.Error, "IS切替");
+
+        await replaceLocalStateJsonAsync(saved.StateJson, cancellationToken);
+        return new RhodesSukiStateSyncResult(
+            "",
+            RhodesApiStatusProbe.ParseStateJson(saved.StateJson),
+            true,
+            "現在ISをAPIへ同期しました。");
+    }
+
+    private static RhodesSukiStateSyncResult Failure(string error, string label)
     {
         return new RhodesSukiStateSyncResult(
             error,
             new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", error, false, false),
             false,
-            $"ADB API設定の同期に失敗しました: {error}");
+            $"{label}の同期に失敗しました: {error}");
     }
 }
