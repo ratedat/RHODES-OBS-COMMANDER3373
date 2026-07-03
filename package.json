@@ -34,37 +34,5 @@
     "ocr:sync-maa-operator": "node tools/sync-maa-operator-ocr-map.mjs"
   },
   "devDependencies": {},
-  "build": {
-    "appId": "com.ratedat.rhodes.obs.commander3373",
-    "productName": "RHODES OBS COMMANDER3373",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "app/**/*",
-      "assets/**/*",
-      "data/**/*",
-      "package.json",
-      "!data/current-state.json",
-      "LICENSE",
-      "README.md",
-      "THIRD_PARTY_NOTICES.md",
-      "docs/**/*",
-      "third_party/**/*",
-      "!third_party/maa/**/inference.onnx"
-    ],
-    "asar": true,
-    "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
-    }
-  },
   "license": "AGPL-3.0-only"
 }

@@ -14,6 +14,7 @@ test("package exposes Suki/Avalonia as the only active desktop shell", async () 
   const scriptNames = Object.keys(pkg.scripts);
   assert.equal(scriptNames.some((name) => name.startsWith("tauri:")), false);
   assert.equal(scriptNames.some((name) => ["app", "app:5174", "app:debug", "app:smoke", "dist:win", "dist:debugger", "pack:win", "pack:debugger"].includes(name)), false);
+  assert.equal("build" in pkg, false);
 
   const devDependencies = pkg.devDependencies ?? {};
   assert.equal("@tauri-apps/cli" in devDependencies, false);
