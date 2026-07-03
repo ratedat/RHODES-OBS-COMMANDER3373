@@ -707,6 +707,10 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   const runtimeWorkspace = xaml.slice(runtimeWorkspaceStart, runtimeWorkspaceEnd);
   assert.match(runtimeWorkspace, /<ScrollViewer[^>]+VerticalScrollBarVisibility="Auto"[^>]+HorizontalScrollBarVisibility="Disabled"/);
   assert.match(runtimeWorkspace, /WrapPanel[^>]+Classes="runtimeActions"/);
+  assert.ok((runtimeWorkspace.match(/Height="236"/g) ?? []).length >= 2);
+  assert.match(runtimeWorkspace, /AdbPathCandidates[\s\S]*MaxLines="2"/);
+  assert.match(runtimeWorkspace, /AdbDevices[\s\S]*MaxLines="2"/);
+  assert.doesNotMatch(runtimeWorkspace, /MaxHeight="170"/);
   assert.doesNotMatch(runtimeWorkspace, /ColumnDefinitions="128,\*,Auto,Auto"/);
   assert.match(xaml, /ApplyAdbPresetCommand/);
   assert.match(xaml, /RefreshAdbDevicesCommand/);
