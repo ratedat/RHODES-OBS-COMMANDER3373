@@ -63,6 +63,27 @@ adb devices -l
 
 ## 5. 報告時に添付してほしいもの
 
+まずSuki/Avaloniaの `デバッグ` ワークスペースで `バグ報告ZIP` の `作成` を押してください。
+
+生成先:
+
+```text
+RHODES OBS COMMANDER3373 Debug Logs\Bug Reports
+```
+
+このZIPには、再現確認に必要なものだけが入ります。
+
+| ZIP内の主な内容 | 用途 |
+| --- | --- |
+| `debug/` | アプリログ、Recognition Scans、ROI Sessions、ROI Drafts、最新ADBスクリーンショット |
+| `state/current-state.json` | 報告時点の選択・認識反映状態 |
+| `state/suki-settings.json` | ADB path、serial、profileなどのSuki設定 |
+| `manifest.json` | OS、解像度、ADB概要、MAA contract、実行profile、候補数 |
+
+GLM/Ollama本体、モデル、巨大キャッシュ、`dist` 類、古いZIP、DLL/EXE類は含めません。
+
+ZIPを作れない場合だけ、以下を手動で添付してください。
+
 デバッグ版では、実行ファイルの近くに次のフォルダが作られます。
 
 ```text

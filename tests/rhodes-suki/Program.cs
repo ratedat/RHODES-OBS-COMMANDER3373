@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using MaaFramework.Binding;
@@ -75,6 +76,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA ROI selection matcher links OCR detail rows to ROI previews", RoiSelectionMatcherLinksOcrRows),
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
+    ("Bug report bundle collects debug artifacts without optional runtimes", BugReportBundleCollectsDebugArtifacts),
     ("Evidence preview tree uses compact typed nodes", EvidencePreviewTreeUsesCompactTypedNodes),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
     ("Resource catalog reads checked-in pipeline nodes", ResourceCatalogReadsPipelineNodes),
@@ -2426,6 +2428,10 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
 
         var nativePayload = RhodesRecognitionScanHistory.LoadPayload(history[0].LogPath);
         Equal(true, nativePayload.Succeeded, "native payload succeeded");
+        Equal("operatorsFull", nativePayload.ProfileId, "native payload profile id");
+        Equal("オペレーター", nativePayload.ProfileLabel, "native payload profile label");
+        Equal("suki-maa-native", nativePayload.Source, "native payload source");
+        Equal("completed", nativePayload.Status, "native payload status");
         Equal(1, nativePayload.Candidates.Count, "native payload candidates");
         Equal(1, nativePayload.TaskResults.Count, "native payload task results");
         Equal(2, nativePayload.LogRows.Count, "native payload log rows");
@@ -2439,6 +2445,10 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
 
         var apiPayload = RhodesRecognitionScanHistory.LoadPayload(history[1].LogPath);
         Equal(true, apiPayload.Succeeded, "api payload succeeded");
+        Equal("relicsFull", apiPayload.ProfileId, "api payload profile id");
+        Equal("秘宝スキャン", apiPayload.ProfileLabel, "api payload profile label");
+        Equal("adb", apiPayload.Source, "api payload source");
+        Equal("completed", apiPayload.Status, "api payload status");
         Equal(1, apiPayload.Candidates.Count, "api payload candidates");
         Equal(0, apiPayload.TaskResults.Count, "api payload task results");
         Equal(2, apiPayload.LogRows.Count, "api payload log rows");
@@ -2450,6 +2460,102 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
     finally
     {
         Directory.Delete(directory, recursive: true);
+    }
+}
+
+static void BugReportBundleCollectsDebugArtifacts()
+{
+    var root = Path.Combine(Path.GetTempPath(), $"rhodes-suki-bug-report-{Guid.NewGuid():N}");
+    var debugRoot = Path.Combine(root, RhodesSukiDebugPaths.DebugLogDirectoryName);
+    var destination = Path.Combine(debugRoot, RhodesSukiDebugPaths.BugReportsDirectoryName);
+    var recognitionDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.RecognitionScansDirectoryName);
+    var roiDraftDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.RoiDraftsDirectoryName);
+    var roiSessionDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.RoiSessionsDirectoryName);
+    var glmDirectory = Path.Combine(debugRoot, "glm-ocr-runtime");
+    var oldBugReportDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.BugReportsDirectoryName);
+    Directory.CreateDirectory(recognitionDirectory);
+    Directory.CreateDirectory(roiDraftDirectory);
+    Directory.CreateDirectory(roiSessionDirectory);
+    Directory.CreateDirectory(glmDirectory);
+    Directory.CreateDirectory(oldBugReportDirectory);
+
+    try
+    {
+        var recognitionLogPath = Path.Combine(recognitionDirectory, "recognition-2026-07-01T00-00-00-000Z-runStatusFull-test.json");
+        var capturePath = Path.Combine(debugRoot, "adb-capture.png");
+        var statePath = Path.Combine(root, "current-state.json");
+        var settingsPath = Path.Combine(root, "suki-settings.json");
+        File.WriteAllText(Path.Combine(debugRoot, "main.log"), "main log");
+        File.WriteAllText(recognitionLogPath, """{ "schemaVersion": 1, "profileId": "runStatusFull" }""");
+        File.WriteAllText(Path.Combine(roiDraftDirectory, "draft.json"), """{ "kind": "roi-draft" }""");
+        File.WriteAllText(Path.Combine(roiSessionDirectory, "session.json"), """{ "kind": "roi-session" }""");
+        File.WriteAllBytes(capturePath, [137, 80, 78, 71]);
+        File.WriteAllText(statePath, """{ "version": 1, "run": { "campaignId": "is5_sarkaz" } }""");
+        File.WriteAllText(settingsPath, """{ "AdbSerial": "127.0.0.1:16384" }""");
+        File.WriteAllText(Path.Combine(glmDirectory, "model.bin"), "model");
+        File.WriteAllText(Path.Combine(debugRoot, "native.dll"), "native");
+        File.WriteAllText(Path.Combine(oldBugReportDirectory, "old.zip"), "old");
+
+        var result = RhodesBugReportBundle.CreateAsync(new RhodesBugReportBundleRequest
+        {
+            DebugLogDirectory = debugRoot,
+            DestinationDirectory = destination,
+            StatePath = statePath,
+            SettingsPath = settingsPath,
+            LatestCapturePath = capturePath,
+            LatestRecognitionLogPath = recognitionLogPath,
+            Metadata = new Dictionary<string, string>
+            {
+                ["adbPreset"] = "MuMu Player",
+                ["adbSerial"] = "127.0.0.1:16384",
+                ["profileId"] = "runStatusFull",
+            },
+            Now = DateTimeOffset.Parse("2026-07-01T00:00:00Z"),
+        }).GetAwaiter().GetResult();
+
+        Equal(true, result.Success, "bug report success");
+        Equal(true, File.Exists(result.ZipPath), "bug report zip exists");
+        Equal(true, result.IncludedEntries.Contains("debug/main.log"), "main log included");
+        Equal(true, result.IncludedEntries.Contains("debug/Recognition Scans/recognition-2026-07-01T00-00-00-000Z-runStatusFull-test.json"), "recognition log included");
+        Equal(true, result.IncludedEntries.Contains("debug/ROI Drafts/draft.json"), "roi draft included");
+        Equal(true, result.IncludedEntries.Contains("debug/ROI Sessions/session.json"), "roi session included");
+        Equal(true, result.IncludedEntries.Contains("state/current-state.json"), "state included");
+        Equal(true, result.IncludedEntries.Contains("state/suki-settings.json"), "settings included");
+        Equal(true, result.SkippedEntries.Any(entry => entry.Path.EndsWith("glm-ocr-runtime", StringComparison.OrdinalIgnoreCase)), "glm runtime skipped");
+        Equal(true, result.SkippedEntries.Any(entry => entry.Path.EndsWith("native.dll", StringComparison.OrdinalIgnoreCase)), "dll skipped");
+
+        using var archive = ZipFile.OpenRead(result.ZipPath);
+        var entries = archive.Entries.Select(entry => entry.FullName).ToArray();
+        Equal(true, entries.Contains("manifest.json"), "manifest included");
+        Equal(true, entries.Contains("README.txt"), "readme included");
+        Equal(false, entries.Any(entry => entry.Contains("old.zip", StringComparison.OrdinalIgnoreCase)), "old zip excluded");
+        Equal(false, entries.Any(entry => entry.Contains("glm-ocr-runtime", StringComparison.OrdinalIgnoreCase)), "glm runtime excluded from zip");
+        Equal(false, entries.Any(entry => entry.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)), "dll excluded from zip");
+
+        var manifestEntry = archive.GetEntry("manifest.json") ?? throw new InvalidOperationException("manifest missing");
+        using var manifestReader = new StreamReader(manifestEntry.Open());
+        var manifest = JsonNode.Parse(manifestReader.ReadToEnd())!.AsObject();
+        Equal("Avalonia/Suki", manifest["distributionShell"]!.GetValue<string>(), "distribution shell");
+        Equal("MAA-OCR", manifest["ocrDefault"]!.GetValue<string>(), "default OCR");
+        Equal("MuMu Player", manifest["context.adbPreset"]!.GetValue<string>(), "manifest adb preset");
+        Equal("127.0.0.1:16384", manifest["context.adbSerial"]!.GetValue<string>(), "manifest adb serial");
+        var retainedTargets = manifest["retainedRecognitionTargets"]!.AsArray()
+            .Select(node => node!.GetValue<string>())
+            .ToArray();
+        Equal(true, retainedTargets.Contains("operators"), "operators retained");
+        Equal(true, retainedTargets.Contains("relics"), "relics retained");
+        Equal(false, retainedTargets.Contains("hope"), "hope not retained");
+        var abandonedFields = manifest["abandonedRunFields"]!.AsArray()
+            .Select(node => node!.GetValue<string>())
+            .ToArray();
+        Equal(true, abandonedFields.Contains("hope"), "hope abandoned");
+        Equal(true, abandonedFields.Contains("shield"), "shield abandoned");
+        Equal(true, abandonedFields.Contains("commandLevel"), "command level abandoned");
+    }
+    finally
+    {
+        if (Directory.Exists(root))
+            Directory.Delete(root, recursive: true);
     }
 }
 

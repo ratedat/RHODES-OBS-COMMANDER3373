@@ -55,7 +55,11 @@ public static class RhodesRecognitionScanHistory
                 RhodesMaaCandidateApiClient.ExtractCandidatePreviews(json),
                 ExtractTaskResults(root),
                 ExtractLogRows(root),
-                "");
+                "",
+                JsonString(root, "profileId"),
+                JsonString(root, "profileLabel"),
+                JsonString(root, "source"),
+                JsonString(root, "status"));
         }
         catch (Exception ex)
         {

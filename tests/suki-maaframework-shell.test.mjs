@@ -104,6 +104,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const recognitionWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionWorkflow.cs", "utf8");
   const scanHistory = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanHistory.cs", "utf8");
   const debugPaths = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiDebugPaths.cs", "utf8");
+  const bugReportBundle = await fs.readFile("apps/rhodes-suki/Services/RhodesBugReportBundle.cs", "utf8");
   const stateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesStateApiClient.cs", "utf8");
   const stateSyncWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiStateSyncWorkflow.cs", "utf8");
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
@@ -454,6 +455,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.doesNotMatch(viewModel, /RhodesRecognitionScanStatusClient/);
   assert.match(viewModel, /RhodesRecognitionScanHistory\.LoadRecent/);
   assert.match(viewModel, /RhodesRecognitionScanHistory\.LoadPayload/);
+  assert.match(viewModel, /payload\.ProfileId/);
+  assert.match(viewModel, /保存ログ再候補化\(local\)/);
   assert.match(viewModel, /TryLoadCapturePreviewFromPath/);
   assert.match(viewModel, /RhodesSukiDebugPaths\.RecognitionScansDirectory/);
   assert.match(viewModel, /RhodesMaaRecognitionEvidenceLog\.SaveAsync/);
@@ -462,6 +465,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(scanHistory, /ExtractTaskResults/);
   assert.match(scanHistory, /ExtractLogRows/);
   assert.match(models, /FirstImagePath/);
+  assert.match(models, /RhodesRecognitionScanHistoryPayload\([\s\S]*ProfileId/);
   assert.match(models, /HasImagePath/);
   assert.match(scanHistory, /ResourceTaskCount/);
   assert.match(scanHistory, /CandidateCount/);
@@ -804,6 +808,9 @@ test("MAA resource generator output is checked into the Suki shell", () => {
 
 test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   const xaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
+  const debugPaths = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiDebugPaths.cs", "utf8");
+  const bugReportBundle = await fs.readFile("apps/rhodes-suki/Services/RhodesBugReportBundle.cs", "utf8");
   const workspaceLayoutRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceLayoutRegistry.cs", "utf8");
 
   assert.match(workspaceLayoutRegistry, /MAA ADB接続/);
@@ -899,6 +906,20 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /CommandParameter="is5ThoughtFull"/);
   assert.match(xaml, /RunAllResourceTasksCommand/);
   assert.match(xaml, /ExportResourceTaskResultsCommand/);
+  assert.match(xaml, /CreateBugReportBundleCommand/);
+  assert.match(xaml, /バグ報告ZIP/);
+  assert.match(xaml, /BugReportBundleStatus/);
+  assert.match(viewModel, /RhodesBugReportBundle\.CreateAsync/);
+  assert.match(viewModel, /RhodesRunStateStore\.ResolveDefaultStatePath/);
+  assert.match(viewModel, /RhodesSukiSettingsStore\.DefaultPath/);
+  assert.match(debugPaths, /BugReportsDirectoryName/);
+  assert.match(debugPaths, /BugReportsDirectory/);
+  assert.match(bugReportBundle, /ZipArchive/);
+  assert.match(bugReportBundle, /manifest\.json/);
+  assert.match(bugReportBundle, /retainedRecognitionTargets/);
+  assert.match(bugReportBundle, /abandonedRunFields/);
+  assert.match(bugReportBundle, /GLM\/Ollama本体/);
+  assert.match(bugReportBundle, /excluded-extension/);
   assert.match(xaml, /RefreshRecognitionScanHistoryCommand/);
   assert.match(xaml, /LoadRecognitionScanHistoryCommand/);
   assert.match(xaml, /RecognitionScanHistory/);
@@ -989,6 +1010,9 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ConvertResourceTaskResultsCommand/);
   assert.match(xaml, /CandidateResults/);
   assert.match(xaml, /LastCandidateApplySummary/);
+  assert.match(xaml, /RecognitionDebugSummary/);
+  assert.match(viewModel, /"候補0"/);
+  assert.match(viewModel, /候補あり・反映確認待ち/);
   assert.match(xaml, /ResourceTaskDiagnostics/);
   assert.match(xaml, /RhodesApiUrl/);
   assert.match(xaml, /RunProbeCommand/);

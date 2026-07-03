@@ -6,6 +6,7 @@ public static class RhodesSukiDebugPaths
     public const string RecognitionScansDirectoryName = "Recognition Scans";
     public const string RoiDraftsDirectoryName = "ROI Drafts";
     public const string RoiSessionsDirectoryName = "ROI Sessions";
+    public const string BugReportsDirectoryName = "Bug Reports";
 
     public static string DebugLogDirectory => Path.Combine(AppContext.BaseDirectory, DebugLogDirectoryName);
 
@@ -14,4 +15,6 @@ public static class RhodesSukiDebugPaths
     public static string RoiDraftsDirectory => Path.Combine(DebugLogDirectory, RoiDraftsDirectoryName);
 
     public static string RoiSessionsDirectory => Path.Combine(DebugLogDirectory, RoiSessionsDirectoryName);
+
+    public static string BugReportsDirectory => Path.Combine(DebugLogDirectory, BugReportsDirectoryName);
 }

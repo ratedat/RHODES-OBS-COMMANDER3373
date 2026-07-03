@@ -939,7 +939,11 @@ public sealed record RhodesRecognitionScanHistoryPayload(
     IReadOnlyList<MaaCandidatePreview> Candidates,
     IReadOnlyList<MaaTaskRunResult> TaskResults,
     IReadOnlyList<RhodesRecognitionScanLogRow> LogRows,
-    string Error)
+    string Error,
+    string ProfileId = "",
+    string ProfileLabel = "",
+    string Source = "",
+    string Status = "")
 {
     public bool Succeeded => string.IsNullOrWhiteSpace(Error);
 

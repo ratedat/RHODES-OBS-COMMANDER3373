@@ -493,10 +493,11 @@
                 </Grid>
               </Border>
               <Border Grid.Column="1" CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4">
                   <TextBlock Text="{Binding RecognitionLayout.Review.Title}" FontSize="14" FontWeight="SemiBold" />
                   <TextBlock Grid.Row="1" Text="{Binding RecognitionLayout.Review.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
                   <TextBlock Grid.Row="2" Text="{Binding LastCandidateApplySummary}" FontSize="12" TextWrapping="Wrap" Opacity="0.74" />
+                  <TextBlock Grid.Row="3" Text="{Binding RecognitionDebugSummary}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
                 </Grid>
               </Border>
             </Grid>
@@ -807,6 +808,23 @@
             </StackPanel>
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel Spacing="12">
+                <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                  <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
+                    <TextBlock Text="バグ報告ZIP" FontSize="14" FontWeight="SemiBold" />
+                    <Button Grid.Column="1"
+                            Content="作成"
+                            Command="{Binding CreateBugReportBundleCommand}"
+                            Padding="12,5" />
+                    <TextBlock Grid.Row="1"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding BugReportBundleStatus}"
+                               FontFamily="Consolas"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Opacity="0.68" />
+                  </Grid>
+                </Border>
+
                 <ItemsControl ItemsSource="{Binding DebugLogLines}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Input;
 using Avalonia.Media.Imaging;
@@ -40,6 +41,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastResourceTaskResultsPath = "";
     private string _lastRoiDraftPath = "";
     private string _lastRoiSessionPath = "";
+    private string _lastBugReportBundlePath = "";
+    private string _bugReportBundleStatus = "未作成";
     private string _roiRescanComparisonSummary = "再スキャン比較未実行";
     private string _roiRescanComparisonEvidenceSummary = "比較証跡未保存";
     private string _roiRescanEvidencePreviewTitle = "比較証跡未表示";
@@ -246,6 +249,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
         ExportSelectedRoiDraftCommand = new AsyncRelayCommand(ExportSelectedRoiDraftAsync);
         ExportRoiAdjustmentSessionCommand = new AsyncRelayCommand(ExportRoiAdjustmentSessionAsync);
+        CreateBugReportBundleCommand = new AsyncRelayCommand(CreateBugReportBundleAsync);
         RefreshRoiAdjustmentSessionsCommand = new AsyncRelayCommand(RefreshRoiAdjustmentSessionsAsync);
         LoadRoiAdjustmentSessionCommand = new AsyncRelayCommand(parameter => LoadRoiAdjustmentSessionAsync(parameter as MaaRoiAdjustmentSessionItem));
         SelectRoiPreviewCommand = new AsyncRelayCommand(parameter => SelectRoiPreviewAsync(parameter as MaaRoiPreviewRow));
@@ -413,6 +417,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetProperty(ref _resourceTaskDiagnostics, value))
                 return;
             RefreshInspectorRows();
+            OnPropertyChanged(nameof(RecognitionDebugSummary));
         }
     }
 
@@ -928,6 +933,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public string LastBugReportBundlePath
+    {
+        get => _lastBugReportBundlePath;
+        private set => SetProperty(ref _lastBugReportBundlePath, value ?? "");
+    }
+
+    public string BugReportBundleStatus
+    {
+        get => _bugReportBundleStatus;
+        private set => SetProperty(ref _bugReportBundleStatus, string.IsNullOrWhiteSpace(value) ? "未作成" : value);
+    }
+
     public Bitmap? LastCaptureImage
     {
         get => _lastCaptureImage;
@@ -1044,7 +1061,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string LastCandidateApplySummary
     {
         get => _lastCandidateApplySummary;
-        private set => SetProperty(ref _lastCandidateApplySummary, string.IsNullOrWhiteSpace(value) ? "候補未反映" : value);
+        private set
+        {
+            if (!SetProperty(ref _lastCandidateApplySummary, string.IsNullOrWhiteSpace(value) ? "候補未反映" : value))
+                return;
+            OnPropertyChanged(nameof(RecognitionDebugSummary));
+        }
+    }
+
+    public string RecognitionDebugSummary
+    {
+        get
+        {
+            if (ResourceTaskResults.Count == 0)
+                return "未実行 / task=0 / candidate=0 / state=未反映";
+
+            var candidateState = CandidateResults.Count == 0
+                ? "候補0"
+                : LastCandidateApplySummary.Equals("候補未反映", StringComparison.Ordinal)
+                    || LastCandidateApplySummary.Contains("履歴", StringComparison.Ordinal)
+                    || LastCandidateApplySummary.Contains("再候補化", StringComparison.Ordinal)
+                    ? "候補あり・反映確認待ち"
+                    : "候補あり・反映処理済み";
+
+            return string.Join(
+                " / ",
+                $"task={ResourceTaskDiagnostics.Succeeded}/{ResourceTaskDiagnostics.Total}",
+                $"hit={ResourceTaskDiagnostics.Hit}",
+                $"rawOCR={OcrDetailRows.Count}",
+                $"ROI={RoiDetailRows.Count}",
+                $"candidate={CandidateResults.Count}",
+                $"state={candidateState}");
+        }
     }
 
     public bool ShowRoiOverlay
@@ -1313,6 +1361,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ExportSelectedRoiDraftCommand { get; }
 
     public ICommand ExportRoiAdjustmentSessionCommand { get; }
+
+    public ICommand CreateBugReportBundleCommand { get; }
 
     public ICommand RefreshRoiAdjustmentSessionsCommand { get; }
 
@@ -1699,20 +1749,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             var adbConfigJson = SukiAdbConfigJson.Normalize(AdbConfigJson);
             AdbConfigJson = adbConfigJson;
-            await RhodesSukiSettingsStore.SaveAsync(new RhodesSukiSettings(
-                AdbPath,
-                AdbSerial,
-                adbConfigJson,
-                RhodesApiUrl,
-                SelectedAdbPreset?.Id ?? "auto",
-                SelectedResourceProfile?.Id ?? "runStatusFull",
-                SelectedAdbInputMethod?.Id ?? SukiAdbMethodCatalog.DefaultInputMethodId,
-                SelectedAdbScreencapMethod?.Id ?? SukiAdbMethodCatalog.DefaultScreencapMethodId));
+            await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings(adbConfigJson));
             var apiError = await SaveAdbSettingsToApiStateAsync();
             StatusMessage = string.IsNullOrWhiteSpace(apiError)
                 ? $"Suki設定とADB API設定を保存しました: {RhodesSukiSettingsStore.DefaultPath}"
                 : $"Suki設定を保存しました。ADB API設定の反映は失敗: {apiError}";
         });
+    }
+
+    private RhodesSukiSettings BuildCurrentSettings(string? adbConfigJson = null)
+    {
+        return new RhodesSukiSettings(
+            AdbPath,
+            AdbSerial,
+            string.IsNullOrWhiteSpace(adbConfigJson) ? SukiAdbConfigJson.Normalize(AdbConfigJson) : adbConfigJson,
+            RhodesApiUrl,
+            SelectedAdbPreset?.Id ?? "auto",
+            SelectedResourceProfile?.Id ?? "runStatusFull",
+            SelectedAdbInputMethod?.Id ?? SukiAdbMethodCatalog.DefaultInputMethodId,
+            SelectedAdbScreencapMethod?.Id ?? SukiAdbMethodCatalog.DefaultScreencapMethodId);
     }
 
     private async Task<string> SaveAdbSettingsToApiStateAsync()
@@ -2197,6 +2252,72 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RefreshRoiAdjustmentSessions();
             StatusMessage = $"ROI調整セッションを保存しました: {LastRoiSessionPath}";
         });
+    }
+
+    private async Task CreateBugReportBundleAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var adbConfigJson = SukiAdbConfigJson.Normalize(AdbConfigJson);
+            AdbConfigJson = adbConfigJson;
+            await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings(adbConfigJson));
+
+            var result = await RhodesBugReportBundle.CreateAsync(new RhodesBugReportBundleRequest
+            {
+                DebugLogDirectory = RhodesSukiDebugPaths.DebugLogDirectory,
+                DestinationDirectory = RhodesSukiDebugPaths.BugReportsDirectory,
+                StatePath = RhodesRunStateStore.ResolveDefaultStatePath(),
+                SettingsPath = RhodesSukiSettingsStore.DefaultPath,
+                LatestCapturePath = LastCapturePath,
+                LatestRecognitionLogPath = LastResourceTaskResultsPath,
+                Metadata = BuildBugReportMetadata(),
+            });
+
+            LastBugReportBundlePath = result.ZipPath;
+            BugReportBundleStatus = result.Success
+                ? $"{result.IncludedEntries.Count}件 / {result.ZipBytes:n0} bytes / {result.ZipPath}"
+                : result.Message;
+            StatusMessage = result.Message;
+            DebugLogLines.Insert(0, result.Success
+                ? $"Bug report ZIP: {result.ZipPath}"
+                : $"Bug report ZIP failed: {result.Message}");
+        });
+    }
+
+    private IReadOnlyDictionary<string, string> BuildBugReportMetadata()
+    {
+        var plan = CurrentResourceExecutionPlan;
+        return new SortedDictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["appVersion"] = typeof(MainWindowViewModel).Assembly.GetName().Version?.ToString() ?? "",
+            ["os"] = RuntimeInformation.OSDescription,
+            ["processArchitecture"] = RuntimeInformation.ProcessArchitecture.ToString(),
+            ["baseResolution"] = BaseResolution.AspectRatioLabel,
+            ["campaignId"] = SelectedCampaign?.Id ?? "",
+            ["campaignLabel"] = SelectedCampaign?.DisplayName ?? "",
+            ["profileId"] = SelectedResourceProfile?.Id ?? "",
+            ["profileLabel"] = SelectedResourceProfile?.DisplayName ?? "",
+            ["executionPlan"] = plan.Summary,
+            ["maaContract"] = MaaResourceContract.Summary,
+            ["maaContractDetail"] = MaaResourceContract.Detail,
+            ["resourceTaskDiagnostics"] = ResourceTaskDiagnostics.Summary,
+            ["candidateCount"] = CandidateResults.Count.ToString(),
+            ["appliedStateSummary"] = LastCandidateApplySummary,
+            ["adbPath"] = AdbPath,
+            ["adbSerial"] = AdbSerial,
+            ["adbPreset"] = SelectedAdbPreset?.DisplayName ?? SelectedAdbPreset?.Label ?? "",
+            ["adbDetectionSummary"] = AdbDetectionSummary,
+            ["adbDetectionDetail"] = AdbDetectionDetail,
+            ["screencapMethod"] = SelectedAdbScreencapMethod?.Label ?? "",
+            ["inputMethod"] = SelectedAdbInputMethod?.Label ?? "",
+            ["captureState"] = CaptureState,
+            ["lastCapturePath"] = LastCapturePath,
+            ["lastRecognitionLogPath"] = LastResourceTaskResultsPath,
+            ["lastRoiDraftPath"] = LastRoiDraftPath,
+            ["lastRoiSessionPath"] = LastRoiSessionPath,
+            ["ocrEngine"] = SelectedOcrEngine?.Label ?? "",
+            ["rhodesApiUrl"] = RhodesApiUrl,
+        };
     }
 
     private async Task RefreshRoiAdjustmentSessionsAsync()
@@ -3305,8 +3426,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         string candidateApplySummary)
     {
         ClearRoiRescanComparison();
+        if (!string.IsNullOrWhiteSpace(payload.ProfileId))
+        {
+            SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile =>
+                profile.Id.Equals(payload.ProfileId, StringComparison.OrdinalIgnoreCase)) ?? SelectedResourceProfile;
+            _lastResourceExecutionPlan = null;
+        }
+
+        var replayCandidates = payload.Candidates;
+        if (replayCandidates.Count == 0 && payload.TaskResults.Count > 0)
+        {
+            replayCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(payload.ProfileId, payload.TaskResults);
+            candidateApplySummary = $"保存ログ再候補化(local): {payload.ProfileId} / 候補{replayCandidates.Count}件";
+        }
+
         CandidateResults.Clear();
-        foreach (var candidate in payload.Candidates)
+        foreach (var candidate in replayCandidates)
         {
             CandidateResults.Add(candidate);
         }
@@ -3453,6 +3588,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         foreach (var candidate in conversion.Candidates)
             CandidateResults.Add(candidate);
 
+        OnPropertyChanged(nameof(RecognitionDebugSummary));
         RefreshInspectorRows();
         LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
             ResourceTaskResults,
@@ -3526,6 +3662,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ReplaceCollection(OcrDetailRows, RhodesMaaOcrDetailRows.FromTaskResults(ResourceTaskResults));
         ReplaceCollection(RoiDetailRows, RhodesMaaRoiDetailRows.FromTaskResults(ResourceTaskResults));
         RefreshRoiPreviewRows();
+        OnPropertyChanged(nameof(RecognitionDebugSummary));
     }
 
     private void RefreshRoiPreviewRows()
