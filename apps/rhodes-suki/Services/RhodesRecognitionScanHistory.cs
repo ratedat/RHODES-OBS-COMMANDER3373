@@ -87,6 +87,7 @@ public static class RhodesRecognitionScanHistory
             if (logCount <= 0)
                 logCount = JsonArrayCount(root, "log");
 
+            var executionPlan = ExecutionPlan(root);
             return new RhodesRecognitionScanHistoryItem(
                 ProfileId: JsonString(root, "profileId"),
                 ProfileLabel: JsonString(root, "profileLabel"),
@@ -98,6 +99,11 @@ public static class RhodesRecognitionScanHistory
                 LogCount: logCount,
                 ResourceTaskCount: JsonInt(counts, "resourceTasks"),
                 PresetTaskCount: PresetTaskCount(root, counts),
+                ExecutionPlanState: executionPlan.State,
+                ExecutionPlanStateLabel: executionPlan.StateLabel,
+                ExecutionPlanSource: executionPlan.Source,
+                ExecutionPlanTaskCount: executionPlan.TaskCount,
+                ExecutionPlanError: executionPlan.Error,
                 LogPath: path,
                 Error: JsonError(root),
                 SortTimestamp: observedAt);
@@ -154,6 +160,21 @@ public static class RhodesRecognitionScanHistory
         var evidence = ObjectProperty(root, "evidence");
         var profile = ObjectProperty(evidence, "profile");
         return JsonArrayCount(profile, "presetTaskEntries");
+    }
+
+    private static (string State, string StateLabel, string Source, int TaskCount, string Error) ExecutionPlan(JsonElement root)
+    {
+        var evidence = ObjectProperty(root, "evidence");
+        var profile = ObjectProperty(evidence, "profile");
+        var plan = ObjectProperty(profile, "executionPlan");
+        return plan.ValueKind == JsonValueKind.Object
+            ? (
+                JsonString(plan, "state"),
+                JsonString(plan, "stateLabel"),
+                JsonString(plan, "source"),
+                JsonInt(plan, "taskCount"),
+                JsonString(plan, "error"))
+            : ("", "", "", 0, "");
     }
 
     private static string JsonError(JsonElement root)

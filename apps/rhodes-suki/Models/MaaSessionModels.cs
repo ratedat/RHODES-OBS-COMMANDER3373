@@ -862,6 +862,11 @@ public sealed record RhodesRecognitionScanHistoryItem(
     int LogCount,
     int ResourceTaskCount,
     int PresetTaskCount,
+    string ExecutionPlanState,
+    string ExecutionPlanStateLabel,
+    string ExecutionPlanSource,
+    int ExecutionPlanTaskCount,
+    string ExecutionPlanError,
     string LogPath,
     string Error,
     DateTimeOffset SortTimestamp)
@@ -876,8 +881,27 @@ public sealed record RhodesRecognitionScanHistoryItem(
 
     public string TimestampLabel => SortTimestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
+    public string ExecutionPlanSummary
+    {
+        get
+        {
+            var parts = new List<string>
+            {
+                string.IsNullOrWhiteSpace(ExecutionPlanStateLabel) ? ExecutionPlanState : ExecutionPlanStateLabel,
+                ExecutionPlanSource,
+            };
+            if (ExecutionPlanTaskCount > 0)
+                parts.Add($"tasks={ExecutionPlanTaskCount}");
+            if (!string.IsNullOrWhiteSpace(ExecutionPlanError))
+                parts.Add(ExecutionPlanError);
+            return string.Join("/", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+        }
+    }
+
     public string Summary => ResourceTaskCount > 0
-        ? $"{SourceLabel} / candidates={CandidateCount} / tasks={ResourceTaskCount} / preset={PresetTaskCount} / log={LogCount}"
+        ? string.IsNullOrWhiteSpace(ExecutionPlanSummary)
+            ? $"{SourceLabel} / candidates={CandidateCount} / tasks={ResourceTaskCount} / preset={PresetTaskCount} / log={LogCount}"
+            : $"{SourceLabel} / candidates={CandidateCount} / tasks={ResourceTaskCount} / preset={PresetTaskCount} / plan={ExecutionPlanSummary} / log={LogCount}"
         : $"{SourceLabel} / candidates={CandidateCount} / log={LogCount}";
 
     public string Detail => string.IsNullOrWhiteSpace(Error)

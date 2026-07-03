@@ -2364,7 +2364,17 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
                 "O:/debug/native-shot.png",
                 54321,
                 "オペレーター",
-                ["RhodesOperatorNameOcr"]));
+                ["RhodesOperatorNameOcr"],
+                executionPlan: new MaaResourceExecutionPlan(
+                    "operatorsFull",
+                    "オペレーター",
+                    "profile preset",
+                    ["RhodesOperatorNameOcr"],
+                    [
+                        new MaaResourceTaskPreview("RhodesOperatorNameOcr", "オペレーター名", "", ["operatorsFull"], "generated"),
+                    ],
+                    "",
+                    MaaResourceExecutionPlan.ReadyState)));
         File.WriteAllText(Path.Combine(directory, "recognition-broken.json"), "{");
 
         var history = RhodesRecognitionScanHistory.LoadRecent(directory, limit: 8);
@@ -2376,9 +2386,15 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
         Equal(1, history[0].CandidateCount, "native candidate count");
         Equal(1, history[0].ResourceTaskCount, "native task count");
         Equal(1, history[0].PresetTaskCount, "native preset task count");
+        Equal(MaaResourceExecutionPlan.ReadyState, history[0].ExecutionPlanState, "native execution plan state");
+        Equal("実行可能", history[0].ExecutionPlanStateLabel, "native execution plan label");
+        Equal("profile preset", history[0].ExecutionPlanSource, "native execution plan source");
+        Equal(1, history[0].ExecutionPlanTaskCount, "native execution plan task count");
+        Equal(true, history[0].Summary.Contains("plan=実行可能/profile preset/tasks=1", StringComparison.Ordinal), "native summary execution plan");
         Equal("秘宝スキャン", history[1].DisplayProfile, "api profile label");
         Equal(1, history[1].CandidateCount, "api candidate count");
         Equal(4, history[1].LogCount, "api log count");
+        Equal("", history[1].ExecutionPlanSummary, "api execution plan omitted");
 
         var nativePayload = RhodesRecognitionScanHistory.LoadPayload(history[0].LogPath);
         Equal(true, nativePayload.Succeeded, "native payload succeeded");
