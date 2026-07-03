@@ -779,6 +779,10 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.ok((runtimeWorkspace.match(/Height="236"/g) ?? []).length >= 2);
   assert.match(runtimeWorkspace, /AdbPathCandidates[\s\S]*MaxLines="2"/);
   assert.match(runtimeWorkspace, /AdbDevices[\s\S]*MaxLines="2"/);
+  assert.match(runtimeWorkspace, /IsVisible="\{Binding IsAdbPathCandidateListEmpty\}"/);
+  assert.match(runtimeWorkspace, /IsVisible="\{Binding IsAdbDeviceListEmpty\}"/);
+  assert.match(runtimeWorkspace, /Text="\{Binding AdbPathCandidateEmptyMessage\}"/);
+  assert.match(runtimeWorkspace, /Text="\{Binding AdbDeviceEmptyMessage\}"/);
   assert.doesNotMatch(runtimeWorkspace, /MaxHeight="170"/);
   assert.doesNotMatch(runtimeWorkspace, /ColumnDefinitions="128,\*,Auto,Auto"/);
   assert.match(xaml, /ApplyAdbPresetCommand/);
@@ -1007,6 +1011,21 @@ test("MAAFramework roadmap records 1280x720 as a 16:9 base coordinate system", a
   assert.match(roadmap, /maa-resource-scan-runner\.js/);
   assert.match(roadmap, /MFAToolsPlus/);
   assert.match(notice, /SweetSmellFox\/MFAToolsPlus/);
+});
+
+test("Suki runtime view model exposes ADB empty-state bindings", async () => {
+  const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
+
+  assert.match(viewModel, /public bool HasAdbPathCandidates => AdbPathCandidates\.Count > 0;/);
+  assert.match(viewModel, /public bool IsAdbPathCandidateListEmpty => !HasAdbPathCandidates;/);
+  assert.match(viewModel, /public string AdbPathCandidateEmptyMessage/);
+  assert.match(viewModel, /public bool HasAdbDevices => AdbDevices\.Count > 0;/);
+  assert.match(viewModel, /public bool IsAdbDeviceListEmpty => !HasAdbDevices;/);
+  assert.match(viewModel, /public string AdbDeviceEmptyMessage/);
+  assert.match(viewModel, /OnPropertyChanged\(nameof\(HasAdbPathCandidates\)\)/);
+  assert.match(viewModel, /OnPropertyChanged\(nameof\(IsAdbPathCandidateListEmpty\)\)/);
+  assert.match(viewModel, /OnPropertyChanged\(nameof\(HasAdbDevices\)\)/);
+  assert.match(viewModel, /OnPropertyChanged\(nameof\(IsAdbDeviceListEmpty\)\)/);
 });
 
 test("Suki design docs require operational operator and relic UI", async () => {

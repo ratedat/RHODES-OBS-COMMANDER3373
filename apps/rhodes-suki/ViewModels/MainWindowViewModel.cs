@@ -577,7 +577,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string AdbPathCandidateSummary => $"{AdbPathCandidates.Count}件";
 
+    public bool HasAdbPathCandidates => AdbPathCandidates.Count > 0;
+
+    public bool IsAdbPathCandidateListEmpty => !HasAdbPathCandidates;
+
+    public string AdbPathCandidateEmptyMessage => "ADB候補はありません。自動検出、参照、または手動入力でADB実行ファイルを指定してください。";
+
     public string AdbDeviceSummary => $"{AdbDevices.Count}件";
+
+    public bool HasAdbDevices => AdbDevices.Count > 0;
+
+    public bool IsAdbDeviceListEmpty => !HasAdbDevices;
+
+    public string AdbDeviceEmptyMessage => "接続端末はありません。エミュレーターを起動し、必要ならADB接続を有効化してから端末更新してください。";
 
     public string RunContextSummary
     {
@@ -1866,6 +1878,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ReplaceCollection(AdbPathCandidates, RhodesAdbCandidateRegistry.Normalize(candidates));
         SelectedAdbPathCandidate = RhodesAdbCandidateRegistry.SelectDefault(AdbPathCandidates, AdbPath);
         OnPropertyChanged(nameof(AdbPathCandidateSummary));
+        OnPropertyChanged(nameof(HasAdbPathCandidates));
+        OnPropertyChanged(nameof(IsAdbPathCandidateListEmpty));
     }
 
     private void UpsertAdbPathCandidate(MaaAdbPathCandidatePreview candidate)
@@ -1877,6 +1891,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         ReplaceCollection(AdbDevices, devices);
         OnPropertyChanged(nameof(AdbDeviceSummary));
+        OnPropertyChanged(nameof(HasAdbDevices));
+        OnPropertyChanged(nameof(IsAdbDeviceListEmpty));
     }
 
     private void ApplyAdbMethodsForPreset(string? presetId)

@@ -695,7 +695,8 @@
                     <TextBlock Text="ADB候補" FontSize="14" FontWeight="SemiBold" />
                     <TextBlock Grid.Column="1" Text="{Binding AdbPathCandidateSummary}" FontSize="12" Opacity="0.62" VerticalAlignment="Center" />
                   </Grid>
-                  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                  <TextBlock Grid.Row="1" Text="{Binding AdbPathCandidateEmptyMessage}" IsVisible="{Binding IsAdbPathCandidateListEmpty}" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
+                  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasAdbPathCandidates}">
                     <ItemsControl ItemsSource="{Binding AdbPathCandidates}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -720,7 +721,8 @@
                     <TextBlock Text="接続端末" FontSize="14" FontWeight="SemiBold" />
                     <TextBlock Grid.Column="1" Text="{Binding AdbDeviceSummary}" FontSize="12" Opacity="0.62" VerticalAlignment="Center" />
                   </Grid>
-                  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                  <TextBlock Grid.Row="1" Text="{Binding AdbDeviceEmptyMessage}" IsVisible="{Binding IsAdbDeviceListEmpty}" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
+                  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasAdbDevices}">
                     <ItemsControl ItemsSource="{Binding AdbDevices}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
