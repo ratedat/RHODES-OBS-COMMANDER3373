@@ -100,7 +100,6 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const candidateApplier = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionCandidateApplier.cs", "utf8");
   const candidateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaCandidateApiClient.cs", "utf8");
   const recognitionWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionWorkflow.cs", "utf8");
-  const scanResultParser = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanApiClient.cs", "utf8");
   const scanHistory = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanHistory.cs", "utf8");
   const debugPaths = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiDebugPaths.cs", "utf8");
   const stateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesStateApiClient.cs", "utf8");
@@ -386,11 +385,11 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(recognitionWorkflow, /RhodesMaaCandidateMerger\.Merge/);
   assert.match(recognitionWorkflow, /RhodesStateApiClient\.ApplyCandidatesToStateJson/);
   assert.match(recognitionWorkflow, /RhodesApiStatusProbe\.ParseStateJson/);
-  assert.doesNotMatch(viewModel, /RhodesRecognitionScanApiClient\.RunAsync/);
-  assert.doesNotMatch(scanResultParser, /PostAsJsonAsync/);
-  assert.doesNotMatch(scanResultParser, /api\/recognition\/scan/);
-  assert.match(scanResultParser, /ExtractResult/);
-  assert.match(scanResultParser, /RhodesMaaCandidateApiClient\.ExtractCandidatePreviews/);
+  assert.doesNotMatch(viewModel, /RhodesRecognitionScanApiClient/);
+  await assert.rejects(
+    fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanApiClient.cs", "utf8"),
+    /ENOENT/,
+  );
   assert.match(stateApiClient, /api\/state/);
   assert.match(viewModel, /RhodesSukiStateSyncWorkflow\.SyncSettingsAsync/);
   assert.match(viewModel, /RhodesSukiStateSyncWorkflow\.SyncFromApiAsync/);

@@ -14,7 +14,6 @@ var tests = new (string Name, Action Run)[]
     ("MAA hit without detail falls back to a simple candidate", HitFallback),
     ("Candidate preview exposes stable debugger identity", CandidatePreviewIdentity),
     ("MAA candidate API extraction preserves structured ids", CandidateApiExtraction),
-    ("Recognition scan API extraction preserves profile status and candidates", RecognitionScanApiExtraction),
     ("MAA candidate merger supplements missing local candidates safely", CandidateMergerSupplementsLocalCandidates),
     ("MAA candidate merger keeps campaign-specific run status fields", CandidateMergerKeepsCampaignRunStatusFields),
     ("Recognition workflow runs resource tasks in plan order", RecognitionWorkflowRunsResourceTasks),
@@ -301,46 +300,6 @@ static void CandidateApiExtraction()
     Equal("status_a", candidates[3].StatusId, "coin status id");
     Equal("back", candidates[3].Face, "coin face");
     Equal(2, candidates[3].Count, "coin count");
-}
-
-static void RecognitionScanApiExtraction()
-{
-    var result = RhodesRecognitionScanApiClient.ExtractResult(
-        """
-        {
-          "result": {
-            "profileId": "operatorsFull",
-            "status": "completed",
-            "logPath": "O:/logs/recognition.json",
-            "candidates": [
-              {
-                "kind": "operator",
-                "name": "グム",
-                "value": "gummy",
-                "rawText": "グム",
-                "confidence": 0.91,
-                "operatorId": "gummy"
-              },
-              {
-                "kind": "runStatus",
-                "label": "希望",
-                "field": "hope",
-                "value": 3,
-                "rawText": "3",
-                "confidence": 0.88
-              }
-            ]
-          }
-        }
-        """);
-
-    Equal("operatorsFull", result.ProfileId, "scan profile id");
-    Equal("completed", result.Status, "scan status");
-    Equal("O:/logs/recognition.json", result.LogPath, "scan log path");
-    Equal(true, result.Succeeded, "scan success");
-    Equal(1, result.Candidates.Count, "scan candidates");
-    Equal("gummy", result.Candidates[0].OperatorId, "operator id");
-    Equal(false, result.Candidates.Any(item => item.Field == "hope"), "scan abandoned run field omitted");
 }
 
 static void CandidateMergerSupplementsLocalCandidates()
