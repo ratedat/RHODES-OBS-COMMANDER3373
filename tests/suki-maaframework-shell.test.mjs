@@ -70,6 +70,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const adbPresets = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbPresetCatalog.cs", "utf8");
   const adbDeviceProbe = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbDeviceProbe.cs", "utf8");
   const adbCandidateRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbCandidateRegistry.cs", "utf8");
+  const adbDetectionWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiAdbDetectionWorkflow.cs", "utf8");
   const settingsStore = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiSettingsStore.cs", "utf8");
   const diagnostics = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaTaskDiagnostics.cs", "utf8");
   const ocrDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaOcrDetailRows.cs", "utf8");
@@ -282,6 +283,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /ApplyAdbPresetCommand/);
   assert.match(viewModel, /RefreshAdbDevicesCommand/);
   assert.match(viewModel, /ApplyAdbDeviceCommand/);
+  assert.match(viewModel, /RhodesSukiAdbDetectionWorkflow\.DetectAsync/);
+  assert.match(adbDetectionWorkflow, /RhodesAdbCandidateRegistry\.SelectDefault/);
+  assert.match(adbDetectionWorkflow, /Sukiローカル検出: ADB候補/);
+  assert.doesNotMatch(viewModel, /localDetection\.Connect/);
   assert.match(viewModel, /RefreshOptionalRuntimesCommand/);
   assert.match(viewModel, /RhodesSukiRuntimeProbeWorkflow\.ProbeAsync/);
   assert.match(runtimeProbeWorkflow, /Task\.WhenAll\(apiTask, masterTask, optionalTask, hypervisorTask\)/);

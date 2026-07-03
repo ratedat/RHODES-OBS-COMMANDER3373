@@ -37,6 +37,7 @@ var tests = new (string Name, Action Run)[]
     ("ADB method catalog maps emulator presets to fast lossless MAA methods", AdbMethodCatalog),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("ADB candidate registry keeps the runtime picker focused", AdbCandidateRegistry),
+    ("Suki ADB detection workflow summarizes selected runtime path and devices", SukiAdbDetectionWorkflow),
     ("ADB detect API client parses runtime, candidates, and devices", AdbApiDetectionParsing),
     ("ADB test API client parses resolution and screenshot details", AdbApiTestParsing),
     ("Suki local ADB detector connects Google Play Games TCP serial", SukiLocalAdbDetectGooglePlay),
@@ -936,6 +937,34 @@ static void AdbCandidateRegistry()
 
     selected = RhodesAdbCandidateRegistry.SelectDefault(normalized, "C:/Other/adb.exe");
     Equal("C:/Tools/adb.exe", selected?.Path ?? "", "first selectable fallback");
+}
+
+static void SukiAdbDetectionWorkflow()
+{
+    var snapshot = RhodesSukiAdbDetectionWorkflow.DetectAsync(
+        new RhodesAdbApiSettings(true, "mumu", "C:/Missing/adb.exe", ""),
+        (_, _) => Task.FromResult(new RhodesAdbLocalDetectionResult(
+            "C:/Tools/MuMu/adb.exe",
+            "C:/Tools/MuMu/adb.exe",
+            "127.0.0.1:16384",
+            [
+                new MaaAdbPathCandidatePreview("C:/Tools/MuMu/adb.exe", "known-path", "mumu", true, true, ""),
+                new MaaAdbPathCandidatePreview("C:/Missing/adb.exe", "settings", "custom", false, false, "")
+            ],
+            [new MaaAdbDevicePreview("127.0.0.1:16384", "device", "product:Hapburn")],
+            new RhodesAdbConnectPreview("127.0.0.1:16384", true, "connected"),
+            "")),
+        path => path.Contains("Tools", StringComparison.OrdinalIgnoreCase)).GetAwaiter().GetResult();
+
+    Equal("C:/Tools/MuMu/adb.exe", snapshot.AdbPath, "workflow adb path");
+    Equal("127.0.0.1:16384", snapshot.AdbSerial, "workflow serial");
+    Equal("C:/Tools/MuMu/adb.exe", snapshot.SelectedAdbPathCandidate?.Path ?? "", "workflow selected candidate");
+    Equal(2, snapshot.AdbCandidates.Count, "workflow candidates");
+    Equal(1, snapshot.Devices.Count, "workflow devices");
+    Equal("Sukiローカル検出: ADB候補2件 / 端末1件", snapshot.DetectionSummary, "workflow summary");
+    Equal("選択中: C:/Tools/MuMu/adb.exe / 127.0.0.1:16384 / connect 127.0.0.1:16384", snapshot.DetectionDetail, "workflow detail");
+    Equal("ADB検出OK", snapshot.SessionState, "workflow session state");
+    Equal("Sukiローカル検出で端末を取得しました: 1件", snapshot.StatusMessage, "workflow status");
 }
 
 static void AdbApiDetectionParsing()
