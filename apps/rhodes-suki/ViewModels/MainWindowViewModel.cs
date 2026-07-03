@@ -2003,7 +2003,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RunAllResourceTasksAsync()
     {
-        await RunBusyAsync(RunAllResourceTasksCoreAsync);
+        await RunBusyAsync(async () => { await RunAllResourceTasksCoreAsync(); });
     }
 
     private async Task ExportResourceTaskResultsAsync()
@@ -2156,8 +2156,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 beforeTaskResults,
                 SelectedResourceProfile?.Id,
                 beforeCandidates);
-            await RunAllResourceTasksCoreAsync();
-            await ConvertResourceTaskResultsCoreAsync();
+            if (!await RunAllResourceTasksCoreAsync())
+                return;
+            if (!await ConvertResourceTaskResultsCoreAsync())
+                return;
 
             var afterTaskResults = ResourceTaskResults.ToArray();
             var afterCandidates = CandidateResults.ToArray();
@@ -2948,7 +2950,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task ConvertResourceTaskResultsAsync()
     {
-        await RunBusyAsync(ConvertResourceTaskResultsCoreAsync);
+        await RunBusyAsync(async () => { await ConvertResourceTaskResultsCoreAsync(); });
     }
 
     private async Task ApplyCandidateResultsAsync()
@@ -2984,8 +2986,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "選択プロファイルの認識を開始します。";
-            await RunAllResourceTasksCoreAsync();
-            await ConvertResourceTaskResultsCoreAsync();
+            if (await RunAllResourceTasksCoreAsync())
+                await ConvertResourceTaskResultsCoreAsync();
         });
     }
 
@@ -2994,8 +2996,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "選択プロファイルの認識と反映を開始します。";
-            await RunAllResourceTasksCoreAsync();
-            await ConvertResourceTaskResultsCoreAsync();
+            if (!await RunAllResourceTasksCoreAsync())
+                return;
+            if (!await ConvertResourceTaskResultsCoreAsync())
+                return;
             await ApplyCandidateResultsCoreAsync();
         });
     }
@@ -3125,7 +3129,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return result.Error;
     }
 
-    private async Task RunAllResourceTasksCoreAsync()
+    private async Task<bool> RunAllResourceTasksCoreAsync()
     {
         var plan = RhodesMaaResourceCatalog.BuildExecutionPlan(_allResourceTasks, SelectedResourceProfile);
         _lastResourceExecutionPlan = null;
@@ -3139,15 +3143,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!plan.CanRun)
         {
             StatusMessage = plan.Summary;
-            return;
+            return false;
         }
         if (!EnsureMaaOcrReadyForRecognition())
-            return;
+            return false;
 
         _lastResourceExecutionPlan = plan;
         StatusMessage = $"MAA実行計画: {plan.Summary}";
         if (!await ForceCaptureAsync())
-            return;
+            return false;
 
         var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
             plan,
@@ -3162,7 +3166,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             StatusMessage = execution.Error;
             RefreshInspectorRows();
-            return;
+            return false;
         }
         RefreshInspectorRows();
         if (ResourceTaskResults.Any())
@@ -3178,14 +3182,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 plan.TaskEntries);
             StatusMessage = $"MAA scan証跡を保存しました: {LastResourceTaskResultsPath}";
         }
+        return ResourceTaskResults.Any();
     }
 
-    private async Task ConvertResourceTaskResultsCoreAsync()
+    private async Task<bool> ConvertResourceTaskResultsCoreAsync()
     {
         if (!ResourceTaskResults.Any())
         {
             StatusMessage = "先にResource taskを実行してください。";
-            return;
+            return false;
         }
 
         var profileId = CandidateApiProfileId();
@@ -3208,6 +3213,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             evidencePlan?.ProfileLabel,
             evidencePlan?.TaskEntries);
         StatusMessage = conversion.StatusMessage;
+        return CandidateResults.Count > 0;
     }
 
     private string? CandidateApiProfileId()

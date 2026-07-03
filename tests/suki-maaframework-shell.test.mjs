@@ -336,7 +336,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(adbConnectionTestWorkflow, /FromCapture/);
   assert.match(
     viewModel,
-    /private async Task RunSelectedProfileRecognitionAndApplyAsync\(\)[\s\S]*await RunAllResourceTasksCoreAsync\(\)[\s\S]*await ConvertResourceTaskResultsCoreAsync\(\)[\s\S]*await ApplyCandidateResultsCoreAsync\(\)/,
+    /private async Task RunSelectedProfileRecognitionAndApplyAsync\(\)[\s\S]*if \(!await RunAllResourceTasksCoreAsync\(\)\)[\s\S]*return;[\s\S]*if \(!await ConvertResourceTaskResultsCoreAsync\(\)\)[\s\S]*return;[\s\S]*await ApplyCandidateResultsCoreAsync\(\)/,
   );
   assert.match(
     viewModel,
