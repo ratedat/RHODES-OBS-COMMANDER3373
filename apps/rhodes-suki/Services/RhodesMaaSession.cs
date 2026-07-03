@@ -26,7 +26,7 @@ public sealed class RhodesMaaSession : IDisposable
             RhodesMaaPaths.DefaultAgentBinaryRoot,
             adbPath,
             adbSerial,
-            string.IsNullOrWhiteSpace(adbConfigJson) ? "{}" : adbConfigJson,
+            SukiAdbConfigJson.Normalize(adbConfigJson),
             inputMethod,
             screencapMethod);
     }

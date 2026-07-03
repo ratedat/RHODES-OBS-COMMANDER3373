@@ -35,6 +35,7 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB method catalog maps emulator presets to fast lossless MAA methods", AdbMethodCatalog),
+    ("ADB config JSON normalizer accepts only object payloads", AdbConfigJsonNormalizer),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("ADB candidate registry keeps the runtime picker focused", AdbCandidateRegistry),
     ("Suki ADB detection workflow summarizes selected runtime path and devices", SukiAdbDetectionWorkflow),
@@ -895,6 +896,14 @@ static void AdbMethodCatalog()
     Equal(SukiAdbMethodCatalog.DefaultInputMethodId, ldInput.Id, "ldplayer input stays default");
     Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, ldScreencap.Id, "ldplayer screencap fast");
     Equal(SukiAdbMethodCatalog.DefaultScreencapMethodId, googlePlay.Id, "google play stays default");
+}
+
+static void AdbConfigJsonNormalizer()
+{
+    Equal("{}", SukiAdbConfigJson.Normalize(""), "blank config");
+    Equal("""{"touch":"adb"}""", SukiAdbConfigJson.Normalize(""" { "touch" : "adb" } """), "object config");
+    ThrowsInvalidOperation(() => SukiAdbConfigJson.Normalize("not json"), "invalid json");
+    ThrowsInvalidOperation(() => SukiAdbConfigJson.Normalize("[1,2]"), "array json");
 }
 
 static void AdbDeviceParsing()
@@ -3612,4 +3621,18 @@ static void Equal<T>(T expected, T actual, string label)
 {
     if (!EqualityComparer<T>.Default.Equals(expected, actual))
         throw new InvalidOperationException($"{label}: expected {expected}, got {actual}");
+}
+
+static void ThrowsInvalidOperation(Action action, string label)
+{
+    try
+    {
+        action();
+    }
+    catch (InvalidOperationException)
+    {
+        return;
+    }
+
+    throw new InvalidOperationException($"{label}: expected InvalidOperationException");
 }

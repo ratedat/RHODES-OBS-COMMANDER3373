@@ -1,4 +1,6 @@
 using MaaFramework.Binding;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace RhodesSuki.Models;
 
@@ -15,6 +17,28 @@ public sealed record MaaSessionOptions(
     string AdbConfigJson,
     AdbInputMethods InputMethod,
     AdbScreencapMethods ScreencapMethod);
+
+public static class SukiAdbConfigJson
+{
+    public static string Normalize(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "{}";
+
+        try
+        {
+            var node = JsonNode.Parse(value);
+            if (node is not JsonObject)
+                throw new InvalidOperationException("ADB ConfigはJSON objectで入力してください。");
+
+            return node.ToJsonString();
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"ADB Config JSONが不正です: {ex.Message}", ex);
+        }
+    }
+}
 
 public sealed record MaaAdbPresetPreview(
     string Id,

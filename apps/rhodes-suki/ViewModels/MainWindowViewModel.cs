@@ -436,7 +436,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string AdbConfigJson
     {
         get => _adbConfigJson;
-        set => SetProperty(ref _adbConfigJson, string.IsNullOrWhiteSpace(value) ? "{}" : value);
+        set => SetProperty(ref _adbConfigJson, string.IsNullOrWhiteSpace(value) ? "{}" : value.Trim());
     }
 
     public string WorkspaceTab
@@ -1598,10 +1598,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunBusyAsync(async () =>
         {
+            var adbConfigJson = SukiAdbConfigJson.Normalize(AdbConfigJson);
+            AdbConfigJson = adbConfigJson;
             await RhodesSukiSettingsStore.SaveAsync(new RhodesSukiSettings(
                 AdbPath,
                 AdbSerial,
-                AdbConfigJson,
+                adbConfigJson,
                 RhodesApiUrl,
                 SelectedAdbPreset?.Id ?? "auto",
                 SelectedResourceProfile?.Id ?? "runStatusFull",

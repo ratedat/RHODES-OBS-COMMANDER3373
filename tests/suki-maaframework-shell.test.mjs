@@ -282,6 +282,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /AdbScreencapMethodOptions/);
   assert.match(viewModel, /SukiAdbMethodCatalog\.DefaultInputMethodIdForPreset/);
   assert.match(viewModel, /SukiAdbMethodCatalog\.DefaultScreencapMethodIdForPreset/);
+  assert.match(models, /public static class SukiAdbConfigJson/);
+  assert.match(viewModel, /SukiAdbConfigJson\.Normalize\(AdbConfigJson\)/);
+  assert.match(session, /SukiAdbConfigJson\.Normalize\(adbConfigJson\)/);
   assert.match(viewModel, /ApplyAdbPresetCommand/);
   assert.match(viewModel, /RefreshAdbDevicesCommand/);
   assert.match(viewModel, /ApplyAdbDeviceCommand/);
