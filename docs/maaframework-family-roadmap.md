@@ -70,7 +70,8 @@ flowchart LR
 - 接続済み: MAAFramework native `Tasker` の単発/一括実行は実行直前のfresh captureを使い、単発実行でも証跡JSONを保存する。
 - 接続済み: MAAFramework native `Tasker` 実行履歴と過去のNode API経由スキャン履歴を、UI上の同一スキャン履歴ビューへ統合し、候補/task結果を再読込できる。
 - 接続済み: 保存済み `recognition-*.json` のprofile/source/statusを復元し、candidateが無い証跡でもtask resultからローカル再候補化してADBなしで切り分けできる。
-- 接続済み: Debugワークスペースから公開デバッグ用バグ報告ZIPを作成し、Debug Logs / Recognition Scans / ROI Sessions / ROI Drafts / state / settings / manifestをまとめられる。
+- 接続済み: 認識前のスクリーンショットを Frame Records としてPNG、メタJSON、state snapshotの同一frameIdで保存できる。
+- 接続済み: Debugワークスペースから公開デバッグ用バグ報告ZIPを作成し、Debug Logs / Frame Records / Recognition Scans / ROI Sessions / ROI Drafts / state / settings / manifestをまとめられる。
 - 接続済み: バグ報告ZIPは GLM/Ollama本体、モデル、巨大キャッシュ、旧ZIP、DLL/EXE類を除外し、manifestにADB概要、MAA contract、対象認識境界を保存する。
 - 接続済み: スキャン履歴の `log[]` イベントを詳細パネルへ復元し、capture/recognize/tap等のイベント、スクリーンショットパス、OCR詳細を追える。
 - 接続済み: スキャン履歴の `log[].path` がPNG/JPGの場合、読込時に右側プレビューへスクリーンショットを復元する。

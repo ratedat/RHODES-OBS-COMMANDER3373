@@ -680,6 +680,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(roiPreviewProjector, /imageWidth/);
   assert.match(roiPreviewProjector, /baseResolution\.Width/);
   assert.match(viewModel, /ShowRoiOverlay/);
+  assert.match(debugPaths, /Frame Records/);
   assert.match(debugPaths, /Recognition Scans/);
   assert.match(debugPaths, /ROI Drafts/);
   assert.match(debugPaths, /ROI Sessions/);
@@ -914,6 +915,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(viewModel, /RhodesSukiSettingsStore\.DefaultPath/);
   assert.match(debugPaths, /BugReportsDirectoryName/);
   assert.match(debugPaths, /BugReportsDirectory/);
+  assert.match(debugPaths, /FrameRecordsDirectory/);
   assert.match(bugReportBundle, /ZipArchive/);
   assert.match(bugReportBundle, /manifest\.json/);
   assert.match(bugReportBundle, /retainedRecognitionTargets/);

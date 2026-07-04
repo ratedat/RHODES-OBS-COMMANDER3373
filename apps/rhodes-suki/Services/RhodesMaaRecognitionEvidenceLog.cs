@@ -26,7 +26,10 @@ public static class RhodesMaaRecognitionEvidenceLog
         IEnumerable<string>? presetTaskEntries = null,
         MaaRecognitionRuntimeEvidence? runtime = null,
         MaaResourceExecutionPlan? executionPlan = null,
-        MaaResourceContractSnapshot? contract = null)
+        MaaResourceContractSnapshot? contract = null,
+        string? frameId = null,
+        string? frameMetadataPath = null,
+        string? stateSnapshotPath = null)
     {
         var resultList = taskResults.ToArray();
         var candidateList = candidates.ToArray();
@@ -41,6 +44,9 @@ public static class RhodesMaaRecognitionEvidenceLog
         var normalizedProfile = NormalizeProfile(profileId);
         var normalizedProfileLabel = string.IsNullOrWhiteSpace(profileLabel) ? normalizedProfile : profileLabel.Trim();
         var normalizedCapturePath = string.IsNullOrWhiteSpace(capturePath) ? "" : capturePath.Trim();
+        var normalizedFrameId = string.IsNullOrWhiteSpace(frameId) ? "" : frameId.Trim();
+        var normalizedFrameMetadataPath = string.IsNullOrWhiteSpace(frameMetadataPath) ? "" : frameMetadataPath.Trim();
+        var normalizedStateSnapshotPath = string.IsNullOrWhiteSpace(stateSnapshotPath) ? "" : stateSnapshotPath.Trim();
         var log = new List<object>();
         if (!string.IsNullOrWhiteSpace(normalizedCapturePath))
         {
@@ -51,6 +57,9 @@ public static class RhodesMaaRecognitionEvidenceLog
                 stage = "maa-native",
                 path = normalizedCapturePath,
                 bytes = Math.Max(0, captureBytes),
+                frameId = normalizedFrameId,
+                metadataPath = normalizedFrameMetadataPath,
+                stateSnapshotPath = normalizedStateSnapshotPath,
             });
         }
 
@@ -119,6 +128,9 @@ public static class RhodesMaaRecognitionEvidenceLog
                 {
                     path = normalizedCapturePath,
                     bytes = Math.Max(0, captureBytes),
+                    frameId = normalizedFrameId,
+                    metadataPath = normalizedFrameMetadataPath,
+                    stateSnapshotPath = normalizedStateSnapshotPath,
                 },
                 contract = contract is null
                     ? null
@@ -156,7 +168,10 @@ public static class RhodesMaaRecognitionEvidenceLog
         IEnumerable<string>? presetTaskEntries = null,
         MaaRecognitionRuntimeEvidence? runtime = null,
         MaaResourceExecutionPlan? executionPlan = null,
-        MaaResourceContractSnapshot? contract = null)
+        MaaResourceContractSnapshot? contract = null,
+        string? frameId = null,
+        string? frameMetadataPath = null,
+        string? stateSnapshotPath = null)
     {
         Directory.CreateDirectory(directory);
         var completed = completedAt ?? DateTimeOffset.UtcNow;
@@ -164,7 +179,7 @@ public static class RhodesMaaRecognitionEvidenceLog
         var requestId = Guid.NewGuid().ToString("D");
         var normalizedProfile = NormalizeProfile(profileId) ?? "all";
         var file = Path.Combine(directory, $"recognition-{TimestampForFile(started)}-{SanitizeFilePart(normalizedProfile)}-{SanitizeFilePart(requestId)}.json");
-        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes, profileLabel, presetTaskEntries, runtime, executionPlan, contract);
+        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes, profileLabel, presetTaskEntries, runtime, executionPlan, contract, frameId, frameMetadataPath, stateSnapshotPath);
         await File.WriteAllTextAsync(file, $"{json}{Environment.NewLine}");
         return file;
     }

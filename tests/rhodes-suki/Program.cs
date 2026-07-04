@@ -76,6 +76,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA ROI selection matcher links OCR detail rows to ROI previews", RoiSelectionMatcherLinksOcrRows),
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
+    ("Recognition frame record store saves screenshot metadata and state snapshot", RecognitionFrameRecordStoreSavesFrame),
     ("Bug report bundle collects debug artifacts without optional runtimes", BugReportBundleCollectsDebugArtifacts),
     ("Evidence preview tree uses compact typed nodes", EvidencePreviewTreeUsesCompactTypedNodes),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
@@ -2293,7 +2294,10 @@ static void MaaNativeEvidenceLog()
             ],
             "",
             MaaResourceExecutionPlan.ReadyState),
-        new MaaResourceContractSnapshot(true, 43, 7, 7, []));
+        new MaaResourceContractSnapshot(true, 43, 7, 7, []),
+        "frame-a",
+        "O:/debug/frame-a.json",
+        "O:/debug/frame-a-state.json");
 
     var root = JsonNode.Parse(json)!.AsObject();
     Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
@@ -2308,6 +2312,7 @@ static void MaaNativeEvidenceLog()
     Equal(3, counts["log"]!.GetValue<int>(), "evidence log count includes capture");
     Equal("capture", root["log"]!.AsArray()[0]!.AsObject()["event"]!.GetValue<string>(), "evidence capture log event");
     Equal("O:/debug/native-capture.png", root["log"]!.AsArray()[0]!.AsObject()["path"]!.GetValue<string>(), "evidence capture log path");
+    Equal("frame-a", root["log"]!.AsArray()[0]!.AsObject()["frameId"]!.GetValue<string>(), "evidence capture frame id");
     Equal("maa-task", root["log"]!.AsArray()[1]!.AsObject()["event"]!.GetValue<string>(), "evidence task log event");
     var evidence = root["evidence"]!.AsObject();
     Equal("maa-resource-task-results", evidence["kind"]!.GetValue<string>(), "evidence kind");
@@ -2322,6 +2327,9 @@ static void MaaNativeEvidenceLog()
     Equal(2, executionPlan["taskCount"]!.GetValue<int>(), "evidence execution plan task count");
     Equal(2, executionPlan["taskEntries"]!.AsArray().Count, "evidence execution plan entries");
     Equal("O:/debug/native-capture.png", evidence["capture"]!.AsObject()["path"]!.GetValue<string>(), "evidence capture path");
+    Equal("frame-a", evidence["capture"]!.AsObject()["frameId"]!.GetValue<string>(), "evidence capture frame id");
+    Equal("O:/debug/frame-a.json", evidence["capture"]!.AsObject()["metadataPath"]!.GetValue<string>(), "evidence capture metadata path");
+    Equal("O:/debug/frame-a-state.json", evidence["capture"]!.AsObject()["stateSnapshotPath"]!.GetValue<string>(), "evidence capture state snapshot path");
     var contract = evidence["contract"]!.AsObject();
     Equal(true, contract["isValid"]!.GetValue<bool>(), "evidence contract valid");
     Equal("OK", contract["state"]!.GetValue<string>(), "evidence contract state");
@@ -2397,7 +2405,10 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
                     ],
                     "",
                     MaaResourceExecutionPlan.ReadyState),
-                contract: new MaaResourceContractSnapshot(true, 43, 7, 7, [])));
+                contract: new MaaResourceContractSnapshot(true, 43, 7, 7, []),
+                frameId: "frame-native",
+                frameMetadataPath: "O:/debug/frame-native.json",
+                stateSnapshotPath: "O:/debug/frame-native-state.json"));
         File.WriteAllText(Path.Combine(directory, "recognition-broken.json"), "{");
 
         var history = RhodesRecognitionScanHistory.LoadRecent(directory, limit: 8);
@@ -2432,6 +2443,9 @@ static void RecognitionScanHistoryLoadsUnifiedLogs()
         Equal("オペレーター", nativePayload.ProfileLabel, "native payload profile label");
         Equal("suki-maa-native", nativePayload.Source, "native payload source");
         Equal("completed", nativePayload.Status, "native payload status");
+        Equal("frame-native", nativePayload.FrameId, "native payload frame id");
+        Equal("O:/debug/frame-native.json", nativePayload.FrameMetadataPath, "native payload frame metadata path");
+        Equal("O:/debug/frame-native-state.json", nativePayload.StateSnapshotPath, "native payload state snapshot path");
         Equal(1, nativePayload.Candidates.Count, "native payload candidates");
         Equal(1, nativePayload.TaskResults.Count, "native payload task results");
         Equal(2, nativePayload.LogRows.Count, "native payload log rows");
@@ -2468,6 +2482,7 @@ static void BugReportBundleCollectsDebugArtifacts()
     var root = Path.Combine(Path.GetTempPath(), $"rhodes-suki-bug-report-{Guid.NewGuid():N}");
     var debugRoot = Path.Combine(root, RhodesSukiDebugPaths.DebugLogDirectoryName);
     var destination = Path.Combine(debugRoot, RhodesSukiDebugPaths.BugReportsDirectoryName);
+    var frameDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.FrameRecordsDirectoryName);
     var recognitionDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.RecognitionScansDirectoryName);
     var roiDraftDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.RoiDraftsDirectoryName);
     var roiSessionDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.RoiSessionsDirectoryName);
@@ -2481,11 +2496,15 @@ static void BugReportBundleCollectsDebugArtifacts()
 
     try
     {
+        Directory.CreateDirectory(frameDirectory);
         var recognitionLogPath = Path.Combine(recognitionDirectory, "recognition-2026-07-01T00-00-00-000Z-runStatusFull-test.json");
         var capturePath = Path.Combine(debugRoot, "adb-capture.png");
         var statePath = Path.Combine(root, "current-state.json");
         var settingsPath = Path.Combine(root, "suki-settings.json");
         File.WriteAllText(Path.Combine(debugRoot, "main.log"), "main log");
+        File.WriteAllText(Path.Combine(frameDirectory, "frame-test.json"), """{ "schemaVersion": 1, "frameId": "test" }""");
+        File.WriteAllBytes(Path.Combine(frameDirectory, "frame-test.png"), [137, 80, 78, 71]);
+        File.WriteAllText(Path.Combine(frameDirectory, "frame-test-state.json"), """{ "version": 1 }""");
         File.WriteAllText(recognitionLogPath, """{ "schemaVersion": 1, "profileId": "runStatusFull" }""");
         File.WriteAllText(Path.Combine(roiDraftDirectory, "draft.json"), """{ "kind": "roi-draft" }""");
         File.WriteAllText(Path.Combine(roiSessionDirectory, "session.json"), """{ "kind": "roi-session" }""");
@@ -2516,6 +2535,9 @@ static void BugReportBundleCollectsDebugArtifacts()
         Equal(true, result.Success, "bug report success");
         Equal(true, File.Exists(result.ZipPath), "bug report zip exists");
         Equal(true, result.IncludedEntries.Contains("debug/main.log"), "main log included");
+        Equal(true, result.IncludedEntries.Contains("debug/Frame Records/frame-test.json"), "frame metadata included");
+        Equal(true, result.IncludedEntries.Contains("debug/Frame Records/frame-test.png"), "frame image included");
+        Equal(true, result.IncludedEntries.Contains("debug/Frame Records/frame-test-state.json"), "frame state snapshot included");
         Equal(true, result.IncludedEntries.Contains("debug/Recognition Scans/recognition-2026-07-01T00-00-00-000Z-runStatusFull-test.json"), "recognition log included");
         Equal(true, result.IncludedEntries.Contains("debug/ROI Drafts/draft.json"), "roi draft included");
         Equal(true, result.IncludedEntries.Contains("debug/ROI Sessions/session.json"), "roi session included");
@@ -2551,6 +2573,68 @@ static void BugReportBundleCollectsDebugArtifacts()
         Equal(true, abandonedFields.Contains("hope"), "hope abandoned");
         Equal(true, abandonedFields.Contains("shield"), "shield abandoned");
         Equal(true, abandonedFields.Contains("commandLevel"), "command level abandoned");
+    }
+    finally
+    {
+        if (Directory.Exists(root))
+            Directory.Delete(root, recursive: true);
+    }
+}
+
+static void RecognitionFrameRecordStoreSavesFrame()
+{
+    var root = Path.Combine(Path.GetTempPath(), $"rhodes-suki-frame-record-{Guid.NewGuid():N}");
+    var frameDirectory = Path.Combine(root, RhodesSukiDebugPaths.FrameRecordsDirectoryName);
+    var statePath = Path.Combine(root, "current-state.json");
+    var now = DateTimeOffset.Parse("2026-07-01T00:00:00Z");
+    Directory.CreateDirectory(root);
+
+    try
+    {
+        File.WriteAllText(statePath, """{ "version": 1, "run": { "campaignId": "is5_sarkaz", "ingot": 20 } }""");
+        var frame = RhodesFrameRecordStore.SaveAsync(new RhodesFrameRecordRequest
+        {
+            FrameDirectory = frameDirectory,
+            EncodedImage = [137, 80, 78, 71],
+            StatePath = statePath,
+            ProfileId = "runStatusFull",
+            ProfileLabel = "基礎情報",
+            Source = "maa-native",
+            AppVersion = "test-version",
+            RuntimeSummary = "MuMu / 127.0.0.1:16384",
+            Now = now,
+            RetentionLimit = 1,
+        }).GetAwaiter().GetResult();
+
+        Equal(true, frame.Succeeded, "frame record success");
+        Equal(true, File.Exists(frame.ImagePath), "frame image exists");
+        Equal(true, File.Exists(frame.MetadataPath), "frame metadata exists");
+        Equal(true, File.Exists(frame.StateSnapshotPath), "frame state snapshot exists");
+        Equal(true, frame.FrameId.StartsWith("20260701-000000-000-", StringComparison.Ordinal), "frame id timestamp prefix");
+
+        var metadata = JsonNode.Parse(File.ReadAllText(frame.MetadataPath))!.AsObject();
+        Equal(1, metadata["schemaVersion"]!.GetValue<int>(), "frame metadata schema");
+        Equal(frame.FrameId, metadata["frameId"]!.GetValue<string>(), "metadata frame id");
+        Equal("runStatusFull", metadata["profileId"]!.GetValue<string>(), "metadata profile id");
+        Equal("基礎情報", metadata["profileLabel"]!.GetValue<string>(), "metadata profile label");
+        Equal("maa-native", metadata["source"]!.GetValue<string>(), "metadata source");
+        Equal("MuMu / 127.0.0.1:16384", metadata["runtimeSummary"]!.GetValue<string>(), "metadata runtime");
+        Equal(frame.ImagePath, metadata["imagePath"]!.GetValue<string>(), "metadata image path");
+        Equal(frame.StateSnapshotPath, metadata["stateSnapshotPath"]!.GetValue<string>(), "metadata state snapshot path");
+
+        var second = RhodesFrameRecordStore.SaveAsync(new RhodesFrameRecordRequest
+        {
+            FrameDirectory = frameDirectory,
+            EncodedImage = [137, 80, 78, 71],
+            StatePath = statePath,
+            ProfileId = "operatorsFull",
+            Now = now.AddSeconds(1),
+            RetentionLimit = 1,
+        }).GetAwaiter().GetResult();
+
+        Equal(true, File.Exists(second.MetadataPath), "second frame metadata exists");
+        Equal(false, File.Exists(frame.MetadataPath), "old frame metadata pruned");
+        Equal(false, File.Exists(frame.ImagePath), "old frame image pruned");
     }
     finally
     {

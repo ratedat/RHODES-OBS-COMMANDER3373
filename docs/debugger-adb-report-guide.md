@@ -75,7 +75,7 @@ RHODES OBS COMMANDER3373 Debug Logs\Bug Reports
 
 | ZIP内の主な内容 | 用途 |
 | --- | --- |
-| `debug/` | アプリログ、Recognition Scans、ROI Sessions、ROI Drafts、最新ADBスクリーンショット |
+| `debug/` | アプリログ、Frame Records、Recognition Scans、ROI Sessions、ROI Drafts、最新ADBスクリーンショット |
 | `state/current-state.json` | 報告時点の選択・認識反映状態 |
 | `state/suki-settings.json` | ADB path、serial、profileなどのSuki設定 |
 | `manifest.json` | OS、解像度、ADB概要、MAA contract、実行profile、候補数 |

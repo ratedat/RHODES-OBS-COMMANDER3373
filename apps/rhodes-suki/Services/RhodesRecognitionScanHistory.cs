@@ -51,6 +51,7 @@ public static class RhodesRecognitionScanHistory
             if (root.ValueKind != JsonValueKind.Object)
                 return new RhodesRecognitionScanHistoryPayload([], [], [], "スキャンログがobjectではありません。");
 
+            var frame = FrameEvidence(root);
             return new RhodesRecognitionScanHistoryPayload(
                 RhodesMaaCandidateApiClient.ExtractCandidatePreviews(json),
                 ExtractTaskResults(root),
@@ -59,7 +60,10 @@ public static class RhodesRecognitionScanHistory
                 JsonString(root, "profileId"),
                 JsonString(root, "profileLabel"),
                 JsonString(root, "source"),
-                JsonString(root, "status"));
+                JsonString(root, "status"),
+                frame.FrameId,
+                frame.MetadataPath,
+                frame.StateSnapshotPath);
         }
         catch (Exception ex)
         {
@@ -197,6 +201,43 @@ public static class RhodesRecognitionScanHistory
                 JsonString(contract, "detail"),
                 JsonArrayCount(contract, "errors"))
             : ("", "", "", 0);
+    }
+
+    private static (string FrameId, string MetadataPath, string StateSnapshotPath) FrameEvidence(JsonElement root)
+    {
+        var evidence = ObjectProperty(root, "evidence");
+        var capture = ObjectProperty(evidence, "capture");
+        var frameId = JsonString(capture, "frameId");
+        var metadataPath = JsonString(capture, "metadataPath");
+        var stateSnapshotPath = JsonString(capture, "stateSnapshotPath");
+        if (!string.IsNullOrWhiteSpace(frameId)
+            || !string.IsNullOrWhiteSpace(metadataPath)
+            || !string.IsNullOrWhiteSpace(stateSnapshotPath))
+        {
+            return (frameId, metadataPath, stateSnapshotPath);
+        }
+
+        if (root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty("log", out var log)
+            || log.ValueKind != JsonValueKind.Array)
+        {
+            return ("", "", "");
+        }
+
+        foreach (var entry in log.EnumerateArray())
+        {
+            if (entry.ValueKind != JsonValueKind.Object)
+                continue;
+            if (!JsonString(entry, "event").Equals("capture", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            return (
+                JsonString(entry, "frameId"),
+                JsonString(entry, "metadataPath"),
+                JsonString(entry, "stateSnapshotPath"));
+        }
+
+        return ("", "", "");
     }
 
     private static string JsonError(JsonElement root)

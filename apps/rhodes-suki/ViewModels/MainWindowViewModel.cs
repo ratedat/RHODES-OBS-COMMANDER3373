@@ -38,6 +38,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _sessionDetail;
     private string _captureState = "未取得";
     private string _lastCapturePath = "";
+    private string _lastFrameId = "";
+    private string _lastFrameMetadataPath = "";
+    private string _lastFrameStateSnapshotPath = "";
     private string _lastResourceTaskResultsPath = "";
     private string _lastRoiDraftPath = "";
     private string _lastRoiSessionPath = "";
@@ -2312,6 +2315,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ["inputMethod"] = SelectedAdbInputMethod?.Label ?? "",
             ["captureState"] = CaptureState,
             ["lastCapturePath"] = LastCapturePath,
+            ["lastFrameId"] = _lastFrameId,
+            ["lastFrameMetadataPath"] = _lastFrameMetadataPath,
+            ["lastFrameStateSnapshotPath"] = _lastFrameStateSnapshotPath,
             ["lastRecognitionLogPath"] = LastResourceTaskResultsPath,
             ["lastRoiDraftPath"] = LastRoiDraftPath,
             ["lastRoiSessionPath"] = LastRoiSessionPath,
@@ -3458,6 +3464,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RecognitionScanLogRows.Add(logRow);
         }
         TryLoadCapturePreviewFromPath(payload.FirstImagePath);
+        _lastFrameId = payload.FrameId;
+        _lastFrameMetadataPath = payload.FrameMetadataPath;
+        _lastFrameStateSnapshotPath = payload.StateSnapshotPath;
 
         LastResourceTaskResultsPath = logPath;
         LastCandidateApplySummary = candidateApplySummary;
@@ -4574,8 +4583,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         _lastCapture = capture.EncodedImage;
         LastCaptureImage = CreateCaptureBitmap(capture.EncodedImage);
-        LastCapturePath = await SaveCaptureAsync(capture.EncodedImage);
-        CaptureState = $"{capture.Detail} / {LastCapturePath}";
+        var frameRecord = await SaveCaptureFrameAsync(capture.EncodedImage);
+        LastCapturePath = frameRecord.Succeeded ? frameRecord.ImagePath : await SaveLegacyCaptureAsync(capture.EncodedImage);
+        _lastFrameId = frameRecord.FrameId;
+        _lastFrameMetadataPath = frameRecord.MetadataPath;
+        _lastFrameStateSnapshotPath = frameRecord.StateSnapshotPath;
+        CaptureState = frameRecord.Succeeded
+            ? $"{capture.Detail} / frame={frameRecord.FrameId} / {LastCapturePath}"
+            : $"{capture.Detail} / frame保存失敗: {frameRecord.Error} / {LastCapturePath}";
         RefreshInspectorRows();
         return capture;
     }
@@ -4597,6 +4612,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _lastCapture = bytes;
             LastCaptureImage = CreateCaptureBitmap(bytes);
             LastCapturePath = path;
+            _lastFrameId = "";
+            _lastFrameMetadataPath = "";
+            _lastFrameStateSnapshotPath = "";
             CaptureState = $"履歴から読込: {path}";
         }
         catch
@@ -4615,7 +4633,30 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SelectedAdbScreencapMethod?.Value ?? AdbScreencapMethods.Default);
     }
 
-    private static async Task<string> SaveCaptureAsync(byte[] encodedImage)
+    private async Task<RhodesFrameRecordResult> SaveCaptureFrameAsync(byte[] encodedImage)
+    {
+        var profile = SelectedResourceProfile;
+        return await RhodesFrameRecordStore.SaveAsync(new RhodesFrameRecordRequest
+        {
+            EncodedImage = encodedImage,
+            StatePath = RhodesRunStateStore.ResolveDefaultStatePath(),
+            ProfileId = profile?.Id,
+            ProfileLabel = profile?.Label ?? profile?.DisplayName,
+            Source = "maa-native",
+            AppVersion = typeof(MainWindowViewModel).Assembly.GetName().Version?.ToString() ?? "",
+            RuntimeSummary = string.Join(
+                " / ",
+                new[]
+                {
+                    SelectedAdbPreset?.DisplayName ?? SelectedAdbPreset?.Label ?? "手動",
+                    AdbSerial,
+                    SelectedAdbScreencapMethod?.Label ?? "",
+                    SelectedAdbInputMethod?.Label ?? "",
+                }.Where(value => !string.IsNullOrWhiteSpace(value))),
+        });
+    }
+
+    private static async Task<string> SaveLegacyCaptureAsync(byte[] encodedImage)
     {
         var directory = Path.Combine(AppContext.BaseDirectory, "RHODES OBS COMMANDER3373 Debug Logs", "maa-captures");
         Directory.CreateDirectory(directory);
@@ -4644,7 +4685,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             presetTaskEntries: presetTaskEntries ?? (selectedMatches ? SelectedResourceProfile?.TaskEntries : null),
             runtime: BuildRecognitionRuntimeEvidence(),
             executionPlan: executionPlan,
-            contract: MaaResourceContract);
+            contract: MaaResourceContract,
+            frameId: _lastFrameId,
+            frameMetadataPath: _lastFrameMetadataPath,
+            stateSnapshotPath: _lastFrameStateSnapshotPath);
     }
 
     private MaaRecognitionRuntimeEvidence BuildRecognitionRuntimeEvidence()

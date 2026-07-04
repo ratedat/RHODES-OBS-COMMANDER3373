@@ -943,7 +943,10 @@ public sealed record RhodesRecognitionScanHistoryPayload(
     string ProfileId = "",
     string ProfileLabel = "",
     string Source = "",
-    string Status = "")
+    string Status = "",
+    string FrameId = "",
+    string FrameMetadataPath = "",
+    string StateSnapshotPath = "")
 {
     public bool Succeeded => string.IsNullOrWhiteSpace(Error);
 
