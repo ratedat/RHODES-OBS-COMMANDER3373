@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Input;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using MaaFramework.Binding;
 using RhodesSuki.Models;
 using RhodesSuki.Services;
@@ -46,6 +48,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastRoiSessionPath = "";
     private string _lastBugReportBundlePath = "";
     private string _bugReportBundleStatus = "未作成";
+    private string _bugReportImportPath = "";
+    private string _bugReportImportStatus = "未取込";
+    private string _importedBugReportFrameRecordsDirectory = "";
+    private string _importedBugReportRecognitionScansDirectory = "";
     private string _roiRescanComparisonSummary = "再スキャン比較未実行";
     private string _roiRescanComparisonEvidenceSummary = "比較証跡未保存";
     private string _roiRescanEvidencePreviewTitle = "比較証跡未表示";
@@ -73,6 +79,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private Bitmap? _lastCaptureImage;
     private int _capturePixelWidth;
     private int _capturePixelHeight;
+    private bool _adbDiagnosticsDetectionAttempted;
+    private bool? _adbDiagnosticsMaaReady;
+    private bool? _adbDiagnosticsCaptureSucceeded;
+    private string _adbDiagnosticsCaptureDetail = "";
+    private DispatcherTimer? _operatorSearchDebounce;
+    private DispatcherTimer? _relicSearchDebounce;
+    private int _manualIngot;
+    private int _manualDifficulty = 1;
+    private SukiSquadOption? _selectedManualSquad;
+    private SukiSquadOption? _selectedManualSquadRandomEffect;
+    private bool _isHudVisible;
+    private bool _isHudClickThrough;
+    private readonly RhodesSidecarServerLauncher _sidecarServer = new();
+    private string _sidecarServerStatus = "未確認";
     private string _selectedRoiPreviewKey = "";
     private int[] _roiDragOrigin = [];
     private double _roiDragStartX;
@@ -146,7 +166,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ];
 
         var runCatalog = RhodesRunCatalog.LoadDefault();
-        _runState = runCatalog.Current;
+        _runState = RhodesPublicDebugPolicy.ApplyCampaign(runCatalog.Current);
         WorkspaceNav = new ObservableCollection<SukiWorkspaceNavItem>(RhodesWorkspaceRegistry.Items);
         RunLayout = RhodesWorkspaceLayoutRegistry.For("run");
         ChoicesLayout = RhodesWorkspaceLayoutRegistry.For("choices");
@@ -159,7 +179,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RuntimeLayout = RhodesRuntimeWorkspaceRegistry.Layout;
         RecognitionLayout = RhodesRecognitionWorkspaceRegistry.Layout;
         HeaderStatusChips = new ObservableCollection<SukiStatusChip>(BuildHeaderStatusChips());
-        RunFieldPreviews = new ObservableCollection<SukiRunFieldPreview>(BuildRunFieldPreviews(runCatalog.Current));
+        RunFieldPreviews = new ObservableCollection<SukiRunFieldPreview>(BuildRunFieldPreviews(_runState));
         CampaignPreviews = [];
         SpecialValuePreviews = [];
         RuntimeCapabilities = new ObservableCollection<SukiRuntimeCapabilityPreview>(BuildRuntimeCapabilities());
@@ -187,7 +207,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "auto") ?? AdbPresets.FirstOrDefault();
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodId);
-        Campaigns = new ObservableCollection<SukiCampaignPreview>(runCatalog.Campaigns);
+        Campaigns = new ObservableCollection<SukiCampaignPreview>(RhodesPublicDebugPolicy.FilterCampaigns(runCatalog.Campaigns));
         _allOperators = runCatalog.Operators;
         _allRelics = runCatalog.Relics;
         FilteredOperators = [];
@@ -209,8 +229,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _relicPaneColumns = ClampPaneColumns(runCatalog.Current.RelicGridColumns);
         _selectedOcrEngine = OcrEngineOptions.FirstOrDefault(option => option.Id == runCatalog.Current.OcrEngine)
             ?? OcrEngineOptions.FirstOrDefault();
-        _selectedCampaign = Campaigns.FirstOrDefault(campaign => campaign.Id == runCatalog.Current.CampaignId) ?? Campaigns.FirstOrDefault();
-        ResourceProfiles = new ObservableCollection<MaaResourceProfilePreview>(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks));
+        _selectedCampaign = Campaigns.FirstOrDefault(campaign => campaign.Id == _runState.CampaignId) ?? Campaigns.FirstOrDefault();
+        ResourceProfiles = new ObservableCollection<MaaResourceProfilePreview>(
+            RhodesPublicDebugPolicy.FilterProfiles(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks)));
         ResourceTasks = [];
         ResourceTaskResults = [];
         CandidateResults = [];
@@ -222,6 +243,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RoiAdjustmentSessions = [];
         RoiRescanComparisonRows = [];
         RoiRescanEvidencePreviewNodes = [];
+        FrameRecordHistory = [];
         RecognitionScanHistory = [];
         RecognitionScanLogRows = [];
         BaseResolution = Services.RhodesMaaPaths.BaseResolution;
@@ -245,6 +267,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunAllProbesCommand = new AsyncRelayCommand(RunAllProbesAsync);
         RunSelectedProfileRecognitionCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAsync);
         RunSelectedProfileRecognitionAndApplyCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAndApplyAsync);
+        RunProfileRecognitionAndApplyCommand = new AsyncRelayCommand(parameter => RunProfileRecognitionAndApplyAsync(parameter as string));
+        RefreshFrameRecordHistoryCommand = new AsyncRelayCommand(RefreshFrameRecordHistoryAsync);
+        LoadFrameRecordHistoryCommand = new AsyncRelayCommand(parameter => LoadFrameRecordHistoryAsync(parameter as RhodesFrameRecordHistoryItem));
+        ReplayFrameRecordRecognitionCommand = new AsyncRelayCommand(parameter => ReplayFrameRecordRecognitionAsync(parameter as RhodesFrameRecordHistoryItem));
         RefreshRecognitionScanHistoryCommand = new AsyncRelayCommand(RefreshRecognitionScanHistoryAsync);
         LoadRecognitionScanHistoryCommand = new AsyncRelayCommand(parameter => LoadRecognitionScanHistoryAsync(parameter as RhodesRecognitionScanHistoryItem));
         OpenPreviewUrlCommand = new AsyncRelayCommand(OpenPreviewUrlAsync);
@@ -270,6 +296,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         PreviewRoiRescanEvidenceCommand = new AsyncRelayCommand(PreviewRoiRescanEvidenceAsync);
         RegenerateMaaResourceCommand = new AsyncRelayCommand(RegenerateMaaResourceAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
+        ApplyManualRunValuesCommand = new AsyncRelayCommand(ApplyManualRunValuesAsync);
+        StartSidecarServerCommand = new AsyncRelayCommand(StartSidecarServerAsync);
+        StopSidecarServerCommand = new AsyncRelayCommand(StopSidecarServerAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
         ApplyCandidateResultsCommand = new AsyncRelayCommand(ApplyCandidateResultsAsync);
         RunProbeCommand = new AsyncRelayCommand(parameter => RunProbeAsync(parameter as MaaProbePayloadPreview));
@@ -287,11 +316,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshChoiceLists();
         RefreshCampaignPreviews();
         RefreshSpecialValuePreviews();
+        RefreshFrameRecordHistory();
         RefreshRecognitionScanHistory();
         RefreshRoiAdjustmentSessions();
         RefreshWorkspaceActions();
         RefreshInspectorRows();
         LoadSettings();
+        RefreshManualRunEditors();
+        RefreshOverlayPartLinks();
+        RefreshAdbDiagnosticSteps();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -356,6 +389,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<MaaAdbDevicePreview> AdbDevices { get; }
 
+    public ObservableCollection<SukiAdbDiagnosticStepRow> AdbDiagnosticSteps { get; } = [];
+
     public ObservableCollection<SukiOcrEngineOption> OcrEngineOptions { get; }
 
     public ObservableCollection<SukiAdbInputMethodOption> AdbInputMethodOptions { get; }
@@ -408,6 +443,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<MaaEvidencePreviewNode> RoiRescanEvidencePreviewNodes { get; }
 
+    public ObservableCollection<RhodesFrameRecordHistoryItem> FrameRecordHistory { get; }
+
     public ObservableCollection<RhodesRecognitionScanHistoryItem> RecognitionScanHistory { get; }
 
     public ObservableCollection<RhodesRecognitionScanLogRow> RecognitionScanLogRows { get; }
@@ -449,6 +486,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetProperty(ref _adbPath, value))
                 return;
             OnPropertyChanged(nameof(AdbHeaderDetail));
+            OnPropertyChanged(nameof(AdbDiagnosticCopyText));
             RefreshInspectorRows();
         }
     }
@@ -462,6 +500,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             OnPropertyChanged(nameof(AdbHeaderTitle));
             OnPropertyChanged(nameof(AdbHeaderDetail));
+            OnPropertyChanged(nameof(AdbDiagnosticCopyText));
             RefreshInspectorRows();
         }
     }
@@ -469,7 +508,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string AdbConfigJson
     {
         get => _adbConfigJson;
-        set => SetProperty(ref _adbConfigJson, string.IsNullOrWhiteSpace(value) ? "{}" : value.Trim());
+        set
+        {
+            if (SetProperty(ref _adbConfigJson, string.IsNullOrWhiteSpace(value) ? "{}" : value.Trim()))
+                OnPropertyChanged(nameof(AdbDiagnosticCopyText));
+        }
     }
 
     public string WorkspaceTab
@@ -485,9 +528,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(IsOutputWorkspaceVisible));
             OnPropertyChanged(nameof(IsRuntimeWorkspaceVisible));
             OnPropertyChanged(nameof(IsDebugWorkspaceVisible));
+            OnPropertyChanged(nameof(IsRoiToolsVisible));
+            OnPropertyChanged(nameof(IsEvidencePanelsVisible));
             OnPropertyChanged(nameof(WorkspaceTitle));
+            OnPropertyChanged(nameof(SelectedWorkspaceNavItem));
             RefreshWorkspaceActions();
             RefreshInspectorRows();
+        }
+    }
+
+    /// <summary>左ナビのListBox選択と WorkspaceTab を同期する。</summary>
+    public SukiWorkspaceNavItem? SelectedWorkspaceNavItem
+    {
+        get => WorkspaceNav.FirstOrDefault(item => string.Equals(item.Id, WorkspaceTab, StringComparison.Ordinal));
+        set
+        {
+            if (value is not null)
+                WorkspaceTab = value.Id;
         }
     }
 
@@ -502,12 +559,63 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RefreshChoiceLists();
             RefreshCampaignPreviews();
             RefreshSpecialValuePreviews();
+            RefreshHudRelics();
+            RefreshManualRunEditors();
             RefreshInspectorRows();
             OnPropertyChanged(nameof(RunContextSummary));
             OnPropertyChanged(nameof(CampaignHeaderTitle));
             OnPropertyChanged(nameof(CampaignHeaderDetail));
+            OnPropertyChanged(nameof(ManualDifficultyMaximum));
         }
     }
+
+    /// <summary>共通値の手動入力: 源石錐。認識と同じ経路でstateへ反映する。</summary>
+    public int ManualIngot
+    {
+        get => _manualIngot;
+        set => SetProperty(ref _manualIngot, Math.Clamp(value, 0, 9999));
+    }
+
+    /// <summary>共通値の手動入力: 等級。反映時に多元化珍品tier(run.difficultyTierId)も導出される。</summary>
+    public int ManualDifficulty
+    {
+        get => _manualDifficulty;
+        set
+        {
+            if (!SetProperty(ref _manualDifficulty, Math.Clamp(value, 1, ManualDifficultyMaximum)))
+                return;
+            OnPropertyChanged(nameof(ManualDifficultyTierLabel));
+        }
+    }
+
+    public int ManualDifficultyMaximum => RhodesRunCatalog.MaxDifficultyForCampaign(SelectedCampaign?.Id ?? _runState.CampaignId);
+
+    /// <summary>入力中の等級に対応する多元化珍品tierのプレビュー (例: 多元化珍品: 創作的)。</summary>
+    public string ManualDifficultyTierLabel =>
+        RhodesDifficultyTierCatalog.DescribeTier(SelectedCampaign?.Id ?? _runState.CampaignId, ManualDifficulty);
+
+    public ObservableCollection<SukiSquadOption> ManualSquadOptions { get; } = [];
+
+    public ObservableCollection<SukiSquadOption> ManualSquadRandomEffectOptions { get; } = [];
+
+    public SukiSquadOption? SelectedManualSquad
+    {
+        get => _selectedManualSquad;
+        set
+        {
+            if (!SetProperty(ref _selectedManualSquad, value))
+                return;
+            RefreshManualSquadRandomEffectOptions();
+        }
+    }
+
+    public SukiSquadOption? SelectedManualSquadRandomEffect
+    {
+        get => _selectedManualSquadRandomEffect;
+        set => SetProperty(ref _selectedManualSquadRandomEffect, value);
+    }
+
+    public bool IsManualSquadRandomEffectVisible => ManualSquadRandomEffectOptions.Count > 1;
 
     public bool IsRunWorkspaceVisible => WorkspaceTab == "run";
 
@@ -520,6 +628,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool IsRuntimeWorkspaceVisible => WorkspaceTab == "runtime";
 
     public bool IsDebugWorkspaceVisible => WorkspaceTab == "debug";
+
+    /// <summary>ROI編集ツール群は認識ワークスペースでのみ右ペインに出す。</summary>
+    public bool IsRoiToolsVisible => IsRecognitionWorkspaceVisible;
+
+    /// <summary>task結果・Probeなどの証跡パネルは認識/デバッグでのみ右ペインに出す。</summary>
+    public bool IsEvidencePanelsVisible => IsRecognitionWorkspaceVisible || IsDebugWorkspaceVisible;
 
     public string WorkspaceTitle => RhodesWorkspaceRegistry.TitleFor(WorkspaceTab);
 
@@ -566,6 +680,41 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public string AdbHeaderTitle => string.IsNullOrWhiteSpace(AdbSerial) ? "ADB未選択" : AdbSerial;
+
+    /// <summary>ヘッダー接続ピルのラベル。段階診断の結果から導出する。</summary>
+    public string ConnectionStatusLabel => _adbDiagnosticsMaaReady switch
+    {
+        true when _adbDiagnosticsCaptureSucceeded == false => "接続OK / 撮影失敗",
+        true => "接続OK",
+        false => "接続失敗",
+        null => "未接続",
+    };
+
+    public string ConnectionStatusDetail
+    {
+        get
+        {
+            var serial = string.IsNullOrWhiteSpace(AdbSerial) ? "serial未選択" : AdbSerial;
+            return $"{serial} · {CapturePixelSizeLabel}";
+        }
+    }
+
+    public string ConnectionStatusForeground => ConnectionStatusTone("#7BE2B6", "#F0D06A", "#F08A8A", "#AAB6B8");
+
+    public string ConnectionStatusBackground => ConnectionStatusTone("#12241D", "#242012", "#241212", "#151D1E");
+
+    public string ConnectionStatusBorder => ConnectionStatusTone("#2C5745", "#5C512C", "#5C2C2C", "#2B3638");
+
+    private string ConnectionStatusTone(string ok, string warning, string failed, string unknown)
+    {
+        return _adbDiagnosticsMaaReady switch
+        {
+            true when _adbDiagnosticsCaptureSucceeded == false => warning,
+            true => ok,
+            false => failed,
+            null => unknown,
+        };
+    }
 
     public string AdbHeaderDetail
     {
@@ -625,6 +774,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string AdbDeviceEmptyMessage => "接続端末はありません。エミュレーターを起動し、必要ならADB接続を有効化してから端末更新してください。";
 
+    public string AdbDiagnosticCopyText => BuildAdbDiagnosticCopyText();
+
     public string RunContextSummary
     {
         get
@@ -654,7 +805,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _operatorSearch, value ?? ""))
                 return;
-            RefreshOperatorChoices();
+            RestartSearchDebounce(ref _operatorSearchDebounce, RefreshOperatorChoices);
         }
     }
 
@@ -736,7 +887,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _relicSearch, value ?? ""))
                 return;
-            RefreshRelicChoices();
+            RestartSearchDebounce(ref _relicSearchDebounce, RefreshRelicChoices);
         }
     }
 
@@ -948,6 +1099,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref _bugReportBundleStatus, string.IsNullOrWhiteSpace(value) ? "未作成" : value);
     }
 
+    public string BugReportImportPath
+    {
+        get => _bugReportImportPath;
+        private set => SetProperty(ref _bugReportImportPath, value ?? "");
+    }
+
+    public string BugReportImportStatus
+    {
+        get => _bugReportImportStatus;
+        private set => SetProperty(ref _bugReportImportStatus, string.IsNullOrWhiteSpace(value) ? "未取込" : value);
+    }
+
     public Bitmap? LastCaptureImage
     {
         get => _lastCaptureImage;
@@ -968,9 +1131,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetProperty(ref _rhodesApiUrl, string.IsNullOrWhiteSpace(value) ? "http://127.0.0.1:5173" : value.TrimEnd('/')))
                 return;
             _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "未確認", "API URLが変更されました。状態同期で確認してください。", false, false);
+            OnPropertyChanged(nameof(OverlayUrl));
+            OnPropertyChanged(nameof(SidecarUrl));
+            RefreshOverlayPartLinks();
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         }
+    }
+
+    /// <summary>OBSブラウザソースに設定するURL。</summary>
+    public string OverlayUrl => $"{RhodesApiUrl}/overlay";
+
+    public string SidecarUrl => $"{RhodesApiUrl}/sidecar";
+
+    /// <summary>部品単位でOBSへ追加するためのURL一覧。</summary>
+    public ObservableCollection<SukiOverlayPartLink> OverlayPartLinks { get; } = [];
+
+    private void RefreshOverlayPartLinks()
+    {
+        ReplaceCollection(OverlayPartLinks, RhodesOverlayPartLinkCatalog.Build(RhodesApiUrl));
     }
 
     public string StatusMessage
@@ -1241,6 +1420,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetProperty(ref _selectedAdbPreset, value))
                 return;
             OnPropertyChanged(nameof(AdbHeaderDetail));
+            OnPropertyChanged(nameof(AdbDiagnosticCopyText));
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         }
@@ -1267,6 +1447,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(AdbHeaderDetail));
             OnPropertyChanged(nameof(AdbMethodSummary));
             OnPropertyChanged(nameof(AdbMethodDetail));
+            OnPropertyChanged(nameof(AdbDiagnosticCopyText));
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         }
@@ -1282,6 +1463,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(AdbHeaderDetail));
             OnPropertyChanged(nameof(AdbMethodSummary));
             OnPropertyChanged(nameof(AdbMethodDetail));
+            OnPropertyChanged(nameof(AdbDiagnosticCopyText));
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         }
@@ -1306,6 +1488,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _selectedOcrEngine, value))
                 return;
+            OnPropertyChanged(nameof(AdbDiagnosticCopyText));
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         }
@@ -1350,6 +1533,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RunSelectedProfileRecognitionCommand { get; }
 
     public ICommand RunSelectedProfileRecognitionAndApplyCommand { get; }
+
+    public ICommand RunProfileRecognitionAndApplyCommand { get; }
+
+    public ICommand RefreshFrameRecordHistoryCommand { get; }
+
+    public ICommand LoadFrameRecordHistoryCommand { get; }
+
+    public ICommand ReplayFrameRecordRecognitionCommand { get; }
 
     public ICommand RefreshRecognitionScanHistoryCommand { get; }
 
@@ -1401,6 +1592,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand SyncRunStateFromApiCommand { get; }
 
+    public ICommand ApplyManualRunValuesCommand { get; }
+
+    public ICommand StartSidecarServerCommand { get; }
+
+    public ICommand StopSidecarServerCommand { get; }
+
     public ICommand ConvertResourceTaskResultsCommand { get; }
 
     public ICommand ApplyCandidateResultsCommand { get; }
@@ -1426,7 +1623,159 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public void Dispose()
     {
         _lastCaptureImage?.Dispose();
+        _sidecarServer.Dispose();
         _session.Dispose();
+    }
+
+    /// <summary>
+    /// 本人用HUD小窓 (MAAのログ小窓と同型のデスクトップ最前面ウィンドウ) の表示状態。
+    /// ウィンドウ生成・破棄はMainWindowのコードビハインドがこのプロパティを監視して行う。
+    /// </summary>
+    public bool IsHudVisible
+    {
+        get => _isHudVisible;
+        set
+        {
+            if (!SetProperty(ref _isHudVisible, value))
+                return;
+            // 表示し直すたびにクリック透過を解除する。透過中はHUD自身を操作できないため、
+            // ここが「詰み」からの復帰経路になる (ヘッダーのHUDトグルをOFF→ON)。
+            if (value)
+                IsHudClickThrough = false;
+        }
+    }
+
+    /// <summary>HUDのクリック透過。ONの間はHUDがマウスを素通しし、下のゲームを操作できる。</summary>
+    public bool IsHudClickThrough
+    {
+        get => _isHudClickThrough;
+        set => SetProperty(ref _isHudClickThrough, value);
+    }
+
+    /// <summary>HUDの前回位置 (物理px)。-1は未保存。</summary>
+    public int HudX { get; private set; } = -1;
+
+    public int HudY { get; private set; } = -1;
+
+    public void UpdateHudPosition(int x, int y)
+    {
+        HudX = x;
+        HudY = y;
+    }
+
+    /// <summary>HUDに出す内容のチェック一覧 (出力ワークスペースで編集)。</summary>
+    public ObservableCollection<SukiHudPartOption> HudPartOptions { get; } = [];
+
+    /// <summary>HUDに表示するラン値チップ。HeaderStatusChipsをHUD部品設定でフィルタしたもの。</summary>
+    public ObservableCollection<SukiStatusChip> HudChips { get; } = [];
+
+    /// <summary>HUDに表示する所持秘宝。現在ISの選択済み秘宝だけを小窓向けに並べる。</summary>
+    public ObservableCollection<SukiChoiceItem> HudRelics { get; } = [];
+
+    public bool IsHudRelicsVisible => IsHudPartEnabled(RhodesHudPartCatalog.RelicsPartId) && HudRelics.Count > 0;
+
+    public bool IsHudTierVisible => IsHudPartEnabled(RhodesHudPartCatalog.TierPartId);
+
+    public bool IsHudApplySummaryVisible => IsHudPartEnabled(RhodesHudPartCatalog.ApplySummaryPartId);
+
+    public bool IsHudConnectionVisible => IsHudPartEnabled(RhodesHudPartCatalog.ConnectionPartId);
+
+    private bool IsHudPartEnabled(string partId)
+    {
+        var option = HudPartOptions.FirstOrDefault(item => item.Id.Equals(partId, StringComparison.Ordinal));
+        return option?.IsEnabled ?? true;
+    }
+
+    private void InitializeHudPartOptions(string? enabledCsv)
+    {
+        ReplaceCollection(HudPartOptions, RhodesHudPartCatalog.Build(enabledCsv, OnHudPartToggled));
+        OnHudPartToggled();
+    }
+
+    private void OnHudPartToggled()
+    {
+        RefreshHudChips();
+        RefreshHudRelics();
+        OnPropertyChanged(nameof(IsHudRelicsVisible));
+        OnPropertyChanged(nameof(IsHudTierVisible));
+        OnPropertyChanged(nameof(IsHudApplySummaryVisible));
+        OnPropertyChanged(nameof(IsHudConnectionVisible));
+    }
+
+    private void RefreshHudChips()
+    {
+        ReplaceCollection(HudChips, HeaderStatusChips.Where(chip => IsHudPartEnabled(chip.Detail)));
+    }
+
+    private void RefreshHudRelics()
+    {
+        ReplaceCollection(
+            HudRelics,
+            _allRelics
+                .Where(item => item.CampaignId == SelectedCampaign?.Id && item.IsSelected && !item.IsExcluded)
+                .OrderBy(item => item.SortOrder)
+                .ThenBy(item => item.Name, StringComparer.Ordinal));
+        OnPropertyChanged(nameof(IsHudRelicsVisible));
+    }
+
+    /// <summary>出力ワークスペースの配信サーバー状態表示。</summary>
+    public string SidecarServerStatus
+    {
+        get => _sidecarServerStatus;
+        private set => SetProperty(ref _sidecarServerStatus, string.IsNullOrWhiteSpace(value) ? "未確認" : value);
+    }
+
+    private async Task StartSidecarServerAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            StatusMessage = "配信サーバーの状態を確認しています。";
+            var before = await RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
+            if (before.Installed)
+            {
+                _rhodesApiStatus = before;
+                SidecarServerStatus = $"稼働中 (外部起動) · {RhodesApiUrl}";
+                StatusMessage = "配信サーバーは既に稼働しています。OBSブラウザソースにOverlayのURLを設定してください。";
+                RefreshRuntimeCapabilities();
+                return;
+            }
+
+            var launch = _sidecarServer.Start(RhodesApiUrl);
+            if (!launch.Succeeded)
+            {
+                SidecarServerStatus = "起動失敗";
+                StatusMessage = launch.Message;
+                return;
+            }
+
+            StatusMessage = launch.Message;
+            await Task.Delay(TimeSpan.FromMilliseconds(1500));
+            var after = await RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
+            _rhodesApiStatus = after;
+            if (after.Installed)
+            {
+                SidecarServerStatus = $"稼働中 (Sukiが管理) · {RhodesApiUrl}";
+                StatusMessage = $"配信サーバーが応答しました。Overlay: {RhodesApiUrl}/overlay / Sidecar: {RhodesApiUrl}/sidecar";
+            }
+            else
+            {
+                var detail = string.IsNullOrWhiteSpace(_sidecarServer.LastError) ? after.Detail : _sidecarServer.LastError;
+                SidecarServerStatus = $"応答なし: {detail}";
+                StatusMessage = $"配信サーバーを起動しましたが応答がありません: {detail}";
+            }
+
+            RefreshRuntimeCapabilities();
+        });
+    }
+
+    private async Task StopSidecarServerAsync()
+    {
+        await RunBusyAsync(() =>
+        {
+            StatusMessage = _sidecarServer.Stop();
+            SidecarServerStatus = _sidecarServer.IsOwnedProcessRunning ? SidecarServerStatus : "停止";
+            return Task.CompletedTask;
+        });
     }
 
     private IEnumerable<SukiStatusChip> BuildHeaderStatusChips()
@@ -1494,6 +1843,58 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void RefreshRuntimeCapabilities()
     {
         ReplaceCollection(RuntimeCapabilities, BuildRuntimeCapabilities());
+        RefreshAdbDiagnosticSteps();
+    }
+
+    private void RefreshAdbDiagnosticSteps()
+    {
+        ReplaceCollection(AdbDiagnosticSteps, RhodesAdbDiagnosticsChecklist.Build(new RhodesAdbDiagnosticsInput(
+            AdbPath,
+            _adbDiagnosticsDetectionAttempted,
+            AdbPathCandidates.Any(candidate => candidate.Available),
+            AdbDevices.Count,
+            AdbDevices.Count(device => device.IsUsable),
+            AdbDevices.Count == 0 ? "端末なし" : string.Join(", ", AdbDevices.Select(device => device.Serial)),
+            _adbDiagnosticsMaaReady,
+            SessionDetail,
+            _adbDiagnosticsCaptureSucceeded,
+            _adbDiagnosticsCaptureDetail,
+            _capturePixelWidth,
+            _capturePixelHeight)));
+        OnPropertyChanged(nameof(AdbDiagnosticCopyText));
+        OnPropertyChanged(nameof(ConnectionStatusLabel));
+        OnPropertyChanged(nameof(ConnectionStatusDetail));
+        OnPropertyChanged(nameof(ConnectionStatusForeground));
+        OnPropertyChanged(nameof(ConnectionStatusBackground));
+        OnPropertyChanged(nameof(ConnectionStatusBorder));
+    }
+
+    public void MarkAdbDiagnosticsCopied()
+    {
+        StatusMessage = "ADB診断テキストをコピーしました。";
+    }
+
+    private string BuildAdbDiagnosticCopyText()
+    {
+        return RhodesAdbDiagnosticsChecklist.BuildCopyText(
+            new RhodesAdbDiagnosticsCopyInput(
+                SelectedCampaign?.DisplayName ?? "",
+                SelectedAdbPreset?.DisplayName ?? SelectedAdbPreset?.Label ?? "",
+                AdbPath,
+                AdbSerial,
+                SelectedAdbScreencapMethod?.Label ?? "",
+                SelectedAdbScreencapMethod?.Id ?? "",
+                SelectedAdbInputMethod?.Label ?? "",
+                SelectedAdbInputMethod?.Id ?? "",
+                SelectedOcrEngine?.Label ?? "",
+                SelectedOcrEngine?.Id ?? "",
+                CapturePixelSizeLabel,
+                _adbDiagnosticsCaptureDetail,
+                _adbDiagnosticsMaaReady is null ? "未確認" : _adbDiagnosticsMaaReady.Value ? "OK" : "失敗",
+                SessionDetail,
+                AdbDetectionSummary,
+                AdbDetectionDetail),
+            AdbDiagnosticSteps);
     }
 
     private void RefreshCampaignPreviews()
@@ -1521,9 +1922,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void RefreshRunStatePreviews()
     {
         ReplaceCollection(HeaderStatusChips, BuildHeaderStatusChips());
+        RefreshHudChips();
+        RefreshHudRelics();
         ReplaceCollection(RunFieldPreviews, BuildRunFieldPreviews(_runState));
         RefreshSpecialValuePreviews();
         RefreshCampaignPreviews();
+        RefreshManualRunEditors();
         OnPropertyChanged(nameof(CampaignHeaderDetail));
         OnPropertyChanged(nameof(RunContextSummary));
         RefreshInspectorRows();
@@ -1540,7 +1944,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void ReloadRunStateFromStore()
     {
-        _runState = RhodesRunCatalog.LoadDefault().Current;
+        _runState = RhodesPublicDebugPolicy.ApplyCampaign(RhodesRunCatalog.LoadDefault().Current);
         var campaign = Campaigns.FirstOrDefault(item => string.Equals(item.Id, _runState.CampaignId, StringComparison.Ordinal));
         if (campaign is not null && !string.Equals(campaign.Id, SelectedCampaign?.Id, StringComparison.Ordinal))
             SelectedCampaign = campaign;
@@ -1589,6 +1993,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             nameof(SyncRunStateFromApiCommand) => SyncRunStateFromApiCommand,
             nameof(OpenRecognitionProfileCommand) => OpenRecognitionProfileCommand,
+            nameof(RunProfileRecognitionAndApplyCommand) => RunProfileRecognitionAndApplyCommand,
             nameof(ClearVisibleChoicesCommand) => ClearVisibleChoicesCommand,
             nameof(RunSelectedProfileRecognitionCommand) => RunSelectedProfileRecognitionCommand,
             nameof(RunSelectedProfileRecognitionAndApplyCommand) => RunSelectedProfileRecognitionAndApplyCommand,
@@ -1726,6 +2131,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void ApplyMaaSessionSnapshot(MaaSessionSnapshot snapshot, string statusMessage)
     {
+        _adbDiagnosticsMaaReady = snapshot.IsReady;
         SessionState = snapshot.State;
         SessionDetail = snapshot.Detail;
         StatusMessage = statusMessage;
@@ -1741,9 +2147,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         AdbConfigJson = string.IsNullOrWhiteSpace(settings.AdbConfigJson) ? "{}" : settings.AdbConfigJson;
         RhodesApiUrl = string.IsNullOrWhiteSpace(settings.RhodesApiUrl) ? "http://127.0.0.1:5173" : settings.RhodesApiUrl;
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == settings.SelectedAdbPresetId) ?? SelectedAdbPreset;
-        SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == settings.SelectedResourceProfileId) ?? SelectedResourceProfile;
+        SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile =>
+            RhodesPublicDebugPolicy.IsProfileAllowed(settings.SelectedResourceProfileId)
+            && profile.Id == settings.SelectedResourceProfileId) ?? SelectedResourceProfile;
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(settings.AdbInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(settings.AdbScreencapMethodId);
+        HudX = settings.HudX;
+        HudY = settings.HudY;
+        InitializeHudPartOptions(settings.HudVisibleParts);
+        IsHudVisible = settings.HudVisible;
     }
 
     private async Task SaveSettingsAsync()
@@ -1770,7 +2182,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SelectedAdbPreset?.Id ?? "auto",
             SelectedResourceProfile?.Id ?? "runStatusFull",
             SelectedAdbInputMethod?.Id ?? SukiAdbMethodCatalog.DefaultInputMethodId,
-            SelectedAdbScreencapMethod?.Id ?? SukiAdbMethodCatalog.DefaultScreencapMethodId);
+            SelectedAdbScreencapMethod?.Id ?? SukiAdbMethodCatalog.DefaultScreencapMethodId,
+            IsHudVisible,
+            HudX,
+            HudY,
+            RhodesHudPartCatalog.SerializeEnabledIds(HudPartOptions));
     }
 
     private async Task<string> SaveAdbSettingsToApiStateAsync()
@@ -1865,6 +2281,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         };
         if (string.IsNullOrWhiteSpace(campaignId))
             return;
+        if (!RhodesPublicDebugPolicy.IsCampaignAllowed(campaignId))
+        {
+            StatusMessage = "公開デバッグではIS#5 サルカズの炉辺奇談のみを対象にします。";
+            return;
+        }
 
         if (string.Equals(campaignId, _runState.CampaignId, StringComparison.Ordinal))
         {
@@ -2029,6 +2450,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SessionState = snapshot.SessionState;
         SessionDetail = snapshot.SessionDetail;
         StatusMessage = snapshot.StatusMessage;
+        _adbDiagnosticsDetectionAttempted = true;
         RefreshRuntimeCapabilities();
         RefreshInspectorRows();
     }
@@ -2095,6 +2517,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _glmRuntimeStatus = snapshot.Glm;
             _ollamaRuntimeStatus = snapshot.Ollama;
             _hypervisorStatus = snapshot.Hypervisor;
+            SidecarServerStatus = snapshot.Api.Installed
+                ? (_sidecarServer.IsOwnedProcessRunning ? $"稼働中 (Sukiが管理) · {RhodesApiUrl}" : $"稼働中 (外部起動) · {RhodesApiUrl}")
+                : "停止または未起動";
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
             StatusMessage = snapshot.StatusMessage;
@@ -2115,6 +2540,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             StatusMessage = "MAA Controller でADB接続を確認しています。";
             var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
+            _adbDiagnosticsMaaReady = snapshot.IsReady;
             ApplyAdbConnectionTestSnapshot(RhodesSukiAdbConnectionTestWorkflow.FromController(snapshot));
             if (!snapshot.IsReady)
                 return;
@@ -2324,6 +2750,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ["ocrEngine"] = SelectedOcrEngine?.Label ?? "",
             ["rhodesApiUrl"] = RhodesApiUrl,
         };
+    }
+
+    public async Task ImportBugReportPathAsync(string path)
+    {
+        await RunBusyAsync(async () =>
+        {
+            var result = await RhodesBugReportImport.ImportAsync(path, RhodesSukiDebugPaths.BugReportsDirectory);
+            BugReportImportPath = result.ImportedRoot;
+            BugReportImportStatus = result.Message;
+            if (!result.Success)
+            {
+                StatusMessage = result.Message;
+                return;
+            }
+
+            _importedBugReportFrameRecordsDirectory = result.FrameRecordsDirectory;
+            _importedBugReportRecognitionScansDirectory = result.RecognitionScansDirectory;
+            RefreshFrameRecordHistory();
+            RefreshRecognitionScanHistory();
+            StatusMessage = result.Message;
+            DebugLogLines.Insert(0, $"Bug report imported: {result.ImportedRoot}");
+        });
     }
 
     private async Task RefreshRoiAdjustmentSessionsAsync()
@@ -3332,14 +3780,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(ApplyCandidateResultsCoreAsync);
     }
 
-    private async Task ApplyCandidateResultsCoreAsync()
+    /// <summary>
+    /// 候補反映の共通経路。認識候補も手動入力も同じreducer/API同期/ローカルfallbackを通す。
+    /// </summary>
+    private async Task<RhodesCandidateApplyWorkflowResult> ApplyCandidatesPipelineAsync(
+        IReadOnlyList<MaaCandidatePreview> candidates)
     {
         var result = await RhodesRecognitionWorkflow.ApplyCandidatesAsync(
-            CandidateResults.ToArray(),
+            candidates,
             cancellationToken => RhodesStateApiClient.FetchAsync(RhodesApiUrl, cancellationToken: cancellationToken),
             (stateJson, cancellationToken) => RhodesStateApiClient.SaveAsync(RhodesApiUrl, stateJson, cancellationToken: cancellationToken),
             (stateJson, _) => RhodesRunStateStore.ReplaceStateJsonAsync(stateJson),
-            (candidates, _) => RhodesRunStateStore.SaveCandidatesAsync(candidates));
+            (localCandidates, _) => RhodesRunStateStore.SaveCandidatesAsync(localCandidates));
 
         if (result.ApiStatus is not null)
         {
@@ -3352,6 +3804,93 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         LastCandidateApplySummary = result.LastCandidateApplySummary;
         StatusMessage = result.StatusMessage;
+        return result;
+    }
+
+    /// <summary>共通値(源石錐/等級/分隊)の手動入力を「手動候補」として反映する。</summary>
+    private async Task ApplyManualRunValuesAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
+            var candidates = new List<MaaCandidatePreview>
+            {
+                new("runStatus", "源石錐 (手動入力)", ManualIngot.ToString(CultureInfo.InvariantCulture), "手動入力", 1.0, Field: "ingot", CampaignId: campaignId),
+                new("runStatus", "等級 (手動入力)", ManualDifficulty.ToString(CultureInfo.InvariantCulture), "手動入力", 1.0, Field: "difficulty", CampaignId: campaignId),
+            };
+            if (!string.IsNullOrWhiteSpace(SelectedManualSquad?.Id))
+                candidates.Add(new("runStatus", "分隊 (手動入力)", SelectedManualSquad.Id, "手動入力", 1.0, Field: "squadId", CampaignId: campaignId));
+            if (!string.IsNullOrWhiteSpace(SelectedManualSquadRandomEffect?.Id))
+                candidates.Add(new("runStatus", "分隊追加効果 (手動入力)", SelectedManualSquadRandomEffect.Id, "手動入力", 1.0, Field: "squadRandomEffectOptionId", CampaignId: campaignId));
+
+            await ApplyCandidatesPipelineAsync(candidates);
+            RefreshInspectorRows();
+        });
+    }
+
+    /// <summary>手動入力欄を現在stateへ同期し、分隊候補を現在ISで組み直す。</summary>
+    private void RefreshManualRunEditors()
+    {
+        var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
+        ReplaceCollection(ManualSquadOptions, new[] { SukiSquadOption.KeepCurrent }
+            .Concat(RhodesRunCatalog.LoadSquadOptions(campaignId)));
+        ManualIngot = _runState.Ingot;
+        if (int.TryParse(_runState.Difficulty, NumberStyles.Integer, CultureInfo.InvariantCulture, out var difficulty))
+            ManualDifficulty = difficulty;
+        SelectedManualSquad = ManualSquadOptions.FirstOrDefault(option =>
+                !string.IsNullOrWhiteSpace(option.Id)
+            && option.Name.Equals(_runState.Squad, StringComparison.Ordinal))
+            ?? SukiSquadOption.KeepCurrent;
+        RefreshManualSquadRandomEffectOptions();
+        OnPropertyChanged(nameof(ManualDifficultyMaximum));
+        OnPropertyChanged(nameof(ManualDifficultyTierLabel));
+    }
+
+    private void RefreshManualSquadRandomEffectOptions()
+    {
+        var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
+        var squadId = ManualSquadRandomEffectSourceSquadId();
+        var options = new[] { SukiSquadOption.KeepCurrent }
+            .Concat(RhodesRunCatalog.LoadSquadRandomEffectOptions(campaignId, squadId))
+            .ToArray();
+        ReplaceCollection(ManualSquadRandomEffectOptions, options);
+        SelectedManualSquadRandomEffect = options.FirstOrDefault(option =>
+                !string.IsNullOrWhiteSpace(option.Id)
+                && option.Name.Equals(_runState.SquadRandomEffect, StringComparison.Ordinal))
+            ?? SukiSquadOption.KeepCurrent;
+        OnPropertyChanged(nameof(IsManualSquadRandomEffectVisible));
+    }
+
+    private string ManualSquadRandomEffectSourceSquadId()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedManualSquad?.Id))
+            return SelectedManualSquad.Id;
+
+        return ManualSquadOptions.FirstOrDefault(option =>
+                !string.IsNullOrWhiteSpace(option.Id)
+                && option.Name.Equals(_runState.Squad, StringComparison.Ordinal))
+            ?.Id ?? "";
+    }
+
+    private async Task ApplyCandidateResultsCoreAsync()
+    {
+        var result = await ApplyCandidatesPipelineAsync(CandidateResults.ToArray());
+        if (ResourceTaskResults.Any())
+        {
+            var profileId = CandidateApiProfileId();
+            var evidencePlan = CurrentEvidencePlan(profileId);
+            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
+                ResourceTaskResults,
+                profileId,
+                CandidateResults,
+                evidencePlan?.ProfileLabel,
+                evidencePlan?.TaskEntries,
+                evidencePlan,
+                result.Summary,
+                result.LocalFallbackUsed,
+                result.ApiError);
+            RefreshRecognitionScanHistory();
+        }
         RefreshInspectorRows();
     }
 
@@ -3370,12 +3909,53 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "選択プロファイルの認識と反映を開始します。";
-            if (!await RunAllResourceTasksCoreAsync())
-                return;
-            if (!await ConvertResourceTaskResultsCoreAsync())
-                return;
-            await ApplyCandidateResultsCoreAsync();
+            await RunSelectedProfileRecognitionAndApplyCoreAsync();
         });
+    }
+
+    private async Task RunProfileRecognitionAndApplyAsync(string? profileId)
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (!TrySelectRecognitionProfile(profileId))
+                return;
+
+            StatusMessage = $"{SelectedResourceProfile?.DisplayName ?? "現在画面"}の撮影・認識・反映を開始します。";
+            await RunSelectedProfileRecognitionAndApplyCoreAsync();
+        });
+    }
+
+    private async Task<bool> RunSelectedProfileRecognitionAndApplyCoreAsync()
+    {
+        if (!await RunAllResourceTasksCoreAsync())
+            return false;
+        if (!await ConvertResourceTaskResultsCoreAsync())
+            return false;
+        await ApplyCandidateResultsCoreAsync();
+        return true;
+    }
+
+    private bool TrySelectRecognitionProfile(string? profileId)
+    {
+        if (string.IsNullOrWhiteSpace(profileId))
+            return SelectedResourceProfile is not null;
+
+        if (!RhodesPublicDebugPolicy.IsProfileAllowed(profileId))
+        {
+            StatusMessage = $"公開デバッグ対象外の認識プロファイルです: {profileId}";
+            return false;
+        }
+
+        var profile = ResourceProfiles.FirstOrDefault(item => string.Equals(item.Id, profileId, StringComparison.Ordinal));
+        if (profile is null)
+        {
+            StatusMessage = $"認識プロファイルが未定義です: {profileId}";
+            return false;
+        }
+
+        SelectedResourceProfile = profile;
+        _lastResourceExecutionPlan = null;
+        return true;
     }
 
     private async Task RefreshRecognitionScanHistoryAsync()
@@ -3388,14 +3968,206 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private async Task RefreshFrameRecordHistoryAsync()
+    {
+        await RunBusyAsync(() =>
+        {
+            RefreshFrameRecordHistory();
+            StatusMessage = $"Frame Recordsを更新しました: {FrameRecordHistory.Count}件";
+            return Task.CompletedTask;
+        });
+    }
+
+    private void RefreshFrameRecordHistory()
+    {
+        ReplaceCollection(
+            FrameRecordHistory,
+            MergeFrameRecordHistory(
+                RhodesFrameRecordHistory.LoadRecent(
+                    RhodesSukiDebugPaths.FrameRecordsDirectory,
+                    [_lastFrameMetadataPath]),
+                string.IsNullOrWhiteSpace(_importedBugReportFrameRecordsDirectory)
+                    ? []
+                    : RhodesFrameRecordHistory.LoadRecent(_importedBugReportFrameRecordsDirectory, limit: 48)));
+        RefreshInspectorRows();
+    }
+
+    private static IReadOnlyList<RhodesFrameRecordHistoryItem> MergeFrameRecordHistory(
+        IEnumerable<RhodesFrameRecordHistoryItem> primary,
+        IEnumerable<RhodesFrameRecordHistoryItem> imported)
+    {
+        return primary
+            .Concat(imported)
+            .GroupBy(item => item.MetadataPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderByDescending(item => item.SortTimestamp)
+            .ThenBy(item => item.MetadataPath, StringComparer.OrdinalIgnoreCase)
+            .Take(48)
+            .ToArray();
+    }
+
+    private async Task LoadFrameRecordHistoryAsync(RhodesFrameRecordHistoryItem? item)
+    {
+        if (item is null)
+            return;
+
+        await RunBusyAsync(async () =>
+        {
+            if (await LoadFrameRecordImageCoreAsync(item))
+                StatusMessage = $"Frame Recordを読み込みました: {item.FrameId}";
+        });
+    }
+
+    private async Task ReplayFrameRecordRecognitionAsync(RhodesFrameRecordHistoryItem? item)
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (item is not null)
+            {
+                if (!await LoadFrameRecordImageCoreAsync(item))
+                    return;
+
+                if (RhodesPublicDebugPolicy.IsProfileAllowed(item.ProfileId))
+                {
+                    SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == item.ProfileId) ?? SelectedResourceProfile;
+                    _lastResourceExecutionPlan = null;
+                }
+            }
+
+            if (_lastCapture.Length == 0)
+            {
+                StatusMessage = "再実行するFrame Record画像がありません。";
+                return;
+            }
+
+            if (!EnsureMaaOcrReadyForRecognition())
+                return;
+            if (!await EnsureMaaOfflineRecognitionReadyAsync())
+                return;
+
+            var plan = CurrentResourceExecutionPlan;
+            if (!plan.CanRun)
+            {
+                StatusMessage = plan.Summary;
+                return;
+            }
+
+            _lastResourceExecutionPlan = plan;
+            ClearRoiRescanComparison();
+            ResourceTaskResults.Clear();
+            CandidateResults.Clear();
+            RecognitionScanLogRows.Clear();
+            LastCandidateApplySummary = "保存Frame再実行: 候補未反映";
+            RefreshResourceTaskDiagnostics();
+            RefreshInspectorRows();
+
+            var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
+                plan,
+                (entry, cancellationToken) =>
+                {
+                    var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                    return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, cancellationToken);
+                },
+                result =>
+                {
+                    ResourceTaskResults.Add(result);
+                    RefreshResourceTaskDiagnostics();
+                    StatusMessage = $"{result.Entry}: {result.Status}";
+                });
+            if (!execution.Succeeded)
+            {
+                StatusMessage = execution.Error;
+                RefreshInspectorRows();
+                return;
+            }
+
+            RefreshInspectorRows();
+            var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+                plan.ProfileId,
+                ResourceTaskResults);
+            LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
+                ResourceTaskResults,
+                plan.ProfileId,
+                localCandidates,
+                plan.ProfileLabel,
+                plan.TaskEntries,
+                plan);
+            await ConvertResourceTaskResultsCoreAsync();
+            RefreshRecognitionScanHistory();
+            StatusMessage = $"保存Frameを再認識しました: {plan.ProfileLabel} / task{ResourceTaskResults.Count} / 候補{CandidateResults.Count}";
+        });
+    }
+
+    private async Task<bool> LoadFrameRecordImageCoreAsync(RhodesFrameRecordHistoryItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.ImagePath) || !File.Exists(item.ImagePath))
+        {
+            StatusMessage = $"Frame Recordの画像が見つかりません: {item.ImagePath}";
+            return false;
+        }
+
+        try
+        {
+            var bytes = await File.ReadAllBytesAsync(item.ImagePath);
+            _lastCapture = bytes;
+            LastCaptureImage = CreateCaptureBitmap(bytes);
+            LastCapturePath = item.ImagePath;
+            _lastFrameId = item.FrameId;
+            _lastFrameMetadataPath = item.MetadataPath;
+            _lastFrameStateSnapshotPath = item.StateSnapshotPath;
+            CaptureState = $"Frame Record読込: {item.FrameId} / {item.ProfileId}";
+            RefreshFrameRecordHistory();
+            RefreshInspectorRows();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Frame Recordの読込に失敗しました: {ex.Message}";
+            return false;
+        }
+    }
+
+    private async Task<bool> EnsureMaaOfflineRecognitionReadyAsync()
+    {
+        if (_session.IsTaskerReady)
+            return true;
+
+        StatusMessage = "MAA Resourceをオフライン認識用に初期化しています。";
+        var snapshot = await _session.InitializeOfflineAsync(BuildSessionOptions());
+        ApplyMaaSessionSnapshot(
+            snapshot,
+            snapshot.IsReady
+                ? "MAA Resourceをオフライン認識用に初期化しました。"
+                : "MAA Resourceのオフライン初期化に失敗しました。");
+        return snapshot.IsReady;
+    }
+
     private void RefreshRecognitionScanHistory()
     {
         ReplaceCollection(
             RecognitionScanHistory,
-            RhodesRecognitionScanHistory.LoadRecent(
-                RhodesSukiDebugPaths.RecognitionScansDirectory,
-                [LastResourceTaskResultsPath]));
+            MergeRecognitionScanHistory(
+                RhodesRecognitionScanHistory.LoadRecent(
+                    RhodesSukiDebugPaths.RecognitionScansDirectory,
+                    [LastResourceTaskResultsPath]),
+                string.IsNullOrWhiteSpace(_importedBugReportRecognitionScansDirectory)
+                    ? []
+                    : RhodesRecognitionScanHistory.LoadRecent(_importedBugReportRecognitionScansDirectory, limit: 48)));
         RefreshInspectorRows();
+    }
+
+    private static IReadOnlyList<RhodesRecognitionScanHistoryItem> MergeRecognitionScanHistory(
+        IEnumerable<RhodesRecognitionScanHistoryItem> primary,
+        IEnumerable<RhodesRecognitionScanHistoryItem> imported)
+    {
+        return primary
+            .Concat(imported)
+            .GroupBy(item => item.LogPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderByDescending(item => item.SortTimestamp)
+            .ThenBy(item => item.LogPath, StringComparer.OrdinalIgnoreCase)
+            .Take(48)
+            .ToArray();
     }
 
     private void RefreshRoiAdjustmentSessions()
@@ -3543,10 +4315,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StatusMessage = $"MAA実行計画: {plan.Summary}";
         if (!await ForceCaptureAsync())
             return false;
+        if (_lastCapture.Length == 0)
+        {
+            StatusMessage = "認識に渡すスクリーンショットがありません。";
+            RefreshInspectorRows();
+            return false;
+        }
 
         var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
             plan,
-            (entry, cancellationToken) => _session.RunResourceTaskAsync(entry, "{}", cancellationToken),
+            (entry, cancellationToken) =>
+            {
+                var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, cancellationToken);
+            },
             result =>
             {
                 ResourceTaskResults.Add(result);
@@ -3651,8 +4433,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _lastResourceExecutionPlan = null;
             if (!await ForceCaptureAsync())
                 return;
+            if (_lastCapture.Length == 0)
+            {
+                StatusMessage = "認識に渡すスクリーンショットがありません。";
+                return;
+            }
 
-            var result = await _session.RunResourceTaskAsync(task.Entry);
+            var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(task.Entry);
+            var result = await _session.RunResourceRecognitionAsync(task.Entry, payload, _lastCapture);
             ResourceTaskResults.Add(result);
             RefreshResourceTaskDiagnostics();
             RefreshInspectorRows();
@@ -3872,7 +4660,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var selectedProfileId = SelectedResourceProfile?.Id;
         _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
         MaaResourceContract = RhodesMaaResourceCatalog.ValidateContract();
-        ReplaceCollection(ResourceProfiles, RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks));
+        ReplaceCollection(ResourceProfiles, RhodesPublicDebugPolicy.FilterProfiles(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks)));
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => string.Equals(profile.Id, selectedProfileId, StringComparison.Ordinal))
             ?? ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull")
             ?? ResourceProfiles.FirstOrDefault();
@@ -3890,6 +4678,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshInspectorRows();
         OnPropertyChanged(nameof(RunContextSummary));
         OnPropertyChanged(nameof(CampaignHeaderDetail));
+    }
+
+    /// <summary>検索は1文字ごとに全再構築せず、入力が止まってから一度だけ反映する。</summary>
+    private static void RestartSearchDebounce(ref DispatcherTimer? timer, Action refresh)
+    {
+        if (timer is null)
+        {
+            var created = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            created.Tick += (_, _) =>
+            {
+                created.Stop();
+                refresh();
+            };
+            timer = created;
+        }
+
+        timer.Stop();
+        timer.Start();
     }
 
     private void RefreshChoiceAfterSelectionMutation(string kind)
@@ -3958,7 +4764,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusMessage = $"状態保存に失敗しました: {ex.Message}";
+            TryWriteStateSaveErrorLog(ex);
             return false;
+        }
+    }
+
+    /// <summary>保存失敗はStatusMessageだけだと原因調査ができないため、スタック付きでデバッグログへ残す。</summary>
+    private static void TryWriteStateSaveErrorLog(Exception ex)
+    {
+        try
+        {
+            Directory.CreateDirectory(RhodesSukiDebugPaths.DebugLogDirectory);
+            var path = Path.Combine(RhodesSukiDebugPaths.DebugLogDirectory, "state-save-errors.log");
+            File.AppendAllText(path, $"[{DateTimeOffset.UtcNow:O}]{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch
+        {
+            // ログ書き込み自体の失敗で保存経路を壊さない。
         }
     }
 
@@ -4029,6 +4851,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(RelicListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
         OnPropertyChanged(nameof(CampaignHeaderDetail));
+        RefreshHudRelics();
         RefreshCampaignPreviews();
         RefreshInspectorRows();
     }
@@ -4052,6 +4875,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(RelicListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
         OnPropertyChanged(nameof(CampaignHeaderDetail));
+        RefreshHudRelics();
         RefreshCampaignPreviews();
         RefreshInspectorRows();
     }
@@ -4106,10 +4930,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void EnsureFilterValue(ref string value, IEnumerable<string> options, string propertyName)
     {
-        if (options.Contains(value))
-            return;
+        if (!options.Contains(value))
+            value = "すべて";
 
-        value = "すべて";
+        // 選択肢リストの再構築中、ComboBoxは一時的に選択をクリアしてnullを押し込む。
+        // VM側は同値へ正規化するため変更通知が出ず、コンボの選択表示が空のまま固着する。
+        // 値が変わっていなくても必ず再通知して選択表示を復元する。
         OnPropertyChanged(propertyName);
     }
 
@@ -4575,9 +5401,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         var capture = await _session.CaptureEncodedAsync();
         CaptureState = capture.Succeeded ? $"取得済み: {capture.Detail}" : $"失敗: {capture.Detail}";
+        _adbDiagnosticsCaptureSucceeded = capture.Succeeded;
+        _adbDiagnosticsCaptureDetail = capture.Detail;
         if (!capture.Succeeded)
         {
             StatusMessage = capture.Detail;
+            RefreshAdbDiagnosticSteps();
             return capture;
         }
 
@@ -4591,6 +5420,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         CaptureState = frameRecord.Succeeded
             ? $"{capture.Detail} / frame={frameRecord.FrameId} / {LastCapturePath}"
             : $"{capture.Detail} / frame保存失敗: {frameRecord.Error} / {LastCapturePath}";
+        RefreshFrameRecordHistory();
         RefreshInspectorRows();
         return capture;
     }
@@ -4671,7 +5501,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IEnumerable<MaaCandidatePreview>? candidates = null,
         string? profileLabel = null,
         IEnumerable<string>? presetTaskEntries = null,
-        MaaResourceExecutionPlan? executionPlan = null)
+        MaaResourceExecutionPlan? executionPlan = null,
+        SukiCandidateApplySummary? stateApplySummary = null,
+        bool stateApplyLocalFallbackUsed = false,
+        string? stateApplyApiError = null)
     {
         var selectedMatches = string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal);
         return await RhodesMaaRecognitionEvidenceLog.SaveAsync(
@@ -4688,7 +5521,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             contract: MaaResourceContract,
             frameId: _lastFrameId,
             frameMetadataPath: _lastFrameMetadataPath,
-            stateSnapshotPath: _lastFrameStateSnapshotPath);
+            stateSnapshotPath: _lastFrameStateSnapshotPath,
+            stateApplySummary: stateApplySummary,
+            stateApplyLocalFallbackUsed: stateApplyLocalFallbackUsed,
+            stateApplyApiError: stateApplyApiError);
     }
 
     private MaaRecognitionRuntimeEvidence BuildRecognitionRuntimeEvidence()
@@ -4811,6 +5647,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(LastCaptureImage));
         OnPropertyChanged(nameof(CapturePixelSizeLabel));
         RefreshRoiPreviewRows();
+        RefreshAdbDiagnosticSteps();
         previous?.Dispose();
     }
 

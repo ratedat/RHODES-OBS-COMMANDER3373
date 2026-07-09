@@ -1,0 +1,230 @@
+<Styles
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:services="clr-namespace:RhodesSuki.Services">
+  <!--
+    ワークベンチ共有テーマ。
+    MainWindowと分割後の各ワークスペースUserControlが同じ見た目を共有するため、
+    DataTemplate・コンバーター・共通スタイルをここへ集約する。
+  -->
+  <Styles.Resources>
+    <DataTemplate x:Key="PlainComboItemTemplate">
+      <TextBlock Text="{Binding}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="CampaignComboItemTemplate">
+      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="ResourceProfileComboItemTemplate">
+      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="AdbPresetComboItemTemplate">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding PathSummary}" Foreground="#AAB6B8" FontSize="11" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="AdbPresetSelectionTemplate">
+      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="OcrEngineComboItemTemplate">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding Detail}" Foreground="#AAB6B8" FontSize="11" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="OcrEngineSelectionTemplate">
+      <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="AdbMethodComboItemTemplate">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding Detail}" Foreground="#AAB6B8" FontSize="11" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="AdbMethodSelectionTemplate">
+      <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <services:RhodesBitmapPathConverter x:Key="BitmapPathConverter" />
+  </Styles.Resources>
+
+  <Style Selector="ComboBox">
+    <Setter Property="Foreground" Value="#E8EFEF" />
+    <Setter Property="Background" Value="#151D1E" />
+    <Setter Property="BorderBrush" Value="#344143" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="8,5" />
+    <Setter Property="MaxDropDownHeight" Value="360" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="Foreground" Value="#E8EFEF" />
+    <Setter Property="Background" Value="#101617" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ComboBoxItem:pointerover">
+    <Setter Property="Background" Value="#1D2A2C" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+  <Style Selector="ComboBoxItem:selected">
+    <Setter Property="Background" Value="#244145" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+  <Style Selector="WrapPanel.runtimeActions Button">
+    <Setter Property="Margin" Value="0,0,8,8" />
+  </Style>
+  <!--
+    選択リストはItemsControlで表示する (ListBoxは使わない)。
+    行コンテナに選択/フォーカスの視覚状態が付くと、クリックのたびに行全体へ
+    テーマ由来の枠が出てしまう。選択の表示はカード(Button.choiceCard)のみが担う。
+    仮想化のためテンプレートでScrollViewer+VirtualizingStackPanelを与える。
+  -->
+  <Style Selector="ItemsControl.choicePane">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <ItemsPresenter ItemsPanel="{TemplateBinding ItemsPanel}" />
+        </ScrollViewer>
+      </ControlTemplate>
+    </Setter>
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate>
+        <VirtualizingStackPanel />
+      </ItemsPanelTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.choiceCard">
+    <Setter Property="Background" Value="#151D1E" />
+    <Setter Property="BorderBrush" Value="#2B3638" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="9" />
+    <Setter Property="Margin" Value="0,0,8,8" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border
+            Background="{TemplateBinding Background}"
+            BorderBrush="{TemplateBinding BorderBrush}"
+            BorderThickness="{TemplateBinding BorderThickness}"
+            CornerRadius="7"
+            Padding="{TemplateBinding Padding}"
+            MinHeight="{TemplateBinding MinHeight}">
+          <ContentPresenter
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}"
+              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.choiceCard:pointerover">
+    <Setter Property="Background" Value="#1A2426" />
+    <Setter Property="BorderBrush" Value="#3A5559" />
+  </Style>
+  <Style Selector="Button.choiceCard:pressed">
+    <Setter Property="Background" Value="#203236" />
+    <Setter Property="BorderBrush" Value="#4C6C72" />
+  </Style>
+  <!-- 選択中カード: クリックの結果が一目で分かるようアクセント枠+ティント。 -->
+  <Style Selector="Button.choiceCard.selected">
+    <Setter Property="Background" Value="#16302B" />
+    <Setter Property="BorderBrush" Value="#36E2B6" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="Padding" Value="8" />
+  </Style>
+  <Style Selector="Button.choiceCard.selected:pointerover">
+    <Setter Property="Background" Value="#1B3A34" />
+    <Setter Property="BorderBrush" Value="#5FEECB" />
+  </Style>
+  <Style Selector="Button.choiceCard.excluded">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <!-- 主アクション。1画面に原則1つだけ使う。 -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="#1D4A3F" />
+    <Setter Property="BorderBrush" Value="#37907C" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="#D9FFF3" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="14,7" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#256052" />
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="#1A3E36" />
+  </Style>
+
+  <!-- 左ナビ。選択中のワークスペースを常に可視化する。 -->
+  <Style Selector="ListBox.navList">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="Margin" Value="0,0,0,4" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#16211F" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="#17322E" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:selected">
+    <Setter Property="BorderBrush" Value="#36E2B6" />
+  </Style>
+
+  <!-- 文字階層は3段階に固定する。9-10pxは使わない。 -->
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Opacity" Value="0.62" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="Consolas" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Opacity" Value="0.72" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="#151D1E" />
+    <Setter Property="BorderBrush" Value="#2B3638" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="#101617" />
+    <Setter Property="BorderBrush" Value="#2B3638" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="14" />
+  </Style>
+
+  <Style Selector="Expander">
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+</Styles>

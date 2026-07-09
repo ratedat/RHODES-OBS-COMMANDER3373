@@ -215,6 +215,102 @@ public static class RhodesRunCatalog
             SukiOcrEngineCatalog.Normalize(JsonString(preferences, "ocrEngine", SukiOcrEngineCatalog.DefaultId)));
     }
 
+    /// <summary>手動入力UI向け: 現在ISの分隊一覧 (id + 表示名)。</summary>
+    public static IReadOnlyList<SukiSquadOption> LoadSquadOptions(string? campaignId)
+    {
+        try
+        {
+            var path = ResolveDataPath(ResolveDataRoot(), "squads.json");
+            if (!File.Exists(path))
+                return [];
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (!document.RootElement.TryGetProperty("squads", out var squads) || squads.ValueKind != JsonValueKind.Array)
+                return [];
+
+            return squads.EnumerateArray()
+                .Where(item => string.IsNullOrWhiteSpace(campaignId)
+                    || JsonString(item, "campaignId").Equals(campaignId, StringComparison.Ordinal))
+                .Select(item => new SukiSquadOption(JsonString(item, "id"), JsonString(item, "name")))
+                .Where(option => !string.IsNullOrWhiteSpace(option.Id) && !string.IsNullOrWhiteSpace(option.Name))
+                .ToArray();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    /// <summary>手動入力UI向け: 現在ISの選択可能な等級上限。difficulty-grades.jsonを正とする。</summary>
+    public static int MaxDifficultyForCampaign(string? campaignId)
+    {
+        try
+        {
+            var path = ResolveDataPath(ResolveDataRoot(), "difficulty-grades.json");
+            if (!File.Exists(path) || string.IsNullOrWhiteSpace(campaignId))
+                return 15;
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            var root = document.RootElement;
+            if (!root.TryGetProperty("campaignDifficultyGrades", out var groups)
+                || groups.ValueKind != JsonValueKind.Object
+                || !groups.TryGetProperty(campaignId, out var group)
+                || group.ValueKind != JsonValueKind.Object)
+            {
+                return 15;
+            }
+
+            var max = JsonInt(group, "maxSelectableGrade");
+            return max > 0 ? max : 15;
+        }
+        catch
+        {
+            return 15;
+        }
+    }
+
+    /// <summary>手動入力UI向け: 奇想天外分隊など、分隊に紐づく追加効果候補。</summary>
+    public static IReadOnlyList<SukiSquadOption> LoadSquadRandomEffectOptions(string? campaignId, string? squadId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(squadId))
+                return [];
+
+            var path = ResolveDataPath(ResolveDataRoot(), "squads.json");
+            if (!File.Exists(path))
+                return [];
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (!document.RootElement.TryGetProperty("squads", out var squads) || squads.ValueKind != JsonValueKind.Array)
+                return [];
+
+            foreach (var squad in squads.EnumerateArray())
+            {
+                if (!JsonString(squad, "id").Equals(squadId, StringComparison.Ordinal))
+                    continue;
+                if (!string.IsNullOrWhiteSpace(campaignId)
+                    && !JsonString(squad, "campaignId").Equals(campaignId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                if (!squad.TryGetProperty("randomEffectOptions", out var options) || options.ValueKind != JsonValueKind.Array)
+                    return [];
+
+                return options.EnumerateArray()
+                    .Select(item => new SukiSquadOption(JsonString(item, "id"), JsonString(item, "label")))
+                    .Where(option => !string.IsNullOrWhiteSpace(option.Id) && !string.IsNullOrWhiteSpace(option.Name))
+                    .ToArray();
+            }
+
+            return [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
     private static string ResolveSquadDisplayName(string dataRoot, string campaignId, JsonElement run)
     {
         var fallback = JsonString(run, "squad");
@@ -714,4 +810,13 @@ public static class RhodesRunCatalog
             && property.ValueKind is JsonValueKind.True or JsonValueKind.False
             && property.GetBoolean();
     }
+}
+
+public sealed record SukiSquadOption(string Id, string Name)
+{
+    /// <summary>手動入力コンボの「変更しない」プレースホルダ。</summary>
+    public static SukiSquadOption KeepCurrent { get; } = new("", "(変更しない)");
+
+    // ComboBoxの既定表示(選択ボックス/ドロップダウン)にそのまま名前を出す。
+    public override string ToString() => Name;
 }

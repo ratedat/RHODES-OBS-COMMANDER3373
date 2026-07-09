@@ -23,6 +23,10 @@ public sealed class RhodesBitmapPathConverter : IValueConverter
         return null;
     }
 
+    // 一覧カードの表示サイズは42px程度。フル解像度でデコードすると
+    // 数百枚で数百MB級のメモリと大きなデコード時間を食うため、サムネイル幅で読む。
+    private const int ThumbnailDecodeWidth = 96;
+
     private static Bitmap? LoadBitmap(string path)
     {
         if (!File.Exists(path))
@@ -30,7 +34,8 @@ public sealed class RhodesBitmapPathConverter : IValueConverter
 
         try
         {
-            return new Bitmap(path);
+            using var stream = File.OpenRead(path);
+            return Bitmap.DecodeToWidth(stream, ThumbnailDecodeWidth);
         }
         catch
         {

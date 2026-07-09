@@ -42,63 +42,228 @@ public static class RhodesRecognitionCandidateApplier
     {
         var pruned = RhodesRunStateStore.PruneAbandonedRunValues(state);
         var normalizedOcrEngine = RhodesRunStateStore.NormalizeOcrEnginePreference(state);
-        var candidateList = NormalizeCandidatesForApply(candidates);
+        var prepared = PrepareCandidatesForApply(candidates);
+        var candidateList = prepared.Active.Select(item => item.Candidate).ToArray();
         var applied = new List<string>();
+        var outcomes = new List<SukiCandidateApplyOutcome>();
         var handledIndexes = ApplyCampaignCandidates(state, candidateList, applied);
         if (!runStatusOnly)
             handledIndexes.UnionWith(ApplyIs5SpecialCandidates(state, candidateList, applied));
-        var ignored = 0;
-        for (var index = 0; index < candidateList.Count; index++)
+        foreach (var index in handledIndexes.OrderBy(value => value))
+            outcomes.Add(Outcome(prepared.Active[index].Index, candidateList[index], "applied", AppliedFieldForCandidate(candidateList[index]), ""));
+        var ignored = prepared.IgnoredDuplicates.Count;
+        foreach (var duplicate in prepared.IgnoredDuplicates)
+            outcomes.Add(Outcome(duplicate.Index, duplicate.Candidate, "ignored", "", "lower-confidence-duplicate"));
+        for (var index = 0; index < candidateList.Length; index++)
         {
             if (handledIndexes.Contains(index))
                 continue;
 
             var candidate = candidateList[index];
-            if (!ApplyCandidate(state, candidate, applied, runStatusOnly))
+            if (ApplyCandidate(state, candidate, applied, runStatusOnly))
+            {
+                outcomes.Add(Outcome(prepared.Active[index].Index, candidate, "applied", AppliedFieldForCandidate(candidate), ""));
+            }
+            else
             {
                 ignored++;
+                outcomes.Add(Outcome(prepared.Active[index].Index, candidate, "ignored", "", IgnoredReason(state, candidate, runStatusOnly)));
             }
         }
 
         if (applied.Count > 0 || pruned || normalizedOcrEngine)
             state["updatedAt"] = now.UtcDateTime.ToString("O");
 
-        return new SukiCandidateApplySummary(applied.Count, ignored, applied);
+        return new SukiCandidateApplySummary(
+            applied.Count,
+            ignored,
+            applied,
+            outcomes.OrderBy(item => item.Index).ToArray());
     }
 
-    private static List<MaaCandidatePreview> NormalizeCandidatesForApply(IEnumerable<MaaCandidatePreview> candidates)
+    private static SukiCandidateApplyOutcome Outcome(
+        int index,
+        MaaCandidatePreview candidate,
+        string outcome,
+        string appliedField,
+        string ignoredReason)
     {
-        var normalized = new List<MaaCandidatePreview>();
+        return new SukiCandidateApplyOutcome(
+            index,
+            candidate.Kind,
+            candidate.Label,
+            candidate.Value,
+            candidate.Identity,
+            outcome,
+            appliedField,
+            ignoredReason);
+    }
+
+    private static string AppliedFieldForCandidate(MaaCandidatePreview candidate)
+    {
+        if (CandidateIsKind(candidate, "runStatus"))
+            return string.IsNullOrWhiteSpace(candidate.Field) ? "run" : candidate.Field.Trim();
+        if (CandidateIsKind(candidate, "operator"))
+            return $"operator:{CandidateId(candidate.OperatorId, candidate.Value)}";
+        if (CandidateIsKind(candidate, "relic"))
+            return $"relic:{CandidateId(candidate.RelicId, candidate.Value)}";
+        if (CandidateIsKind(candidate, "thought"))
+            return $"thought:{CandidateId(candidate.ThoughtId, candidate.Value)}";
+        if (CandidateIsKind(candidate, "age"))
+            return $"age:{CandidateId(candidate.AgeId, candidate.Value)}";
+        if (CandidateIsKind(candidate, "revelation"))
+            return $"revelation:{CandidateId(candidate.EffectId, candidate.Value)}";
+        if (CandidateIsKind(candidate, "coin"))
+            return $"coin:{CandidateId(candidate.CoinId, candidate.Value)}";
+        return candidate.Identity;
+    }
+
+    private static string IgnoredReason(JsonObject state, MaaCandidatePreview candidate, bool runStatusOnly)
+    {
+        if (runStatusOnly && !CandidateIsKind(candidate, "runStatus"))
+            return "run-status-only";
+        if (string.IsNullOrWhiteSpace(candidate.Kind))
+            return "missing-kind";
+        if (CandidateIsKind(candidate, "runStatus"))
+            return RunStatusIgnoredReason(state, candidate);
+        if (CandidateIsKind(candidate, "operator"))
+            return StringSetIgnoredReason(state, "operators", candidate.OperatorId, candidate.Value, "operator");
+        if (CandidateIsKind(candidate, "relic"))
+            return RelicIgnoredReason(state, candidate);
+        if (CandidateIsKind(candidate, "thought") || CandidateIsKind(candidate, "age"))
+            return Is5SpecialIgnoredReason(candidate);
+        if (CandidateIsKind(candidate, "revelation"))
+            return "not-is4-or-invalid-revelation-slot";
+        if (CandidateIsKind(candidate, "coin"))
+            return "not-is6-or-missing-coin-id";
+        return "unsupported-kind";
+    }
+
+    private static string RunStatusIgnoredReason(JsonObject state, MaaCandidatePreview candidate)
+    {
+        var field = candidate.Field.Trim();
+        if (string.IsNullOrWhiteSpace(field))
+            return "missing-run-field";
+        if (RhodesMaaRecognitionPolicy.AbandonedRunFields.Contains(field))
+            return "abandoned-run-field";
+
+        var run = state["run"] as JsonObject;
+        if (run is not null
+            && !field.Equals("campaignId", StringComparison.Ordinal)
+            && !CandidateCampaignMatchesCurrentRun(run, candidate))
+        {
+            return "campaign-mismatch";
+        }
+
+        return field switch
+        {
+            "ingot" or "difficulty" or "idea" => int.TryParse(candidate.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)
+                ? "unsupported-or-invalid-run-field"
+                : "invalid-run-value",
+            "squadId" or "squadRandomEffectOptionId" => string.IsNullOrWhiteSpace(candidate.Value)
+                ? "missing-run-value"
+                : "unsupported-or-invalid-run-field",
+            "campaignId" => KnownCampaignIds.Contains(CandidateId(candidate.Value, candidate.CampaignId))
+                ? "unsupported-or-invalid-run-field"
+                : "unknown-campaign-id",
+            _ => "unsupported-run-field",
+        };
+    }
+
+    private static string StringSetIgnoredReason(JsonObject state, string propertyName, string primaryValue, string fallbackValue, string noun)
+    {
+        var value = CandidateId(primaryValue, fallbackValue);
+        if (string.IsNullOrWhiteSpace(value))
+            return $"missing-{noun}-id";
+        if (StringSetContains(state, propertyName, value))
+            return $"duplicate-{noun}";
+        return $"unsupported-{noun}";
+    }
+
+    private static string RelicIgnoredReason(JsonObject state, MaaCandidatePreview candidate)
+    {
+        var run = state["run"] as JsonObject;
+        var currentCampaignId = run is null ? "" : JsonString(run, "campaignId");
+        if (!string.IsNullOrWhiteSpace(candidate.CampaignId)
+            && !string.IsNullOrWhiteSpace(currentCampaignId)
+            && !candidate.CampaignId.Equals(currentCampaignId, StringComparison.Ordinal))
+        {
+            return "campaign-mismatch";
+        }
+
+        return StringSetIgnoredReason(state, "relics", candidate.RelicId, candidate.Value, "relic");
+    }
+
+    private static string Is5SpecialIgnoredReason(MaaCandidatePreview candidate)
+    {
+        if (!CandidateCampaignIsIs5(candidate))
+            return "campaign-mismatch";
+
+        var id = CandidateIsKind(candidate, "thought")
+            ? CandidateId(candidate.ThoughtId, candidate.Value)
+            : CandidateId(candidate.AgeId, candidate.Value);
+        return string.IsNullOrWhiteSpace(id) ? "missing-special-id" : "unsupported-is5-special";
+    }
+
+    private static bool StringSetContains(JsonObject state, string propertyName, string value)
+    {
+        if (state[propertyName] is not JsonArray existing)
+            return false;
+
+        foreach (var item in existing)
+        {
+            if (item is JsonValue existingValue
+                && existingValue.TryGetValue<string>(out var text)
+                && text.Equals(value, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static CandidatePreparation PrepareCandidatesForApply(IEnumerable<MaaCandidatePreview> candidates)
+    {
+        var active = new List<CandidateApplyEntry>();
+        var ignoredDuplicates = new List<CandidateApplyEntry>();
         var bestRunStatusByKey = new Dictionary<string, int>(StringComparer.Ordinal);
 
-        foreach (var candidate in candidates)
+        foreach (var (candidate, originalIndex) in candidates.Select((candidate, index) => (candidate, index)))
         {
             if (!CandidateIsKind(candidate, "runStatus"))
             {
-                normalized.Add(candidate);
+                active.Add(new CandidateApplyEntry(originalIndex, candidate));
                 continue;
             }
 
             var key = RunStatusApplyKey(candidate);
             if (string.IsNullOrWhiteSpace(key))
             {
-                normalized.Add(candidate);
+                active.Add(new CandidateApplyEntry(originalIndex, candidate));
                 continue;
             }
 
             if (!bestRunStatusByKey.TryGetValue(key, out var existingIndex))
             {
-                bestRunStatusByKey[key] = normalized.Count;
-                normalized.Add(candidate);
+                bestRunStatusByKey[key] = active.Count;
+                active.Add(new CandidateApplyEntry(originalIndex, candidate));
                 continue;
             }
 
-            var existing = normalized[existingIndex];
-            if ((candidate.Confidence ?? 0) > (existing.Confidence ?? 0))
-                normalized[existingIndex] = candidate;
+            var existing = active[existingIndex];
+            if ((candidate.Confidence ?? 0) > (existing.Candidate.Confidence ?? 0))
+            {
+                ignoredDuplicates.Add(existing);
+                active[existingIndex] = new CandidateApplyEntry(originalIndex, candidate);
+            }
+            else
+            {
+                ignoredDuplicates.Add(new CandidateApplyEntry(originalIndex, candidate));
+            }
         }
 
-        return normalized;
+        return new CandidatePreparation(active, ignoredDuplicates);
     }
 
     private static HashSet<int> ApplyCampaignCandidates(
@@ -170,7 +335,10 @@ public static class RhodesRecognitionCandidateApplier
             case "ingot":
                 return ApplyInt(run, field, candidate.Value, 0, 9999, applied);
             case "difficulty":
-                return ApplyInt(run, field, candidate.Value, 1, 99, applied);
+                if (!ApplyInt(run, field, candidate.Value, 1, 99, applied))
+                    return false;
+                ApplyDifficultyTier(run);
+                return true;
             case "squadId":
                 return ApplyString(run, field, candidate.Value, applied, clearSquad: true);
             case "squadRandomEffectOptionId":
@@ -182,6 +350,21 @@ public static class RhodesRecognitionCandidateApplier
             default:
                 return false;
         }
+    }
+
+    /// <summary>
+    /// 等級は多元化珍品(No.001〜020の効果バリアント)のtierと結びつく。
+    /// Web側 app/domain/difficulty.js の applyDifficultyTier と同じ規則で run.difficultyTierId を導出し、
+    /// API未接続のローカル反映でも珍品バリアント解決が追従するようにする。
+    /// </summary>
+    private static void ApplyDifficultyTier(JsonObject run)
+    {
+        var campaignId = JsonString(run, "campaignId");
+        if (!RhodesDifficultyTierCatalog.HasTiers(campaignId))
+            return;
+
+        if (run["difficulty"] is JsonValue value && value.TryGetValue<int>(out var difficulty))
+            run["difficultyTierId"] = RhodesDifficultyTierCatalog.ResolveTierId(campaignId, difficulty);
     }
 
     private static bool ApplyInt(JsonObject run, string field, string value, int min, int max, ICollection<string> applied)
@@ -623,7 +806,8 @@ public static class RhodesRecognitionCandidateApplier
 
     private static void ResetRunValues(JsonObject run)
     {
-        foreach (var propertyName in new[] { "squad", "difficulty", "ingot", "idea", "special" }
+        // difficultyTierId は difficulty からの導出値なので、等級と一緒に破棄する。
+        foreach (var propertyName in new[] { "squad", "difficulty", "difficultyTierId", "ingot", "idea", "special" }
             .Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {
             run.Remove(propertyName);
@@ -651,4 +835,10 @@ public static class RhodesRecognitionCandidateApplier
 
         return "";
     }
+
+    private sealed record CandidatePreparation(
+        IReadOnlyList<CandidateApplyEntry> Active,
+        IReadOnlyList<CandidateApplyEntry> IgnoredDuplicates);
+
+    private sealed record CandidateApplyEntry(int Index, MaaCandidatePreview Candidate);
 }

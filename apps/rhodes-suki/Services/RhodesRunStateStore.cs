@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
@@ -7,9 +8,12 @@ namespace RhodesSuki.Services;
 public static class RhodesRunStateStore
 {
     private static readonly SemaphoreSlim WriteLock = new(1, 1);
+    // TypeInfoResolver必須: JsonArray.Add<T>で作られたノード(JsonValueCustomized)は、
+    // リゾルバ無しのoptionsをToJsonStringへ渡すとMakeReadOnlyで例外になる。
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
         WriteIndented = true,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
     };
 
     public static string ResolveDefaultStatePath()
@@ -209,7 +213,8 @@ public static class RhodesRunStateStore
 
     private static void ResetRunValues(JsonObject run)
     {
-        foreach (var propertyName in new[] { "squad", "difficulty", "ingot", "idea", "special" }
+        // difficultyTierId は difficulty からの導出値なので、等級と一緒に破棄する。
+        foreach (var propertyName in new[] { "squad", "difficulty", "difficultyTierId", "ingot", "idea", "special" }
             .Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {
             run.Remove(propertyName);

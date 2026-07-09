@@ -6,5 +6,6 @@
     RequestedThemeVariant="Dark">
   <Application.Styles>
     <suki:SukiTheme ThemeColor="Green" />
+    <StyleInclude Source="avares://RhodesSuki/Views/WorkbenchTheme.axaml" />
   </Application.Styles>
 </Application>

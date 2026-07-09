@@ -1,0 +1,426 @@
+<UserControl
+    x:Class="RhodesSuki.Views.Workspaces.RecognitionWorkspaceView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    認識スタジオ。
+    左: キャプチャプレビュー(ROIオーバーレイ) + タスク個別実行 + ROI調整(開発者向け)。
+    右: 候補、反映結果、スキャン履歴、Raw OCR、task結果。
+    流れ: プロファイル選択 → 認識実行 → 候補確認 → 候補反映。
+  -->
+  <Grid RowDefinitions="Auto,*" RowSpacing="10">
+    <Grid ColumnDefinitions="Auto,260,Auto,Auto,Auto,*" ColumnSpacing="8">
+      <TextBlock Text="{Binding RecognitionLayout.Header.Title}" Classes="h1" VerticalAlignment="Center" Margin="0,0,6,0" />
+      <ComboBox Grid.Column="1" ToolTip.Tip="{Binding RecognitionLayout.Profile.Title}" ItemsSource="{Binding ResourceProfiles}" SelectedItem="{Binding SelectedResourceProfile, Mode=TwoWay}" ItemTemplate="{StaticResource ResourceProfileComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource ResourceProfileComboItemTemplate}" VerticalAlignment="Center" />
+      <Button Grid.Column="2" Classes="primary" Content="認識実行" Command="{Binding RunSelectedProfileRecognitionCommand}" VerticalAlignment="Center" />
+      <Button Grid.Column="3" Content="候補反映" Command="{Binding ApplyCandidateResultsCommand}" VerticalAlignment="Center" />
+      <CheckBox Grid.Column="4" Content="ROI表示" IsChecked="{Binding ShowRoiOverlay, Mode=TwoWay}" VerticalAlignment="Center" />
+      <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
+        <TextBlock Text="{Binding CapturePixelSizeLabel}" Classes="mono" />
+        <TextBlock Text="{Binding RoiProjectionLabel}" Classes="mono" />
+      </StackPanel>
+    </Grid>
+
+    <Grid Grid.Row="1" ColumnDefinitions="3*,2*" ColumnSpacing="10">
+      <Grid RowDefinitions="Auto,*" RowSpacing="8">
+        <Border Classes="card" Padding="8">
+          <Viewbox Stretch="Uniform" MaxHeight="470">
+            <Canvas x:Name="RoiCanvas" Width="1280" Height="720">
+              <Image Source="{Binding LastCaptureImage}" Width="1280" Height="720" Stretch="Fill" />
+              <ItemsControl ItemsSource="{Binding RoiPreviewRows}" IsVisible="{Binding ShowRoiOverlay}" Width="1280" Height="720">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <Canvas Width="1280" Height="720" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Canvas.Left="{Binding X}"
+                            Canvas.Top="{Binding Y}"
+                            Width="{Binding Width}"
+                            Height="{Binding Height}"
+                            BorderBrush="#36E2B6"
+                            BorderThickness="3"
+                            Background="#2236E2B6"
+                            PointerPressed="RoiOverlayPointerPressed"
+                            PointerMoved="RoiOverlayPointerMoved"
+                            PointerReleased="RoiOverlayPointerReleased"
+                            PointerCaptureLost="RoiOverlayPointerCaptureLost">
+                      <TextBlock Text="{Binding Source}" FontSize="16" Foreground="#F3FFFB" Background="#CC081011" Padding="4,1" />
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding SelectedRoiPreviewRows}" IsVisible="{Binding ShowRoiOverlay}" IsHitTestVisible="False" Width="1280" Height="720">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <Canvas Width="1280" Height="720" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Canvas.Left="{Binding X}"
+                            Canvas.Top="{Binding Y}"
+                            Width="{Binding Width}"
+                            Height="{Binding Height}"
+                            BorderBrush="#FFD447"
+                            BorderThickness="5"
+                            Background="#22FFD447">
+                      <TextBlock Text="{Binding Source}" FontSize="18" Foreground="#111100" Background="#EEFFD447" Padding="5,2" />
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding SelectedRoiPreviewRows}" IsVisible="{Binding ShowRoiOverlay}" Width="1280" Height="720">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <Canvas Width="1280" Height="720" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Canvas Width="1280" Height="720">
+                      <Border Canvas.Left="{Binding TopLeftHandleX}" Canvas.Top="{Binding TopLeftHandleY}" Width="24" Height="24" CornerRadius="3" BorderBrush="#111100" BorderThickness="2" Background="#EEFFD447" Tag="topLeft"
+                              PointerPressed="RoiResizePointerPressed" PointerMoved="RoiResizePointerMoved" PointerReleased="RoiResizePointerReleased" PointerCaptureLost="RoiResizePointerCaptureLost">
+                        <TextBlock Text="↖" FontSize="16" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <Border Canvas.Left="{Binding LeftHandleX}" Canvas.Top="{Binding LeftHandleY}" Width="20" Height="20" CornerRadius="3" BorderBrush="#111100" BorderThickness="2" Background="#EEFFD447" Tag="left"
+                              PointerPressed="RoiResizePointerPressed" PointerMoved="RoiResizePointerMoved" PointerReleased="RoiResizePointerReleased" PointerCaptureLost="RoiResizePointerCaptureLost">
+                        <TextBlock Text="←" FontSize="14" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <Border Canvas.Left="{Binding TopHandleX}" Canvas.Top="{Binding TopHandleY}" Width="20" Height="20" CornerRadius="3" BorderBrush="#111100" BorderThickness="2" Background="#EEFFD447" Tag="top"
+                              PointerPressed="RoiResizePointerPressed" PointerMoved="RoiResizePointerMoved" PointerReleased="RoiResizePointerReleased" PointerCaptureLost="RoiResizePointerCaptureLost">
+                        <TextBlock Text="↑" FontSize="14" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <Border Canvas.Left="{Binding RightHandleX}" Canvas.Top="{Binding RightHandleY}" Width="20" Height="20" CornerRadius="3" BorderBrush="#111100" BorderThickness="2" Background="#EEFFD447" Tag="right"
+                              PointerPressed="RoiResizePointerPressed" PointerMoved="RoiResizePointerMoved" PointerReleased="RoiResizePointerReleased" PointerCaptureLost="RoiResizePointerCaptureLost">
+                        <TextBlock Text="→" FontSize="14" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <Border Canvas.Left="{Binding BottomHandleX}" Canvas.Top="{Binding BottomHandleY}" Width="20" Height="20" CornerRadius="3" BorderBrush="#111100" BorderThickness="2" Background="#EEFFD447" Tag="bottom"
+                              PointerPressed="RoiResizePointerPressed" PointerMoved="RoiResizePointerMoved" PointerReleased="RoiResizePointerReleased" PointerCaptureLost="RoiResizePointerCaptureLost">
+                        <TextBlock Text="↓" FontSize="14" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <Border Canvas.Left="{Binding ResizeHandleX}" Canvas.Top="{Binding ResizeHandleY}" Width="24" Height="24" CornerRadius="3" BorderBrush="#111100" BorderThickness="2" Background="#EEFFD447" Tag="bottomRight"
+                              PointerPressed="RoiResizePointerPressed" PointerMoved="RoiResizePointerMoved" PointerReleased="RoiResizePointerReleased" PointerCaptureLost="RoiResizePointerCaptureLost">
+                        <TextBlock Text="↘" FontSize="16" Foreground="#111100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                    </Canvas>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Canvas>
+          </Viewbox>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="0">
+            <Expander Header="タスク個別実行" ToolTip.Tip="{Binding RecognitionLayout.Execution.Title}">
+              <StackPanel Spacing="8" Margin="0,8,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="全実行" Command="{Binding RunAllResourceTasksCommand}" />
+                  <Button Content="JSON保存" Command="{Binding ExportResourceTaskResultsCommand}" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding ResourceTasks}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="card" Padding="10" Margin="0,0,0,8">
+                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="4">
+                          <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Purpose}" Classes="caption" />
+                          </StackPanel>
+                          <Button Grid.Column="1" Grid.RowSpan="3" Content="実行" Command="{Binding DataContext.RunResourceTaskCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" VerticalAlignment="Center" />
+                          <TextBlock Grid.Row="1" Text="{Binding Entry}" Classes="mono" />
+                          <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <TextBlock Text="{Binding SourceSummary}" Classes="mono" Opacity="0.56" />
+                            <TextBlock Grid.Column="1" Text="{Binding ProfileSummary}" Classes="mono" Opacity="0.56" />
+                          </Grid>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Expander>
+
+            <Expander Header="ROI調整 (開発者向け)">
+              <StackPanel Spacing="8" Margin="0,8,0,0">
+                <Border CornerRadius="7" Padding="9" Background="#151913" BorderBrush="#3A4528" BorderThickness="1">
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                    <TextBlock Text="{Binding SelectedRoiEditDraft.StatusLabel}" FontSize="13" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1" Text="{Binding SelectedRoiEditDraft.RoiJson}" Classes="mono" />
+                    <Button Grid.Column="2" Content="適用確認" Command="{Binding PreviewSelectedRoiDraftApplyCommand}" Padding="8,3" />
+                    <Button Grid.Column="3" Content="適用" Command="{Binding ApplySelectedRoiDraftCommand}" Padding="8,3" />
+                    <Button Grid.Column="4" Content="書出し" Command="{Binding ExportSelectedRoiDraftCommand}" Padding="8,3" />
+                    <WrapPanel Grid.Row="1" Grid.ColumnSpan="5">
+                      <TextBlock Text="{Binding RoiSnapStepLabel}" Classes="mono" VerticalAlignment="Center" Margin="0,0,8,6" />
+                      <Button Content="1px" Command="{Binding SetRoiSnapStepCommand}" CommandParameter="1" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="4px" Command="{Binding SetRoiSnapStepCommand}" CommandParameter="4" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="8px" Command="{Binding SetRoiSnapStepCommand}" CommandParameter="8" Padding="7,2" Margin="0,0,10,6" />
+                      <Button Content="元に戻す" Command="{Binding ResetSelectedRoiDraftCommand}" Padding="7,2" Margin="0,0,10,6" />
+                      <Button Content="左" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="left" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="右" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="right" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="上" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="up" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="下" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="down" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="幅+" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="wider" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="幅-" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="narrower" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="高+" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="taller" Padding="7,2" Margin="0,0,6,6" />
+                      <Button Content="高-" Command="{Binding AdjustSelectedRoiDraftCommand}" CommandParameter="shorter" Padding="7,2" Margin="0,0,6,6" />
+                    </WrapPanel>
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="5" Text="{Binding SelectedRoiEditDraft.Detail}" Classes="mono" />
+                    <TextBlock Grid.Row="3" Grid.ColumnSpan="5" Text="{Binding RoiDraftApplyResult.Message}" Classes="mono" />
+                    <TextBlock Grid.Row="4" Grid.ColumnSpan="5" Text="{Binding RoiDraftApplyResult.TargetSummary}" Classes="mono" />
+                    <TextBlock Grid.Row="5" Grid.ColumnSpan="5" Text="{Binding RoiDraftApplyResult.DiffSummary}" Classes="mono" />
+                    <TextBlock Grid.Row="6" Grid.ColumnSpan="5" Text="{Binding RoiDraftApplyResult.BackupSummary}" Classes="mono" />
+                  </Grid>
+                </Border>
+
+                <Border CornerRadius="7" Padding="9" Background="#121A1C" BorderBrush="#2E4448" BorderThickness="1">
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                    <TextBlock Text="表示中ROI一括" FontSize="13" FontWeight="SemiBold" />
+                    <Button Grid.Column="1" Content="全選択" Command="{Binding IncludeAllRoiBatchDraftsCommand}" Padding="8,3" />
+                    <Button Grid.Column="2" Content="全解除" Command="{Binding ExcludeAllRoiBatchDraftsCommand}" Padding="8,3" />
+                    <Button Grid.Column="3" Content="全候補確認" Command="{Binding PreviewVisibleRoiDraftsApplyCommand}" Padding="8,3" />
+                    <Button Grid.Column="4" Content="全候補適用" Command="{Binding ApplyVisibleRoiDraftsCommand}" Padding="8,3" />
+                    <Button Grid.Column="5" Content="セッション保存" Command="{Binding ExportRoiAdjustmentSessionCommand}" Padding="8,3" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="6" Text="{Binding RoiBatchApplyResult.Summary}" Classes="mono" />
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="6" Text="{Binding RoiBatchApplyResult.BackupSummary}" Classes="mono" />
+                    <ListBox Grid.Row="3" Grid.ColumnSpan="6" ItemsSource="{Binding RoiBatchDrafts}" MaxHeight="118" Background="Transparent" BorderThickness="0" Padding="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,4,0,0">
+                            <CheckBox IsChecked="{Binding IsIncluded, Mode=TwoWay}" VerticalAlignment="Center" />
+                            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                              <TextBlock Text="{Binding Entry}" Classes="mono" />
+                              <TextBlock Grid.Column="1" Text="{Binding StateLabel}" FontSize="11" Opacity="0.78" />
+                              <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding RoiJson}" Classes="mono" />
+                              <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding StateDetail}" Classes="mono" />
+                            </Grid>
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                    <ListBox Grid.Row="4" Grid.ColumnSpan="6" ItemsSource="{Binding RoiBatchApplyResult.Results}" MaxHeight="132" Background="Transparent" BorderThickness="0" Padding="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid RowDefinitions="Auto,Auto" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding TargetSummary}" Classes="mono" />
+                            <TextBlock Grid.Row="1" Text="{Binding DiffSummary}" Classes="mono" />
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+
+                <Border CornerRadius="7" Padding="9" Background="#131719" BorderBrush="#334147" BorderThickness="1">
+                  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
+                    <TextBlock Text="ROI調整セッション" FontSize="13" FontWeight="SemiBold" />
+                    <Button Grid.Column="1" Content="更新" Command="{Binding RefreshRoiAdjustmentSessionsCommand}" Padding="8,3" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding RoiSessionRestoreNotice}" Classes="caption" />
+                    <ListBox Grid.Row="2" Grid.ColumnSpan="2" ItemsSource="{Binding RoiAdjustmentSessions}" MaxHeight="132" Background="Transparent" BorderThickness="0" Padding="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <Button Grid.Column="1" Content="読込" Command="{Binding DataContext.LoadRoiAdjustmentSessionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="8,2" />
+                            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" Classes="mono" />
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+
+                <Border CornerRadius="7" Padding="9" Background="#151915" BorderBrush="#3B4730" BorderThickness="1">
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
+                    <TextBlock Text="調整後再スキャン比較" FontSize="13" FontWeight="SemiBold" />
+                    <Button Grid.Column="1" Content="再スキャン比較" Command="{Binding RunRoiRescanComparisonCommand}" Padding="8,3" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding RoiRescanComparisonSummary}" Classes="mono" />
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding RoiRescanComparisonEvidenceSummary}" Classes="mono" Opacity="0.5" />
+                    <WrapPanel Grid.Row="3" Grid.ColumnSpan="2">
+                      <Button Content="before表示" Command="{Binding PreviewRoiRescanEvidenceCommand}" CommandParameter="before" Padding="7,2" Margin="0,0,6,0" />
+                      <Button Content="after表示" Command="{Binding PreviewRoiRescanEvidenceCommand}" CommandParameter="after" Padding="7,2" Margin="0,0,6,0" />
+                      <CheckBox Content="候補" IsChecked="{Binding RoiEvidenceShowCandidates, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                      <CheckBox Content="task" IsChecked="{Binding RoiEvidenceShowTasks, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                      <CheckBox Content="log" IsChecked="{Binding RoiEvidenceShowLog, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Text="{Binding RoiRescanEvidencePreviewTitle}" Classes="mono" VerticalAlignment="Center" />
+                    </WrapPanel>
+                    <ListBox Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding RoiRescanComparisonRows}" SelectedItem="{Binding SelectedRoiRescanComparisonRow, Mode=TwoWay}" MaxHeight="132" Background="Transparent" BorderThickness="0" Padding="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="6" Padding="8" Background="#101514" BorderBrush="#2F3A30" BorderThickness="1" Margin="0,0,0,6">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" RowSpacing="2">
+                              <TextBlock Text="{Binding StateLabel}" FontSize="11" FontWeight="SemiBold" Opacity="0.82" />
+                              <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                              <Button Grid.Column="2" Content="before" Command="{Binding DataContext.OpenRoiRescanEvidenceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="before" Padding="7,2" />
+                              <Button Grid.Column="3" Content="after" Command="{Binding DataContext.OpenRoiRescanEvidenceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="after" Padding="7,2" />
+                              <TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="{Binding ValueDiff}" Classes="mono" />
+                              <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Text="{Binding TaskEntry}" Classes="mono" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TreeView Grid.Row="5" Grid.ColumnSpan="2" ItemsSource="{Binding RoiRescanEvidencePreviewNodes}" SelectedItem="{Binding SelectedRoiRescanEvidencePreviewNode, Mode=TwoWay}" MaxHeight="180" Background="#0E1212" BorderBrush="#2F3A30" BorderThickness="1" Padding="4">
+                      <TreeView.ItemTemplate>
+                        <TreeDataTemplate ItemsSource="{Binding SafeChildren}">
+                          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Grid.Column="1" Text="{Binding CountLabel}" Classes="mono" />
+                            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" IsVisible="{Binding HasVisibleDetail}" Classes="mono" />
+                          </Grid>
+                        </TreeDataTemplate>
+                      </TreeView.ItemTemplate>
+                    </TreeView>
+                    <TextBox Grid.Row="6" Grid.ColumnSpan="2" Text="{Binding RoiRescanEvidencePreviewText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="10" MaxHeight="160" Background="#0E1212" BorderBrush="#2F3A30" BorderThickness="1" />
+                  </Grid>
+                </Border>
+
+                <Button Content="{Binding MaaResourceGenerationResult.Message}" Command="{Binding RegenerateMaaResourceCommand}" HorizontalContentAlignment="Left" Padding="9,6" />
+
+                <ListBox ItemsSource="{Binding RoiPreviewRows}" SelectedItem="{Binding SelectedRoiPreviewRow, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="7" Padding="9" Background="#171B22" BorderBrush="#354052" BorderThickness="1" Margin="0,0,0,8">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="3">
+                          <TextBlock Text="{Binding DisplayTitle}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Grid.Column="1" Text="{Binding EditKindLabel}" FontSize="11" Opacity="0.78" />
+                          <TextBlock Grid.Row="1" Text="{Binding BoundsLabel}" Classes="mono" />
+                          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ProjectedRoiJson}" Classes="mono" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </Expander>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+
+      <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="8">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBlock Text="候補" Classes="h2" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Text="{Binding CandidateResults.Count}" Classes="mono" VerticalAlignment="Center" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="8">
+            <ListBox ItemsSource="{Binding CandidateResults}" SelectedItem="{Binding SelectedCandidateResult, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#132021" BorderBrush="#2B4547" BorderThickness="1">
+                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="80,*,90" ColumnSpacing="8">
+                      <TextBlock Text="{Binding Kind}" Classes="caption" />
+                      <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" />
+                      <TextBlock Grid.Column="2" Text="{Binding Confidence}" Classes="mono" HorizontalAlignment="Right" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Value}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
+                      <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Identity}" FontSize="11" HorizontalAlignment="Right" Opacity="0.55" />
+                      <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding RawText}" Classes="mono" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Border Classes="card" ToolTip.Tip="{Binding RecognitionLayout.Review.Title}">
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="反映結果" Classes="h2" />
+                  <TextBlock Grid.Column="1" Text="{Binding ResourceTaskDiagnostics.Summary}" Classes="mono" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="{Binding LastCandidateApplySummary}" FontSize="12" TextWrapping="Wrap" Opacity="0.8" />
+                <TextBlock Text="{Binding RecognitionDebugSummary}" Classes="mono" />
+                <Expander Header="診断ログ" Margin="0,4,0,0">
+                  <ItemsControl ItemsSource="{Binding ResourceTaskDiagnostics.Lines}" Margin="0,6,0,0">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}" Classes="mono" Margin="0,0,0,4" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Expander>
+              </StackPanel>
+            </Border>
+
+            <Expander Header="スキャン履歴">
+              <StackPanel Spacing="8" Margin="0,8,0,0">
+                <Button Content="履歴更新" Command="{Binding RefreshRecognitionScanHistoryCommand}" HorizontalAlignment="Left" />
+                <ItemsControl ItemsSource="{Binding RecognitionScanHistory}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="7" Padding="8" Margin="0,0,0,6" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                          <TextBlock Text="{Binding DisplayProfile}" FontSize="13" FontWeight="SemiBold" />
+                          <TextBlock Grid.Column="1" Text="{Binding TimestampLabel}" Classes="mono" />
+                          <Button Grid.Column="2" Grid.RowSpan="2" Content="読込" Command="{Binding DataContext.LoadRecognitionScanHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="8,3" VerticalAlignment="Center" />
+                          <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Summary}" Classes="mono" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Expander>
+
+            <Expander Header="Raw OCR / ログ">
+              <StackPanel Spacing="8" Margin="0,8,0,0">
+                <ListBox ItemsSource="{Binding OcrDetailRows}" SelectedItem="{Binding SelectedOcrDetailRow, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="7" Padding="9" Background="#132021" BorderBrush="#2B4547" BorderThickness="1" Margin="0,0,0,8">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <TextBlock Text="{Binding Text}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Grid.Column="1" Text="{Binding ScoreLabel}" Classes="mono" />
+                          <TextBlock Grid.Row="1" Text="{Binding Entry}" Classes="mono" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <ListBox ItemsSource="{Binding RecognitionScanLogRows}" SelectedItem="{Binding SelectedRecognitionScanLogRow, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="7" Padding="9" Background="#101617" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" />
+                          <TextBlock Grid.Column="1" Text="{Binding At}" Classes="mono" />
+                          <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Summary}" Classes="mono" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </Expander>
+
+            <Expander Header="task結果" ToolTip.Tip="{Binding RecognitionLayout.Evidence.Title}">
+              <ListBox ItemsSource="{Binding ResourceTaskResults}" SelectedItem="{Binding SelectedResourceTaskResult, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,8,0,0">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="card" Padding="9" Margin="0,0,0,8">
+                      <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <TextBlock Text="{Binding Entry}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="{Binding Status}" FontFamily="Consolas" FontSize="12" />
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" Classes="mono" />
+                        <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding RecognitionDetailJson}" Classes="mono" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Expander>
+
+            <Expander Header="詳細設定">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0">
+                <TextBox Text="{Binding RhodesApiUrl, Mode=TwoWay}" />
+                <Button Grid.Column="1" Content="候補化" Command="{Binding ConvertResourceTaskResultsCommand}" />
+              </Grid>
+            </Expander>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

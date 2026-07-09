@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
@@ -18,6 +19,13 @@ public sealed record RhodesCandidateStateApplyResult(
 
 public static class RhodesStateApiClient
 {
+    // TypeInfoResolver必須: JsonArray.Add<T>由来のノードをToJsonStringする際の例外を防ぐ。
+    private static readonly JsonSerializerOptions IndentedWriteOptions = new()
+    {
+        WriteIndented = true,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+    };
+
     public static async Task<RhodesStateApiResult> FetchAsync(
         string baseUrl,
         TimeSpan? timeout = null,
@@ -96,7 +104,7 @@ public static class RhodesStateApiClient
         RhodesRunStateStore.PruneAbandonedRunValues(root);
         RhodesRunStateStore.NormalizeOcrEnginePreference(root);
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
-        return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        return root.ToJsonString(IndentedWriteOptions);
     }
 
     public static string ApplyRunContextToStateJson(
@@ -106,7 +114,7 @@ public static class RhodesStateApiClient
     {
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson)?.AsObject() ?? [];
         RhodesRunStateStore.ApplyRunContext(root, campaignId, now ?? DateTimeOffset.UtcNow);
-        return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        return root.ToJsonString(IndentedWriteOptions);
     }
 
     public static string ApplyChoicesToStateJson(
@@ -180,7 +188,7 @@ public static class RhodesStateApiClient
 
         RhodesRunStateStore.PruneAbandonedRunValues(root);
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
-        return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        return root.ToJsonString(IndentedWriteOptions);
     }
 
     private static string Shorten(string value, int maxLength)

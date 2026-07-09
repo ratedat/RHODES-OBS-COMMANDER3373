@@ -1,0 +1,232 @@
+<UserControl
+    x:Class="RhodesSuki.Views.Workspaces.DebugWorkspaceView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid RowDefinitions="Auto,*" RowSpacing="12">
+    <StackPanel Spacing="2">
+      <TextBlock Text="{Binding DebugLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding DebugLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
+    </StackPanel>
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="12">
+        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+          <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
+            <TextBlock Text="バグ報告ZIP" FontSize="14" FontWeight="SemiBold" />
+            <Button Grid.Column="1"
+                    Content="作成"
+                    Command="{Binding CreateBugReportBundleCommand}"
+                    Padding="12,5" />
+            <TextBlock Grid.Row="1"
+                       Grid.ColumnSpan="2"
+                       Text="{Binding BugReportBundleStatus}"
+                       FontFamily="Consolas"
+                       FontSize="11"
+                       TextWrapping="Wrap"
+                       Opacity="0.68" />
+            <TextBlock Grid.Row="2"
+                       Grid.ColumnSpan="2"
+                       Text="{Binding LastBugReportBundlePath}"
+                       FontFamily="Consolas"
+                       FontSize="10"
+                       TextWrapping="Wrap"
+                       Opacity="0.48" />
+          </Grid>
+        </Border>
+
+        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+          <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+            <StackPanel Spacing="2">
+              <TextBlock Text="受信報告の取込" FontSize="14" FontWeight="SemiBold" />
+              <TextBlock Text="ZIPまたは展開済みフォルダからFrame Recordsを読み込みます。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Content="ZIP取込"
+                    Click="ImportBugReportZipClick"
+                    Padding="10,4"
+                    VerticalAlignment="Center" />
+            <Button Grid.Column="2"
+                    Content="フォルダ"
+                    Click="ImportBugReportFolderClick"
+                    Padding="10,4"
+                    VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1"
+                       Grid.ColumnSpan="3"
+                       Text="{Binding BugReportImportStatus}"
+                       FontFamily="Consolas"
+                       FontSize="11"
+                       TextWrapping="Wrap"
+                       Opacity="0.68" />
+            <TextBlock Grid.Row="2"
+                       Grid.ColumnSpan="3"
+                       Text="{Binding BugReportImportPath}"
+                       FontFamily="Consolas"
+                       FontSize="10"
+                       TextWrapping="Wrap"
+                       Opacity="0.48" />
+          </Grid>
+        </Border>
+
+        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+          <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+            <TextBlock Text="最新の証跡" FontSize="14" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="1" Text="{Binding LastCapturePath}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+            <TextBlock Grid.Row="2" Text="{Binding LastResourceTaskResultsPath}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+          </Grid>
+        </Border>
+
+        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+          <Grid RowDefinitions="Auto,180" RowSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Frame Records" FontSize="14" FontWeight="SemiBold" />
+                <TextBlock Text="ADBなし再検証用の保存スクリーンショットです。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="{Binding FrameRecordHistory.Count}" FontFamily="Consolas" FontSize="12" Opacity="0.62" VerticalAlignment="Center" />
+              <Button Grid.Column="2" Content="更新" Command="{Binding RefreshFrameRecordHistoryCommand}" Padding="10,4" VerticalAlignment="Center" />
+            </Grid>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding FrameRecordHistory}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="7" Padding="8" Margin="0,0,0,6" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+                      <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" RowSpacing="3">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <TextBlock Text="{Binding CapturedAtLabel}" FontFamily="Consolas" FontSize="11" Opacity="0.72" />
+                          <TextBlock Text="{Binding ProfileLabel}" FontSize="12" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Source}" FontFamily="Consolas" FontSize="11" Opacity="0.55" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Grid.RowSpan="3"
+                                Content="読込"
+                                Command="{Binding DataContext.LoadFrameRecordHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"
+                                Padding="8,3"
+                                VerticalAlignment="Center" />
+                        <Button Grid.Column="2"
+                                Grid.RowSpan="3"
+                                Content="再認識"
+                                Command="{Binding DataContext.ReplayFrameRecordRecognitionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"
+                                Padding="8,3"
+                                VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="1" Text="{Binding Detail}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                        <TextBlock Grid.Row="2" Text="{Binding ImagePath}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.46" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+
+        <Expander Header="インスペクタ (開発者向け)">
+          <StackPanel Spacing="8" Margin="0,8,0,0">
+            <TextBlock Text="現在の接続・認識・出力状態のスナップショットです。報告調査時の突き合わせに使います。" FontSize="11" Opacity="0.62" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding InspectorRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,6" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="110,*" ColumnSpacing="8">
+                      <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.58" />
+                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.52" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Expander>
+
+        <Expander Header="操作カタログ (開発者向け)">
+          <StackPanel Spacing="8" Margin="0,8,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="現在のワークスペースで実行できる操作の一覧です。" FontSize="11" Opacity="0.62" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding WorkspaceActionCountLabel}" FontFamily="Consolas" FontSize="11" Opacity="0.58" VerticalAlignment="Center" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding WorkspaceActions}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#0C1011" BorderBrush="#273335" BorderThickness="1">
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="5">
+                      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Grid.Column="1" Text="{Binding SectionId}" FontFamily="Consolas" FontSize="11" VerticalAlignment="Center" Opacity="0.54" />
+                        <Button Grid.Column="2"
+                                Content="{Binding ActionButtonLabel}"
+                                Command="{Binding Command}"
+                                CommandParameter="{Binding CommandParameter}"
+                                IsEnabled="{Binding IsExecutable}"
+                                Padding="8,3" />
+                      </Grid>
+                      <TextBlock Grid.Row="1" Text="{Binding Workflow}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.64" />
+                      <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6">
+                        <Border CornerRadius="5" Padding="6,2" Background="#132629" BorderBrush="#315154" BorderThickness="1">
+                          <TextBlock Text="{Binding MaaRequirementLabel}" FontSize="11" />
+                        </Border>
+                        <Border Grid.Column="1" CornerRadius="5" Padding="6,2" Background="#1E2115" BorderBrush="#4B4A2C" BorderThickness="1">
+                          <TextBlock Text="{Binding StateWriteLabel}" FontSize="11" />
+                        </Border>
+                        <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.52" />
+                      </Grid>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Expander>
+
+        <Expander Header="認識Probe (開発者向け)">
+          <StackPanel Spacing="8" Margin="0,8,0,0">
+            <ItemsControl ItemsSource="{Binding ProbePayloads}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="4">
+                      <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
+                      <Button Grid.Column="1" Grid.RowSpan="3" Content="実行" Command="{Binding DataContext.RunProbeCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" Text="{Binding Purpose}" FontSize="11" TextWrapping="Wrap" Opacity="0.66" />
+                      <TextBlock Grid.Row="2" Text="{Binding Payload}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.58" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ItemsControl ItemsSource="{Binding ProbeResults}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                      <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
+                      <TextBlock Grid.Column="1" Text="{Binding Status}" FontFamily="Consolas" FontSize="12" />
+                      <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Detail}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.72" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Expander>
+
+        <ItemsControl ItemsSource="{Binding DebugLogLines}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.68" Margin="0,0,0,4" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Text="{Binding DebugMigrationSection.Title}" FontSize="14" FontWeight="SemiBold" />
+        <ItemsControl ItemsSource="{Binding MigrationSteps}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" Margin="0,0,0,5" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

@@ -16,6 +16,8 @@ public sealed class RhodesMaaSession : IDisposable
 
     public bool IsControllerReady => _tasker?.Controller is { IsConnected: true };
 
+    public bool IsTaskerReady => _tasker is not null;
+
     public static MaaSessionOptions DefaultAdbOptions(
         string adbPath = "adb",
         string adbSerial = "",
@@ -117,6 +119,49 @@ public sealed class RhodesMaaSession : IDisposable
         }, cancellationToken);
     }
 
+    public async Task<MaaSessionSnapshot> InitializeOfflineAsync(MaaSessionOptions options, CancellationToken cancellationToken = default)
+    {
+        DisposeCurrent();
+
+        var runtimeStatus = MaaFrameworkRuntimeProbe.ProbeAppBaseDirectory(AppContext.BaseDirectory);
+        if (!runtimeStatus.IsReady)
+            return Snapshot($"MAAFramework {runtimeStatus.State}", runtimeStatus.Detail, options, false);
+
+        EnsureNativeRuntimeDirectory();
+
+        if (!Directory.Exists(options.ResourceRoot))
+            return Snapshot("Resource未配置", "MAA Resource root が存在しません。", options, false);
+
+        return await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                _resource = new MaaResource(options.ResourceRoot);
+                _tasker = new MaaTasker
+                {
+                    Resource = _resource,
+                    Controller = null!,
+                    DisposeOptions = DisposeOptions.All,
+                };
+
+                _tasker.Global.SetOption_SaveOnError(false);
+                _tasker.Global.SetOption_DebugMode(true);
+
+                return Snapshot(
+                    "オフライン認識",
+                    "MAA Resource をADBなし再実行用に初期化しました。",
+                    options,
+                    true);
+            }
+            catch (Exception ex)
+            {
+                DisposeCurrent();
+                return Snapshot("オフライン初期化失敗", ex.Message, options, false);
+            }
+        }, cancellationToken);
+    }
+
     public MaaJobStatus Capture()
     {
         if (_tasker?.Controller is not { IsConnected: true } controller)
@@ -180,6 +225,40 @@ public sealed class RhodesMaaSession : IDisposable
             var job = _tasker.AppendTask(entry.Trim(), string.IsNullOrWhiteSpace(pipelineOverrideJson) ? "{}" : pipelineOverrideJson);
             var status = job.Wait();
             var detail = BuildTaskDetail(_tasker, job.Id, $"TaskId={job.Id}");
+            return new MaaTaskRunResult(
+                entry,
+                status.ToString(),
+                status == MaaJobStatus.Succeeded,
+                detail.Summary,
+                detail.RecognitionDetailJson,
+                detail.Algorithm,
+                detail.Hit);
+        }, cancellationToken);
+    }
+
+    public async Task<MaaTaskRunResult> RunResourceRecognitionAsync(
+        string entry,
+        string recognitionPayloadJson,
+        byte[] encodedImage,
+        CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_tasker is null)
+                return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "MAA Tasker が初期化されていません。");
+            if (string.IsNullOrWhiteSpace(entry))
+                return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "entry が空です。");
+            if (string.IsNullOrWhiteSpace(recognitionPayloadJson))
+                return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "recognition payload が空です。");
+            if (encodedImage.Length == 0)
+                return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "保存Frame画像が空です。");
+
+            using var image = new MaaImageBuffer();
+            image.TrySetEncodedData(encodedImage);
+            var job = _tasker.AppendRecognition(entry.Trim(), recognitionPayloadJson, image);
+            var status = job.Wait();
+            var detail = BuildTaskDetail(_tasker, job.Id, $"ReplayRecognition={entry}");
             return new MaaTaskRunResult(
                 entry,
                 status.ToString(),

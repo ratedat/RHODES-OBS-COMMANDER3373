@@ -29,7 +29,10 @@ public static class RhodesMaaRecognitionEvidenceLog
         MaaResourceContractSnapshot? contract = null,
         string? frameId = null,
         string? frameMetadataPath = null,
-        string? stateSnapshotPath = null)
+        string? stateSnapshotPath = null,
+        SukiCandidateApplySummary? stateApplySummary = null,
+        bool stateApplyLocalFallbackUsed = false,
+        string? stateApplyApiError = null)
     {
         var resultList = taskResults.ToArray();
         var candidateList = candidates.ToArray();
@@ -148,6 +151,17 @@ public static class RhodesMaaRecognitionEvidenceLog
                 runtime,
                 diagnostics,
                 taskResults = resultList,
+                stateApply = stateApplySummary is null
+                    ? null
+                    : new
+                    {
+                        stateApplySummary.AppliedCount,
+                        stateApplySummary.IgnoredCount,
+                        appliedFields = stateApplySummary.AppliedFields,
+                        outcomes = stateApplySummary.Outcomes,
+                        localFallbackUsed = stateApplyLocalFallbackUsed,
+                        apiError = stateApplyApiError ?? "",
+                    },
             },
             error = (object?)null,
         };
@@ -171,7 +185,10 @@ public static class RhodesMaaRecognitionEvidenceLog
         MaaResourceContractSnapshot? contract = null,
         string? frameId = null,
         string? frameMetadataPath = null,
-        string? stateSnapshotPath = null)
+        string? stateSnapshotPath = null,
+        SukiCandidateApplySummary? stateApplySummary = null,
+        bool stateApplyLocalFallbackUsed = false,
+        string? stateApplyApiError = null)
     {
         Directory.CreateDirectory(directory);
         var completed = completedAt ?? DateTimeOffset.UtcNow;
@@ -179,7 +196,27 @@ public static class RhodesMaaRecognitionEvidenceLog
         var requestId = Guid.NewGuid().ToString("D");
         var normalizedProfile = NormalizeProfile(profileId) ?? "all";
         var file = Path.Combine(directory, $"recognition-{TimestampForFile(started)}-{SanitizeFilePart(normalizedProfile)}-{SanitizeFilePart(requestId)}.json");
-        var json = BuildJson(taskResults, candidates, profileId, started, completed, requestId, requestId, capturePath, captureBytes, profileLabel, presetTaskEntries, runtime, executionPlan, contract, frameId, frameMetadataPath, stateSnapshotPath);
+        var json = BuildJson(
+            taskResults,
+            candidates,
+            profileId,
+            started,
+            completed,
+            requestId,
+            requestId,
+            capturePath,
+            captureBytes,
+            profileLabel,
+            presetTaskEntries,
+            runtime,
+            executionPlan,
+            contract,
+            frameId,
+            frameMetadataPath,
+            stateSnapshotPath,
+            stateApplySummary,
+            stateApplyLocalFallbackUsed,
+            stateApplyApiError);
         await File.WriteAllTextAsync(file, $"{json}{Environment.NewLine}");
         return file;
     }

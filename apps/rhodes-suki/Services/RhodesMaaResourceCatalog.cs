@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
@@ -42,6 +43,21 @@ public static class RhodesMaaResourceCatalog
         }
 
         return tasks.Values.ToList();
+    }
+
+    public static string LoadRecognitionPayloadJson(string entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry))
+            return "";
+
+        foreach (var relativePath in new[] { ManualPipelineSource, GeneratedPipelineSource })
+        {
+            var payload = LoadRecognitionPayloadJson(relativePath, entry.Trim());
+            if (!string.IsNullOrWhiteSpace(payload))
+                return payload;
+        }
+
+        return "";
     }
 
     public static IReadOnlyList<MaaResourceProfilePreview> ProfileGroups(IReadOnlyList<MaaResourceTaskPreview> tasks)
@@ -486,6 +502,36 @@ public static class RhodesMaaResourceCatalog
         }
 
         return tasks;
+    }
+
+    private static string LoadRecognitionPayloadJson(string relativePath, string entry)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(path))
+            return "";
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (!document.RootElement.TryGetProperty(entry, out var node)
+                || node.ValueKind != JsonValueKind.Object
+                || !RhodesMaaRecognitionPolicy.IsPublishableEntry(entry))
+            {
+                return "";
+            }
+
+            var payload = JsonNode.Parse(node.GetRawText())?.AsObject();
+            if (payload is null)
+                return "";
+
+            payload.Remove("action");
+            payload.Remove("attach");
+            return payload.ToJsonString();
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     private static HashSet<string> PipelineEntries(ICollection<string> errors)

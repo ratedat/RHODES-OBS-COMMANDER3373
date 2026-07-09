@@ -45,6 +45,8 @@ var tests = new (string Name, Action Run)[]
     ("Suki local ADB detector connects Google Play Games TCP serial", SukiLocalAdbDetectGooglePlay),
     ("Suki local ADB detector prefers explicit MuMu adb path", SukiLocalAdbDetectExplicitMumu),
     ("Suki ADB connection test workflow reports controller and capture outcomes", SukiAdbConnectionTestWorkflow),
+    ("ADB diagnostics checklist explains setup failures and capture readiness", AdbDiagnosticsChecklist),
+    ("ADB diagnostics copy text includes report-ready runtime details", AdbDiagnosticsCopyText),
     ("Preview URL builder normalizes RHODES app routes", PreviewUrlBuilder),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
@@ -77,16 +79,21 @@ var tests = new (string Name, Action Run)[]
     ("MAA native resource task evidence uses recognition scan shape", MaaNativeEvidenceLog),
     ("Recognition scan history loads API and MAA native evidence logs", RecognitionScanHistoryLoadsUnifiedLogs),
     ("Recognition frame record store saves screenshot metadata and state snapshot", RecognitionFrameRecordStoreSavesFrame),
+    ("Recognition frame record history loads saved frames for debugger replay", FrameRecordHistoryLoadsRecent),
+    ("Bug report import extracts ZIPs into replayable frame history", BugReportImportExtractsReplayFrames),
     ("Bug report bundle collects debug artifacts without optional runtimes", BugReportBundleCollectsDebugArtifacts),
     ("Evidence preview tree uses compact typed nodes", EvidencePreviewTreeUsesCompactTypedNodes),
     ("Resource task preview exposes source and profile summaries", ResourceTaskSummary),
     ("Resource catalog reads checked-in pipeline nodes", ResourceCatalogReadsPipelineNodes),
+    ("Resource catalog exports recognition payloads for frame replay", ResourceCatalogExportsReplayPayloads),
     ("Resource catalog validates MAA interface contract", ResourceCatalogValidatesInterfaceContract),
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
     ("Resource profiles use interface groups", ResourceProfilesUseInterfaceGroups),
     ("Resource profile task filtering follows interface presets", ResourceProfileTaskFilteringFollowsInterfacePresets),
+    ("Public debug policy restricts runtime to IS5 Sarkaz profiles", PublicDebugPolicyRestrictsSarkazScope),
     ("Run field registry exposes retained base and campaign-specific fields", RunFieldRegistryRetainedFields),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
+    ("Run catalog exposes Sarkaz difficulty and random squad options", RunCatalogSarkazManualOptions),
     ("Choice catalog registry builds operator and relic workspace models", ChoiceCatalogRegistryBuildsWorkspaceModels),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
@@ -105,6 +112,7 @@ var tests = new (string Name, Action Run)[]
     ("State API client can apply recognition candidates into current state JSON", StateApiCandidatesApply),
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
+    ("Recognition candidate applier can apply Sarkaz random squad effect", CandidateRunStatusApplySquadRandomEffect),
     ("Recognition candidate applier rejects run status candidates from other campaigns", CandidateRunStatusRejectsOtherCampaign),
     ("Recognition candidate applier keeps current campaign run status duplicates", CandidateRunStatusKeepsCurrentCampaignDuplicate),
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
@@ -1201,6 +1209,132 @@ static void SukiOptionalRuntimeActionWorkflow()
     Equal("Ollama起動失敗: connection refused", failure.StatusMessage, "failure message");
 }
 
+static void AdbDiagnosticsChecklist()
+{
+    var missing = RhodesAdbDiagnosticsChecklist.Build(new RhodesAdbDiagnosticsInput(
+        "",
+        false,
+        false,
+        0,
+        0,
+        "",
+        null,
+        "",
+        null,
+        "",
+        0,
+        0));
+
+    Equal(6, missing.Count, "step count");
+    Equal("失敗", missing[0].State, "missing adb path fails");
+    Equal(true, missing[0].NextAction.Contains("adb.exe", StringComparison.Ordinal), "missing adb guidance");
+    Equal("未確認", missing[1].State, "adb launch waits for detection");
+    Equal("未確認", missing[5].State, "resolution waits for capture");
+
+    var adbPath = Path.Combine(Path.GetTempPath(), $"rhodes-adb-{Guid.NewGuid():N}.exe");
+    try
+    {
+        File.WriteAllText(adbPath, "fake");
+        var readyWithWarnings = RhodesAdbDiagnosticsChecklist.Build(new RhodesAdbDiagnosticsInput(
+            adbPath,
+            true,
+            true,
+            2,
+            2,
+            "127.0.0.1:16384 / emulator-5554",
+            false,
+            "DLL not found",
+            false,
+            "capture failed",
+            1920,
+            1080));
+
+        Equal("OK", readyWithWarnings[0].State, "existing adb path ok");
+        Equal("OK", readyWithWarnings[1].State, "adb launch ok");
+        Equal("注意", readyWithWarnings[2].State, "multiple devices require explicit serial");
+        Equal(true, readyWithWarnings[2].NextAction.Contains("serial", StringComparison.Ordinal), "multiple device guidance");
+        Equal("失敗", readyWithWarnings[3].State, "maa failure shown");
+        Equal(true, readyWithWarnings[3].NextAction.Contains("VC++", StringComparison.Ordinal), "maa dll guidance");
+        Equal("失敗", readyWithWarnings[4].State, "capture failure shown");
+        Equal("注意", readyWithWarnings[5].State, "16:9 non-1280 warns");
+        Equal(true, readyWithWarnings[5].Detail.Contains("1920x1080", StringComparison.Ordinal), "resolution detail");
+
+        var exactBaseResolution = RhodesAdbDiagnosticsChecklist.Build(new RhodesAdbDiagnosticsInput(
+            adbPath,
+            true,
+            true,
+            1,
+            1,
+            "127.0.0.1:16384",
+            true,
+            "connected",
+            true,
+            "capture ok",
+            1280,
+            720));
+
+        Equal("OK", exactBaseResolution[2].State, "single usable device ok");
+        Equal("OK", exactBaseResolution[3].State, "maa ready ok");
+        Equal("OK", exactBaseResolution[4].State, "capture ready ok");
+        Equal("OK", exactBaseResolution[5].State, "base resolution ok");
+    }
+    finally
+    {
+        if (File.Exists(adbPath))
+            File.Delete(adbPath);
+    }
+}
+
+static void AdbDiagnosticsCopyText()
+{
+    var steps = RhodesAdbDiagnosticsChecklist.Build(new RhodesAdbDiagnosticsInput(
+        "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe",
+        true,
+        true,
+        2,
+        2,
+        "127.0.0.1:16384 / emulator-5554",
+        false,
+        "DLL not found",
+        false,
+        "capture failed",
+        1920,
+        1080));
+
+    var text = RhodesAdbDiagnosticsChecklist.BuildCopyText(
+        new RhodesAdbDiagnosticsCopyInput(
+            "IS#5 サルカズの炉辺奇談",
+            "MuMu Player",
+            "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe",
+            "127.0.0.1:16384",
+            "MuMu/LD高速撮影",
+            "emulator-fast",
+            "MuMu高速入力",
+            "emulator-fast",
+            "MAA-OCR",
+            "maa-ocr",
+            "1920x1080",
+            "capture failed",
+            "失敗",
+            "DLL not found",
+            "MuMu検出",
+            "candidate selected"),
+        steps);
+
+    Equal(true, text.Contains("RHODES OBS COMMANDER3373 ADB診断", StringComparison.Ordinal), "copy header");
+    Equal(true, text.Contains("IS: IS#5 サルカズの炉辺奇談", StringComparison.Ordinal), "copy campaign");
+    Equal(true, text.Contains("ADB preset: MuMu Player", StringComparison.Ordinal), "copy preset");
+    Equal(true, text.Contains("serial: 127.0.0.1:16384", StringComparison.Ordinal), "copy serial");
+    Equal(true, text.Contains("撮影方式: MuMu/LD高速撮影 (emulator-fast)", StringComparison.Ordinal), "copy screencap");
+    Equal(true, text.Contains("入力方式: MuMu高速入力 (emulator-fast)", StringComparison.Ordinal), "copy input");
+    Equal(true, text.Contains("OCR: MAA-OCR (maa-ocr)", StringComparison.Ordinal), "copy ocr");
+    Equal(true, text.Contains("capture: 1920x1080 / capture failed", StringComparison.Ordinal), "copy capture");
+    Equal(true, text.Contains("MAA: 失敗 / DLL not found", StringComparison.Ordinal), "copy maa failure");
+    Equal(true, text.Contains("ADB detection: MuMu検出 / candidate selected", StringComparison.Ordinal), "copy detection");
+    Equal(true, text.Contains("3. 端末検出 [注意]", StringComparison.Ordinal), "copy step state");
+    Equal(true, text.Contains("next: 使用する端末の「使用」を押してserialを固定してください。", StringComparison.Ordinal), "copy next action");
+}
+
 static void PreviewUrlBuilder()
 {
     Equal("http://127.0.0.1:5173/sidecar", RhodesPreviewUrlBuilder.Build("", ""), "default preview url");
@@ -1344,8 +1478,8 @@ static void WorkspaceActionRegistry()
     var actions = RhodesWorkspaceActionRegistry.Items;
 
     Equal(0, RhodesWorkspaceActionRegistry.Validate().Count, "workspace action validation");
-    var profileCommand = RhodesWorkspaceActionRegistry.ParseCommandName("OpenRecognitionProfileCommand(runStatusFull)");
-    Equal("OpenRecognitionProfileCommand", profileCommand.CommandName, "workspace action command parser name");
+    var profileCommand = RhodesWorkspaceActionRegistry.ParseCommandName("RunProfileRecognitionAndApplyCommand(runStatusFull)");
+    Equal("RunProfileRecognitionAndApplyCommand", profileCommand.CommandName, "workspace action command parser name");
     Equal("runStatusFull", profileCommand.CommandParameter, "workspace action command parser parameter");
     Equal(null, RhodesWorkspaceActionRegistry.ParseCommandName("CaptureCommand").CommandParameter, "workspace action command parser no parameter");
     Equal(
@@ -2297,7 +2431,17 @@ static void MaaNativeEvidenceLog()
         new MaaResourceContractSnapshot(true, 43, 7, 7, []),
         "frame-a",
         "O:/debug/frame-a.json",
-        "O:/debug/frame-a-state.json");
+        "O:/debug/frame-a-state.json",
+        new SukiCandidateApplySummary(
+            1,
+            1,
+            ["operator:gummy"],
+            [
+                new SukiCandidateApplyOutcome(0, "operator", "グム", "gummy", "gummy", "applied", "operator:gummy", ""),
+                new SukiCandidateApplyOutcome(1, "operator", "不明", "", "", "ignored", "", "missing-operator-id"),
+            ]),
+        true,
+        "api down");
 
     var root = JsonNode.Parse(json)!.AsObject();
     Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
@@ -2346,6 +2490,16 @@ static void MaaNativeEvidenceLog()
     Equal("1280x720 (16:9)", runtime["baseResolution"]!.GetValue<string>(), "evidence runtime base resolution");
     Equal(true, runtime["isControllerReady"]!.GetValue<bool>(), "evidence runtime controller ready");
     Equal(2, evidence["diagnostics"]!.AsObject()["total"]!.GetValue<int>(), "evidence diagnostics");
+    var stateApply = evidence["stateApply"]!.AsObject();
+    Equal(1, stateApply["appliedCount"]!.GetValue<int>(), "evidence state apply applied count");
+    Equal(1, stateApply["ignoredCount"]!.GetValue<int>(), "evidence state apply ignored count");
+    Equal("operator:gummy", stateApply["appliedFields"]!.AsArray()[0]!.GetValue<string>(), "evidence state apply field");
+    Equal(true, stateApply["localFallbackUsed"]!.GetValue<bool>(), "evidence state apply fallback");
+    Equal("api down", stateApply["apiError"]!.GetValue<string>(), "evidence state apply api error");
+    var stateApplyOutcomes = stateApply["outcomes"]!.AsArray();
+    Equal(2, stateApplyOutcomes.Count, "evidence state apply outcome count");
+    Equal("applied", stateApplyOutcomes[0]!.AsObject()["outcome"]!.GetValue<string>(), "evidence state apply outcome applied");
+    Equal("missing-operator-id", stateApplyOutcomes[1]!.AsObject()["ignoredReason"]!.GetValue<string>(), "evidence state apply ignored reason");
 }
 
 static void RecognitionScanHistoryLoadsUnifiedLogs()
@@ -2543,6 +2697,11 @@ static void BugReportBundleCollectsDebugArtifacts()
         Equal(true, result.IncludedEntries.Contains("debug/ROI Sessions/session.json"), "roi session included");
         Equal(true, result.IncludedEntries.Contains("state/current-state.json"), "state included");
         Equal(true, result.IncludedEntries.Contains("state/suki-settings.json"), "settings included");
+        Equal(true, result.IncludedEntries.Contains("resource/interface.json"), "interface included");
+        Equal(true, result.IncludedEntries.Contains("resource/pipeline/rhodes.json"), "manual pipeline included");
+        Equal(true, result.IncludedEntries.Contains("resource/pipeline/rhodes-generated.json"), "generated pipeline included");
+        Equal(true, result.IncludedEntries.Contains("resource/recognition/maa-tasks.json"), "maa tasks included");
+        Equal(true, result.IncludedEntries.Contains("resource/recognition/scan-profiles.json"), "scan profiles included");
         Equal(true, result.SkippedEntries.Any(entry => entry.Path.EndsWith("glm-ocr-runtime", StringComparison.OrdinalIgnoreCase)), "glm runtime skipped");
         Equal(true, result.SkippedEntries.Any(entry => entry.Path.EndsWith("native.dll", StringComparison.OrdinalIgnoreCase)), "dll skipped");
 
@@ -2550,6 +2709,9 @@ static void BugReportBundleCollectsDebugArtifacts()
         var entries = archive.Entries.Select(entry => entry.FullName).ToArray();
         Equal(true, entries.Contains("manifest.json"), "manifest included");
         Equal(true, entries.Contains("README.txt"), "readme included");
+        Equal(true, entries.Contains("resource/interface.json"), "interface zip entry");
+        Equal(true, entries.Contains("resource/pipeline/rhodes.json"), "manual pipeline zip entry");
+        Equal(true, entries.Contains("resource/pipeline/rhodes-generated.json"), "generated pipeline zip entry");
         Equal(false, entries.Any(entry => entry.Contains("old.zip", StringComparison.OrdinalIgnoreCase)), "old zip excluded");
         Equal(false, entries.Any(entry => entry.Contains("glm-ocr-runtime", StringComparison.OrdinalIgnoreCase)), "glm runtime excluded from zip");
         Equal(false, entries.Any(entry => entry.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)), "dll excluded from zip");
@@ -2559,6 +2721,17 @@ static void BugReportBundleCollectsDebugArtifacts()
         var manifest = JsonNode.Parse(manifestReader.ReadToEnd())!.AsObject();
         Equal("Avalonia/Suki", manifest["distributionShell"]!.GetValue<string>(), "distribution shell");
         Equal("MAA-OCR", manifest["ocrDefault"]!.GetValue<string>(), "default OCR");
+        Equal(true, !string.IsNullOrWhiteSpace(manifest["dotnetRuntime"]!.GetValue<string>()), "dotnet runtime manifest");
+        Equal(true, !string.IsNullOrWhiteSpace(manifest["currentCulture"]!.GetValue<string>()), "culture manifest");
+        var resourceHashes = manifest["resourceHashes"]!.AsObject();
+        Equal(true, resourceHashes["resource/interface.json"]!.GetValue<string>().Length >= 16, "interface hash");
+        Equal(true, resourceHashes["resource/pipeline/rhodes.json"]!.GetValue<string>().Length >= 16, "manual pipeline hash");
+        Equal(true, resourceHashes["resource/pipeline/rhodes-generated.json"]!.GetValue<string>().Length >= 16, "generated pipeline hash");
+        Equal("is5_sarkaz", manifest["publicDebugCampaign"]!.GetValue<string>(), "public debug campaign");
+        var publicDebugProfiles = manifest["publicDebugProfiles"]!.AsArray()
+            .Select(node => node!.GetValue<string>())
+            .ToArray();
+        Equal("runStatusFull|operatorsFull|relicsFull|is5ThoughtFull|is5AgeFull", string.Join("|", publicDebugProfiles), "public debug profiles");
         Equal("MuMu Player", manifest["context.adbPreset"]!.GetValue<string>(), "manifest adb preset");
         Equal("127.0.0.1:16384", manifest["context.adbSerial"]!.GetValue<string>(), "manifest adb serial");
         var retainedTargets = manifest["retainedRecognitionTargets"]!.AsArray()
@@ -2635,6 +2808,124 @@ static void RecognitionFrameRecordStoreSavesFrame()
         Equal(true, File.Exists(second.MetadataPath), "second frame metadata exists");
         Equal(false, File.Exists(frame.MetadataPath), "old frame metadata pruned");
         Equal(false, File.Exists(frame.ImagePath), "old frame image pruned");
+    }
+    finally
+    {
+        if (Directory.Exists(root))
+            Directory.Delete(root, recursive: true);
+    }
+}
+
+static void FrameRecordHistoryLoadsRecent()
+{
+    var root = Path.Combine(Path.GetTempPath(), $"rhodes-frame-history-{Guid.NewGuid():N}");
+    var frameDirectory = Path.Combine(root, RhodesSukiDebugPaths.FrameRecordsDirectoryName);
+    var statePath = Path.Combine(root, "current-state.json");
+    try
+    {
+        Directory.CreateDirectory(root);
+        File.WriteAllText(statePath, """{"campaign":"is5"}""");
+        var older = RhodesFrameRecordStore.SaveAsync(new RhodesFrameRecordRequest
+        {
+            FrameDirectory = frameDirectory,
+            EncodedImage = [1, 2, 3],
+            StatePath = statePath,
+            FrameId = "older",
+            ProfileId = "runStatusFull",
+            ProfileLabel = "ラン基本値",
+            Source = "adb",
+            AppVersion = "test",
+            RuntimeSummary = "MuMu / 1280x720",
+            Now = DateTimeOffset.Parse("2026-07-04T01:02:03Z"),
+            RetentionLimit = 8,
+        }).GetAwaiter().GetResult();
+        Equal(true, older.Succeeded, "older frame saved");
+
+        var newer = RhodesFrameRecordStore.SaveAsync(new RhodesFrameRecordRequest
+        {
+            FrameDirectory = frameDirectory,
+            EncodedImage = [4, 5, 6],
+            FrameId = "newer",
+            ProfileId = "operatorsFull",
+            ProfileLabel = "オペレーター",
+            Source = "disk",
+            AppVersion = "test",
+            RuntimeSummary = "replay",
+            Now = DateTimeOffset.Parse("2026-07-04T02:03:04Z"),
+            RetentionLimit = 8,
+        }).GetAwaiter().GetResult();
+        Equal(true, newer.Succeeded, "newer frame saved");
+
+        File.WriteAllText(Path.Combine(frameDirectory, "frame-broken.json"), "{broken");
+        var history = RhodesFrameRecordHistory.LoadRecent(frameDirectory, limit: 4);
+
+        Equal(2, history.Count, "history count ignores broken metadata");
+        Equal("newer", history[0].FrameId, "newer first");
+        Equal("operatorsFull", history[0].ProfileId, "profile id");
+        Equal("オペレーター", history[0].ProfileLabel, "profile label");
+        Equal("disk", history[0].Source, "source");
+        Equal(true, history[0].ImagePath.EndsWith("frame-newer.png", StringComparison.OrdinalIgnoreCase), "image path");
+        Equal(true, history[0].Detail.Contains("replay", StringComparison.Ordinal), "runtime detail");
+        Equal("older", history[1].FrameId, "older second");
+        Equal(true, history[1].StateSnapshotPath.EndsWith("frame-older-state.json", StringComparison.OrdinalIgnoreCase), "state snapshot");
+        Equal(true, File.Exists(history[1].StateSnapshotPath), "state snapshot exists");
+    }
+    finally
+    {
+        if (Directory.Exists(root))
+            Directory.Delete(root, recursive: true);
+    }
+}
+
+static void BugReportImportExtractsReplayFrames()
+{
+    var root = Path.Combine(Path.GetTempPath(), $"rhodes-bug-import-{Guid.NewGuid():N}");
+    var sourceRoot = Path.Combine(root, "source");
+    var debugRoot = Path.Combine(sourceRoot, "debug");
+    var frameDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.FrameRecordsDirectoryName);
+    var importDestination = Path.Combine(root, "imports");
+    var zipPath = Path.Combine(root, "report.zip");
+    var statePath = Path.Combine(root, "current-state.json");
+
+    try
+    {
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(frameDirectory);
+        File.WriteAllText(statePath, """{"run":{"campaignId":"is5_sarkaz"}}""");
+        var frame = RhodesFrameRecordStore.SaveAsync(new RhodesFrameRecordRequest
+        {
+            FrameDirectory = frameDirectory,
+            EncodedImage = [137, 80, 78, 71],
+            StatePath = statePath,
+            FrameId = "zip-frame",
+            ProfileId = "runStatusFull",
+            ProfileLabel = "基礎情報",
+            Source = "test",
+            RuntimeSummary = "MuMu / 1280x720",
+            Now = DateTimeOffset.Parse("2026-07-07T00:00:00Z"),
+            RetentionLimit = 8,
+        }).GetAwaiter().GetResult();
+        Equal(true, frame.Succeeded, "source frame saved");
+        File.WriteAllText(Path.Combine(sourceRoot, "manifest.json"), """{"schemaVersion":1}""");
+        ZipFile.CreateFromDirectory(sourceRoot, zipPath);
+
+        var imported = RhodesBugReportImport.ImportAsync(
+            zipPath,
+            importDestination,
+            DateTimeOffset.Parse("2026-07-07T00:01:00Z")).GetAwaiter().GetResult();
+
+        Equal(true, imported.Success, "zip import success");
+        Equal(true, Directory.Exists(imported.FrameRecordsDirectory), "imported frame directory exists");
+        Equal(true, File.Exists(imported.ManifestPath), "manifest path exists");
+        Equal(1, imported.FrameCount, "imported frame count");
+        var history = RhodesFrameRecordHistory.LoadRecent(imported.FrameRecordsDirectory);
+        Equal(1, history.Count, "history count");
+        Equal("zip-frame", history[0].FrameId, "imported frame id");
+        Equal("runStatusFull", history[0].ProfileId, "imported profile id");
+
+        var folderImport = RhodesBugReportImport.ImportAsync(sourceRoot, importDestination).GetAwaiter().GetResult();
+        Equal(true, folderImport.Success, "folder import success");
+        Equal(frameDirectory, folderImport.FrameRecordsDirectory, "folder frame directory");
     }
     finally
     {
@@ -2802,6 +3093,27 @@ static void ResourceCatalogReadsPipelineNodes()
     Equal("profiles: operatorsFull", generated.ProfileSummary, "generated card profile");
 }
 
+static void ResourceCatalogExportsReplayPayloads()
+{
+    var manualPayload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson("RhodesOperatorNameOcr");
+    Equal(true, !string.IsNullOrWhiteSpace(manualPayload), "manual replay payload exported");
+    var manual = JsonNode.Parse(manualPayload)!.AsObject();
+    Equal("OCR", manual["recognition"]!.GetValue<string>(), "manual recognition type");
+    Equal(true, manual.ContainsKey("roi"), "manual roi retained");
+    Equal(false, manual.ContainsKey("action"), "manual action stripped");
+    Equal(false, manual.ContainsKey("attach"), "manual attach stripped");
+
+    var generatedPayload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson("RhodesScreen_run_squad_info_panel");
+    Equal(true, !string.IsNullOrWhiteSpace(generatedPayload), "generated replay payload exported");
+    var generated = JsonNode.Parse(generatedPayload)!.AsObject();
+    Equal("OCR", generated["recognition"]!.GetValue<string>(), "generated recognition type");
+    Equal(true, generated.ContainsKey("roi"), "generated roi retained");
+    Equal(false, generated.ContainsKey("attach"), "generated attach stripped");
+
+    Equal("", RhodesMaaResourceCatalog.LoadRecognitionPayloadJson("RhodesMissingEntry"), "missing payload empty");
+    Equal("", RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(""), "blank payload empty");
+}
+
 static void ResourceCatalogValidatesInterfaceContract()
 {
     var contract = RhodesMaaResourceCatalog.ValidateContract();
@@ -2901,6 +3213,52 @@ static void ResourceProfileTaskFilteringFollowsInterfacePresets()
         [operatorName, ingot],
         new MaaResourceProfilePreview("futureProfile", "将来", 0));
     Equal(MaaResourceExecutionPlan.EmptyState, emptyPlan.State, "empty profile state");
+}
+
+static void PublicDebugPolicyRestrictsSarkazScope()
+{
+    var state = new SukiRunStateSnapshot(
+        CampaignId: "is6_sui",
+        SelectedOperatorIds: new HashSet<string>(StringComparer.Ordinal),
+        SelectedRelicIds: new HashSet<string>(StringComparer.Ordinal),
+        ExcludedOperatorIds: new HashSet<string>(StringComparer.Ordinal),
+        ExcludedRelicIds: new HashSet<string>(StringComparer.Ordinal),
+        OperatorShowSelectedFirst: false,
+        OperatorHideExcluded: false,
+        OperatorSelectedOnly: false,
+        RelicShowSelectedFirst: false,
+        RelicHideExcluded: false,
+        RelicSelectedOnly: false,
+        Squad: "指揮分隊",
+        Difficulty: "18",
+        Ingot: 20);
+    var applied = RhodesPublicDebugPolicy.ApplyCampaign(state);
+    Equal("is5_sarkaz", applied.CampaignId, "campaign forced to IS5");
+    Equal("指揮分隊", applied.Squad, "run data is preserved while campaign changes");
+
+    var campaigns = RhodesPublicDebugPolicy.FilterCampaigns([
+        new SukiCampaignPreview("is4_sami", 4, "IS#4", "サーミ", []),
+        new SukiCampaignPreview("is5_sarkaz", 5, "IS#5", "サルカズの炉辺奇談", []),
+        new SukiCampaignPreview("is6_sui", 6, "IS#6", "歳", []),
+    ]);
+    Equal("is5_sarkaz", string.Join("|", campaigns.Select(item => item.Id)), "only Sarkaz campaign remains");
+
+    var profiles = RhodesPublicDebugPolicy.FilterProfiles([
+        new MaaResourceProfilePreview("all", "すべて", 9),
+        new MaaResourceProfilePreview("is6CoinsFull", "通宝", 1),
+        new MaaResourceProfilePreview("relicsFull", "秘宝", 1),
+        new MaaResourceProfilePreview("operatorsFull", "オペレーター", 1),
+        new MaaResourceProfilePreview("is5AgeFull", "時代", 1),
+        new MaaResourceProfilePreview("is4RevelationFull", "啓示", 1),
+        new MaaResourceProfilePreview("runStatusFull", "基礎情報", 1),
+        new MaaResourceProfilePreview("is5ThoughtFull", "思案", 1),
+    ]);
+    Equal(
+        "runStatusFull|operatorsFull|relicsFull|is5ThoughtFull|is5AgeFull",
+        string.Join("|", profiles.Select(item => item.Id)),
+        "public debug profiles are Sarkaz-only and executable");
+    Equal(false, profiles.Any(item => item.Id == "all"), "all profile is hidden from public debug runtime");
+    Equal(false, profiles.Any(item => item.Id is "is4RevelationFull" or "is6CoinsFull"), "other IS special profiles are hidden");
 }
 
 static void RunFieldRegistryRetainedFields()
@@ -3033,6 +3391,21 @@ static void RunCatalogLoadsChoices()
     }
 }
 
+static void RunCatalogSarkazManualOptions()
+{
+    Equal(18, RhodesRunCatalog.MaxDifficultyForCampaign("is5_sarkaz"), "is5 max difficulty");
+    Equal(15, RhodesRunCatalog.MaxDifficultyForCampaign("is6_sui"), "default current max difficulty");
+
+    var squad = RhodesRunCatalog.LoadSquadOptions("is5_sarkaz")
+        .Single(option => option.Name == "奇想天外分隊");
+    var randomEffects = RhodesRunCatalog.LoadSquadRandomEffectOptions("is5_sarkaz", squad.Id);
+
+    Equal(25, randomEffects.Count, "sarkaz random squad effect count");
+    Equal("is5_sarkaz_mimic_01", randomEffects[0].Id, "first random effect id");
+    Equal(true, randomEffects[0].Name.Contains("組み合わせ01", StringComparison.Ordinal), "first random effect label");
+    Equal(0, RhodesRunCatalog.LoadSquadRandomEffectOptions("is5_sarkaz", "is5_sarkaz_squad_01").Count, "non-random squad has no random options");
+}
+
 static void ChoiceCatalogRegistryBuildsWorkspaceModels()
 {
     var operators = new[]
@@ -3093,7 +3466,7 @@ static void ChoiceCatalogRegistryBuildsWorkspaceModels()
     Equal("秘宝A", relicView.FilteredItems.Single().Name, "relic view applies campaign and category filters");
     Equal("1件 / 所持1件 / IS内2件", relicView.Summary, "relic view summary");
     Equal(2, relicView.Rows.Single().Columns, "relic view rows use pane columns");
-    Equal(true, RhodesChoiceCatalogRegistry.RequiresFullRefreshAfterSelectionMutation(relicView.FilterState), "registry selection refresh policy");
+    Equal(false, RhodesChoiceCatalogRegistry.RequiresFullRefreshAfterSelectionMutation(relicView.FilterState), "registry selection keeps list stable for selected-first");
 }
 
 static void ChoiceFilters()
@@ -3138,9 +3511,10 @@ static void ChoiceFilters()
     Equal("特選獣肉缶詰", foodRelics[0].Name, "relic category filter item");
 
     Equal(false, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(HideExcluded: true)), "selection does not rebuild for hide excluded only");
-    Equal(true, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(ShowSelectedFirst: true)), "selection rebuilds for selected first");
+    Equal(false, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(ShowSelectedFirst: true)), "selection keeps list stable for selected first");
     Equal(true, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(SelectedOnly: true)), "selection rebuilds for selected only");
     Equal(true, RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(new SukiChoiceFilterOptions(HideExcluded: true)), "exclusion rebuilds for hide excluded");
+    Equal(false, RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(new SukiChoiceFilterOptions(ShowSelectedFirst: true)), "exclusion keeps list stable for selected first");
 }
 
 static void ChoiceRows()
@@ -3731,15 +4105,49 @@ static void CandidateRunStatusApply()
     Equal(3, summary.AppliedCount, "applied count");
     Equal(5, summary.IgnoredCount, "ignored count");
     Equal("ingot|difficulty|idea", string.Join("|", summary.AppliedFields), "applied fields");
+    Equal(8, summary.Outcomes.Count, "candidate outcome count");
+    Equal("applied", summary.Outcomes.Single(item => item.AppliedField == "ingot").Outcome, "ingot candidate applied outcome");
+    Equal("abandoned-run-field", summary.Outcomes.Single(item => item.Label == "希望").IgnoredReason, "hope candidate ignored reason");
+    Equal("abandoned-run-field", summary.Outcomes.Single(item => item.Label == "指揮Lv").IgnoredReason, "command level candidate ignored reason");
+    Equal("run-status-only", summary.Outcomes.Single(item => item.Label == "グム").IgnoredReason, "operator ignored in run status reason");
+    Equal("abandoned-run-field", summary.Outcomes.Single(item => item.Label == "壊れた値").IgnoredReason, "abandoned shield ignored reason");
     var run = state["run"]!.AsObject();
     Equal(20, run["ingot"]!.GetValue<int>(), "ingot");
     Equal(false, run.ContainsKey("hope"), "discarded hope pruned");
     Equal(false, run.ContainsKey("maxHope"), "discarded max hope not written");
     Equal(false, run.ContainsKey("commandLevel"), "discarded command level not written");
     Equal(18, run["difficulty"]!.GetValue<int>(), "difficulty");
+    // 等級は多元化珍品(効果バリアント)のtierと結びつく: run.difficulty -> run.difficultyTierId。
+    Equal("imaginary", run["difficultyTierId"]!.GetValue<string>(), "difficulty tier derived for is5 curio variants");
+    Equal("realistic", RhodesDifficultyTierCatalog.ResolveTierId("is5_sarkaz", 2), "tier boundary 2 is realistic");
+    Equal("original", RhodesDifficultyTierCatalog.ResolveTierId("is5_sarkaz", 3), "tier boundary 3 is original");
+    Equal("fantastical", RhodesDifficultyTierCatalog.ResolveTierId("is5_sarkaz", 8), "tier boundary 8 is fantastical");
+    Equal("imaginary", RhodesDifficultyTierCatalog.ResolveTierId("is5_sarkaz", 9), "tier boundary 9 is imaginary");
+    Equal("", RhodesDifficultyTierCatalog.ResolveTierId("is2_phantom", 5), "campaigns without variant curios derive no tier");
     Equal(7, run["special"]!.AsObject()["is5_sarkaz"]!.AsObject()["idea"]!.GetValue<int>(), "idea");
     Equal("gummy", state["operators"]!.AsArray()[0]!.GetValue<string>(), "unrelated selections preserved");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "updatedAt");
+}
+
+static void CandidateRunStatusApplySquadRandomEffect()
+{
+    var state = JsonNode.Parse("""{ "run": { "campaignId": "is5_sarkaz" } }""")!.AsObject();
+    var candidates = new[]
+    {
+        new MaaCandidatePreview("runStatus", "奇想天外分隊", "is5_sarkaz_squad_16", "手動入力", 1.0, Field: "squadId", CampaignId: "is5_sarkaz"),
+        new MaaCandidatePreview("runStatus", "奇想天外分隊 追加効果", "is5_sarkaz_mimic_02", "手動入力", 1.0, Field: "squadRandomEffectOptionId", CampaignId: "is5_sarkaz"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.ApplyRunStatus(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
+
+    Equal(2, summary.AppliedCount, "squad and random effect applied");
+    Equal("squadId|squadRandomEffectOptionId", string.Join("|", summary.AppliedFields), "applied fields");
+    var run = state["run"]!.AsObject();
+    Equal("is5_sarkaz_squad_16", run["squadId"]!.GetValue<string>(), "squad id");
+    Equal("is5_sarkaz_mimic_02", run["squadRandomEffectOptionId"]!.GetValue<string>(), "random effect id");
 }
 
 static void CandidateRunStatusRejectsOtherCampaign()
@@ -3856,8 +4264,12 @@ static void CandidateRunStatusApplyBestDuplicate()
         DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
 
     Equal(1, summary.AppliedCount, "applied duplicate count");
-    Equal(0, summary.IgnoredCount, "ignored duplicate count");
+    Equal(1, summary.IgnoredCount, "ignored duplicate count");
     Equal("ingot", string.Join("|", summary.AppliedFields), "applied duplicate fields");
+    Equal(2, summary.Outcomes.Count, "duplicate outcome count");
+    Equal("applied", summary.Outcomes[0].Outcome, "best duplicate applied");
+    Equal("ignored", summary.Outcomes[1].Outcome, "lower duplicate ignored");
+    Equal("lower-confidence-duplicate", summary.Outcomes[1].IgnoredReason, "lower duplicate ignored reason");
     var run = state["run"]!.AsObject();
     Equal(5, run["ingot"]!.GetValue<int>(), "best ingot");
 }
@@ -3889,6 +4301,9 @@ static void CandidateChoiceApply()
     Equal(2, summary.AppliedCount, "applied choice count");
     Equal(3, summary.IgnoredCount, "ignored choice count");
     Equal("operator:rain|relic:is5_sarkaz_relic_002", string.Join("|", summary.AppliedFields), "applied choices");
+    Equal("duplicate-operator", summary.Outcomes.Single(item => item.Label == "重複").IgnoredReason, "duplicate operator ignored reason");
+    Equal("campaign-mismatch", summary.Outcomes.Single(item => item.Label == "別IS秘宝").IgnoredReason, "other campaign relic ignored reason");
+    Equal("campaign-mismatch", summary.Outcomes.Single(item => item.Label == "別IS思案").IgnoredReason, "other campaign thought ignored reason");
     Equal("gummy|rain", string.Join("|", state["operators"]!.AsArray().Select(item => item!.GetValue<string>())), "operators");
     Equal("is5_sarkaz_relic_001|is5_sarkaz_relic_002", string.Join("|", state["relics"]!.AsArray().Select(item => item!.GetValue<string>())), "relics");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "choice updatedAt");

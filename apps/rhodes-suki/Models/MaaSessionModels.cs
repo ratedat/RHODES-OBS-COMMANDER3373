@@ -310,7 +310,11 @@ public sealed record RhodesSukiSettings(
     string SelectedAdbPresetId = "auto",
     string SelectedResourceProfileId = "runStatusFull",
     string AdbInputMethodId = SukiAdbMethodCatalog.DefaultInputMethodId,
-    string AdbScreencapMethodId = SukiAdbMethodCatalog.DefaultScreencapMethodId);
+    string AdbScreencapMethodId = SukiAdbMethodCatalog.DefaultScreencapMethodId,
+    bool HudVisible = false,
+    int HudX = -1,
+    int HudY = -1,
+    string HudVisibleParts = "");
 
 public sealed record MaaSessionSnapshot(
     string State,
@@ -1073,7 +1077,20 @@ public sealed record MaaEvidencePreviewNode(
 public sealed record SukiCandidateApplySummary(
     int AppliedCount,
     int IgnoredCount,
-    IReadOnlyList<string> AppliedFields)
+    IReadOnlyList<string> AppliedFields,
+    IReadOnlyList<SukiCandidateApplyOutcome>? OutcomeItems = null)
 {
-    public static SukiCandidateApplySummary Empty { get; } = new(0, 0, []);
+    public IReadOnlyList<SukiCandidateApplyOutcome> Outcomes => OutcomeItems ?? [];
+
+    public static SukiCandidateApplySummary Empty { get; } = new(0, 0, [], []);
 }
+
+public sealed record SukiCandidateApplyOutcome(
+    int Index,
+    string Kind,
+    string Label,
+    string Value,
+    string Identity,
+    string Outcome,
+    string AppliedField,
+    string IgnoredReason);

@@ -103,6 +103,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const candidateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaCandidateApiClient.cs", "utf8");
   const recognitionWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionWorkflow.cs", "utf8");
   const scanHistory = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionScanHistory.cs", "utf8");
+  const frameRecordHistory = await fs.readFile("apps/rhodes-suki/Services/RhodesFrameRecordHistory.cs", "utf8");
+  const publicDebugPolicy = await fs.readFile("apps/rhodes-suki/Services/RhodesPublicDebugPolicy.cs", "utf8");
   const debugPaths = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiDebugPaths.cs", "utf8");
   const bugReportBundle = await fs.readFile("apps/rhodes-suki/Services/RhodesBugReportBundle.cs", "utf8");
   const stateApiClient = await fs.readFile("apps/rhodes-suki/Services/RhodesStateApiClient.cs", "utf8");
@@ -110,8 +112,22 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const models = await fs.readFile("apps/rhodes-suki/Models/MaaSessionModels.cs", "utf8");
   const runModels = await fs.readFile("apps/rhodes-suki/Models/RunCatalogModels.cs", "utf8");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
-  const mainWindowCodeBehind = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml.cs", "utf8");
-  const mainWindowAxaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const mainWindowCodeBehind = [
+    await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml.cs", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/RecognitionWorkspaceView.axaml.cs", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml.cs", "utf8"),
+  ].join("\n");
+  const mainWindowAxamlBase = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const mainWindowAxaml = [
+    mainWindowAxamlBase,
+    await fs.readFile("apps/rhodes-suki/Views/WorkbenchTheme.axaml", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/RunWorkspaceView.axaml", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/ChoicesWorkspaceView.axaml", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/RecognitionWorkspaceView.axaml", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/OutputWorkspaceView.axaml", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/DebugWorkspaceView.axaml", "utf8"),
+  ].join("\n");
   const resource = await fs.readFile("apps/rhodes-suki/resource/base/pipeline/rhodes.json", "utf8");
   const generatedResource = await fs.readFile("apps/rhodes-suki/resource/base/pipeline/rhodes-generated.json", "utf8");
   const projectInterface = await fs.readFile("apps/rhodes-suki/interface.json", "utf8");
@@ -120,6 +136,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(session, /new MaaTasker/);
   assert.match(session, /GetCachedImage/);
   assert.match(session, /AppendTask/);
+  assert.match(session, /AppendRecognition/);
+  assert.match(session, /InitializeOfflineAsync/);
+  assert.match(session, /RunResourceRecognitionAsync/);
+  assert.match(session, /IsTaskerReady/);
   assert.match(session, /GetRecognitionDetail/);
   assert.match(session, /RecognitionDetailJson/);
   assert.match(session, /MissingRecognitionResourceFiles/);
@@ -134,6 +154,9 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(catalog, /JsonDocument\.Parse/);
   assert.match(catalog, /GeneratedTasks/);
   assert.match(catalog, /ProfileGroups/);
+  assert.match(catalog, /LoadRecognitionPayloadJson/);
+  assert.match(catalog, /payload\.Remove\("action"\)/);
+  assert.match(catalog, /payload\.Remove\("attach"\)/);
   assert.match(catalog, /ValidateContract/);
   assert.match(catalog, /profileIds/);
   assert.match(adbPresets, /google-play-games-dev/);
@@ -213,7 +236,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(mainWindowAxaml, /MaaRequirementLabel/);
   assert.match(mainWindowAxaml, /StateWriteLabel/);
   assert.match(bitmapPathConverter, /IValueConverter/);
-  assert.match(bitmapPathConverter, /new Bitmap\(path\)/);
+  assert.match(bitmapPathConverter, /Bitmap\.DecodeToWidth/);
   assert.match(choiceFilter, /ShowSelectedFirst/);
   assert.match(choiceFilter, /HideExcluded/);
   assert.match(choiceFilter, /SelectedOnly/);
@@ -403,12 +426,41 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(adbConnectionTestWorkflow, /FromCapture/);
   assert.match(
     viewModel,
-    /private async Task RunSelectedProfileRecognitionAndApplyAsync\(\)[\s\S]*if \(!await RunAllResourceTasksCoreAsync\(\)\)[\s\S]*return;[\s\S]*if \(!await ConvertResourceTaskResultsCoreAsync\(\)\)[\s\S]*return;[\s\S]*await ApplyCandidateResultsCoreAsync\(\)/,
+    /private async Task RunSelectedProfileRecognitionAndApplyAsync\(\)[\s\S]*await RunSelectedProfileRecognitionAndApplyCoreAsync\(\)/,
   );
   assert.match(
     viewModel,
-    /private async Task ApplyCandidateResultsCoreAsync\(\)[\s\S]*RhodesRecognitionWorkflow\.ApplyCandidatesAsync[\s\S]*RhodesStateApiClient\.FetchAsync[\s\S]*RhodesStateApiClient\.SaveAsync[\s\S]*RhodesRunStateStore\.ReplaceStateJsonAsync[\s\S]*RhodesRunStateStore\.SaveCandidatesAsync[\s\S]*ReloadRunStateFromStore\(\)/,
+    /private async Task<bool> RunSelectedProfileRecognitionAndApplyCoreAsync\(\)[\s\S]*if \(!await RunAllResourceTasksCoreAsync\(\)\)[\s\S]*return false;[\s\S]*if \(!await ConvertResourceTaskResultsCoreAsync\(\)\)[\s\S]*return false;[\s\S]*await ApplyCandidateResultsCoreAsync\(\)/,
   );
+  assert.match(viewModel, /RunProfileRecognitionAndApplyCommand/);
+  assert.match(viewModel, /RunProfileRecognitionAndApplyAsync\(parameter as string\)/);
+  assert.match(viewModel, /private async Task RunProfileRecognitionAndApplyAsync\(string\? profileId\)/);
+  // 認識候補も手動入力も同じ反映パイプライン (ApplyCandidatesPipelineAsync) を通す。
+  assert.match(
+    viewModel,
+    /private async Task<RhodesCandidateApplyWorkflowResult> ApplyCandidatesPipelineAsync\([\s\S]*RhodesRecognitionWorkflow\.ApplyCandidatesAsync[\s\S]*RhodesStateApiClient\.FetchAsync[\s\S]*RhodesStateApiClient\.SaveAsync[\s\S]*RhodesRunStateStore\.ReplaceStateJsonAsync[\s\S]*RhodesRunStateStore\.SaveCandidatesAsync[\s\S]*ReloadRunStateFromStore\(\)/,
+  );
+  assert.match(
+    viewModel,
+    /private async Task ApplyCandidateResultsCoreAsync\(\)[\s\S]*ApplyCandidatesPipelineAsync\(CandidateResults\.ToArray\(\)\)/,
+  );
+  assert.match(viewModel, /ApplyManualRunValuesAsync/);
+  assert.match(viewModel, /RhodesDifficultyTierCatalog/);
+  // 配信サーバー (overlay/sidecar) は出力ワークスペースから起動・停止できる。
+  assert.match(viewModel, /RhodesSidecarServerLauncher/);
+  assert.match(mainWindowAxaml, /StartSidecarServerCommand/);
+  assert.match(mainWindowAxaml, /StopSidecarServerCommand/);
+  assert.match(mainWindowAxaml, /SidecarServerStatus/);
+  assert.match(mainWindowAxaml, /\{Binding OverlayUrl\}/);
+  // HUD (本人用透過小窓): 表示内容は出力ワークスペースのチェックで制御し、settingsに永続化する。
+  const hudWindowAxaml = await fs.readFile("apps/rhodes-suki/Views/HudWindow.axaml", "utf8");
+  assert.match(viewModel, /RhodesHudPartCatalog/);
+  assert.match(mainWindowAxaml, /ItemsSource="\{Binding HudPartOptions\}"/);
+  assert.match(hudWindowAxaml, /ItemsSource="\{Binding HudChips\}"/);
+  assert.match(hudWindowAxaml, /IsVisible="\{Binding IsHudTierVisible\}"/);
+  assert.match(hudWindowAxaml, /IsVisible="\{Binding IsHudApplySummaryVisible\}"/);
+  assert.match(hudWindowAxaml, /IsVisible="\{Binding IsHudConnectionVisible\}"/);
+  assert.match(mainWindowAxaml, /IsChecked="\{Binding IsHudVisible, Mode=TwoWay\}"/);
   assert.match(candidateApiClient, /api\/recognition\/maa-resource/);
   assert.match(candidateApiClient, /ExtractCandidatePreviews/);
   assert.match(viewModel, /RhodesRecognitionWorkflow\.RunResourceTasksAsync/);
@@ -442,6 +494,14 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /CandidateApiProfileId/);
   assert.doesNotMatch(viewModel, /RunSelectedProfileAdbScanCommand/);
   assert.doesNotMatch(viewModel, /SelectedResourceProfile\?\.Id == "all" \? "runStatusFull"/);
+  const liveResourceTaskStart = viewModel.indexOf("private async Task<bool> RunAllResourceTasksCoreAsync()");
+  const liveResourceTaskEnd = viewModel.indexOf("private async Task<bool> ConvertResourceTaskResultsCoreAsync()", liveResourceTaskStart);
+  assert.ok(liveResourceTaskStart >= 0);
+  assert.ok(liveResourceTaskEnd > liveResourceTaskStart);
+  const liveResourceTaskBody = viewModel.slice(liveResourceTaskStart, liveResourceTaskEnd);
+  assert.match(liveResourceTaskBody, /RhodesMaaResourceCatalog\.LoadRecognitionPayloadJson\(entry\)/);
+  assert.match(liveResourceTaskBody, /_session\.RunResourceRecognitionAsync\(entry, payload, _lastCapture, cancellationToken\)/);
+  assert.doesNotMatch(liveResourceTaskBody, /_session\.RunResourceTaskAsync\(entry, "\{\}", cancellationToken\)/);
   assert.match(recognitionWorkflow, /RhodesMaaResultPreview\.FromTaskResults/);
   assert.match(viewModel, /CandidateResults/);
   assert.match(viewModel, /RunResourceTaskCommand/);
@@ -757,8 +817,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesRunStateStore\.SaveCandidatesAsync/);
   assert.match(viewModel, /SetCurrentCampaignCommand/);
   assert.match(viewModel, /SequenceEqual\(items\)/);
-  assert.match(mainWindowCodeBehind, /CloseOpenComboBoxesOnOutsidePress/);
-  assert.match(mainWindowCodeBehind, /IsDropDownOpen = false/);
+  // 独自の「外側クリックで全ComboBoxを閉じる」ハンドラは、ポップアップ内クリックまで
+  // 閉じてしまいドロップダウンの項目選択を壊すため撤去済み (light dismissに委譲)。
+  assert.doesNotMatch(mainWindowCodeBehind, /CloseOpenComboBoxesOnOutsidePress/);
+  assert.doesNotMatch(mainWindowCodeBehind, /IsDropDownOpen = false/);
   assert.doesNotMatch(mainWindowAxaml, /API進捗/);
   assert.doesNotMatch(mainWindowAxaml, /RefreshRecognitionScanStatusCommand/);
   assert.doesNotMatch(resource, /RhodesRunStatusTopBarOcr/);
@@ -808,9 +870,23 @@ test("MAA resource generator output is checked into the Suki shell", () => {
 });
 
 test("Suki shell exposes manual MAA ADB and probe controls", async () => {
-  const xaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const mainWindowXaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const runtimeWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml", "utf8");
+  const recognitionWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RecognitionWorkspaceView.axaml", "utf8");
+  const xaml = [
+    mainWindowXaml,
+    await fs.readFile("apps/rhodes-suki/Views/WorkbenchTheme.axaml", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/RunWorkspaceView.axaml", "utf8"),
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/ChoicesWorkspaceView.axaml", "utf8"),
+    recognitionWorkspace,
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/OutputWorkspaceView.axaml", "utf8"),
+    runtimeWorkspace,
+    await fs.readFile("apps/rhodes-suki/Views/Workspaces/DebugWorkspaceView.axaml", "utf8"),
+  ].join("\n");
   const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
   const debugPaths = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiDebugPaths.cs", "utf8");
+  const frameRecordHistory = await fs.readFile("apps/rhodes-suki/Services/RhodesFrameRecordHistory.cs", "utf8");
+  const publicDebugPolicy = await fs.readFile("apps/rhodes-suki/Services/RhodesPublicDebugPolicy.cs", "utf8");
   const bugReportBundle = await fs.readFile("apps/rhodes-suki/Services/RhodesBugReportBundle.cs", "utf8");
   const workspaceLayoutRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceLayoutRegistry.cs", "utf8");
 
@@ -831,18 +907,16 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectedAdbInputMethod/);
   assert.match(xaml, /AdbMethodSummary/);
   assert.match(xaml, /AdbMethodDetail/);
-  assert.match(xaml, /StackPanel Grid\.Column="2" Spacing="8" Width="300"/);
-  assert.match(xaml, /<WrapPanel Classes="runtimeActions" HorizontalAlignment="Right">\s*<Button Content="保存"/s);
+  // 2026-07-08 UI再設計: 常設右ペインを廃止し、ヘッダーは接続ピル+主アクションに集約。
+  assert.match(mainWindowXaml, /ConnectionStatusLabel/);
+  assert.match(mainWindowXaml, /ConnectionStatusBackground/);
+  assert.match(mainWindowXaml, /<Button Classes="primary" Content="認識\+反映"/);
+  assert.match(mainWindowXaml, /SelectedWorkspaceNavItem/);
   assert.doesNotMatch(xaml, /StackPanel Grid\.Column="2" Spacing="8" MinWidth="260"/);
   assert.match(xaml, /<Border Grid\.Column="1"[^>]+ClipToBounds="True"[^>]+MinWidth="0"/);
-  assert.match(xaml, /<Grid RowDefinitions="Auto,Auto" RowSpacing="6">\s*<TextBlock Text="プレビュー \/ 結果"/s);
-  assert.match(xaml, /<WrapPanel Grid\.Row="1" Classes="runtimeActions">\s*<TextBlock Text="\{Binding CapturePixelSizeLabel\}"/s);
-  const runtimeWorkspaceVisible = xaml.indexOf('IsVisible="{Binding IsRuntimeWorkspaceVisible}"');
-  const runtimeWorkspaceStart = xaml.lastIndexOf("<ScrollViewer", runtimeWorkspaceVisible);
-  const runtimeWorkspaceEnd = xaml.indexOf('IsVisible="{Binding IsDebugWorkspaceVisible}"');
-  assert.ok(runtimeWorkspaceStart >= 0);
-  assert.ok(runtimeWorkspaceEnd > runtimeWorkspaceStart);
-  const runtimeWorkspace = xaml.slice(runtimeWorkspaceStart, runtimeWorkspaceEnd);
+  assert.doesNotMatch(mainWindowXaml, /プレビュー \/ 結果/);
+  assert.match(recognitionWorkspace, /x:Name="RoiCanvas"/);
+  assert.match(recognitionWorkspace, /\{Binding CapturePixelSizeLabel\}/);
   assert.match(runtimeWorkspace, /<ScrollViewer[^>]+VerticalScrollBarVisibility="Auto"[^>]+HorizontalScrollBarVisibility="Disabled"/);
   assert.match(runtimeWorkspace, /<StackPanel Spacing="12" HorizontalAlignment="Stretch">/);
   assert.match(runtimeWorkspace, /WrapPanel[^>]+Classes="runtimeActions"[^>]+HorizontalAlignment="Left"/);
@@ -885,11 +959,6 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RecognitionLayout\.Review\.Title/);
   assert.match(xaml, /RecognitionLayout\.Evidence\.Title/);
   assert.match(xaml, /ApplyCandidateResultsCommand/);
-  const recognitionWorkspaceStart = xaml.indexOf('IsVisible="{Binding IsRecognitionWorkspaceVisible}"');
-  const debugWorkspaceStart = xaml.indexOf('IsVisible="{Binding IsDebugWorkspaceVisible}"');
-  assert.ok(recognitionWorkspaceStart >= 0);
-  assert.ok(debugWorkspaceStart > recognitionWorkspaceStart);
-  const recognitionWorkspace = xaml.slice(recognitionWorkspaceStart, debugWorkspaceStart);
   assert.doesNotMatch(recognitionWorkspace, /RunSelectedProfileAdbScanCommand/);
   assert.match(xaml, /SyncRunStateFromApiCommand/);
   assert.match(xaml, /API状態同期/);
@@ -899,7 +968,12 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(workspaceLayoutRegistry, /源石錐・等級・分隊とIS固有値/);
   assert.match(xaml, /共通値を認識/);
   assert.doesNotMatch(xaml, /基本値を認識/);
-  assert.match(xaml, /OpenRecognitionProfileCommand/);
+  assert.match(viewModel, /OpenRecognitionProfileCommand/);
+  assert.match(xaml, /RunProfileRecognitionAndApplyCommand/);
+  assert.match(xaml, /認識\+反映/);
+  assert.match(xaml, /基礎認識/);
+  assert.match(xaml, /時代認識/);
+  assert.match(xaml, /CommandParameter="runStatusFull"/);
   assert.match(xaml, /CommandParameter="\{Binding ProfileId\}"/);
   assert.match(xaml, /CommandParameter="runStatusFull"/);
   assert.match(xaml, /CommandParameter="operatorsFull"/);
@@ -916,8 +990,25 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(debugPaths, /BugReportsDirectoryName/);
   assert.match(debugPaths, /BugReportsDirectory/);
   assert.match(debugPaths, /FrameRecordsDirectory/);
+  assert.match(frameRecordHistory, /RhodesFrameRecordHistory/);
+  assert.match(frameRecordHistory, /LoadRecent/);
+  assert.match(frameRecordHistory, /frame-\*\.json/);
+  assert.match(frameRecordHistory, /RhodesFrameRecordHistoryItem/);
+  assert.match(publicDebugPolicy, /SarkazCampaignId = "is5_sarkaz"/);
+  assert.match(publicDebugPolicy, /runStatusFull/);
+  assert.match(publicDebugPolicy, /operatorsFull/);
+  assert.match(publicDebugPolicy, /relicsFull/);
+  assert.match(publicDebugPolicy, /is5ThoughtFull/);
+  assert.match(publicDebugPolicy, /is5AgeFull/);
+  assert.doesNotMatch(publicDebugPolicy, /is4RevelationFull/);
+  assert.doesNotMatch(publicDebugPolicy, /is6CoinsFull/);
+  assert.match(viewModel, /RhodesPublicDebugPolicy\.ApplyCampaign/);
+  assert.match(viewModel, /RhodesPublicDebugPolicy\.FilterProfiles/);
+  assert.match(viewModel, /RhodesPublicDebugPolicy\.FilterCampaigns/);
   assert.match(bugReportBundle, /ZipArchive/);
   assert.match(bugReportBundle, /manifest\.json/);
+  assert.match(bugReportBundle, /publicDebugCampaign/);
+  assert.match(bugReportBundle, /publicDebugProfiles/);
   assert.match(bugReportBundle, /retainedRecognitionTargets/);
   assert.match(bugReportBundle, /abandonedRunFields/);
   assert.match(bugReportBundle, /GLM\/Ollama本体/);
@@ -925,6 +1016,14 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RefreshRecognitionScanHistoryCommand/);
   assert.match(xaml, /LoadRecognitionScanHistoryCommand/);
   assert.match(xaml, /RecognitionScanHistory/);
+  assert.match(xaml, /RefreshFrameRecordHistoryCommand/);
+  assert.match(xaml, /LoadFrameRecordHistoryCommand/);
+  assert.match(xaml, /ReplayFrameRecordRecognitionCommand/);
+  assert.match(viewModel, /ReplayFrameRecordRecognitionAsync/);
+  assert.match(viewModel, /InitializeOfflineAsync\(BuildSessionOptions\(\)\)/);
+  assert.match(viewModel, /RunResourceRecognitionAsync\(entry, payload, _lastCapture/);
+  assert.match(xaml, /FrameRecordHistory/);
+  assert.match(xaml, /Frame Records/);
   assert.match(xaml, /RecognitionScanLogRows/);
   assert.match(xaml, /OcrDetailRows/);
   assert.match(xaml, /RoiPreviewRows/);
@@ -1000,7 +1099,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ShowRoiOverlay/);
   assert.match(xaml, /CapturePixelSizeLabel/);
   assert.match(xaml, /RoiProjectionLabel/);
-  assert.match(xaml, /Content="ROI"/);
+  assert.match(xaml, /Content="ROI表示"/);
   assert.match(xaml, /Canvas Width="1280" Height="720"/);
   assert.match(xaml, /Canvas\.Left="\{Binding X\}"/);
   assert.match(xaml, /Canvas\.Top="\{Binding Y\}"/);
@@ -1045,8 +1144,8 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(workspaceLayoutRegistry, /出力 \/ OBS/);
   assert.doesNotMatch(xaml, /Content="Control"/);
   assert.doesNotMatch(xaml, /\/control-v2\?screen=obs/);
-  assert.match(xaml, /Content="Sidecar"/);
-  assert.match(xaml, /Content="Overlay"/);
+  assert.match(xaml, /Content="Sidecarを開く"/);
+  assert.match(xaml, /Content="Overlayを開く"/);
   assert.match(xaml, /OutputParts/);
   assert.match(xaml, /OutputSeparateWindow/);
   assert.match(xaml, /OutputTournamentMode/);
@@ -1078,15 +1177,16 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /RelicSearch/);
   assert.match(xaml, /OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged/);
   assert.match(xaml, /RelicSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged/);
-  assert.match(xaml, /PaneColumnOptions/);
-  assert.match(xaml, /OperatorPaneColumns/);
+  // 列数はComboBoxではなくNumericUpDown (int項目のSelectionBox表示不具合を回避)。
+  assert.match(xaml, /NumericUpDown[^>]+Value="\{Binding OperatorPaneColumns, Mode=TwoWay\}"/);
+  assert.match(xaml, /NumericUpDown[^>]+Value="\{Binding RelicPaneColumns, Mode=TwoWay\}"/);
   assert.match(xaml, /RelicPaneColumns/);
-  assert.match(xaml, /Selector="ListBox\.choicePane ListBoxItem"/);
-  assert.match(xaml, /HorizontalContentAlignment" Value="Stretch"/);
-  assert.match(xaml, /Content="\{TemplateBinding Content\}"/);
-  assert.match(xaml, /ContentTemplate="\{TemplateBinding ContentTemplate\}"/);
-  assert.match(xaml, /ListBox Grid\.Row="2" Classes="choicePane" ItemsSource="\{Binding FilteredOperatorRows\}"/);
-  assert.match(xaml, /ListBox Grid\.Row="2" Classes="choicePane" ItemsSource="\{Binding FilteredRelicRows\}"/);
+  // 選択リストはItemsControl。ListBoxだと行コンテナに選択/フォーカス枠が付くため使わない。
+  assert.match(xaml, /Selector="ItemsControl\.choicePane"/);
+  assert.match(xaml, /VirtualizingStackPanel/);
+  assert.match(xaml, /ItemsControl Grid\.Row="2" Classes="choicePane" ItemsSource="\{Binding FilteredOperatorRows\}"/);
+  assert.match(xaml, /ItemsControl Grid\.Row="2" Classes="choicePane" ItemsSource="\{Binding FilteredRelicRows\}"/);
+  assert.doesNotMatch(xaml, /ListBox[^>]*Classes="choicePane"/);
   assert.match(xaml, /UniformGrid Columns="\{Binding Columns\}"/);
   assert.match(xaml, /UniformGrid Columns="\{Binding Columns\}" HorizontalAlignment="Stretch"/);
   assert.match(xaml, /RelativeSource=\{RelativeSource AncestorType=Window\}/);
@@ -1094,7 +1194,9 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /Classes="choiceCard"/);
   assert.match(xaml, /Background="\{TemplateBinding Background\}"/);
   assert.match(xaml, /MinHeight="\{TemplateBinding MinHeight\}"/);
-  assert.match(xaml, /<Button Classes="choiceCard" Command="\{Binding DataContext\.ToggleChoiceSelectedCommand, RelativeSource=\{RelativeSource AncestorType=Window\}\}"/);
+  // 選択状態はカード自体の見た目 (Classes.selected/.excluded) で表す。
+  assert.match(xaml, /<Button Classes="choiceCard" Classes\.selected="\{Binding IsSelected\}" Classes\.excluded="\{Binding IsExcluded\}" Command="\{Binding DataContext\.ToggleChoiceSelectedCommand, RelativeSource=\{RelativeSource AncestorType=Window\}\}"/);
+  assert.match(xaml, /Selector="Button\.choiceCard\.selected"/);
   assert.doesNotMatch(xaml, /<Button Classes="choiceCard"[^>]*>\s*<Border CornerRadius="7" Padding="9"/);
   assert.doesNotMatch(xaml, /SelectionButtonLabel/);
   assert.doesNotMatch(xaml, /ExclusionButtonLabel/);

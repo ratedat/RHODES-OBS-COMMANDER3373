@@ -1,0 +1,180 @@
+<UserControl
+    x:Class="RhodesSuki.Views.Workspaces.RunWorkspaceView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    ホーム(ラン)ダッシュボード。
+    上段: 最新キャプチャ + 認識ループの主操作。
+    下段: ラン値 / IS特殊値 / 認識候補 / 進行。
+  -->
+  <Grid RowDefinitions="Auto,*" RowSpacing="12">
+    <Grid ColumnDefinitions="300,*" ColumnSpacing="12">
+      <Border Classes="card" Padding="8">
+        <Grid RowDefinitions="*,Auto" RowSpacing="6">
+          <Border CornerRadius="6" Background="#0C1011" ClipToBounds="True" Height="150">
+            <Image Source="{Binding LastCaptureImage}" Stretch="Uniform" />
+          </Border>
+          <TextBlock Grid.Row="1" Text="{Binding CapturePixelSizeLabel}" Classes="mono" TextTrimming="CharacterEllipsis" />
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1" Classes="card">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+          <StackPanel Spacing="2">
+            <TextBlock Text="{Binding RunContextSummary}" Classes="h2" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding RunLayout.Header.Detail}" Classes="caption" />
+          </StackPanel>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="撮影" Command="{Binding CaptureCommand}" />
+            <Button Classes="primary" Content="共通値を認識+反映" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="runStatusFull" />
+            <Button Content="思案" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="is5ThoughtFull" />
+            <Button Content="時代" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="is5AgeFull" />
+            <Button Content="API状態同期" Command="{Binding SyncRunStateFromApiCommand}" />
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding HeaderStatusChips}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="8" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border CornerRadius="6" Padding="9,5" Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1" MinWidth="82" ToolTip.Tip="{Binding Detail}">
+                    <StackPanel Spacing="1">
+                      <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.62" />
+                      <TextBlock Text="{Binding Value}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <TextBlock Grid.Row="3" Text="{Binding LastCandidateApplySummary}" Classes="caption" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="14">
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding RunLayout.Header.Title}" Classes="h2" />
+
+          <!-- 共通値の手動入力: 大会配信など認識に頼らない運用向け。認識と同じ反映経路を通す。 -->
+          <Border Classes="card">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+              <WrapPanel VerticalAlignment="Center">
+                <TextBlock Text="手動入力" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,6" />
+                <TextBlock Text="源石錐" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+                <NumericUpDown Width="130" Minimum="0" Maximum="9999" Increment="1" FormatString="0" Value="{Binding ManualIngot, Mode=TwoWay}" Margin="0,0,10,6" />
+                <TextBlock Text="等級" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+                <NumericUpDown Width="110" Minimum="1" Maximum="{Binding ManualDifficultyMaximum}" Increment="1" FormatString="0" Value="{Binding ManualDifficulty, Mode=TwoWay}" Margin="0,0,10,6" />
+                <TextBlock Text="{Binding ManualDifficultyTierLabel}" FontSize="12" Foreground="#7BE2B6" VerticalAlignment="Center" Margin="0,0,10,6" />
+                <TextBlock Text="分隊" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+                <ComboBox Width="210" ItemsSource="{Binding ManualSquadOptions}" SelectedItem="{Binding SelectedManualSquad, Mode=TwoWay}" Margin="0,0,10,6" />
+                <Button Content="手動反映" Command="{Binding ApplyManualRunValuesCommand}" Margin="0,0,0,6" />
+              </WrapPanel>
+              <WrapPanel Grid.Row="1" IsVisible="{Binding IsManualSquadRandomEffectVisible}">
+                <TextBlock Text="追加効果" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+                <ComboBox Width="470" ItemsSource="{Binding ManualSquadRandomEffectOptions}" SelectedItem="{Binding SelectedManualSquadRandomEffect, Mode=TwoWay}" Margin="0,0,10,6" />
+              </WrapPanel>
+              <TextBlock Grid.Row="2" Classes="caption" Text="認識と同じ経路でstateとAPIへ反映します。等級を反映すると多元化珍品のtier (run.difficultyTierId) も自動的に更新されます。" />
+            </Grid>
+          </Border>
+
+          <ItemsControl ItemsSource="{Binding RunFieldPreviews}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Classes="card" Width="196" MinHeight="92" Margin="0,0,10,10">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Label}" Classes="caption" />
+                    <TextBlock Text="{Binding Value}" FontSize="26" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Detail}" Classes="caption" TextTrimming="CharacterEllipsis" MaxLines="2" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+          <StackPanel Spacing="8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding RunSpecialSection.Title}" Classes="h2" />
+              <TextBlock Text="{Binding CampaignHeaderTitle}" Classes="caption" />
+            </StackPanel>
+            <ItemsControl ItemsSource="{Binding SpecialValuePreviews}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Classes="choiceCard" Command="{Binding DataContext.RunProfileRecognitionAndApplyCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding ProfileId}" HorizontalContentAlignment="Stretch">
+                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="8" RowSpacing="2">
+                      <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" />
+                      <TextBlock Grid.Column="1" Text="クリックで認識+反映" Classes="caption" />
+                      <TextBlock Grid.Row="1" Text="{Binding Value}" FontSize="20" FontWeight="SemiBold" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Detail}" Classes="caption" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" Spacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <TextBlock Text="認識候補" Classes="h2" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding CandidateResults.Count}" Classes="mono" VerticalAlignment="Center" />
+              <Button Grid.Column="2" Content="候補反映" Command="{Binding ApplyCandidateResultsCommand}" Padding="10,4" />
+            </Grid>
+            <Border Classes="card" Padding="8" MaxHeight="320">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding CandidateResults}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="6" Padding="8" Margin="0,0,0,6" Background="#132021" BorderBrush="#2B4547" BorderThickness="1">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                          <TextBlock Text="{Binding Kind}" Classes="caption" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Text="{Binding Confidence}" Classes="mono" VerticalAlignment="Center" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Border>
+            <TextBlock Text="詳細な確認は「認識」ワークスペースで行います。" Classes="caption" />
+            <Button Content="認識へ移動" Command="{Binding SetWorkspaceCommand}" CommandParameter="recognition" />
+          </StackPanel>
+        </Grid>
+
+        <StackPanel Spacing="8">
+          <StackPanel Spacing="2">
+            <TextBlock Text="{Binding RunCampaignSection.Title}" Classes="h2" />
+            <TextBlock Text="{Binding CampaignHeaderDetail}" Classes="caption" />
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding CampaignPreviews}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Classes="card" Padding="10" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Detail}" Classes="caption" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding CurrentRunLabel}" Classes="caption" VerticalAlignment="Center" />
+                    <Button Grid.Column="2" Content="{Binding CurrentRunActionLabel}" Command="{Binding DataContext.SetCurrentCampaignCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanSetCurrentRun}" Padding="8,4" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

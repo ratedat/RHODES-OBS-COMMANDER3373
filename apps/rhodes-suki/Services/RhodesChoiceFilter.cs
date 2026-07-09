@@ -36,14 +36,17 @@ public static class RhodesChoiceFilter
             .ToArray();
     }
 
+    // クリック直後の全再構築は「押した項目が並び替えで移動し、スクロール位置も失われる」ため、
+    // 表示メンバーが実際に増減するフィルター(選択のみ/除外を隠す)に限定する。
+    // 優先表示(選択を先頭へ)の並び替えは、次にリストが再構築されるタイミングで反映される。
     public static bool RequiresFullRefreshAfterSelectionMutation(SukiChoiceFilterOptions options)
     {
-        return options.ShowSelectedFirst || options.SelectedOnly;
+        return options.SelectedOnly;
     }
 
     public static bool RequiresFullRefreshAfterExclusionMutation(SukiChoiceFilterOptions options)
     {
-        return options.ShowSelectedFirst || options.HideExcluded || options.SelectedOnly;
+        return options.HideExcluded || options.SelectedOnly;
     }
 
     private static bool IsAll(string value)

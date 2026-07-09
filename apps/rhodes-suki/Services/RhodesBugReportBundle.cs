@@ -1,4 +1,8 @@
 using System.IO.Compression;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace RhodesSuki.Services;
@@ -123,6 +127,14 @@ public static class RhodesBugReportBundle
                     skipped,
                     addedPaths,
                     enforceDebugWhitelist: true,
+                    cancellationToken);
+
+                await AddResourceDefinitionFilesAsync(
+                    archive,
+                    request.MaxFileBytes,
+                    included,
+                    skipped,
+                    addedPaths,
                     cancellationToken);
 
                 AddTextEntry(
@@ -259,6 +271,29 @@ public static class RhodesBugReportBundle
         writer.Write(text);
     }
 
+    private static async Task AddResourceDefinitionFilesAsync(
+        ZipArchive archive,
+        long maxFileBytes,
+        ICollection<string> included,
+        ICollection<RhodesBugReportSkippedEntry> skipped,
+        ISet<string> addedPaths,
+        CancellationToken cancellationToken)
+    {
+        foreach (var file in DefaultResourceFiles())
+        {
+            await AddFileAsync(
+                archive,
+                file.Path,
+                file.EntryName,
+                maxFileBytes,
+                included,
+                skipped,
+                addedPaths,
+                enforceDebugWhitelist: false,
+                cancellationToken);
+        }
+    }
+
     private static string BuildManifest(
         RhodesBugReportBundleRequest request,
         DateTimeOffset now,
@@ -275,6 +310,16 @@ public static class RhodesBugReportBundle
             ["ocrDefault"] = "MAA-OCR",
             ["optionalOcr"] = "GLM-OCR/Ollama",
             ["distributionShell"] = "Avalonia/Suki",
+            ["appInformationalVersion"] = typeof(RhodesBugReportBundle).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                ?? typeof(RhodesBugReportBundle).Assembly.GetName().Version?.ToString()
+                ?? "",
+            ["dotnetRuntime"] = RuntimeInformation.FrameworkDescription,
+            ["osArchitecture"] = RuntimeInformation.OSArchitecture.ToString(),
+            ["currentCulture"] = CultureInfo.CurrentCulture.Name,
+            ["publicDebugCampaign"] = RhodesPublicDebugPolicy.SarkazCampaignId,
+            ["publicDebugProfiles"] = RhodesPublicDebugPolicy.ProfileIds,
+            ["resourceHashes"] = BuildResourceHashes(),
             ["retainedRecognitionTargets"] = new[]
             {
                 "originium-ingot",
@@ -298,6 +343,48 @@ public static class RhodesBugReportBundle
         }
 
         return $"{JsonSerializer.Serialize(manifest, JsonOptions)}{Environment.NewLine}";
+    }
+
+    private static SortedDictionary<string, string> BuildResourceHashes()
+    {
+        var hashes = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var file in DefaultResourceFiles())
+        {
+            hashes[file.EntryName] = File.Exists(file.Path)
+                ? ComputeSha256(file.Path)
+                : "missing";
+        }
+
+        return hashes;
+    }
+
+    private static string ComputeSha256(string path)
+    {
+        using var stream = File.OpenRead(path);
+        var hash = SHA256.HashData(stream);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static IReadOnlyList<RhodesBugReportResourceFile> DefaultResourceFiles()
+    {
+        return
+        [
+            new(
+                Path.Combine(AppContext.BaseDirectory, "interface.json"),
+                "resource/interface.json"),
+            new(
+                Path.Combine(AppContext.BaseDirectory, "resource", "base", "pipeline", "rhodes.json"),
+                "resource/pipeline/rhodes.json"),
+            new(
+                Path.Combine(AppContext.BaseDirectory, "resource", "base", "pipeline", "rhodes-generated.json"),
+                "resource/pipeline/rhodes-generated.json"),
+            new(
+                Path.Combine(AppContext.BaseDirectory, "data", "recognition", "maa-tasks.json"),
+                "resource/recognition/maa-tasks.json"),
+            new(
+                Path.Combine(AppContext.BaseDirectory, "data", "recognition", "scan-profiles.json"),
+                "resource/recognition/scan-profiles.json"),
+        ];
     }
 
     private static string NormalizeEntryPath(string path)
@@ -366,3 +453,5 @@ public sealed record RhodesBugReportBundleResult(
 }
 
 public sealed record RhodesBugReportSkippedEntry(string Path, string Reason);
+
+internal sealed record RhodesBugReportResourceFile(string Path, string EntryName);
