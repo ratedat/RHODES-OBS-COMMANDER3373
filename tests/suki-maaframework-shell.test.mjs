@@ -9,7 +9,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   const portablePublisher = await fs.readFile("tools/publish-suki-portable.mjs", "utf8");
 
   assert.match(csproj, /PackageReference Include="SukiUI" Version="7\.0\.1"/);
-  assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.8\.0"/);
+  assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.10\.0"/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes\.json/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes-generated\.json/);
   assert.match(csproj, /interface\.json/);
@@ -133,6 +133,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const projectInterface = await fs.readFile("apps/rhodes-suki/interface.json", "utf8");
 
   assert.match(session, /new MaaAdbController/);
+  assert.match(session, /MaaToolkit\.Shared\.AdbDevice\.FindAsync/);
+  assert.match(session, /LinkOption\.None/);
   assert.match(session, /new MaaTasker/);
   assert.match(session, /GetCachedImage/);
   assert.match(session, /AppendTask/);

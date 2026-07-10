@@ -36,6 +36,9 @@ var tests = new (string Name, Action Run)[]
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB method catalog maps emulator presets to fast lossless MAA methods", AdbMethodCatalog),
     ("ADB config JSON normalizer accepts only object payloads", AdbConfigJsonNormalizer),
+    ("ADB connection resolver builds MuMu and LD extras config", AdbConnectionResolverBuildsExtras),
+    ("ADB connection resolver adopts MaaToolkit device recommendations", AdbConnectionResolverUsesToolkit),
+    ("ADB connection resolver discovers MaaToolkit devices through one boundary", AdbConnectionResolverDiscoversToolkit),
     ("ADB device output parses serials and usable state", AdbDeviceParsing),
     ("ADB candidate registry keeps the runtime picker focused", AdbCandidateRegistry),
     ("Suki ADB detection workflow summarizes selected runtime path and devices", SukiAdbDetectionWorkflow),
@@ -881,6 +884,108 @@ static void AdbConfigJsonNormalizer()
     Equal("""{"touch":"adb"}""", SukiAdbConfigJson.Normalize(""" { "touch" : "adb" } """), "object config");
     ThrowsInvalidOperation(() => SukiAdbConfigJson.Normalize("not json"), "invalid json");
     ThrowsInvalidOperation(() => SukiAdbConfigJson.Normalize("[1,2]"), "array json");
+}
+
+static void AdbConnectionResolverBuildsExtras()
+{
+    var fastInput = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.FastEmulatorMethodId).Value;
+    var fastScreencap = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.FastEmulatorMethodId).Value;
+    var mumu = RhodesMaaSession.DefaultAdbOptions(
+        @"C:\Program Files\Netease\MuMu Player 12\shell\adb.exe",
+        "emulator-5556",
+        "{}",
+        fastInput,
+        fastScreencap,
+        "mumu");
+
+    var resolvedMumu = RhodesMaaAdbConnectionResolver.ApplyPresetExtras(mumu);
+    var mumuConfig = JsonNode.Parse(resolvedMumu.AdbConfigJson)!.AsObject();
+    var mumuExtras = mumuConfig["extras"]!["mumu"]!.AsObject();
+    Equal(true, mumuExtras["enable"]!.GetValue<bool>(), "MuMu extras enabled");
+    Equal(@"C:\Program Files\Netease\MuMu Player 12", mumuExtras["path"]!.GetValue<string>(), "MuMu root path");
+    Equal(1, mumuExtras["index"]!.GetValue<int>(), "MuMu emulator serial index");
+
+    var manual = mumu with
+    {
+        AdbConfigJson = """{"extras":{"mumu":{"path":"D:/MuMu","index":9}},"custom":{"keep":true}}""",
+    };
+    var resolvedManual = RhodesMaaAdbConnectionResolver.ApplyPresetExtras(manual);
+    var manualConfig = JsonNode.Parse(resolvedManual.AdbConfigJson)!.AsObject();
+    Equal("D:/MuMu", manualConfig["extras"]!["mumu"]!["path"]!.GetValue<string>(), "manual MuMu path preserved");
+    Equal(9, manualConfig["extras"]!["mumu"]!["index"]!.GetValue<int>(), "manual MuMu index preserved");
+    Equal(true, manualConfig["custom"]!["keep"]!.GetValue<bool>(), "manual custom config preserved");
+
+    var ld = RhodesMaaSession.DefaultAdbOptions(
+        @"C:\leidian\LDPlayer9\adb.exe",
+        "127.0.0.1:5557",
+        "{}",
+        AdbInputMethods.Default,
+        fastScreencap,
+        "ldplayer");
+    var resolvedLd = RhodesMaaAdbConnectionResolver.ApplyPresetExtras(ld);
+    var ldConfig = JsonNode.Parse(resolvedLd.AdbConfigJson)!.AsObject();
+    Equal(true, ldConfig["extras"]!["ld"]!["enable"]!.GetValue<bool>(), "LD extras enabled");
+    Equal(@"C:\leidian\LDPlayer9", ldConfig["extras"]!["ld"]!["path"]!.GetValue<string>(), "LD root path");
+    Equal(1, ldConfig["extras"]!["ld"]!["index"]!.GetValue<int>(), "LD TCP serial index");
+}
+
+static void AdbConnectionResolverUsesToolkit()
+{
+    var requested = RhodesMaaSession.DefaultAdbOptions(
+        "adb",
+        "",
+        """{"custom":{"keep":true}}""",
+        AdbInputMethods.Default,
+        AdbScreencapMethods.Default,
+        "auto");
+    var toolkitDevice = new AdbDeviceInfo(
+        "MuMu Player",
+        @"C:\Program Files\Netease\MuMu Player 12\shell\adb.exe",
+        "127.0.0.1:16384",
+        AdbScreencapMethods.EmulatorExtras | AdbScreencapMethods.RawWithGzip,
+        AdbInputMethods.EmulatorExtras | AdbInputMethods.AdbShell,
+        """{"extras":{"mumu":{"enable":true,"path":"C:/MuMu","index":0}}}""");
+
+    var resolution = RhodesMaaAdbConnectionResolver.ResolveToolkitDevice(requested, [toolkitDevice]);
+    Equal(true, resolution.DeviceResolved, "single Toolkit device resolved");
+    Equal("127.0.0.1:16384", resolution.Options.AdbSerial, "Toolkit serial adopted");
+    Equal(toolkitDevice.AdbPath, resolution.Options.AdbPath, "Toolkit adb path adopted");
+    Equal(toolkitDevice.ScreencapMethods, resolution.Options.ScreencapMethod, "Toolkit screencap adopted");
+    Equal(toolkitDevice.InputMethods, resolution.Options.InputMethod, "Toolkit input adopted");
+    var config = JsonNode.Parse(resolution.Options.AdbConfigJson)!.AsObject();
+    Equal(true, config["custom"]!["keep"]!.GetValue<bool>(), "manual config merged over Toolkit config");
+    Equal(true, config["extras"]!["mumu"]!["enable"]!.GetValue<bool>(), "Toolkit extras retained");
+}
+
+static void AdbConnectionResolverDiscoversToolkit()
+{
+    var requested = RhodesMaaSession.DefaultAdbOptions(
+        "C:/Tools/adb.exe",
+        "127.0.0.1:16384",
+        "{}",
+        AdbInputMethods.Default,
+        AdbScreencapMethods.Default,
+        "mumu");
+    var calledPath = "";
+    var toolkitDevice = new AdbDeviceInfo(
+        "MuMu Player",
+        "C:/Tools/adb.exe",
+        "127.0.0.1:16384",
+        AdbScreencapMethods.EmulatorExtras | AdbScreencapMethods.RawWithGzip,
+        AdbInputMethods.EmulatorExtras | AdbInputMethods.AdbShell,
+        """{"extras":{"mumu":{"enable":true,"path":"C:/MuMu","index":0}}}""");
+
+    var resolution = RhodesMaaAdbConnectionResolver.ResolveToolkitAsync(
+        requested,
+        (adbPath, _) =>
+        {
+            calledPath = adbPath;
+            return Task.FromResult<IReadOnlyList<AdbDeviceInfo>>([toolkitDevice]);
+        }).GetAwaiter().GetResult();
+
+    Equal("C:/Tools/adb.exe", calledPath, "Toolkit receives selected adb path");
+    Equal(true, resolution.DeviceResolved, "Toolkit async resolution succeeded");
+    Equal("127.0.0.1:16384", resolution.Options.AdbSerial, "Toolkit async serial");
 }
 
 static void AdbDeviceParsing()

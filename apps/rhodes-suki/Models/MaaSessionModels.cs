@@ -16,7 +16,8 @@ public sealed record MaaSessionOptions(
     string AdbSerial,
     string AdbConfigJson,
     AdbInputMethods InputMethod,
-    AdbScreencapMethods ScreencapMethod);
+    AdbScreencapMethods ScreencapMethod,
+    string ConnectionPreset = "auto");
 
 public static class SukiAdbConfigJson
 {
@@ -323,7 +324,8 @@ public sealed record MaaSessionSnapshot(
     string AgentBinaryRoot,
     bool ResourceRootExists,
     bool AgentBinaryRootExists,
-    bool IsReady);
+    bool IsReady,
+    MaaSessionOptions? EffectiveOptions = null);
 
 public sealed record MaaRecognitionRuntimeEvidence(
     string AdbPresetId,

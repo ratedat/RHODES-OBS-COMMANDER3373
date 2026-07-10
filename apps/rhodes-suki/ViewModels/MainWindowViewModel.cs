@@ -5460,7 +5460,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             AdbSerial.Trim(),
             AdbConfigJson.Trim(),
             SelectedAdbInputMethod?.Value ?? AdbInputMethods.Default,
-            SelectedAdbScreencapMethod?.Value ?? AdbScreencapMethods.Default);
+            SelectedAdbScreencapMethod?.Value ?? AdbScreencapMethods.Default,
+            SelectedAdbPreset?.Id ?? "auto");
     }
 
     private async Task<RhodesFrameRecordResult> SaveCaptureFrameAsync(byte[] encodedImage)
@@ -5529,7 +5530,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private MaaRecognitionRuntimeEvidence BuildRecognitionRuntimeEvidence()
     {
-        var options = BuildSessionOptions();
+        var options = _session.EffectiveOptions ?? BuildSessionOptions();
         var preset = SelectedAdbPreset;
         var input = SelectedAdbInputMethod ?? SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodId);
         var screencap = SelectedAdbScreencapMethod ?? SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodId);

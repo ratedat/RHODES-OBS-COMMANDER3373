@@ -8,6 +8,8 @@ namespace RhodesSuki.Services;
 public sealed class RhodesMaaSession : IDisposable
 {
     private static int NativeRuntimePrepared;
+    private static readonly SemaphoreSlim ToolkitConfigGate = new(1, 1);
+    private static bool ToolkitConfigInitialized;
     private MaaResource? _resource;
     private MaaController? _controller;
     private MaaTasker? _tasker;
@@ -18,12 +20,15 @@ public sealed class RhodesMaaSession : IDisposable
 
     public bool IsTaskerReady => _tasker is not null;
 
+    public MaaSessionOptions? EffectiveOptions { get; private set; }
+
     public static MaaSessionOptions DefaultAdbOptions(
         string adbPath = "adb",
         string adbSerial = "",
         string adbConfigJson = "{}",
         AdbInputMethods inputMethod = AdbInputMethods.Default,
-        AdbScreencapMethods screencapMethod = AdbScreencapMethods.Default)
+        AdbScreencapMethods screencapMethod = AdbScreencapMethods.Default,
+        string connectionPreset = "auto")
     {
         return new MaaSessionOptions(
             RhodesMaaPaths.DefaultResourceRoot,
@@ -32,7 +37,8 @@ public sealed class RhodesMaaSession : IDisposable
             adbSerial,
             SukiAdbConfigJson.Normalize(adbConfigJson),
             inputMethod,
-            screencapMethod);
+            screencapMethod,
+            connectionPreset);
     }
 
     public static MaaSessionSnapshot ProbeDefaultPaths()
@@ -79,6 +85,35 @@ public sealed class RhodesMaaSession : IDisposable
             return Snapshot("Resource未配置", "MAA Resource root が存在しません。", options, false);
         }
 
+        var toolkitDetail = "";
+        try
+        {
+            var toolkitResolution = await RhodesMaaAdbConnectionResolver.ResolveToolkitAsync(
+                options,
+                FindToolkitDevicesAsync,
+                cancellationToken);
+            toolkitDetail = toolkitResolution.Detail;
+            options = toolkitResolution.DeviceResolved
+                ? toolkitResolution.Options
+                : RhodesMaaAdbConnectionResolver.ApplyPresetExtras(options);
+        }
+        catch (Exception ex)
+        {
+            toolkitDetail = $"MaaToolkit検出失敗: {ex.Message}";
+            options = RhodesMaaAdbConnectionResolver.ApplyPresetExtras(options);
+        }
+
+        if (string.IsNullOrWhiteSpace(options.AdbSerial))
+        {
+            return Snapshot(
+                "端末未選択",
+                string.IsNullOrWhiteSpace(toolkitDetail) ? "ADB serialを選択してください。" : toolkitDetail,
+                options,
+                false);
+        }
+
+        EffectiveOptions = options;
+
         return await Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -91,7 +126,9 @@ public sealed class RhodesMaaSession : IDisposable
                     options.ScreencapMethod,
                     options.InputMethod,
                     options.AdbConfigJson,
-                    options.AgentBinaryRoot);
+                    options.AgentBinaryRoot,
+                    LinkOption.None,
+                    CheckStatusOption.None);
 
                 _tasker = new MaaTasker
                 {
@@ -107,7 +144,7 @@ public sealed class RhodesMaaSession : IDisposable
                 var ok = linkStatus == MaaJobStatus.Succeeded;
                 return Snapshot(
                     ok ? "接続済み" : "接続失敗",
-                    $"MAA Controller LinkStart: {linkStatus}",
+                    $"MAA Controller LinkStart: {linkStatus} / {toolkitDetail}",
                     options,
                     ok);
             }
@@ -319,7 +356,8 @@ public sealed class RhodesMaaSession : IDisposable
             options.AgentBinaryRoot,
             Directory.Exists(options.ResourceRoot),
             Directory.Exists(options.AgentBinaryRoot),
-            ready);
+            ready,
+            options);
     }
 
     private void DisposeCurrent()
@@ -328,6 +366,34 @@ public sealed class RhodesMaaSession : IDisposable
         _tasker = null;
         _controller = null;
         _resource = null;
+        EffectiveOptions = null;
+    }
+
+    private static async Task<IReadOnlyList<AdbDeviceInfo>> FindToolkitDevicesAsync(
+        string adbPath,
+        CancellationToken cancellationToken)
+    {
+        await ToolkitConfigGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!ToolkitConfigInitialized)
+            {
+                var userPath = Path.Combine(AppContext.BaseDirectory, "user-data", "maa-toolkit");
+                Directory.CreateDirectory(userPath);
+                if (!MaaToolkit.Shared.Config.InitOption(userPath, "{}"))
+                    throw new InvalidOperationException("MaaToolkit Config.InitOptionに失敗しました。");
+                ToolkitConfigInitialized = true;
+            }
+        }
+        finally
+        {
+            ToolkitConfigGate.Release();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        using var devices = await MaaToolkit.Shared.AdbDevice.FindAsync(adbPath);
+        cancellationToken.ThrowIfCancellationRequested();
+        return devices.ToArray();
     }
 
     private static void EnsureNativeRuntimeDirectory()
