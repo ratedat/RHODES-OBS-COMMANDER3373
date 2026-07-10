@@ -31,6 +31,105 @@
       "present": true
     },
     {
+      "id": "jp.recruitment",
+      "role": "operator-data",
+      "locale": "YoStarJP",
+      "rawPath": "resource/global/YoStarJP/resource/recruitment.json",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/recruitment.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/recruitment.json",
+      "present": true
+    },
+    {
+      "id": "jp.tasks",
+      "role": "ocr-rules",
+      "locale": "YoStarJP",
+      "rawPath": "resource/global/YoStarJP/resource/tasks/tasks.json",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/tasks/tasks.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/tasks/tasks.json",
+      "present": true
+    },
+    {
+      "id": "common.tasks",
+      "role": "ocr-rules",
+      "locale": "common",
+      "rawPath": "resource/tasks/tasks.json",
+      "localPath": "third_party/maa/resource/tasks/tasks.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/tasks.json",
+      "present": true
+    },
+    {
+      "id": "roguelike.base.tasks",
+      "role": "ocr-rules",
+      "locale": "common",
+      "rawPath": "resource/tasks/Roguelike/base.json",
+      "localPath": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/base.json",
+      "present": true
+    },
+    {
+      "id": "roguelike.sami.tasks",
+      "role": "ocr-rules",
+      "locale": "common",
+      "rawPath": "resource/tasks/Roguelike/Sami.json",
+      "localPath": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/Sami.json",
+      "present": true
+    },
+    {
+      "id": "roguelike.sarkaz.tasks",
+      "role": "ocr-rules",
+      "locale": "common",
+      "rawPath": "resource/tasks/Roguelike/Sarkaz.json",
+      "localPath": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/Sarkaz.json",
+      "present": true
+    },
+    {
+      "id": "roguelike.jie-garden.tasks",
+      "role": "ocr-rules",
+      "locale": "common",
+      "rawPath": "resource/tasks/Roguelike/JieGarden.json",
+      "localPath": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/JieGarden.json",
+      "present": true
+    },
+    {
+      "id": "roguelike.recruit.elite-0",
+      "role": "template",
+      "locale": "common",
+      "rawPath": "resource/template/Roguelike/base/RoguelikeRecruitElite0.png",
+      "localPath": "third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitElite0.png",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/template/Roguelike/base/RoguelikeRecruitElite0.png",
+      "present": true
+    },
+    {
+      "id": "roguelike.recruit.elite-1",
+      "role": "template",
+      "locale": "common",
+      "rawPath": "resource/template/Roguelike/base/RoguelikeRecruitElite1.png",
+      "localPath": "third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitElite1.png",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/template/Roguelike/base/RoguelikeRecruitElite1.png",
+      "present": true
+    },
+    {
+      "id": "roguelike.recruit.elite-2",
+      "role": "template",
+      "locale": "common",
+      "rawPath": "resource/template/Roguelike/base/RoguelikeRecruitElite2.png",
+      "localPath": "third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitElite2.png",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/template/Roguelike/base/RoguelikeRecruitElite2.png",
+      "present": true
+    },
+    {
+      "id": "roguelike.recruit.ocr-flag",
+      "role": "template",
+      "locale": "common",
+      "rawPath": "resource/template/Roguelike/base/RoguelikeRecruitOcrFlag.png",
+      "localPath": "third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitOcrFlag.png",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/template/Roguelike/base/RoguelikeRecruitOcrFlag.png",
+      "present": true
+    },
+    {
       "id": "common.det.version",
       "role": "detector-version",
       "locale": "common",
@@ -76,7 +175,7 @@
       "present": true
     }
   ],
-  "syncedAt": "2026-06-26T16:07:43.747Z",
+  "syncedAt": "2026-07-10T03:44:45.249Z",
   "downloaded": [
     {
       "id": "common.ocr_config",
@@ -89,6 +188,72 @@
       "localPath": "third_party/maa/resource/global/YoStarJP/resource/ocr_config.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/ocr_config.json",
       "bytes": 729
+    },
+    {
+      "id": "jp.recruitment",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/recruitment.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/recruitment.json",
+      "bytes": 31546
+    },
+    {
+      "id": "jp.tasks",
+      "localPath": "third_party/maa/resource/global/YoStarJP/resource/tasks/tasks.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/tasks/tasks.json",
+      "bytes": 81132
+    },
+    {
+      "id": "common.tasks",
+      "localPath": "third_party/maa/resource/tasks/tasks.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/tasks.json",
+      "bytes": 177031
+    },
+    {
+      "id": "roguelike.base.tasks",
+      "localPath": "third_party/maa/resource/tasks/Roguelike/base.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/base.json",
+      "bytes": 68524
+    },
+    {
+      "id": "roguelike.sami.tasks",
+      "localPath": "third_party/maa/resource/tasks/Roguelike/Sami.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/Sami.json",
+      "bytes": 56290
+    },
+    {
+      "id": "roguelike.sarkaz.tasks",
+      "localPath": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/Sarkaz.json",
+      "bytes": 45403
+    },
+    {
+      "id": "roguelike.jie-garden.tasks",
+      "localPath": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/JieGarden.json",
+      "bytes": 60033
+    },
+    {
+      "id": "roguelike.recruit.elite-0",
+      "localPath": "third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitElite0.png",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/template/Roguelike/base/RoguelikeRecruitElite0.png",
+      "bytes": 972
+    },
+    {
+      "id": "roguelike.recruit.elite-1",
+      "localPath": "third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitElite1.png",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/template/Roguelike/base/RoguelikeRecruitElite1.png",
+      "bytes": 673
+    },
+    {
+      "id": "roguelike.recruit.elite-2",
+      "localPath": "third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitElite2.png",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/template/Roguelike/base/RoguelikeRecruitElite2.png",
+      "bytes": 1254
+    },
+    {
+      "id": "roguelike.recruit.ocr-flag",
+      "localPath": "third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitOcrFlag.png",
+      "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/template/Roguelike/base/RoguelikeRecruitOcrFlag.png",
+      "bytes": 719
     },
     {
       "id": "common.det.version",

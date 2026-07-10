@@ -12,6 +12,10 @@
 *.yaml text eol=lf
 *.toml text eol=lf
 
+# MaaFramework OCR dictionaries use a literal single-space line as a token.
+third_party/maa/resource/global/YoStarJP/resource/PaddleOCR/rec/keys.txt -whitespace
+third_party/maa/resource/global/YoStarJP/resource/PaddleOCR/rec/version.txt -whitespace
+
 *.csv text eol=crlf
 
 *.png binary

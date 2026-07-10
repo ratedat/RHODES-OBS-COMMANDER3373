@@ -9,6 +9,10 @@ test("MAA OCR asset list excludes ONNX model binaries by default", () => {
   assert.equal(assets.some((asset) => asset.localPath.endsWith("inference.onnx")), false);
   assert.equal(assets.some((asset) => asset.id === "jp.ocr_config"), true);
   assert.equal(assets.some((asset) => asset.id === "jp.rec.keys"), true);
+  assert.equal(assets.some((asset) => asset.id === "jp.tasks"), true);
+  assert.equal(assets.some((asset) => asset.id === "roguelike.sarkaz.tasks"), true);
+  assert.equal(assets.some((asset) => asset.id === "roguelike.recruit.elite-0"), true);
+  assert.equal(assets.some((asset) => asset.id === "roguelike.recruit.ocr-flag"), true);
 });
 
 test("MAA OCR asset list can include optional ONNX model binaries", () => {

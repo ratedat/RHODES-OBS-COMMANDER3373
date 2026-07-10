@@ -295,7 +295,7 @@
         "fullMatch": true,
         "isAscii": true,
         "text": [],
-        "ocrReplaceDoc": "和 ClickedCorrectStage 同步",
+        "ocrReplaceDoc": "和 ClickStageName 同步",
         "ocrReplace": [
             ["OPERATION", ""],
             ["-\\]", "-1"],
@@ -312,6 +312,33 @@
             [".*?([A-Z]{2}-EX-\\d+)", "$1"]
         ],
         "roi": [845, 72, 220, 50]
+    },
+    "StageNavigationByTemplateMatchBegin": {
+        "doc": "模板匹配导航入口（对应 OCR 的 StageNavigationBegin）",
+        "algorithm": "JustReturn",
+        "next": ["ClickStageByTemplate", "FullStageNavigationByTemplate"]
+    },
+    "FullStageNavigationByTemplate": {
+        "doc": "模板匹配导航右滑+左滑（对应 OCR 的 FullStageNavigation）",
+        "baseTask": "FullStageNavigation",
+        "exceededNext": ["ClickStageByTemplate", "StageNavigationSlowlySwipeLeftByTemplate"]
+    },
+    "ClickStageByTemplate": {
+        "doc": "模板匹配关卡截图（对应 OCR 的 ClickStageName），由 C++ 动态替换实际模板",
+        "action": "ClickSelf",
+        "template": ["empty.png"],
+        "roi": [0, 0, 1280, 720],
+        "next": ["ClickedCorrectStageByTemplateOrSwipe", "#self"]
+    },
+    "StageNavigationSlowlySwipeLeftByTemplate": {
+        "doc": "模板匹配导航左滑找关（对应 OCR 的 StageNavigationSlowlySwipeLeft）",
+        "baseTask": "StageNavigationSlowlySwipeLeft",
+        "next": ["FullStageNavigationByTemplate"]
+    },
+    "ClickedCorrectStageByTemplateOrSwipe": {
+        "doc": "模板匹配后验证（对应 OCR 的 ClickedCorrectStageOrSwipe）",
+        "baseTask": "ClickedCorrectStageOrSwipe",
+        "next": ["ClickedCorrectStage", "FullStageNavigationByTemplate"]
     },
     "ChangeToRaidDifficulty": {
         "doc": ["突袭", "15章险地"],
@@ -2385,7 +2412,7 @@
     "InfrastNotification": {
         "roi": [1100, 0, 180, 300],
         "action": "ClickSelf",
-        "next": ["InfrastReward", "InfrastExitReward"]
+        "next": ["InfrastReward", "InfrastNotification@LoadingText", "InfrastExitReward"]
     },
     "InfrastReward": {
         "algorithm": "OcrDetect",
@@ -2394,7 +2421,7 @@
         "roi": [0, 600, 800, 118],
         "postDelay": 1000,
         "postDelay_Doc": "UI 更新之后给这 b 玩意也加了动画，会点到一键换班",
-        "next": ["InfrastReward", "InfrastExitReward"]
+        "next": ["InfrastReward", "InfrastReward@LoadingText", "InfrastExitReward"]
     },
     "InfrastExitReward": {
         "Doc": "干员疲劳、线索收集 是不能一键收获的，所以要先退出一键收获的界面，这里点击的是控制中枢左侧那一片空白的区域",
