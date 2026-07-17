@@ -16,8 +16,8 @@ public static class RhodesRecognitionProbe
     public static IReadOnlyList<MaaProbePayloadPreview> DefaultPayloads()
     {
         var fullFrameRoi = new MaaRoi(0, 0, RhodesMaaPaths.BaseResolution.Width, RhodesMaaPaths.BaseResolution.Height);
-        var ingotNumberRoi = new MaaRoi(1160, 0, 90, 56);
-        var ideaNumberRoi = new MaaRoi(818, 655, 44, 34);
+        var ingotNumberRoi = new MaaRoi(1170, 4, 110, 58);
+        var ideaNumberRoi = new MaaRoi(852, 680, 36, 38);
         var operatorNameRoi = new MaaRoi(900, 260, 260, 56);
 
         return
@@ -86,11 +86,14 @@ public static class RhodesRecognitionProbe
         return await Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!RhodesMaaRecognitionInvocation.TryParse(payload, out var invocation, out var parseError))
+                return new MaaProbeResult(name, MaaJobStatus.Invalid.ToString(), false, parseError);
+
             using var image = new MaaImageBuffer();
             image.TrySetEncodedData(encodedImage);
-            var job = tasker.AppendRecognition(name, payload, image);
+            var job = tasker.AppendRecognition(invocation.Type, invocation.ParametersJson, image);
             var status = job.Wait();
-            var detail = RhodesMaaSession.BuildTaskDetail(tasker, job.Id, payload);
+            var detail = RhodesMaaSession.BuildTaskDetail(tasker, job.Id, $"{name}; type={invocation.Type}");
             return new MaaProbeResult(
                 name,
                 status.ToString(),

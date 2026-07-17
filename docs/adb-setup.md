@@ -24,7 +24,7 @@ $env:ARKNIGHTS_ADB_SERIAL = "127.0.0.1:16384"
 | プリセット | 主なADB候補 | 主なserial候補 | 補足 |
 | --- | --- | --- | --- |
 | 自動 | 保存設定、環境変数、既知インストール先、PATH | 選択プリセットに応じた候補 | まず試す設定です。 |
-| MuMu Player | `MuMu Player 12\shell\adb.exe` | `127.0.0.1:16384`, `16416`, `16448`, `16480`, `16512`, `16544`, `16576` | 複数起動時はMuMu側のADB/ポート表示を確認してください。 |
+| MuMu Player | MuMu 5/15系の `nx_main\adb.exe`、旧MuMu 12系の `shell\adb.exe` | `127.0.0.1:16384`, `16416`, `16448`, `16480`, `16512`, `16544`, `16576` | 実行中プロセスとアンインストール情報も参照します。複数起動時はMuMu側のADB/ポート表示を確認してください。 |
 | LDPlayer | `LDPlayer\LDPlayer9\adb.exe` | `emulator-5554`, `5556`, `5558`, `5560`, `127.0.0.1:5555`, `5557`, `5559`, `5561` | LDPlayer 9向けです。 |
 | BlueStacks | `BlueStacks_nxt\HD-Adb.exe`, `BlueStacks_nxt\Engine\ProgramFiles\HD-Adb.exe` | `127.0.0.1:5555` など、設定ファイルのADBポート | BlueStacks側でAndroid Debug BridgeをONにしてください。Hyper-V版はポートが変わることがあります。 |
 | NoxPlayer | `Nox\bin\nox_adb.exe`, `Nox\bin\adb.exe` | `127.0.0.1:62001`, `127.0.0.1:59865` | 新旧ポートを候補にします。 |
@@ -35,7 +35,7 @@ $env:ARKNIGHTS_ADB_SERIAL = "127.0.0.1:16384"
 | WSA | 手動/カスタム扱い | `127.0.0.1:58526` | 現在は非推奨です。 |
 | 手動 | 入力したADBパス | 入力したserial | 既知候補でうまくいかない場合に使います。 |
 
-既知パスの探索は `Program Files`、`Program Files (x86)`、`LOCALAPPDATA`、検出可能なドライブの `Program Files` 系を見ます。Google Play Gamesは同梱ADBの `Google\Play Games Developer Emulator\current\emulator\adb.exe` と `Google\Play Games\current\emulator\adb.exe` を候補にします。Android SDKは `ANDROID_HOME`、`ANDROID_SDK_ROOT`、`%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` を候補にします。
+既知パスの探索は `Program Files`、`Program Files (x86)`、`LOCALAPPDATA`、検出可能なドライブの `Program Files` 系を見ます。MuMuは `MuMuPlayer`、`MuMuPlayerGlobal-12.0/15.0`、`YXArkNights-12.0` などの新旧配置に加えて、実行中の `MuMuNxDevice` / `MuMuPlayer` とWindowsのアンインストール情報を参照します。Google Play Gamesは同梱ADBの `Google\Play Games Developer Emulator\current\emulator\adb.exe` と `Google\Play Games\current\emulator\adb.exe` を候補にします。Android SDKは `ANDROID_HOME`、`ANDROID_SDK_ROOT`、`%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` を候補にします。
 
 ## ADB設定項目
 

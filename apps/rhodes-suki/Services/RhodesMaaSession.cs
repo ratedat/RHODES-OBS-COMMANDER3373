@@ -1,5 +1,6 @@
 using MaaFramework.Binding;
 using MaaFramework.Binding.Buffers;
+using MaaFramework.Binding.Custom;
 using RhodesSuki.Models;
 using System.Runtime.InteropServices;
 
@@ -13,6 +14,7 @@ public sealed class RhodesMaaSession : IDisposable
     private MaaResource? _resource;
     private MaaController? _controller;
     private MaaTasker? _tasker;
+    private RhodesOfflineMaaControllerApi? _offlineControllerApi;
 
     public MaaTasker? Tasker => _tasker;
 
@@ -175,15 +177,30 @@ public sealed class RhodesMaaSession : IDisposable
             try
             {
                 _resource = new MaaResource(options.ResourceRoot);
+                _offlineControllerApi = new RhodesOfflineMaaControllerApi();
+                _controller = new MaaCustomController(
+                    _offlineControllerApi,
+                    LinkOption.Start,
+                    CheckStatusOption.ThrowIfNotSucceeded);
                 _tasker = new MaaTasker
                 {
                     Resource = _resource,
-                    Controller = null!,
+                    Controller = _controller,
                     DisposeOptions = DisposeOptions.All,
                 };
 
                 _tasker.Global.SetOption_SaveOnError(false);
                 _tasker.Global.SetOption_DebugMode(true);
+
+                if (!_tasker.IsInitialized)
+                {
+                    DisposeCurrent();
+                    return Snapshot(
+                        "オフライン初期化失敗",
+                        "MAA Tasker をResourceとオフラインControllerで初期化できませんでした。",
+                        options,
+                        false);
+                }
 
                 return Snapshot(
                     "オフライン認識",
@@ -241,6 +258,41 @@ public sealed class RhodesMaaSession : IDisposable
         }, cancellationToken);
     }
 
+    public async Task<MaaJobStatus> TapAsync(int x, int y, CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_tasker?.Controller is not { IsConnected: true } controller)
+                return MaaJobStatus.Invalid;
+            return controller.Click(x, y).Wait();
+        }, cancellationToken);
+    }
+
+    public async Task<MaaJobStatus> SwipeAsync(
+        int startX,
+        int startY,
+        int endX,
+        int endY,
+        int durationMs,
+        CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_tasker?.Controller is not { IsConnected: true } controller)
+                return MaaJobStatus.Invalid;
+            return controller.Swipe(
+                startX,
+                startY,
+                endX,
+                endY,
+                Math.Max(1, durationMs),
+                0,
+                1).Wait();
+        }, cancellationToken);
+    }
+
     public async Task<MaaTaskRunResult> RunResourceTaskAsync(
         string entry,
         string pipelineOverrideJson = "{}",
@@ -277,7 +329,8 @@ public sealed class RhodesMaaSession : IDisposable
         string entry,
         string recognitionPayloadJson,
         byte[] encodedImage,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int? scaleOverride = null)
     {
         return await Task.Run(() =>
         {
@@ -290,12 +343,23 @@ public sealed class RhodesMaaSession : IDisposable
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "recognition payload が空です。");
             if (encodedImage.Length == 0)
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "保存Frame画像が空です。");
+            if (!RhodesMaaRecognitionInvocation.TryParse(recognitionPayloadJson, out var invocation, out var parseError))
+                return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, parseError);
 
+            var scale = scaleOverride is > 0
+                ? Math.Clamp(scaleOverride.Value, 1, 12)
+                : RhodesMaaResourceCatalog.LoadRecognitionScale(entry);
+            var prepared = RhodesMaaRecognitionImagePreprocessor.Prepare(
+                encodedImage,
+                invocation.Type,
+                invocation.ParametersJson,
+                scale,
+                entry);
             using var image = new MaaImageBuffer();
-            image.TrySetEncodedData(encodedImage);
-            var job = _tasker.AppendRecognition(entry.Trim(), recognitionPayloadJson, image);
+            image.TrySetEncodedData(prepared.EncodedImage);
+            var job = _tasker.AppendRecognition(invocation.Type, prepared.ParametersJson, image);
             var status = job.Wait();
-            var detail = BuildTaskDetail(_tasker, job.Id, $"ReplayRecognition={entry}");
+            var detail = BuildTaskDetail(_tasker, job.Id, $"ReplayRecognition={entry}; type={invocation.Type}; scale={scale}");
             return new MaaTaskRunResult(
                 entry,
                 status.ToString(),
@@ -366,6 +430,7 @@ public sealed class RhodesMaaSession : IDisposable
         _tasker = null;
         _controller = null;
         _resource = null;
+        _offlineControllerApi = null;
         EffectiveOptions = null;
     }
 

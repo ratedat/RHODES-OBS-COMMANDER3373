@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using System.Runtime.Versioning;
+using System.Text.RegularExpressions;
+using Microsoft.Win32;
 using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
@@ -90,6 +94,10 @@ public static class RhodesAdbPresetCatalog
         PushCandidate(candidates, seen, adbPath, "settings", selectedPresetId);
         PushCandidate(candidates, seen, Environment.GetEnvironmentVariable("ARKNIGHTS_ADB_PATH"), "env", "custom");
 
+        foreach (var candidate in RunningMuMuAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "process", "mumu");
+        foreach (var candidate in RegisteredMuMuAdbPathCandidates())
+            PushCandidate(candidates, seen, candidate, "registry", "mumu");
         foreach (var candidate in AndroidSdkAdbPathCandidates())
             PushCandidate(candidates, seen, candidate, "known-path", "avd");
         foreach (var candidate in MuMuAdbPathCandidates())
@@ -122,10 +130,172 @@ public static class RhodesAdbPresetCatalog
     {
         foreach (var root in ProgramInstallRoots())
         {
-            yield return Path.Combine(root, "Netease", "MuMu Player 12", "shell", "adb.exe");
-            yield return Path.Combine(root, "Netease", "MuMu PlayerGlobal-12.0", "shell", "adb.exe");
-            yield return Path.Combine(root, "MuMu Player 12", "shell", "adb.exe");
+            foreach (var relativeRoot in MuMuInstallDirectoryNames)
+            {
+                foreach (var candidate in MuMuAdbPathsFromInstallRoot(Path.Combine(root, relativeRoot)))
+                    yield return candidate;
+            }
         }
+    }
+
+    internal static IReadOnlyList<string> MuMuAdbPathsFromInstallRoot(string installRoot)
+    {
+        if (string.IsNullOrWhiteSpace(installRoot))
+            return [];
+
+        var root = installRoot.Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return
+        [
+            Path.Combine(root, "nx_main", "adb.exe"),
+            Path.Combine(root, "shell", "adb.exe"),
+            Path.Combine(root, "nx_device", "12.0", "vmonitor", "bin", "adb_server.exe"),
+            Path.Combine(root, "nx_device", "MuMu", "emulator", "nemu", "vmonitor", "bin", "adb_server.exe"),
+        ];
+    }
+
+    internal static string ResolveMuMuInstallRootFromProcessPath(string? processPath)
+    {
+        if (string.IsNullOrWhiteSpace(processPath))
+            return "";
+
+        try
+        {
+            var executable = new FileInfo(processPath.Trim());
+            var directory = executable.Directory;
+            if (directory is null)
+                return "";
+
+            if (executable.Name.Equals("MuMuNxDevice.exe", StringComparison.OrdinalIgnoreCase))
+                return directory.Parent?.Parent?.Parent?.FullName ?? "";
+            if (executable.Name.Equals("MuMuPlayer.exe", StringComparison.OrdinalIgnoreCase))
+                return directory.Parent?.FullName ?? "";
+        }
+        catch
+        {
+            return "";
+        }
+
+        return "";
+    }
+
+    internal static IReadOnlyList<string> MuMuAdbPathsFromProcessPath(string? processPath)
+    {
+        var installRoot = ResolveMuMuInstallRootFromProcessPath(processPath);
+        if (string.IsNullOrWhiteSpace(installRoot) || string.IsNullOrWhiteSpace(processPath))
+            return [];
+
+        var executableName = Path.GetFileName(processPath.Trim());
+        if (executableName.Equals("MuMuNxDevice.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return
+            [
+                Path.Combine(installRoot, "nx_main", "adb.exe"),
+                Path.Combine(installRoot, "nx_device", "12.0", "vmonitor", "bin", "adb_server.exe"),
+                Path.Combine(installRoot, "nx_device", "MuMu", "emulator", "nemu", "vmonitor", "bin", "adb_server.exe"),
+            ];
+        }
+
+        if (executableName.Equals("MuMuPlayer.exe", StringComparison.OrdinalIgnoreCase))
+            return [Path.Combine(installRoot, "shell", "adb.exe")];
+
+        return [];
+    }
+
+    internal static string ResolveMuMuInstallRootFromUninstallString(string? uninstallString)
+    {
+        if (string.IsNullOrWhiteSpace(uninstallString))
+            return "";
+
+        var match = Regex.Match(
+            uninstallString.Trim(),
+            "^\\\"?(.*?)[\\\\/]uninstall\\.exe\\\"?(?:\\s|$)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return match.Success ? match.Groups[1].Value.Trim() : "";
+    }
+
+    private static IEnumerable<string> RunningMuMuAdbPathCandidates()
+    {
+        if (!OperatingSystem.IsWindows())
+            yield break;
+
+        foreach (var processName in new[] { "MuMuNxDevice", "MuMuPlayer" })
+        {
+            Process[] processes;
+            try
+            {
+                processes = Process.GetProcessesByName(processName);
+            }
+            catch
+            {
+                continue;
+            }
+
+            foreach (var process in processes)
+            {
+                using (process)
+                {
+                    string processPath;
+                    try
+                    {
+                        processPath = process.MainModule?.FileName ?? "";
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    foreach (var candidate in MuMuAdbPathsFromProcessPath(processPath))
+                        yield return candidate;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<string> RegisteredMuMuAdbPathCandidates()
+    {
+        if (!OperatingSystem.IsWindows())
+            yield break;
+
+        foreach (var installRoot in RegisteredMuMuInstallRoots())
+        {
+            foreach (var candidate in MuMuAdbPathsFromInstallRoot(installRoot))
+                yield return candidate;
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static IReadOnlyList<string> RegisteredMuMuInstallRoots()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<string>();
+        foreach (var hive in new[] { RegistryHive.LocalMachine, RegistryHive.CurrentUser })
+        {
+            foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
+            {
+                try
+                {
+                    using var baseKey = RegistryKey.OpenBaseKey(hive, view);
+                    foreach (var keyPath in MuMuUninstallRegistryKeys)
+                    {
+                        using var key = baseKey.OpenSubKey(keyPath);
+                        if (key is null)
+                            continue;
+
+                        var installRoot = (key.GetValue("InstallLocation") as string)?.Trim() ?? "";
+                        if (string.IsNullOrWhiteSpace(installRoot))
+                            installRoot = ResolveMuMuInstallRootFromUninstallString(key.GetValue("UninstallString") as string);
+                        if (!string.IsNullOrWhiteSpace(installRoot) && seen.Add(installRoot))
+                            result.Add(installRoot);
+                    }
+                }
+                catch
+                {
+                    // Registry access can be denied on managed PCs; known paths and process detection remain available.
+                }
+            }
+        }
+
+        return result;
     }
 
     private static IEnumerable<string> BlueStacksAdbPathCandidates()
@@ -257,4 +427,32 @@ public static class RhodesAdbPresetCatalog
 
         candidates.Add(new MaaAdbPathCandidatePreview(normalized, source, string.IsNullOrWhiteSpace(preset) ? "custom" : preset, false, false, ""));
     }
+
+    private static readonly string[] MuMuInstallDirectoryNames =
+    [
+        Path.Combine("Netease", "MuMuPlayer"),
+        Path.Combine("Netease", "MuMu Player"),
+        Path.Combine("Netease", "MuMu Player 12"),
+        Path.Combine("Netease", "MuMuPlayer-12.0"),
+        Path.Combine("Netease", "MuMuPlayer-15.0"),
+        Path.Combine("Netease", "MuMuPlayerGlobal-12.0"),
+        Path.Combine("Netease", "MuMuPlayerGlobal-15.0"),
+        Path.Combine("Netease", "MuMu PlayerGlobal-12.0"),
+        Path.Combine("Netease", "YXArkNights-12.0"),
+        "MuMuPlayer",
+        "MuMu Player",
+        "MuMu Player 12",
+        "MuMuPlayerGlobal-12.0",
+        "YXArkNights-12.0",
+    ];
+
+    private static readonly string[] MuMuUninstallRegistryKeys =
+    [
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayer-15.0",
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayer-12.0",
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayer",
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayerGlobal-15.0",
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MuMuPlayerGlobal-12.0",
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\YXArkNights-12.0",
+    ];
 }

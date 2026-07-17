@@ -120,7 +120,7 @@ public static class RhodesProductSurfaceRegistry
             "runtime.maa-ocr",
             "runtime-capability",
             "runtime",
-            "resource.base.PaddleOCR",
+            "resource.base.model.ocr",
             "MAAFramework Resource",
             "runtime-diagnostic",
             "required",

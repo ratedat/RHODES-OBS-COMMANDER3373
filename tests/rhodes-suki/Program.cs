@@ -6,6 +6,7 @@ using MaaFramework.Binding;
 using RhodesSuki.Models;
 using RhodesSuki.Services;
 using RhodesSuki.ViewModels;
+using SkiaSharp;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -25,6 +26,8 @@ var tests = new (string Name, Action Run)[]
     ("Recognition workflow handles empty candidate apply without API calls", RecognitionWorkflowApplyCandidatesEmpty),
     ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
     ("Local MAA candidate converter keeps the best duplicate run status field", LocalCandidateConverterRunStatusBestDuplicate),
+    ("Local MAA candidate converter normalizes numeric OCR drift", LocalCandidateConverterNormalizesNumericDrift),
+    ("Local MAA candidate converter normalizes measured squad OCR drift", LocalCandidateConverterNormalizesSquadDrift),
     ("Local MAA candidate converter extracts random squad effect candidates", LocalCandidateConverterRunStatusSquadRandomEffect),
     ("Local MAA candidate converter extracts exact operator name candidates", LocalCandidateConverterOperators),
     ("Local MAA candidate converter extracts current campaign relic candidates", LocalCandidateConverterRelics),
@@ -34,6 +37,9 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter extracts IS6 coin candidates", LocalCandidateConverterCoins),
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
+    ("ADB presets include current MuMu nx_main layouts", AdbPresetCurrentMumuLayouts),
+    ("ADB presets infer MuMu install roots from current process layouts", AdbPresetMumuProcessLayout),
+    ("ADB presets prefer the ADB layout matching the running MuMu version", AdbPresetMumuRunningVersion),
     ("ADB method catalog maps emulator presets to fast lossless MAA methods", AdbMethodCatalog),
     ("ADB config JSON normalizer accepts only object payloads", AdbConfigJsonNormalizer),
     ("ADB connection resolver builds MuMu and LD extras config", AdbConnectionResolverBuildsExtras),
@@ -52,6 +58,7 @@ var tests = new (string Name, Action Run)[]
     ("ADB diagnostics copy text includes report-ready runtime details", AdbDiagnosticsCopyText),
     ("Preview URL builder normalizes RHODES app routes", PreviewUrlBuilder),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
+    ("Suki settings store migrates unusable manual PATH adb settings", SukiSettingsStoreMigratesBareManualAdb),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Optional runtime probe parses GLM and Ollama status payloads", OptionalRuntimeStatusParsing),
     ("Suki optional runtime action workflow reports runtime and API outcomes", SukiOptionalRuntimeActionWorkflow),
@@ -68,7 +75,20 @@ var tests = new (string Name, Action Run)[]
     ("Hypervisor probe parses Google Play Games readiness states", HypervisorStatusParsing),
     ("MAAFramework runtime probe reports native and VC++ diagnostics", MaaFrameworkRuntimeDiagnostics),
     ("MAA recognition resource paths diagnose OCR asset readiness", MaaRecognitionResourcePathDiagnostics),
+    ("MAA offline session initializes without an ADB controller", MaaOfflineSessionInitializesWithoutAdb),
+    ("Recognition navigation restores profile open and close steps", RecognitionNavigationLoadsProfileSteps),
+    ("Recognition navigation randomizes taps inside configured areas", RecognitionNavigationRandomizesTapAreas),
+    ("Recognition scroll plan loads operator passes and randomizes swipe areas", RecognitionScrollPlanLoadsOperatorPasses),
+    ("Recognition runtime plan removes legacy operator OCR and skips short relic lists", RecognitionRuntimePlanUsesFocusedTasks),
+    ("Recognition frame fingerprint ignores tiny noise and detects layout changes", RecognitionFrameFingerprintIsPerceptual),
+    ("MAA OCR preprocessing crops and scales configured ROI", MaaOcrPreprocessingCropsAndScalesRoi),
+    ("MAA operator OCR preprocessing masks and trims the name ROI", MaaOperatorOcrPreprocessingMasksAndTrimsNameRoi),
+    ("MAA Japanese operator replaceFull rules resolve local operator ids", MaaJapaneseOperatorRulesResolveLocalIds),
+    ("MAA template OCR config exposes operator card offsets", MaaTemplateOcrConfigExposesOperatorOffsets),
+    ("MAA template OCR expander builds dynamic name regions", MaaTemplateOcrExpanderBuildsDynamicRegions),
+    ("Operator scan tracker skips resolved cards and stops on repeated viewports", OperatorScanTrackerCachesResolvedCards),
     ("MAA recognition probe payloads target retained fields", RecognitionProbePayloadsTargetRetainedFields),
+    ("MAA recognition invocation separates algorithm from parameters", MaaRecognitionInvocationSeparatesAlgorithm),
     ("MAA task diagnostics summarize counts and OCR previews", TaskDiagnostics),
     ("MAA OCR detail rows expose raw OCR result groups", OcrDetailRowsExposeRawGroups),
     ("MAA ROI detail rows expose rect, roi, and point boxes", RoiDetailRowsExposeRectVariants),
@@ -539,6 +559,32 @@ static void LocalCandidateConverterRunStatus()
     Equal(false, candidates.Any(item => item.Field == "campaignId"), "campaign id is context only, not a retained candidate");
     Equal("maa-local:ingot:run.ingot", candidates.Single(item => item.Field == "ingot").RecognitionKey, "local recognition key");
 
+    var decoratedSquad = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98),
+            M("RhodesOcrRegion_run_squad_name", "C奇想天外分隊）", 0.99),
+        ]);
+    Equal("奇想天外分隊", decoratedSquad.Single(item => item.Field == "squadId").Label, "decorated squad OCR resolves by unique containment");
+
+    var positionSquad = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98),
+            M("RhodesOcrRegion_run_squad_name", "_", 0.31),
+            M("RhodesOcrRegion_run_squad_card", "スポット更新回数+1、初期構想+Ⅰ、初期希望 +1。各スポットの初回更新時に黄想を消眷し ない", 0.83),
+        ]);
+    Equal("位置測定分隊", positionSquad.Single(item => item.Field == "squadId").Label, "squad effect OCR resolves position squad");
+    Equal("is5_sarkaz_squad_03", positionSquad.Single(item => item.Field == "squadId").Value, "squad effect OCR resolves position squad id");
+
+    var ambiguousSquad = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98),
+            M("RhodesOcrRegion_run_squad_card", "初期希望+1", 0.90),
+        ]);
+    Equal(false, ambiguousSquad.Any(item => item.Field == "squadId"), "short squad effect fragment is not applied");
+
     static MaaTaskRunResult M(string entry, string text, double score)
     {
         return new MaaTaskRunResult(
@@ -577,6 +623,58 @@ static void LocalCandidateConverterRunStatusBestDuplicate()
     }
 }
 
+static void LocalCandidateConverterNormalizesNumericDrift()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesOcrRegion_run_ingot", "2u", 0.91),
+            M("RhodesOcrRegion_run_difficulty_grade", "I8", 0.82),
+        ]);
+
+    Equal("20", candidates.Single(item => item.Field == "ingot").Value, "lowercase u normalized to zero");
+    Equal("18", candidates.Single(item => item.Field == "difficulty").Value, "uppercase i normalized to one");
+
+    static MaaTaskRunResult M(string entry, string text, double score) => new(
+        entry,
+        "Succeeded",
+        true,
+        "detail",
+        $"{{\"best\":{{\"text\":\"{text}\",\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}}}",
+        "OCR",
+        true);
+}
+
+static void LocalCandidateConverterNormalizesSquadDrift()
+{
+    var result = new MaaTaskRunResult(
+        "RhodesOcrRegion_run_squad_name",
+        "Succeeded",
+        true,
+        "detail",
+        """{"best":{"text":"c破悪成金分隊","score":0.88}}""",
+        "OCR",
+        true);
+    var candidate = RhodesMaaLocalCandidateConverter.FromTaskResults("runStatusFull", [result]).Single();
+
+    Equal("squadId", candidate.Field, "squad drift field");
+    Equal("破棘成金分隊", candidate.Label, "squad drift label");
+    Equal("is5_sarkaz_squad_14", candidate.Value, "squad drift id");
+
+    var measuredRoiResult = new MaaTaskRunResult(
+        "RhodesOcrRegion_run_squad_name",
+        "Succeeded",
+        true,
+        "detail",
+        """{"best":{"text":"調棘成金分秒","score":0.78}}""",
+        "OCR",
+        true);
+    var measuredRoiCandidate = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [measuredRoiResult]).Single();
+    Equal("破棘成金分隊", measuredRoiCandidate.Label, "measured squad ROI drift label");
+}
+
 static void LocalCandidateConverterRunStatusSquadRandomEffect()
 {
     var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -605,6 +703,10 @@ static void LocalCandidateConverterRunStatusSquadRandomEffect()
 
 static void LocalCandidateConverterOperators()
 {
+    Equal(
+        RhodesOperatorOcrNormalizer.Normalize("トラゴーディア"),
+        RhodesOperatorOcrNormalizer.Normalize("下ラコ―ディア"),
+        "measured Tragodia OCR normalization");
     var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "operatorsFull",
         [
@@ -613,11 +715,21 @@ static void LocalCandidateConverterOperators()
             M("RhodesOcrRegion_operator_name_center_1", "セイリュウ", 0.92),
             M("RhodesOcrRegion_operator_name_right_1", "テンニンカ", 0.93),
             M("RhodesOcrRegion_operator_name_left_2", "ワイルド メイン", 0.94),
+            M("operator.card.name.0", "—■ウタゲー）", 0.62),
+            M("operator.card.name.1", "――ディピカ）", 0.78),
+            M("operator.card.name.2", "―セイリュゥ", 0.95),
+            M("operator.card.name.3", "―歴陣鋭棺フェン", 0.91),
+            M("operator.card.name.4", "富斬業ホシグマー", 0.90),
+            M("operator.card.name.5", "―ランディゴ", 0.90),
+            M("operator.card.name.6", "シ+――", 0.89),
+            M("operator.card.name.7", "フメィ―", 0.52),
+            M("operator.card.name.8", "■ユリチニル", 0.75),
+            M("operator.card.name.9", "下ラコ―ディア", 0.90),
         ]);
 
-    Equal("gummy|purestream|myrtle|wildmane", string.Join("|", candidates.Select(item => item.OperatorId)), "operator ids");
-    Equal("operator|operator|operator|operator", string.Join("|", candidates.Select(item => item.Kind)), "operator kinds");
-    Equal(false, candidates.Any(item => item.OperatorId == "may"), "operator substring false positive");
+    Equal("gummy|purestream|myrtle|wildmane|utage|deepcolor|fang2|hoshiguma2|indigo|may|mlynar|phantom2", string.Join("|", candidates.Select(item => item.OperatorId)), "operator ids");
+    Equal(12, candidates.Count, "operator candidate count");
+    Equal(false, candidates.Any(item => item.OperatorId is "fang" or "hoshiguma" or "dusk"), "partial card does not split alternate operators");
     Equal("maa-local:operator:gummy", candidates[0].RecognitionKey, "operator recognition key");
 
     static MaaTaskRunResult M(string entry, string text, double score)
@@ -655,6 +767,52 @@ static void LocalCandidateConverterRelics()
     Equal(catalog.Current.CampaignId, candidates[0].CampaignId, "relic campaign id");
     Equal($"maa-local:relic:{relics[0].Id}", candidates[0].RecognitionKey, "relic recognition key");
 
+    var kanaDriftCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "イレーシユのうわ言\n探索者のリユツク", 0.96)]);
+    Equal(
+        "イレーシュのうわ言|探索者のリュック",
+        string.Join("|", kanaDriftCandidates.Select(item => item.Label)),
+        "relic small kana drift");
+
+    var measuredAnchorDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "五秒前のための錯", 0.996)]);
+    Equal("is5_sarkaz_relic_223", measuredAnchorDrift.Single().RelicId, "long relic name tolerates one measured kanji drift");
+
+    var liveRelicDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "幸運のコイン導き\n奇妙なくるくるお面", 0.97)]);
+    Equal(
+        "幸運のコイン|奇妙なぐるぐるお面",
+        string.Join("|", liveRelicDrift.Select(item => item.Label)),
+        "live relic suffix and voiced-kana drift");
+
+    var singleRelicDetail = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_detail_name", "意欲の天秤", 0.93)]);
+    Equal("is5_sarkaz_relic_225", singleRelicDetail.Single().RelicId, "single relic detail screen name");
+
+    var publicDebugReport = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [
+            MR(
+                "RhodesOcrRegion_relic_list_text",
+                [
+                    ("支援補給所", 0.997779),
+                    ("奥義の手", 0.999364),
+                    ("折戟・鋒刃", 0.999927),
+                    ("赤い蝶リボン", 0.998948),
+                    ("「門]5と「救難]", 0.842835),
+                    ("破壊協議命制圧", 0.866392),
+                    ("理想の時代への未練.5", 0.916961),
+                ])
+        ]);
+    Equal(
+        "支援補給所|奥義の手|折戟・鋒刃|赤い蝶リボン|「門」と「救難」|破壊協議・制圧|理想の時代への未練",
+        string.Join("|", publicDebugReport.Select(item => item.Label)),
+        "public debug relic report converts recognized names");
+
     static MaaTaskRunResult M(string entry, string text, double score)
     {
         var encodedText = System.Text.Json.JsonSerializer.Serialize(text);
@@ -666,6 +824,16 @@ static void LocalCandidateConverterRelics()
             $"{{\"filtered_results\":[{{\"text\":{encodedText},\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
             "OCR",
             true);
+    }
+
+    static MaaTaskRunResult MR(string entry, IReadOnlyList<(string Text, double Score)> rows)
+    {
+        var filtered = System.Text.Json.JsonSerializer.Serialize(rows.Select(row => new
+        {
+            text = row.Text,
+            score = row.Score,
+        }));
+        return new MaaTaskRunResult(entry, "Succeeded", true, "detail", $"{{\"filtered\":{filtered}}}", "OCR", true);
     }
 }
 
@@ -690,6 +858,17 @@ static void LocalCandidateConverterThoughts()
     Equal("thought|thought|thought", string.Join("|", candidates.Select(item => item.Kind)), "thought kinds");
     Equal("is5_sarkaz", candidates[0].CampaignId, "thought campaign id");
     Equal("maa-local:thought:is5_sarkaz_selectable_thought_legacy_08:0", candidates[0].RecognitionKey, "thought recognition key");
+
+    var overlappingFrames = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is5ThoughtFull",
+        [
+            M("RhodesOcrRegion_is5_thought_list_text", [("純白の花びら", 0.99), ("文字なき約定", 0.98)]),
+            M("RhodesOcrRegion_is5_thought_list_text", [("純白の花びら", 0.97), ("走る都市", 0.96)]),
+        ]);
+    Equal(
+        "純白の花びら|文字なき約定|走る都市",
+        string.Join("|", overlappingFrames.Select(item => item.Label)),
+        "overlapping thought frames do not double-count the same visible card");
 
     static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
     {
@@ -717,9 +896,14 @@ static void LocalCandidateConverterAge()
 
     Equal(1, candidates.Count, "age candidate count");
     Equal("age", candidates[0].Kind, "age kind");
-    Equal("is5_sarkaz_selectable_age_is5_age_01_prime", candidates[0].AgeId, "age id");
+    Equal("is5_sarkaz_selectable_age_is5_age_01_formation", candidates[0].AgeId, "age group representative id");
     Equal("is5_sarkaz", candidates[0].CampaignId, "age campaign id");
-    Equal("maa-local:age:is5_sarkaz_selectable_age_is5_age_01_prime", candidates[0].RecognitionKey, "age recognition key");
+    Equal("maa-local:age:is5_sarkaz_selectable_age_is5_age_01_formation", candidates[0].RecognitionKey, "age group recognition key");
+
+    var liveAge = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is5AgeFull",
+        [M("RhodesOcrRegion_is5_age_detail_text", "苦難の時代 5歩後に終了\nすべての味方ユニットが配置時に残りHPの70%を失う", 0.99)]);
+    Equal("is5_sarkaz_selectable_age_is5_age_03_formation", liveAge.Single().AgeId, "live age OCR resolves the age group only");
 
     static MaaTaskRunResult M(string entry, string text, double score)
     {
@@ -833,7 +1017,7 @@ static void LocalCandidateConverterAllProfiles()
     Equal(relic.Id, string.Join("|", candidates.Where(item => item.Kind == "relic").Select(item => item.RelicId)), "all profile relic");
     Equal("is4_sami_selectable_revelationBoard_is4_kvama1", string.Join("|", candidates.Where(item => item.Kind == "revelation").Select(item => item.EffectId)), "all profile revelation");
     Equal("is5_sarkaz_selectable_thought_insp_20", string.Join("|", candidates.Where(item => item.Kind == "thought").Select(item => item.ThoughtId)), "all profile thought");
-    Equal("is5_sarkaz_selectable_age_is5_age_01_prime", string.Join("|", candidates.Where(item => item.Kind == "age").Select(item => item.AgeId)), "all profile age");
+    Equal("is5_sarkaz_selectable_age_is5_age_01_formation", string.Join("|", candidates.Where(item => item.Kind == "age").Select(item => item.AgeId)), "all profile age group representative");
     Equal("is6_sui_selectable_coin_is6_copper_b01", string.Join("|", candidates.Where(item => item.Kind == "coin").Select(item => item.CoinId)), "all profile coin");
 
     static MaaTaskRunResult M(string entry, string text, double score)
@@ -858,6 +1042,56 @@ static void AdbPresets()
 
     Equal("127.0.0.1:16384", mumu.Serial, "MuMu serial");
     Equal("127.0.0.1:6520", googlePlay.Serial, "Google Play Games developer serial");
+}
+
+static void AdbPresetCurrentMumuLayouts()
+{
+    var paths = RhodesAdbPresetCatalog.MuMuAdbPathsFromInstallRoot(@"C:\Program Files\Netease\MuMuPlayer");
+
+    Equal(true, paths.Contains(@"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe", StringComparer.OrdinalIgnoreCase), "MuMu 5 adb path");
+    Equal(true, paths.Contains(@"C:\Program Files\Netease\MuMuPlayer\shell\adb.exe", StringComparer.OrdinalIgnoreCase), "legacy MuMu adb path");
+}
+
+static void AdbPresetMumuProcessLayout()
+{
+    Equal(
+        @"C:\Program Files\Netease\MuMuPlayer",
+        RhodesAdbPresetCatalog.ResolveMuMuInstallRootFromProcessPath(
+            @"C:\Program Files\Netease\MuMuPlayer\nx_device\12.0\shell\MuMuNxDevice.exe"),
+        "current MuMu process install root");
+    Equal(
+        @"C:\Program Files\Netease\MuMu Player 12",
+        RhodesAdbPresetCatalog.ResolveMuMuInstallRootFromProcessPath(
+            @"C:\Program Files\Netease\MuMu Player 12\shell\MuMuPlayer.exe"),
+        "legacy MuMu process install root");
+    Equal(
+        @"C:\Program Files\Netease\MuMuPlayer",
+        RhodesAdbPresetCatalog.ResolveMuMuInstallRootFromUninstallString(
+            "\"C:\\Program Files\\Netease\\MuMuPlayer\\uninstall.exe\" /S"),
+        "MuMu registry uninstall install root");
+}
+
+static void AdbPresetMumuRunningVersion()
+{
+    var legacyProcess = @"C:\Program Files\Netease\MuMu Player 12\shell\MuMuPlayer.exe";
+    var currentProcess = @"C:\Program Files\Netease\MuMuPlayer\nx_device\12.0\shell\MuMuNxDevice.exe";
+
+    Equal(
+        @"C:\Program Files\Netease\MuMu Player 12\shell\adb.exe",
+        RhodesAdbPresetCatalog.MuMuAdbPathsFromProcessPath(legacyProcess).First(),
+        "legacy running MuMu prefers shell adb");
+    Equal(
+        @"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe",
+        RhodesAdbPresetCatalog.MuMuAdbPathsFromProcessPath(currentProcess).First(),
+        "current running MuMu prefers nx_main adb");
+
+    var sorted = RhodesAdbLocalDetector.SortCandidates(
+        [
+            new MaaAdbPathCandidatePreview(@"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe", "known-path", "mumu", true, true, ""),
+            new MaaAdbPathCandidatePreview(@"C:\Program Files\Netease\MuMu Player 12\shell\adb.exe", "process", "mumu", true, true, ""),
+        ],
+        new RhodesAdbApiSettings(true, "auto", "adb", ""));
+    Equal("process", sorted[0].Source, "running MuMu process candidate wins when both layouts remain installed");
 }
 
 static void AdbMethodCatalog()
@@ -904,6 +1138,16 @@ static void AdbConnectionResolverBuildsExtras()
     Equal(true, mumuExtras["enable"]!.GetValue<bool>(), "MuMu extras enabled");
     Equal(@"C:\Program Files\Netease\MuMu Player 12", mumuExtras["path"]!.GetValue<string>(), "MuMu root path");
     Equal(1, mumuExtras["index"]!.GetValue<int>(), "MuMu emulator serial index");
+
+    var currentMumu = RhodesMaaSession.DefaultAdbOptions(
+        @"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe",
+        "127.0.0.1:16384",
+        "{}",
+        fastInput,
+        fastScreencap,
+        "mumu");
+    var currentMumuConfig = JsonNode.Parse(RhodesMaaAdbConnectionResolver.ApplyPresetExtras(currentMumu).AdbConfigJson)!.AsObject();
+    Equal(@"C:\Program Files\Netease\MuMuPlayer", currentMumuConfig["extras"]!["mumu"]!["path"]!.GetValue<string>(), "current MuMu root path");
 
     var manual = mumu with
     {
@@ -1261,6 +1505,23 @@ static void SukiSettingsStore()
     }
 }
 
+static void SukiSettingsStoreMigratesBareManualAdb()
+{
+    var normalized = RhodesSukiSettingsStore.Normalize(new RhodesSukiSettings(
+        AdbPath: "adb",
+        AdbSerial: "",
+        SelectedAdbPresetId: "custom"));
+
+    Equal("auto", normalized.SelectedAdbPresetId, "bare manual adb preset migrates to auto");
+    Equal("adb", normalized.AdbPath, "bare adb path remains portable");
+
+    var explicitManual = RhodesSukiSettingsStore.Normalize(new RhodesSukiSettings(
+        AdbPath: "C:/Tools/adb.exe",
+        AdbSerial: "127.0.0.1:16384",
+        SelectedAdbPresetId: "custom"));
+    Equal("custom", explicitManual.SelectedAdbPresetId, "explicit manual adb preset is preserved");
+}
+
 static void OptionalRuntimeStatusParsing()
 {
     var installed = RhodesOptionalRuntimeProbe.ParseStatusJson(
@@ -1586,23 +1847,23 @@ static void WorkspaceActionRegistry()
     var profileCommand = RhodesWorkspaceActionRegistry.ParseCommandName("RunProfileRecognitionAndApplyCommand(runStatusFull)");
     Equal("RunProfileRecognitionAndApplyCommand", profileCommand.CommandName, "workspace action command parser name");
     Equal("runStatusFull", profileCommand.CommandParameter, "workspace action command parser parameter");
-    Equal(null, RhodesWorkspaceActionRegistry.ParseCommandName("CaptureCommand").CommandParameter, "workspace action command parser no parameter");
+    Equal(null, RhodesWorkspaceActionRegistry.ParseCommandName("ConnectAndCaptureCommand").CommandParameter, "workspace action command parser no parameter");
     Equal(
         "run|choices|recognition|output|runtime|debug",
         string.Join("|", actions.Select(item => item.WorkspaceId).Distinct()),
         "action workspace coverage");
     Equal(
-        "runtime.save-settings|runtime.auto-detect|runtime.connection-test|runtime.connect|runtime.capture|runtime.probe-status",
+        "runtime.auto-detect|runtime.connect-capture|runtime.probe-status|runtime.save-settings",
         string.Join("|", RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Select(item => item.Id)),
         "runtime actions");
     Equal(
         true,
-        RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Single(item => item.Id == "runtime.capture").RequiresMaaSession,
-        "capture uses maa");
+        RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Single(item => item.Id == "runtime.connect-capture").RequiresMaaSession,
+        "connect and capture uses maa");
     Equal(
         "MAA",
-        RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Single(item => item.Id == "runtime.capture").MaaRequirementLabel,
-        "capture maa label");
+        RhodesWorkspaceActionRegistry.ForWorkspace("runtime").Single(item => item.Id == "runtime.connect-capture").MaaRequirementLabel,
+        "connect and capture maa label");
     var runAndApply = RhodesWorkspaceActionRegistry.ForWorkspace("recognition").Single(item => item.Id == "recognition.run-and-apply");
     Equal(true, runAndApply.RequiresMaaSession, "run and apply uses maa");
     Equal(true, runAndApply.WritesState, "run and apply writes state");
@@ -1830,8 +2091,9 @@ static void MaaRecognitionResourcePathDiagnostics()
     try
     {
         var missing = RhodesMaaPaths.MissingRecognitionResourceFiles(directory);
-        Equal(true, missing.Contains("PaddleOCR/det/inference.onnx"), "missing detector model");
-        Equal(true, missing.Contains("global/YoStarJP/resource/PaddleOCR/rec/inference.onnx"), "missing jp rec model");
+        Equal(true, missing.Contains("model/ocr/det.onnx"), "missing detector model");
+        Equal(true, missing.Contains("model/ocr/rec.onnx"), "missing jp rec model");
+        Equal(true, missing.Contains("model/ocr/keys.txt"), "missing jp keys");
         Equal(true, RhodesMaaPaths.RecognitionResourceStatusDetail(directory).Contains("missing=", StringComparison.Ordinal), "missing status detail");
 
         foreach (var relative in missing)
@@ -1851,6 +2113,387 @@ static void MaaRecognitionResourcePathDiagnostics()
     }
 }
 
+static void MaaOfflineSessionInitializesWithoutAdb()
+{
+    using var session = new RhodesMaaSession();
+    var options = RhodesMaaSession.DefaultAdbOptions();
+    var snapshot = session.InitializeOfflineAsync(options).GetAwaiter().GetResult();
+
+    Equal(true, snapshot.IsReady, $"offline session ready: {snapshot.Detail}");
+    Equal(true, session.IsTaskerReady, "offline tasker ready");
+    Equal(true, session.IsControllerReady, "offline controller connected");
+    Equal(true, session.Tasker?.IsInitialized, "offline tasker initialized");
+
+    var image = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+    var recognition = session.RunResourceRecognitionAsync(
+        "offline-smoke",
+        """{"recognition":"OCR","roi":[0,0,1,1],"only_rec":true}""",
+        image).GetAwaiter().GetResult();
+    Equal(false, recognition.Status == MaaJobStatus.Invalid.ToString(), $"offline recognition accepted: {recognition.Detail}");
+}
+
+static void RecognitionNavigationLoadsProfileSteps()
+{
+    var path = Path.Combine(AppContext.BaseDirectory, "data", "recognition", "scan-profiles.json");
+    var plan = RhodesRecognitionNavigation.LoadFromJson(File.ReadAllText(path), "runStatusFull");
+
+    Equal(2, plan.OpenSteps.Count, "run status open step count");
+    Equal(2, plan.RestoreSteps.Count, "run status restore step count");
+    Equal("tap", plan.OpenSteps[0].Type, "first open step type");
+    Equal(30, plan.OpenSteps[0].X, "open tap area x");
+    Equal(650, plan.OpenSteps[0].Y, "open tap area y");
+    Equal(54, plan.OpenSteps[0].Width, "open tap area width");
+    Equal(62, plan.OpenSteps[0].Height, "open tap area height");
+    Equal(false, plan.OpenSteps.Concat(plan.RestoreSteps).Any(step => step.Type == "back"), "back action prohibited");
+}
+
+static void RecognitionNavigationRandomizesTapAreas()
+{
+    var step = new RhodesRecognitionNavigationStep("tap", "test", 12, 634, 84, 86, 0);
+    var random = new Random(3373);
+    var points = Enumerable.Range(0, 24)
+        .Select(_ => RhodesRecognitionNavigation.RandomTapPoint(step, random))
+        .ToArray();
+
+    Equal(true, points.All(point => point.X >= 12 && point.X < 96), "random x inside area");
+    Equal(true, points.All(point => point.Y >= 634 && point.Y < 720), "random y inside area");
+    Equal(true, points.Distinct().Count() > 1, "tap points vary");
+}
+
+static void RecognitionScrollPlanLoadsOperatorPasses()
+{
+    var path = Path.Combine(AppContext.BaseDirectory, "data", "recognition", "scan-profiles.json");
+    var passes = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "operatorsFull");
+
+    Equal(2, passes.Count, "operator scroll pass count");
+    Equal("right", passes[0].Direction, "first direction");
+    Equal(30, passes[0].MaxScrolls, "max scrolls");
+    Equal(1, passes[0].MinScrolls, "adaptive minimum scrolls");
+    Equal(3, passes[0].CandidateStableEndCount, "candidate stable end count");
+    Equal(false, passes[1].MirrorPreviousPassScrolls, "operator reverse is independent");
+
+    var random = new Random(3373);
+    var points = Enumerable.Range(0, 20)
+        .Select(_ => RhodesRecognitionScrollPlan.RandomSwipe(passes[0], random))
+        .ToArray();
+    Equal(true, points.All(point => point.StartX >= 1040 && point.StartX < 1170), "start x inside area");
+    Equal(true, points.All(point => point.StartY >= 170 && point.StartY < 530), "start y inside area");
+    Equal(true, points.All(point => point.EndX >= 760 && point.EndX < 920), "end x inside area");
+    Equal(true, points.All(point => point.EndY >= 170 && point.EndY < 530), "end y inside area");
+    Equal(true, points.Distinct().Count() > 1, "swipe points vary");
+
+    var thoughtPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "is5ThoughtFull");
+    Equal(false, thoughtPasses[1].CollectCandidates, "thought restore pass does not collect");
+    Equal(true, thoughtPasses[1].MirrorPreviousPassScrolls, "thought restore mirrors forward pass");
+
+    var relicPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "relicsFull");
+    Equal(2, relicPasses[0].CandidateStableEndCount, "relic pass also stops when candidates stabilize");
+    Equal(true, relicPasses.All(pass => pass.StartArea.X >= 520), "relic swipes avoid Android edge gesture area");
+}
+
+static void RecognitionRuntimePlanUsesFocusedTasks()
+{
+    var operatorTasks = new[]
+    {
+        new MaaResourceTaskPreview("RhodesOcrRegion_operator_name_left_1", "legacy", ""),
+        new MaaResourceTaskPreview("RhodesTemplate_operatorsFull_operator_card_name", "template", ""),
+    };
+    var operatorPlan = new MaaResourceExecutionPlan(
+        "operatorsFull", "operators", "test", operatorTasks.Select(task => task.Entry).ToArray(), operatorTasks, "");
+    var focusedOperator = RhodesRecognitionRuntimePlan.PrepareInitial(operatorPlan);
+    Equal("RhodesTemplate_operatorsFull_operator_card_name", string.Join("|", focusedOperator.TaskEntries), "operator runtime task");
+    Equal(
+        false,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("operatorsFull", []),
+        "operator scan rejects a screen without card anchors");
+    Equal(
+        false,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "operatorsFull",
+            [new MaaTaskRunResult("RhodesOcrRegion_operator_name_left_1", "Succeeded", true, "", "{}", "OCR", true)]),
+        "legacy OCR does not confirm the operator screen");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "operatorsFull",
+            [new MaaTaskRunResult("RhodesTemplate_operatorsFull_operator_card_name", "Succeeded", true, "", "{}", "TemplateMatch", true)]),
+        "operator card anchor confirms the operator screen");
+    Equal(true, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("runStatusFull", []), "run status keeps independent top and footer values without squad panel");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "runStatusFull",
+            [new MaaTaskRunResult("RhodesScreen_run_squad_info_panel", "Succeeded", true, "", "{}", "OCR", true)]),
+        "squad panel confirms run status screen");
+    Equal(false, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("is5AgeFull", []), "age scan requires opened age detail");
+    Equal(false, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("relicsFull", []), "relic scan requires opened relic list");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "relicsFull",
+            [new MaaTaskRunResult("RhodesScreen_relic_list", "Succeeded", true, "", "{}", "OCR", true)]),
+        "relic close button confirms opened relic list");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "relicsFull",
+            [new MaaTaskRunResult(
+                "RhodesOcrRegion_relic_list_text",
+                "Succeeded",
+                true,
+                "",
+                "{\"filtered\":[{\"text\":\"支援補給所\",\"score\":0.99}]}",
+                "OCR",
+                true)]),
+        "relic name OCR confirms the list when close-button OCR drifts");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "relicsFull",
+            [new MaaTaskRunResult(
+                "RhodesOcrRegion_relic_detail_name",
+                "Succeeded",
+                true,
+                "",
+                "{\"filtered\":[{\"text\":\"意欲の天秤\",\"score\":0.93}]}",
+                "OCR",
+                true)]),
+        "single relic detail name confirms the opened relic screen");
+    Equal(
+        false,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "relicsFull",
+            [new MaaTaskRunResult(
+                "RhodesOcrRegion_relic_list_text",
+                "Succeeded",
+                true,
+                "",
+                "{\"filtered\":[{\"text\":\"思わぬ遭遇\",\"score\":0.99}]}",
+                "OCR",
+                true)]),
+        "unrelated map OCR does not confirm the relic list");
+    Equal(
+        false,
+        RhodesRecognitionRuntimePlan.HasReachedScrollEnd(3, 1, 0, 2, 3, 3),
+        "candidate stability alone does not stop a moving variable-length list");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.HasReachedScrollEnd(3, 1, 2, 2, 1, 3),
+        "stable visual frame stops at the list edge");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.HasReachedScrollEnd(4, 1, 1, 2, 3, 3),
+        "candidate stability may stop only after the frame also stops moving");
+
+    var relicTasks = new[]
+    {
+        new MaaResourceTaskPreview("RhodesRelicButton", "button", ""),
+        new MaaResourceTaskPreview("RhodesScreen_relic_list", "screen", ""),
+        new MaaResourceTaskPreview("RhodesOcrRegion_relic_list_text", "list", ""),
+        new MaaResourceTaskPreview("RhodesOcrRegion_relic_detail_name", "detail", ""),
+    };
+    var relicPlan = new MaaResourceExecutionPlan(
+        "relicsFull", "relics", "test", relicTasks.Select(task => task.Entry).ToArray(), relicTasks, "");
+    var focusedRelic = RhodesRecognitionRuntimePlan.PrepareInitial(relicPlan);
+    Equal("RhodesScreen_relic_list|RhodesOcrRegion_relic_list_text|RhodesOcrRegion_relic_detail_name", string.Join("|", focusedRelic.TaskEntries), "relic runtime tasks");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 0), "zero relic candidates must still scroll");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 9), "short relic list skips scroll");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 10), "long relic list scrolls");
+    Equal(true, RhodesRecognitionRuntimePlan.IsScrollProfile("is5ThoughtFull"), "thought list uses scroll recognition");
+}
+
+static void RecognitionFrameFingerprintIsPerceptual()
+{
+    using var baseline = new SKBitmap(128, 72);
+    baseline.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(baseline))
+        canvas.DrawRect(new SKRect(0, 0, 64, 72), new SKPaint { Color = SKColors.White });
+    var baselineBytes = EncodePng(baseline);
+
+    using var noise = baseline.Copy();
+    noise.SetPixel(127, 71, SKColors.DarkGray);
+    var noiseBytes = EncodePng(noise);
+
+    using var changed = new SKBitmap(128, 72);
+    changed.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(changed))
+        canvas.DrawRect(new SKRect(64, 0, 128, 72), new SKPaint { Color = SKColors.White });
+    var changedBytes = EncodePng(changed);
+
+    var area = new RhodesRecognitionSwipeArea(0, 0, 1280, 720);
+    var baselineHash = RhodesRecognitionFrameFingerprint.Compute(baselineBytes, area);
+    Equal(true, RhodesRecognitionFrameFingerprint.Distance(
+        baselineHash,
+        RhodesRecognitionFrameFingerprint.Compute(noiseBytes, area)) <= 2, "tiny noise remains stable");
+    Equal(true, RhodesRecognitionFrameFingerprint.Distance(
+        baselineHash,
+        RhodesRecognitionFrameFingerprint.Compute(changedBytes, area)) > 2, "layout change differs");
+}
+
+static byte[] EncodePng(SKBitmap bitmap)
+{
+    using var image = SKImage.FromBitmap(bitmap);
+    using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+    return encoded.ToArray();
+}
+
+static void MaaOcrPreprocessingCropsAndScalesRoi()
+{
+    using var source = new SKBitmap(4, 4);
+    source.Erase(SKColors.Black);
+    source.SetPixel(1, 1, SKColors.White);
+    using var image = SKImage.FromBitmap(source);
+    using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+
+    var prepared = RhodesMaaRecognitionImagePreprocessor.Prepare(
+        encoded.ToArray(),
+        "OCR",
+        """{"roi":[1,1,2,2],"only_rec":true}""",
+        3);
+
+    using var scaled = SKBitmap.Decode(prepared.EncodedImage);
+    Equal(6, scaled.Width, "scaled crop width");
+    Equal(6, scaled.Height, "scaled crop height");
+    var parameters = JsonNode.Parse(prepared.ParametersJson)!.AsObject();
+    Equal(0, parameters["roi"]![0]!.GetValue<int>(), "prepared roi x");
+    Equal(0, parameters["roi"]![1]!.GetValue<int>(), "prepared roi y");
+    Equal(6, parameters["roi"]![2]!.GetValue<int>(), "prepared roi width");
+    Equal(6, parameters["roi"]![3]!.GetValue<int>(), "prepared roi height");
+}
+
+static void MaaOperatorOcrPreprocessingMasksAndTrimsNameRoi()
+{
+    using var source = new SKBitmap(16, 10);
+    source.Erase(new SKColor(28, 28, 28));
+    using (var canvas = new SKCanvas(source))
+    {
+        canvas.DrawRect(new SKRect(0, 0, 12, 1), new SKPaint { Color = SKColors.White });
+        canvas.DrawRect(new SKRect(13, 0, 16, 10), new SKPaint { Color = SKColors.White });
+        canvas.DrawRect(new SKRect(4, 4, 6, 8), new SKPaint { Color = SKColors.White });
+        canvas.DrawRect(new SKRect(8, 4, 11, 8), new SKPaint { Color = new SKColor(220, 220, 220) });
+    }
+
+    var prepared = RhodesMaaRecognitionImagePreprocessor.Prepare(
+        EncodePng(source),
+        "OCR",
+        """{"roi":[0,0,16,10],"only_rec":true}""",
+        1,
+        "operator.card.name.0");
+
+    using var cropped = SKBitmap.Decode(prepared.EncodedImage);
+    Equal(11, cropped.Width, "operator expanded bounding width");
+    Equal(8, cropped.Height, "operator expanded bounding height");
+    Equal(new SKColor(28, 28, 28), cropped.GetPixel(0, 0), "raw background around the name is preserved");
+    Equal(SKColors.White, cropped.GetPixel(2, 2), "bright name pixel preserved");
+    Equal(new SKColor(28, 28, 28), cropped.GetPixel(5, 2), "raw gap between glyphs is preserved");
+    var parameters = JsonNode.Parse(prepared.ParametersJson)!.AsObject();
+    Equal(0, parameters["roi"]![0]!.GetValue<int>(), "operator prepared roi x");
+    Equal(11, parameters["roi"]![2]!.GetValue<int>(), "operator prepared roi width");
+
+    using var edgeGlyph = new SKBitmap(10, 8);
+    edgeGlyph.Erase(new SKColor(28, 28, 28));
+    using (var canvas = new SKCanvas(edgeGlyph))
+        canvas.DrawRect(new SKRect(8, 3, 10, 7), new SKPaint { Color = SKColors.White });
+    var edgePrepared = RhodesMaaRecognitionImagePreprocessor.Prepare(
+        EncodePng(edgeGlyph),
+        "OCR",
+        """{"roi":[0,0,10,8],"only_rec":true}""",
+        1,
+        "operator.card.name.1");
+    using var edgeCrop = SKBitmap.Decode(edgePrepared.EncodedImage);
+    Equal(4, edgeCrop.Width, "small right-edge glyph keeps its expanded bounding box");
+    Equal(true, edgeCrop.Pixels.Any(pixel => pixel == SKColors.White), "small glyph touching the right edge is preserved");
+}
+
+static void MaaJapaneseOperatorRulesResolveLocalIds()
+{
+    Equal("purestream", RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("セイリュゥ"), "MAA purestream regex");
+    Equal("gummy", RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("グで"), "MAA gummy regex");
+    Equal("phantom2", RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("トラコーディア"), "MAA Tragodia regex");
+    Equal(null, RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("存在しない名前"), "unknown OCR remains unresolved");
+}
+
+static void MaaTemplateOcrConfigExposesOperatorOffsets()
+{
+    var config = RhodesMaaResourceCatalog.LoadTemplateOcrConfig("RhodesTemplate_operatorsFull_operator_card_name");
+
+    Equal(true, config is not null, "operator template OCR config exists");
+    Equal("operator.card.name", config!.IdPrefix, "operator id prefix");
+    Equal(26, config.OffsetX, "operator offset x");
+    Equal(-3, config.OffsetY, "operator offset y");
+    Equal(180, config.Width, "operator OCR width");
+    Equal(23, config.Height, "operator OCR height");
+    Equal(1, config.Scale, "operator OCR scale");
+    Equal(16, config.MaxMatches, "operator max matches");
+}
+
+static void MaaTemplateOcrExpanderBuildsDynamicRegions()
+{
+    var config = new MaaTemplateOcrConfig("operator.card.name", 26, -3, 180, 23, 1, 16);
+    var requests = RhodesMaaTemplateOcrExpander.BuildRequests(
+        config,
+        """
+        {
+          "all": [{"box":[999,999,29,22],"score":0.50}],
+          "filtered": [
+            {"box":[635,175,29,22],"score":0.99},
+            {"box":[635,312,29,22],"score":0.98},
+            {"box":[1124,175,29,22],"score":0.97}
+          ]
+        }
+        """);
+
+    Equal(2, requests.Count, "dynamic OCR request count");
+    Equal("operator.card.name.0", requests[0].Entry, "dynamic entry name");
+    Equal(661, requests[0].X, "dynamic ROI x");
+    Equal(172, requests[0].Y, "dynamic ROI y");
+    Equal(180, requests[0].Width, "dynamic ROI width");
+    Equal(23, requests[0].Height, "dynamic ROI height");
+    Equal(1, requests[0].Scale, "dynamic ROI scale");
+    Equal(309, requests[1].Y, "second dynamic ROI y");
+    Equal(2, requests.Count, "right-edge clipped card is ignored");
+}
+
+static void OperatorScanTrackerCachesResolvedCards()
+{
+    using var firstFrame = new SKBitmap(1280, 720);
+    firstFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(firstFrame))
+    {
+        canvas.DrawRect(new SKRect(110, 105, 142, 134), new SKPaint { Color = SKColors.White });
+        canvas.DrawRect(new SKRect(310, 105, 358, 134), new SKPaint { Color = SKColors.White });
+    }
+
+    var requests = new[]
+    {
+        new MaaDynamicOcrRequest("operator.card.name.0", 100, 100, 100, 40, 4, 0.9),
+        new MaaDynamicOcrRequest("operator.card.name.1", 300, 100, 100, 40, 4, 0.9),
+    };
+    var tracker = new RhodesOperatorScanTracker(maxAttemptsPerCard: 2);
+    var first = tracker.Select(EncodePng(firstFrame), requests);
+
+    Equal(2, first.WorkItems.Count, "first viewport OCRs every visible card");
+    Equal(0, first.StableViewportCount, "first viewport is not repeated");
+    tracker.RecordResult(first.WorkItems[0].Fingerprint, resolved: true);
+    tracker.RecordResult(first.WorkItems[1].Fingerprint, resolved: false);
+
+    var repeated = tracker.Select(EncodePng(firstFrame), requests);
+    Equal(1, repeated.WorkItems.Count, "repeated viewport retries only the unresolved card");
+    Equal("operator.card.name.1", repeated.WorkItems[0].Request.Entry, "resolved card is skipped");
+    Equal(1, repeated.StableViewportCount, "same card set confirms viewport stability");
+    tracker.RecordResult(repeated.WorkItems[0].Fingerprint, resolved: false);
+    Equal(true, tracker.CanStopCurrentViewport, "viewport can stop after unresolved card reaches retry limit");
+    Equal(true, tracker.CanStopScan, "scan can stop when every observed card is resolved or exhausted");
+
+    using var changedFrame = firstFrame.Copy();
+    using (var canvas = new SKCanvas(changedFrame))
+        canvas.DrawRect(new SKRect(365, 105, 392, 134), new SKPaint { Color = SKColors.White });
+    var changed = tracker.Select(EncodePng(changedFrame), requests);
+    Equal(1, changed.WorkItems.Count, "new card fingerprint remains eligible for OCR");
+    Equal(0, changed.StableViewportCount, "changed card set resets viewport stability");
+}
+
 static void RecognitionProbePayloadsTargetRetainedFields()
 {
     var payloads = RhodesRecognitionProbe.DefaultPayloads();
@@ -1864,17 +2507,37 @@ static void RecognitionProbePayloadsTargetRetainedFields()
 
     var ingot = JsonNode.Parse(payloads.Single(item => item.Name == "Ingot OCR").Payload)!.AsObject();
     var ingotRoi = ingot["roi"]!.AsArray();
-    Equal(1160, ingotRoi[0]!.GetValue<int>(), "ingot x");
-    Equal(0, ingotRoi[1]!.GetValue<int>(), "ingot y");
-    Equal(90, ingotRoi[2]!.GetValue<int>(), "ingot width");
-    Equal(56, ingotRoi[3]!.GetValue<int>(), "ingot height");
+    Equal(1170, ingotRoi[0]!.GetValue<int>(), "ingot x");
+    Equal(4, ingotRoi[1]!.GetValue<int>(), "ingot y");
+    Equal(110, ingotRoi[2]!.GetValue<int>(), "ingot width");
+    Equal(58, ingotRoi[3]!.GetValue<int>(), "ingot height");
 
     var idea = JsonNode.Parse(payloads.Single(item => item.Name == "IS#5 Idea OCR").Payload)!.AsObject();
     var ideaRoi = idea["roi"]!.AsArray();
-    Equal(818, ideaRoi[0]!.GetValue<int>(), "idea x");
-    Equal(655, ideaRoi[1]!.GetValue<int>(), "idea y");
-    Equal(44, ideaRoi[2]!.GetValue<int>(), "idea width");
-    Equal(34, ideaRoi[3]!.GetValue<int>(), "idea height");
+    Equal(852, ideaRoi[0]!.GetValue<int>(), "idea x");
+    Equal(680, ideaRoi[1]!.GetValue<int>(), "idea y");
+    Equal(36, ideaRoi[2]!.GetValue<int>(), "idea width");
+    Equal(38, ideaRoi[3]!.GetValue<int>(), "idea height");
+}
+
+static void MaaRecognitionInvocationSeparatesAlgorithm()
+{
+    var parsed = RhodesMaaRecognitionInvocation.TryParse(
+        """{"recognition":"OCR","roi":[10,20,30,40],"only_rec":true}""",
+        out var invocation,
+        out var error);
+
+    Equal(true, parsed, "recognition invocation parsed");
+    Equal("", error, "recognition invocation error");
+    Equal("OCR", invocation.Type, "recognition algorithm");
+    var parameters = JsonNode.Parse(invocation.ParametersJson)!.AsObject();
+    Equal(false, parameters.ContainsKey("recognition"), "algorithm removed from parameters");
+    Equal(10, parameters["roi"]![0]!.GetValue<int>(), "ROI preserved");
+
+    Equal(
+        false,
+        RhodesMaaRecognitionInvocation.TryParse("""{"roi":[0,0,1280,720]}""", out _, out _),
+        "missing algorithm rejected");
 }
 
 static void TaskDiagnostics()
@@ -2333,8 +2996,13 @@ static void MaaGeneratedResourceBuilder()
     var root = JsonNode.Parse(generated)!.AsObject();
     Equal(true, root.ContainsKey("RhodesGeneratedEmpty"), "generated empty node");
     Equal("OCR", root["RhodesOcrRegion_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated ingot recognition");
-    Equal(1190, root["RhodesOcrRegion_run_ingot"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "generated ingot roi x");
+    Equal(1170, root["RhodesOcrRegion_run_ingot"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "generated ingot roi x");
+    Equal("OCR", root["RhodesScreen_relic_list"]!.AsObject()["recognition"]!.GetValue<string>(), "generated relic target screen recognition");
+    Equal(324, root["RhodesOcrRegion_run_squad_name"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "generated squad name roi y");
     Equal(false, root.ContainsKey("RhodesOcrRegion_run_hope_current"), "discarded hope node omitted");
+    Equal(false, root["RhodesOcrRegion_relic_list_text"]!.AsObject()["only_rec"]!.GetValue<bool>(), "relic list enables text detection");
+    Equal("OCR", root["RhodesOcrRegion_relic_detail_name"]!.AsObject()["recognition"]!.GetValue<string>(), "single relic detail name recognition");
+    Equal(false, root["RhodesOcrRegion_is5_thought_list_text"]!.AsObject()["only_rec"]!.GetValue<bool>(), "thought list enables text detection");
     Equal("TemplateMatch", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated template recognition");
     Equal("run/IngotIcon.png", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["template"]!.GetValue<string>(), "generated template path");
     Equal(
@@ -3214,6 +3882,8 @@ static void ResourceCatalogExportsReplayPayloads()
     Equal("OCR", generated["recognition"]!.GetValue<string>(), "generated recognition type");
     Equal(true, generated.ContainsKey("roi"), "generated roi retained");
     Equal(false, generated.ContainsKey("attach"), "generated attach stripped");
+    Equal(3, RhodesMaaResourceCatalog.LoadRecognitionScale("RhodesOcrRegion_operator_list_text"), "generated OCR scale exported");
+    Equal(1, RhodesMaaResourceCatalog.LoadRecognitionScale("RhodesMissingEntry"), "missing scale defaults to one");
 
     Equal("", RhodesMaaResourceCatalog.LoadRecognitionPayloadJson("RhodesMissingEntry"), "missing payload empty");
     Equal("", RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(""), "blank payload empty");
@@ -4421,6 +5091,7 @@ static void CandidateIs5SpecialApply()
         {
           "run": {
             "campaignId": "is5_sarkaz",
+            "difficulty": 18,
             "special": { "is5_sarkaz": { "idea": 21 } }
           }
         }

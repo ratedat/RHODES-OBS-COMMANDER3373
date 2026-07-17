@@ -24,13 +24,13 @@
             <TextBlock Text="{Binding RunContextSummary}" Classes="h2" TextWrapping="Wrap" />
             <TextBlock Text="{Binding RunLayout.Header.Detail}" Classes="caption" />
           </StackPanel>
-          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+          <WrapPanel Grid.Row="1">
             <Button Content="撮影" Command="{Binding CaptureCommand}" />
-            <Button Classes="primary" Content="共通値を認識+反映" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="runStatusFull" />
-            <Button Content="思案" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="is5ThoughtFull" />
-            <Button Content="時代" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="is5AgeFull" />
+            <Button Classes="primary" Content="共通値をADB取得・認識・反映" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="runStatusFull" />
+            <Button Content="思案のみ" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="is5ThoughtFull" />
+            <Button Content="時代のみ" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="is5AgeFull" />
             <Button Content="API状態同期" Command="{Binding SyncRunStateFromApiCommand}" />
-          </StackPanel>
+          </WrapPanel>
           <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding HeaderStatusChips}">
               <ItemsControl.ItemsPanel>
@@ -80,6 +80,64 @@
               </WrapPanel>
               <TextBlock Grid.Row="2" Classes="caption" Text="認識と同じ経路でstateとAPIへ反映します。等級を反映すると多元化珍品のtier (run.difficultyTierId) も自動的に更新されます。" />
             </Grid>
+          </Border>
+
+          <!-- IS#5特殊値の手動入力。実況・解説端末などADBを利用できない運用を想定。 -->
+          <Border Classes="card">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="サルカズ特殊値の手動入力" FontSize="13" FontWeight="SemiBold" />
+                  <TextBlock Text="大会配信では、ゲーム端末へ接続せず実況・解説側から更新できます。" Classes="caption" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="primary" Content="特殊値を反映" Command="{Binding ApplyManualSarkazValuesCommand}" />
+              </Grid>
+              <WrapPanel>
+                <TextBlock Text="構想" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+                <NumericUpDown Width="130" Minimum="0" Maximum="999" Increment="1" FormatString="0" Value="{Binding ManualIdea, Mode=TwoWay}" Margin="0,0,16,6" />
+                <TextBlock Text="時代" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+                <ComboBox Width="330" ItemsSource="{Binding ManualAgeOptions}" SelectedItem="{Binding SelectedManualAge, Mode=TwoWay}" Margin="0,0,10,6" />
+              </WrapPanel>
+              <TextBlock Text="思案（種類別個数）" Classes="caption" />
+              <Border Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="8" MaxHeight="260">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <ItemsControl ItemsSource="{Binding ManualThoughtEditors}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Width="280" Margin="0,0,8,8" Padding="7" Background="#121A1B" CornerRadius="5">
+                          <Grid ColumnDefinitions="*,86" ColumnSpacing="8">
+                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Name}" />
+                            <NumericUpDown Grid.Column="1" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card" BorderBrush="#7A3E3E">
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="現在状況をクリア" FontSize="13" FontWeight="SemiBold" />
+                  <TextBlock Text="探索をやり直す際に、ラン値・特殊値・オペレーター・秘宝を初期化します。" Classes="caption" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="クリア" Command="{Binding ShowClearRunConfirmationCommand}" />
+              </Grid>
+              <Border IsVisible="{Binding IsClearRunConfirmationVisible}" Background="#241516" BorderBrush="#A34C50" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                  <TextBlock Text="この操作は元に戻せません。本当に現在のランをクリアしますか？" TextWrapping="Wrap" VerticalAlignment="Center" />
+                  <Button Grid.Column="1" Content="キャンセル" Command="{Binding CancelClearRunCommand}" />
+                  <Button Grid.Column="2" Content="クリア実行" Command="{Binding ConfirmClearRunCommand}" />
+                </Grid>
+              </Border>
+            </StackPanel>
           </Border>
 
           <ItemsControl ItemsSource="{Binding RunFieldPreviews}">

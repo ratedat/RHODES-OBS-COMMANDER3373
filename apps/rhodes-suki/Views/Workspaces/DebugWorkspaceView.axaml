@@ -84,8 +84,17 @@
               <TextBlock Grid.Column="1" Text="{Binding FrameRecordHistory.Count}" FontFamily="Consolas" FontSize="12" Opacity="0.62" VerticalAlignment="Center" />
               <Button Grid.Column="2" Content="更新" Command="{Binding RefreshFrameRecordHistoryCommand}" Padding="10,4" VerticalAlignment="Center" />
             </Grid>
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <ItemsControl ItemsSource="{Binding FrameRecordHistory}">
+            <Grid Grid.Row="1">
+              <StackPanel IsVisible="{Binding IsFrameRecordHistoryEmpty}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Spacing="6">
+                <TextBlock Text="保存済みFrameはありません" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Opacity="0.72" />
+                <TextBlock Text="接続・撮影または認識を実行すると、ADBなしで再検証できるFrameがここに保存されます。"
+                           FontSize="11" HorizontalAlignment="Center" TextWrapping="Wrap" Opacity="0.5" />
+              </StackPanel>
+              <ScrollViewer IsVisible="{Binding HasFrameRecordHistory}" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding FrameRecordHistory}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Border CornerRadius="7" Padding="8" Margin="0,0,0,6" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
@@ -115,8 +124,9 @@
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </ScrollViewer>
+                </ItemsControl>
+              </ScrollViewer>
+            </Grid>
           </Grid>
         </Border>
 

@@ -12,19 +12,19 @@
       "recognition": {
         "type": "OCR",
         "expected": [
-          "分隊"
+          "DIFFICULTY"
         ],
         "match": "any",
         "normalize": [
           "remove_spaces"
         ],
         "roi": [
-          0,
-          392,
+          24,
           540,
-          270
+          220,
+          88
         ],
-        "scale": 3
+        "scale": 4
       }
     },
     {
@@ -70,10 +70,9 @@
         ],
         "scale": 3,
         "expected": [
-          "形成期",
-          "拡張期",
-          "全盛期"
+          "時代"
         ],
+        "onlyRec": false,
         "match": "any",
         "normalize": [
           "remove_spaces"
@@ -149,6 +148,31 @@
           ]
         ]
       }
+    },
+    {
+      "id": "relic.list",
+      "screenId": "relic-list",
+      "label": "秘宝一覧 閉じるボタン",
+      "profileIds": [
+        "relicsFull"
+      ],
+      "recognition": {
+        "type": "OCR",
+        "roi": [
+          134,
+          648,
+          110,
+          70
+        ],
+        "scale": 3,
+        "expected": [
+          "閉じる"
+        ],
+        "match": "any",
+        "normalize": [
+          "remove_spaces"
+        ]
+      }
     }
   ],
   "candidates": [
@@ -190,10 +214,10 @@
         "runStatusFull"
       ],
       "roi": [
-        1190,
-        10,
-        90,
-        52
+        1170,
+        4,
+        110,
+        58
       ],
       "scale": 8,
       "numericFallback": true
@@ -204,10 +228,10 @@
         "runStatusFull"
       ],
       "roi": [
-        730,
-        650,
-        58,
-        66
+        852,
+        680,
+        36,
+        38
       ],
       "scale": 8
     },
@@ -217,10 +241,10 @@
         "runStatusFull"
       ],
       "roi": [
-        748,
-        652,
-        28,
-        36
+        852,
+        680,
+        36,
+        38
       ],
       "scale": 10
     },
@@ -230,12 +254,13 @@
         "runStatusFull"
       ],
       "roi": [
-        20,
-        380,
-        260,
-        135
+        28,
+        396,
+        460,
+        136
       ],
-      "scale": 3
+      "scale": 2,
+      "onlyRec": false
     },
     {
       "id": "run.squad_name",
@@ -243,10 +268,10 @@
         "runStatusFull"
       ],
       "roi": [
-        45,
-        410,
-        190,
-        52
+        28,
+        324,
+        250,
+        40
       ],
       "scale": 4
     },
@@ -256,10 +281,10 @@
         "runStatusFull"
       ],
       "roi": [
-        125,
-        530,
-        110,
-        85
+        130,
+        552,
+        78,
+        66
       ],
       "scale": 6,
       "numericFallback": true,
@@ -289,7 +314,22 @@
         1100,
         540
       ],
-      "scale": 2
+      "onlyRec": false,
+      "scale": 1
+    },
+    {
+      "id": "relic.detail_name",
+      "profileIds": [
+        "relicsFull"
+      ],
+      "roi": [
+        160,
+        474,
+        240,
+        34
+      ],
+      "onlyRec": true,
+      "scale": 5
     },
     {
       "id": "is4.revelation_list_text",
@@ -310,12 +350,13 @@
         "is5ThoughtFull"
       ],
       "roi": [
-        90,
+        355,
         84,
-        1100,
+        835,
         540
       ],
-      "scale": 2
+      "onlyRec": false,
+      "scale": 1
     },
     {
       "id": "is6.coin_list_text",
@@ -510,7 +551,8 @@
         560,
         280
       ],
-      "scale": 3
+      "scale": 3,
+      "onlyRec": false
     }
   ]
 }

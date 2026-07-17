@@ -104,6 +104,26 @@ public static class RhodesRunStateStore
         }
     }
 
+    public static async Task ClearCurrentRunAsync(string? statePath = null, DateTimeOffset? now = null)
+    {
+        var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
+        await WriteLock.WaitAsync();
+        try
+        {
+            var state = await LoadStateNodeAsync(path);
+            var run = EnsureObject(state, "run");
+            ResetRunValues(run);
+            state["operators"] = new JsonArray();
+            state["relics"] = new JsonArray();
+            state["updatedAt"] = (now ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("O");
+            await WriteJsonAtomicAsync(path, state);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
+    }
+
     public static JsonObject ApplyChoices(
         JsonObject state,
         IEnumerable<SukiChoiceItem> operators,

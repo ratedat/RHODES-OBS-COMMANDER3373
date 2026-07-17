@@ -20,7 +20,7 @@
 
 1. 上部メニューまたは画面内ボタンから `OBS設定` を開きます。
 2. ADB設定で `自動検出` を押します。
-3. MuMuが見つからない場合は、ADBパスにMuMuの `adb.exe` を指定します。例: `M:\Program Files\Netease\MuMu Player 12\shell\adb.exe`
+3. MuMuが見つからない場合は、ADBパスにMuMuの `adb.exe` を指定します。MuMu 5/15系は例として `C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe`、旧MuMu 12系は `M:\Program Files\Netease\MuMu Player 12\shell\adb.exe` です。
 4. `接続テスト` を押し、接続先デバイスが表示されることを確認します。
 5. `スクリーンショットテスト` を押し、現在のMuMu画面が取れることを確認します。
 

@@ -191,6 +191,26 @@ public static class RhodesStateApiClient
         return root.ToJsonString(IndentedWriteOptions);
     }
 
+    public static string ClearCurrentRunInStateJson(string stateJson)
+    {
+        var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson) as JsonObject
+            ?? new JsonObject { ["version"] = 1 };
+        var run = root["run"] as JsonObject ?? new JsonObject();
+        root["run"] = run;
+        foreach (var propertyName in new[]
+        {
+            "squad", "squadId", "squadRandomEffect", "squadRandomEffectOptionId",
+            "difficulty", "difficultyTierId", "ingot", "idea", "special"
+        }.Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
+        {
+            run.Remove(propertyName);
+        }
+        root["operators"] = new JsonArray();
+        root["relics"] = new JsonArray();
+        root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
+        return root.ToJsonString(IndentedWriteOptions);
+    }
+
     private static string Shorten(string value, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(value))

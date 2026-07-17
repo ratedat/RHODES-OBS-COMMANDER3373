@@ -7,6 +7,12 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const outputsRoot = path.join(repoRoot, "outputs");
 const outputDir = path.join(outputsRoot, "suki-portable");
 const sukiBuildDir = path.join(repoRoot, "apps", "rhodes-suki", "bin", "Release", "net8.0", "win-x64");
+const preservedTopLevelEntries = new Set([
+  "user-data",
+  "RHODES OBS COMMANDER3373 Debug Logs",
+  "glm-ocr-runtime",
+  "ollama-runtime",
+]);
 
 function assertSafeOutputPath() {
   const relative = path.relative(outputsRoot, outputDir);
@@ -38,6 +44,15 @@ async function removeFilesByExtension(directory, extension) {
     if (entry.isFile() && path.extname(entry.name).toLowerCase() === extension) {
       await fs.rm(fullPath, { force: true });
     }
+  }
+}
+
+async function cleanOutputPreservingUserData() {
+  await fs.mkdir(outputDir, { recursive: true });
+  const entries = await fs.readdir(outputDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (preservedTopLevelEntries.has(entry.name)) continue;
+    await fs.rm(path.join(outputDir, entry.name), { recursive: true, force: true });
   }
 }
 
@@ -87,6 +102,23 @@ async function copyMaaNativeRuntimeToRuntimes() {
   }
 }
 
+async function copyRequiredMasterData() {
+  const requiredFiles = [
+    "data/operators.json",
+    "data/relics.json",
+    "data/recognition/maa-operator-name-ocr.json",
+  ];
+
+  for (const relativePath of requiredFiles) {
+    const source = path.join(repoRoot, relativePath);
+    const target = path.join(outputDir, relativePath);
+    await fs.access(source);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.copyFile(source, target);
+    await fs.access(target);
+  }
+}
+
 async function collectSummary(directory) {
   let topLevel = 0;
   let files = 0;
@@ -113,8 +145,7 @@ async function collectSummary(directory) {
 }
 
 assertSafeOutputPath();
-await fs.rm(outputDir, { recursive: true, force: true });
-await fs.mkdir(outputDir, { recursive: true });
+await cleanOutputPreservingUserData();
 
 run(process.execPath, ["tools/generate-maa-resource.mjs"]);
 run(process.execPath, ["tools/generate-maa-interface.mjs"]);
@@ -140,6 +171,7 @@ run("dotnet", [
 await removeFilesByExtension(outputDir, ".pdb");
 await moveMaaAgentBinaryToLibs();
 await copyMaaNativeRuntimeToRuntimes();
+await copyRequiredMasterData();
 
 const exePath = path.join(outputDir, "RhodesSuki.exe");
 await fs.access(exePath);

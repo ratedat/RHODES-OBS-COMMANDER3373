@@ -100,7 +100,7 @@ export function generatePipeline({ maaTasks, scanProfiles }) {
       {
         roi: region.roi,
         threshold: region.threshold,
-        only_rec: true,
+        only_rec: region.onlyRec ?? true,
         expected: region.expected,
         ocrReplace: region.ocrReplace,
       },
@@ -126,6 +126,7 @@ export function generatePipeline({ maaTasks, scanProfiles }) {
         idPrefix: config.idPrefix ?? null,
         ocrOffset: config.ocrOffset ?? null,
         maxMatches: config.maxMatches ?? null,
+        scale: config.scale ?? null,
         numericFallback: config.numericFallback ?? null,
       });
     }

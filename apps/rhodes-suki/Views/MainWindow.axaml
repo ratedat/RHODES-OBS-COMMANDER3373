@@ -48,8 +48,11 @@
         </Button>
 
         <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <Button Content="撮影" Command="{Binding CaptureCommand}" />
-          <Button Classes="primary" Content="認識+反映" Command="{Binding RunSelectedProfileRecognitionAndApplyCommand}" />
+          <Button Content="接続・撮影" Command="{Binding ConnectAndCaptureCommand}"
+                  IsVisible="{Binding IsGlobalConnectAndCaptureVisible}"
+                  ToolTip.Tip="保存済みADB設定で接続し、スクリーンショットを1枚取得します" />
+          <Button Classes="primary" Content="ADB取得・認識・反映" Command="{Binding RunSelectedProfileRecognitionAndApplyCommand}"
+                  ToolTip.Tip="保存済みADB設定で接続し、撮影・認識・状態反映まで自動実行します" />
           <Button Content="報告ZIP" Command="{Binding CreateBugReportBundleCommand}" />
           <ToggleButton Content="HUD" IsChecked="{Binding IsHudVisible, Mode=TwoWay}"
                         ToolTip.Tip="本人用の透過メモ小窓をエミュレータの上に重ねます (MAAのログ小窓と同型)。クリック透過で詰まったらここをOFF→ONで復帰。" />

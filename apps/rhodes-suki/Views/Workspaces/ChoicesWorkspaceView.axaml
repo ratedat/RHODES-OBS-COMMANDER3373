@@ -23,7 +23,7 @@
 
     <Grid Grid.Row="2">
       <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsOperatorsPanelVisible}">
-        <Grid ColumnDefinitions="*,110,145,145" ColumnSpacing="8">
+        <Grid ColumnDefinitions="*,150,160,180" ColumnSpacing="8">
           <TextBox Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分で検索" />
           <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
           <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />

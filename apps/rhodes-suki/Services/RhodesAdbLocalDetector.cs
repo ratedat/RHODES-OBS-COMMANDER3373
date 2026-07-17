@@ -147,6 +147,8 @@ public static class RhodesAdbLocalDetector
             score -= 90;
         if (candidate.Source.Equals("env", StringComparison.OrdinalIgnoreCase))
             score -= 80;
+        if (candidate.Source.Equals("process", StringComparison.OrdinalIgnoreCase))
+            score -= 110;
         if (!preset.Equals("auto", StringComparison.OrdinalIgnoreCase))
             score += candidate.Preset.Equals(preset, StringComparison.OrdinalIgnoreCase) ? -60 : 35;
         else

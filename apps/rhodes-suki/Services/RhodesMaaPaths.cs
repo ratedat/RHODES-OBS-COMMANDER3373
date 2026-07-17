@@ -6,17 +6,9 @@ public static class RhodesMaaPaths
 {
     private static readonly string[] RequiredRecognitionResourceFiles =
     [
-        "ocr_config.json",
-        "PaddleOCR/det/inference.onnx",
-        "PaddleOCR/det/version.txt",
-        "PaddleOCR/rec/inference.onnx",
-        "PaddleOCR/rec/keys.txt",
-        "PaddleOCR/rec/version.txt",
-        "global/YoStarJP/resource/ocr_config.json",
-        "global/YoStarJP/resource/recruitment.json",
-        "global/YoStarJP/resource/PaddleOCR/rec/inference.onnx",
-        "global/YoStarJP/resource/PaddleOCR/rec/keys.txt",
-        "global/YoStarJP/resource/PaddleOCR/rec/version.txt",
+        "model/ocr/det.onnx",
+        "model/ocr/rec.onnx",
+        "model/ocr/keys.txt",
         "image/third_party/maa/resource/template/Roguelike/base/RoguelikeRecruitOcrFlag.png",
     ];
 

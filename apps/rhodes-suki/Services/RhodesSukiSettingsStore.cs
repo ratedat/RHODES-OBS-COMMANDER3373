@@ -18,7 +18,7 @@ public static class RhodesSukiSettingsStore
         try
         {
             var json = File.ReadAllText(settingsPath);
-            return JsonSerializer.Deserialize<RhodesSukiSettings>(json, JsonOptions) ?? new RhodesSukiSettings();
+            return Normalize(JsonSerializer.Deserialize<RhodesSukiSettings>(json, JsonOptions) ?? new RhodesSukiSettings());
         }
         catch
         {
@@ -52,5 +52,20 @@ public static class RhodesSukiSettingsStore
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory))
             Directory.CreateDirectory(directory);
+    }
+
+    internal static RhodesSukiSettings Normalize(RhodesSukiSettings settings)
+    {
+        var hasBareAdbPath = string.IsNullOrWhiteSpace(settings.AdbPath)
+            || settings.AdbPath.Trim().Equals("adb", StringComparison.OrdinalIgnoreCase)
+            || settings.AdbPath.Trim().Equals("adb.exe", StringComparison.OrdinalIgnoreCase);
+        if (settings.SelectedAdbPresetId.Equals("custom", StringComparison.OrdinalIgnoreCase)
+            && hasBareAdbPath
+            && string.IsNullOrWhiteSpace(settings.AdbSerial))
+        {
+            return settings with { SelectedAdbPresetId = "auto", AdbPath = "adb" };
+        }
+
+        return settings;
     }
 }

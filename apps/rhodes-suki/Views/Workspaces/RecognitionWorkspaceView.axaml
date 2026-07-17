@@ -26,6 +26,13 @@
         <Border Classes="card" Padding="8">
           <Viewbox Stretch="Uniform" MaxHeight="470">
             <Canvas x:Name="RoiCanvas" Width="1280" Height="720">
+              <Border Width="1280" Height="720" Background="#0C1213" IsVisible="{Binding IsLastCaptureImageEmpty}" IsHitTestVisible="False">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                  <TextBlock Text="スクリーンショット未取得" FontSize="26" FontWeight="SemiBold" HorizontalAlignment="Center" Opacity="0.72" />
+                  <TextBlock Text="上部の「認識実行」、またはデバッグ画面のFrame Recordから画像を読み込んでください。"
+                             FontSize="15" HorizontalAlignment="Center" Opacity="0.5" />
+                </StackPanel>
+              </Border>
               <Image Source="{Binding LastCaptureImage}" Width="1280" Height="720" Stretch="Fill" />
               <ItemsControl ItemsSource="{Binding RoiPreviewRows}" IsVisible="{Binding ShowRoiOverlay}" Width="1280" Height="720">
                 <ItemsControl.ItemsPanel>

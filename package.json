@@ -21,6 +21,7 @@
     "maa:check": "npm run maa:resource:check && npm run maa:interface:check && npm run maa:contract:check",
     "suki:check": "npm run maa:check && npm run suki:test",
     "suki:publish:portable": "node tools/publish-suki-portable.mjs",
+    "suki:package:public-debug": "node tools/package-suki-public-debug.mjs",
     "data:update": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1",
     "data:update:plan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1 -PlanOnly",
     "data:diff": "node tools/compare-data-update.mjs --before data --after data --out review/update-runs/manual-compare",

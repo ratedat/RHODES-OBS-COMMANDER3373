@@ -46,6 +46,41 @@ public sealed record SukiSpecialValuePreview(
     string ProfileId,
     string Detail);
 
+public sealed record SukiSpecialEffectOption(string Id, string Name)
+{
+    public override string ToString() => Name;
+}
+
+public sealed class SukiThoughtCountEditor : INotifyPropertyChanged
+{
+    private int _count;
+
+    public SukiThoughtCountEditor(string id, string name, int count = 0)
+    {
+        Id = id;
+        Name = name;
+        _count = Math.Max(0, count);
+    }
+
+    public string Id { get; }
+    public string Name { get; }
+
+    public int Count
+    {
+        get => _count;
+        set
+        {
+            var normalized = Math.Clamp(value, 0, 99);
+            if (_count == normalized)
+                return;
+            _count = normalized;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Count)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+
 public sealed record SukiSpecialFieldState(
     string CampaignId,
     string FieldId,

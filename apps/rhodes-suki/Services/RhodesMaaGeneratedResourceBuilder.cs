@@ -80,7 +80,7 @@ public static class RhodesMaaGeneratedResourceBuilder
             {
                 ["roi"] = Clone(region.GetProperty("roi")),
                 ["threshold"] = CloneOrNull(region, "threshold"),
-                ["only_rec"] = true,
+                ["only_rec"] = JsonBool(region, "onlyRec") ?? true,
                 ["expected"] = CloneOrNull(region, "expected"),
                 ["ocrReplace"] = CloneOrNull(region, "ocrReplace"),
             };
@@ -126,6 +126,7 @@ public static class RhodesMaaGeneratedResourceBuilder
                     ["idPrefix"] = string.IsNullOrWhiteSpace(idPrefix) ? null : idPrefix,
                     ["ocrOffset"] = CloneOrNull(config, "ocrOffset"),
                     ["maxMatches"] = CloneOrNull(config, "maxMatches"),
+                    ["scale"] = CloneOrNull(config, "scale"),
                     ["numericFallback"] = CloneOrNull(config, "numericFallback"),
                 });
                 index++;
@@ -290,6 +291,15 @@ public static class RhodesMaaGeneratedResourceBuilder
     private static bool? JsonBool(JsonObject element, string propertyName)
     {
         return element[propertyName]?.GetValue<bool>();
+    }
+
+    private static bool? JsonBool(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? property.GetBoolean()
+            : null;
     }
 
     private static string NodeName(string prefix, string id)

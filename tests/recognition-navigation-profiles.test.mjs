@@ -130,7 +130,7 @@ test("ADB scan profile taps match the annotated 2560x1440 screenshot scaled to 1
   const expected = new Map([
     ["runStatusFull", { x: 54, y: 677 }],
     ["relicsFull", { x: 184, y: 655 }],
-    ["is5ThoughtFull", { x: 704, y: 679 }],
+    ["is5ThoughtFull", { x: 638, y: 679 }],
     ["is5AgeFull", { x: 660, y: 52 }],
     ["operatorsFull", { x: 948, y: 678 }],
   ]);
@@ -145,7 +145,7 @@ test("difficulty grade ROI targets the opened squad panel, not the closed footer
   const tasks = await recognitionTasks();
   const difficultyRegion = tasks.ocrRegions.find((region) => region.id === "run.difficulty_grade");
 
-  assert.deepEqual(difficultyRegion.roi, [125, 530, 110, 85]);
+  assert.deepEqual(difficultyRegion.roi, [130, 552, 78, 66]);
   assert.equal(difficultyRegion.numericFallback, true);
 });
 
@@ -184,7 +184,7 @@ test("run status profile no longer carries discarded base-value OCR regions", as
   ]) {
     assert.equal(rois.has(removed), false);
   }
-  assert.deepEqual(rois.get("run.ingot"), [1190, 10, 90, 52]);
+  assert.deepEqual(rois.get("run.ingot"), [1170, 4, 110, 58]);
   assert.equal(tasks.ocrRegions.find((region) => region.id === "run.ingot")?.numericFallback, true);
 });
 
@@ -208,10 +208,10 @@ test("run status profile includes template anchors for map resources", async () 
 test("ADB scan profiles keep annotated tap rectangles for randomized execution", async () => {
   const profiles = await profilesById();
   const expected = new Map([
-    ["runStatusFull", { x: 12, y: 634, width: 84, height: 86 }],
+    ["runStatusFull", { x: 30, y: 650, width: 54, height: 62 }],
     ["relicsFull", { x: 170, y: 646, width: 45, height: 26 }],
-    ["is5ThoughtFull", { x: 582, y: 649, width: 245, height: 59 }],
-    ["is5AgeFull", { x: 585, y: 8, width: 155, height: 84 }],
+    ["is5ThoughtFull", { x: 582, y: 649, width: 112, height: 59 }],
+    ["is5AgeFull", { x: 550, y: 8, width: 180, height: 44 }],
     ["operatorsFull", { x: 904, y: 645, width: 88, height: 66 }],
   ]);
 
@@ -228,7 +228,7 @@ test("relic tap area avoids the inactive count edge", async () => {
   assert.ok(tap.area.x + tap.area.width <= 215, "relic tap should stay inside the right side of the button");
 });
 
-test("vertical full scan profiles sweep the left safe rail down and back up", async () => {
+test("vertical full scan profiles sweep down and back up without Android edge gestures", async () => {
   const profiles = await profilesById();
 
   for (const id of ["relicsFull", "is4RevelationFull"]) {
@@ -240,18 +240,24 @@ test("vertical full scan profiles sweep the left safe rail down and back up", as
     const [down, up] = profile.scrollPasses;
     assert.ok(down.scroll.start.y > down.scroll.end.y, `${id} down pass should use an upward drag to move the list toward the bottom`);
     assert.ok(up.scroll.start.y < up.scroll.end.y, `${id} up pass should use a downward drag to move the list toward the top`);
-    for (const pass of profile.scrollPasses) {
-      assert.ok(pass.scroll.startArea.x <= 16, `${id} start area should stay inside the left safe rail`);
-      assert.ok(pass.scroll.startArea.width <= 32, `${id} start area should stay narrow`);
-      assert.ok(pass.scroll.endArea.x <= 16, `${id} end area should stay inside the left safe rail`);
-      assert.ok(pass.scroll.endArea.width <= 32, `${id} end area should stay narrow`);
-    }
+  }
+
+  const relic = profiles.get("relicsFull");
+  for (const pass of relic.scrollPasses) {
+    assert.ok(pass.scroll.startArea.x >= 500, "relic start area should avoid the Android edge gesture zone");
+    assert.ok(pass.scroll.endArea.x >= 500, "relic end area should avoid the Android edge gesture zone");
+  }
+
+  const revelation = profiles.get("is4RevelationFull");
+  for (const pass of revelation.scrollPasses) {
+    assert.ok(pass.scroll.startArea.x <= 16, "revelation start area should stay inside its left rail");
+    assert.ok(pass.scroll.endArea.x <= 16, "revelation end area should stay inside its left rail");
   }
 });
 
 
 
-test("relic full scan skips scroll when the opened relic panel has at most three rows", async () => {
+test("relic full scan skips scroll when the opened relic panel has at most nine candidates", async () => {
   const profiles = await profilesById();
   const profile = profiles.get("relicsFull");
 
@@ -301,8 +307,8 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
   assert.deepEqual(recruitTemplate.ocrOffset, { x: 0, y: 22, width: 240, height: 30 });
   assert.equal(cardTemplate.templatePath, "assets/recognition/templates/run/OperatorCardCodeNameFlag.png");
   assert.deepEqual(cardTemplate.searchRoi, { x: 380, y: 95, width: 850, height: 545 });
-  assert.deepEqual(cardTemplate.ocrOffset, { x: -7, y: -9, width: 188, height: 29 });
-  assert.equal(cardTemplate.threshold, 0.7);
+  assert.deepEqual(cardTemplate.ocrOffset, { x: 26, y: -3, width: 180, height: 23 });
+  assert.equal(cardTemplate.threshold, 0.64);
   assert.equal(cardTemplate.maxMatches, 16);
   assert.equal(recruitTemplate.suppressStaticRegionIdPattern, undefined);
   assert.equal(cardTemplate.suppressStaticRegionIdPattern, undefined);
@@ -396,8 +402,15 @@ test("run status profile knows when the squad info panel is already open", async
 test("squad info panel OCR screen is scoped to the opened lower-left panel", async () => {
   const tasks = await recognitionTasks();
   const screen = tasks.screens.find((item) => item.id === "run.squad_info_panel");
-  assert.deepEqual(screen.recognition.roi, [0, 392, 540, 270]);
-  assert.deepEqual(screen.recognition.expected, ["分隊"]);
+  assert.deepEqual(screen.recognition.roi, [24, 540, 220, 88]);
+  assert.deepEqual(screen.recognition.expected, ["DIFFICULTY"]);
+});
+
+test("squad random effect description uses multiline OCR", async () => {
+  const tasks = await recognitionTasks();
+  const region = tasks.ocrRegions.find((item) => item.id === "run.squad_card");
+  assert.deepEqual(region.roi, [28, 396, 460, 136]);
+  assert.equal(region.onlyRec, false);
 });
 
 test("age scan taps the top-center era marker and does not scroll", async () => {
@@ -415,7 +428,7 @@ test("operator and thought scans use bounded passes tuned for their scroll surfa
   const thought = profiles.get("is5ThoughtFull");
 
   assert.ok(operator.scrollPasses.every((pass) => pass.maxScrolls >= 30));
-  assert.ok(operator.scrollPasses.every((pass) => pass.minScrolls >= 10));
+  assert.ok(operator.scrollPasses.every((pass) => pass.minScrolls === 1));
   assert.ok(operator.scrollPasses.every((pass) => pass.endFingerprintStableCount === 2));
   assert.ok(operator.scrollPasses.every((pass) => pass.candidateStableEndCount === 3));
   assert.ok(operator.scrollPasses.every((pass) => pass.captureDelayMs <= 120));

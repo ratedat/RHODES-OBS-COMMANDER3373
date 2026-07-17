@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Text.Json.Nodes;
 using RhodesSuki.Models;
 
@@ -511,7 +512,8 @@ public static class RhodesRecognitionCandidateApplier
             .OrderByDescending(item => item.Candidate.Confidence ?? 0)
             .ThenBy(item => item.Index)
             .First();
-        campaign["age"] = best.AgeId;
+        var resolvedAgeId = ResolveAgeVariantId(best.AgeId, RunDifficulty(run));
+        campaign["age"] = resolvedAgeId;
 
         var handled = new HashSet<int>();
         foreach (var item in valid)
@@ -520,6 +522,25 @@ public static class RhodesRecognitionCandidateApplier
             applied.Add($"age:{item.AgeId}");
         }
         return handled;
+    }
+
+    private static int RunDifficulty(JsonObject run)
+    {
+        if (run["difficulty"] is JsonValue value)
+        {
+            if (value.TryGetValue<int>(out var number))
+                return number;
+            if (value.TryGetValue<string>(out var text)
+                && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out number))
+                return number;
+        }
+        return 1;
+    }
+
+    private static string ResolveAgeVariantId(string ageId, int difficulty)
+    {
+        var suffix = difficulty >= 12 ? "prime" : difficulty >= 6 ? "expansion" : "formation";
+        return Regex.Replace(ageId, "_(formation|expansion|prime)$", $"_{suffix}", RegexOptions.CultureInvariant);
     }
 
     private static bool ApplyRelicCandidate(JsonObject state, MaaCandidatePreview candidate, ICollection<string> applied)

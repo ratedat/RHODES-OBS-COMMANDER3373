@@ -60,6 +60,81 @@ public static class RhodesMaaResourceCatalog
         return "";
     }
 
+    public static int LoadRecognitionScale(string entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry))
+            return 1;
+
+        foreach (var relativePath in new[] { ManualPipelineSource, GeneratedPipelineSource })
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+                continue;
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                if (document.RootElement.TryGetProperty(entry.Trim(), out var node)
+                    && node.ValueKind == JsonValueKind.Object
+                    && node.TryGetProperty("attach", out var attach)
+                    && attach.ValueKind == JsonValueKind.Object
+                    && attach.TryGetProperty("scale", out var scale)
+                    && scale.TryGetInt32(out var value))
+                {
+                    return Math.Clamp(value, 1, 12);
+                }
+            }
+            catch
+            {
+                // Invalid resource JSON is reported by ValidateContract; recognition stays unscaled here.
+            }
+        }
+
+        return 1;
+    }
+
+    public static MaaTemplateOcrConfig? LoadTemplateOcrConfig(string entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry))
+            return null;
+
+        foreach (var relativePath in new[] { ManualPipelineSource, GeneratedPipelineSource })
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+                continue;
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                if (!document.RootElement.TryGetProperty(entry.Trim(), out var node)
+                    || node.ValueKind != JsonValueKind.Object
+                    || !node.TryGetProperty("attach", out var attach)
+                    || attach.ValueKind != JsonValueKind.Object
+                    || !attach.TryGetProperty("ocrOffset", out var offset)
+                    || offset.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                return new MaaTemplateOcrConfig(
+                    JsonString(attach, "idPrefix"),
+                    JsonInt(offset, "x"),
+                    JsonInt(offset, "y"),
+                    JsonInt(offset, "width"),
+                    JsonInt(offset, "height"),
+                    Math.Clamp(JsonInt(attach, "scale", 1), 1, 12),
+                    Math.Clamp(JsonInt(attach, "maxMatches", 1), 1, 64));
+            }
+            catch
+            {
+                // Invalid resource JSON is reported by ValidateContract.
+            }
+        }
+
+        return null;
+    }
+
     public static IReadOnlyList<MaaResourceProfilePreview> ProfileGroups(IReadOnlyList<MaaResourceTaskPreview> tasks)
     {
         var interfaceProfiles = InterfaceProfiles();
@@ -570,6 +645,15 @@ public static class RhodesMaaResourceCatalog
         }
 
         return property.EnumerateArray().ToArray();
+    }
+
+    private static int JsonInt(JsonElement element, string propertyName, int fallback = 0)
+    {
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out var property)
+            && property.TryGetInt32(out var value)
+                ? value
+                : fallback;
     }
 
     private static HashSet<string> NamedSet(JsonElement root, string propertyName)

@@ -80,10 +80,10 @@
           },
           "label": "左下の分隊情報を開く",
           "area": {
-            "x": 12,
-            "y": 634,
-            "width": 84,
-            "height": 86
+            "x": 30,
+            "y": 650,
+            "width": 54,
+            "height": 62
           }
         },
         {
@@ -109,15 +109,15 @@
           },
           "label": "左下の分隊情報を閉じる",
           "area": {
-            "x": 12,
-            "y": 634,
-            "width": 84,
-            "height": 86
+            "x": 30,
+            "y": 650,
+            "width": 54,
+            "height": 62
           }
         },
         {
           "type": "wait",
-          "durationMs": 160,
+          "durationMs": 300,
           "label": "閉じる待ち"
         }
       ],
@@ -184,16 +184,16 @@
             "height": 545
           },
           "ocrOffset": {
-            "x": -7,
-            "y": -9,
-            "width": 188,
-            "height": 29
+            "x": 26,
+            "y": -3,
+            "width": 180,
+            "height": 23
           },
-          "threshold": 0.7,
+          "threshold": 0.64,
           "maxMatches": 16,
           "step": 2,
           "sampleStride": 2,
-          "scale": 4
+          "scale": 1
         }
       ],
       "baseResolution": {
@@ -222,7 +222,7 @@
         },
         {
           "type": "wait",
-          "durationMs": 220,
+          "durationMs": 650,
           "label": "表示待ち"
         }
       ],
@@ -285,12 +285,12 @@
               "width": 160,
               "height": 360
             },
-            "durationMs": 500
+            "durationMs": 350
           },
           "maxScrolls": 30,
-          "minScrolls": 10,
+          "minScrolls": 1,
           "endFingerprintStableCount": 2,
-          "captureDelayMs": 120,
+          "captureDelayMs": 80,
           "candidateStableEndCount": 3
         },
         {
@@ -318,12 +318,12 @@
               "width": 150,
               "height": 360
             },
-            "durationMs": 500
+            "durationMs": 350
           },
           "maxScrolls": 30,
-          "minScrolls": 10,
+          "minScrolls": 1,
           "endFingerprintStableCount": 2,
-          "captureDelayMs": 120,
+          "captureDelayMs": 80,
           "candidateStableEndCount": 3,
           "mirrorPreviousPassScrolls": false
         }
@@ -366,7 +366,7 @@
         },
         {
           "type": "wait",
-          "durationMs": 220,
+          "durationMs": 650,
           "label": "表示待ち"
         }
       ],
@@ -418,22 +418,24 @@
               "y": 150
             },
             "startArea": {
-              "x": 12,
+              "x": 520,
               "y": 550,
-              "width": 28,
+              "width": 240,
               "height": 70
             },
             "endArea": {
-              "x": 12,
+              "x": 520,
               "y": 78,
-              "width": 28,
+              "width": 240,
               "height": 90
             },
             "durationMs": 650
           },
           "maxScrolls": 20,
+          "minScrolls": 1,
           "endFingerprintStableCount": 2,
-          "captureDelayMs": 160
+          "captureDelayMs": 160,
+          "candidateStableEndCount": 2
         },
         {
           "axis": "vertical",
@@ -449,22 +451,24 @@
               "y": 610
             },
             "startArea": {
-              "x": 12,
+              "x": 520,
               "y": 78,
-              "width": 28,
+              "width": 240,
               "height": 90
             },
             "endArea": {
-              "x": 12,
+              "x": 520,
               "y": 550,
-              "width": 28,
+              "width": 240,
               "height": 70
             },
             "durationMs": 650
           },
           "maxScrolls": 20,
+          "minScrolls": 1,
           "endFingerprintStableCount": 2,
-          "captureDelayMs": 160
+          "captureDelayMs": 160,
+          "candidateStableEndCount": 2
         }
       ],
       "scrollGuard": {
@@ -589,14 +593,14 @@
         {
           "type": "tap",
           "point": {
-            "x": 704,
+            "x": 638,
             "y": 679
           },
           "label": "思案を開く",
           "area": {
             "x": 582,
             "y": 649,
-            "width": 245,
+            "width": 112,
             "height": 59
           }
         },
@@ -607,9 +611,9 @@
         }
       ],
       "scanRegion": {
-        "x": 90,
+        "x": 355,
         "y": 84,
-        "width": 1100,
+        "width": 835,
         "height": 540
       },
       "scrollAxis": "vertical",
@@ -618,14 +622,14 @@
         {
           "type": "tap",
           "point": {
-            "x": 704,
+            "x": 638,
             "y": 679
           },
           "label": "思案を閉じる",
           "area": {
             "x": 582,
             "y": 649,
-            "width": 245,
+            "width": 112,
             "height": 59
           }
         },
@@ -737,15 +741,15 @@
           },
           "label": "時代を開く",
           "area": {
-            "x": 585,
-            "y": 8,
-            "width": 155,
-            "height": 84
+              "x": 550,
+              "y": 8,
+              "width": 180,
+              "height": 44
           }
         },
         {
           "type": "wait",
-          "durationMs": 220,
+          "durationMs": 650,
           "label": "表示待ち"
         }
       ],
@@ -770,15 +774,15 @@
           },
           "label": "時代を閉じる",
           "area": {
-            "x": 585,
-            "y": 8,
-            "width": 155,
-            "height": 84
+              "x": 550,
+              "y": 8,
+              "width": 180,
+              "height": 44
           }
         },
         {
           "type": "wait",
-          "durationMs": 160,
+          "durationMs": 300,
           "label": "閉じる待ち"
         }
       ],

@@ -125,7 +125,9 @@ public static class RhodesMaaAdbConnectionResolver
         var directory = Path.GetDirectoryName(adbPath.Trim());
         if (string.IsNullOrWhiteSpace(directory))
             return "";
-        if (preset == "mumu" && Path.GetFileName(directory).Equals("shell", StringComparison.OrdinalIgnoreCase))
+        if (preset == "mumu" && (
+            Path.GetFileName(directory).Equals("shell", StringComparison.OrdinalIgnoreCase)
+            || Path.GetFileName(directory).Equals("nx_main", StringComparison.OrdinalIgnoreCase)))
             directory = Directory.GetParent(directory)?.FullName ?? directory;
         return directory;
     }

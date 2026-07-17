@@ -25,6 +25,17 @@ public static class RhodesRunCatalog
         string GroupLabel,
         string Name);
 
+    public static IReadOnlyList<SukiSpecialEffectOption> LoadSpecialEffectOptions(string campaignId, string slot)
+    {
+        var path = ResolveDataPath(ResolveDataRoot(), "selectable-effects.json");
+        return LoadSelectableEffects(path)
+            .Where(item => item.CampaignId.Equals(campaignId, StringComparison.Ordinal)
+                && item.Slot.Equals(slot, StringComparison.Ordinal))
+            .Select(item => new SukiSpecialEffectOption(item.Id, item.Name))
+            .DistinctBy(item => item.Id, StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private static IReadOnlyList<SukiCampaignPreview> LoadCampaigns(string path)
     {
         using var document = JsonDocument.Parse(File.ReadAllText(path));

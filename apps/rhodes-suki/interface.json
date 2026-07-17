@@ -272,6 +272,21 @@
       ]
     },
     {
+      "name": "rhodes_screen_relic_list",
+      "label": "生成: 秘宝一覧 閉じるボタン",
+      "entry": "RhodesScreen_relic_list",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.screens / relic.list / profiles: relicsFull",
+      "group": [
+        "relicsFull"
+      ]
+    },
+    {
       "name": "rhodes_candidate_is5_sarkaz_map_select_campaign",
       "label": "生成: IS#5 campaign marker",
       "entry": "RhodesCandidate_is5_sarkaz_map_select_campaign",
@@ -402,6 +417,21 @@
         "base"
       ],
       "description": "OCR / maa-tasks.ocrRegions / relic.list_text / profiles: relicsFull",
+      "group": [
+        "relicsFull"
+      ]
+    },
+    {
+      "name": "rhodes_ocr_region_relic_detail_name",
+      "label": "生成: relic.detail_name",
+      "entry": "RhodesOcrRegion_relic_detail_name",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / relic.detail_name / profiles: relicsFull",
       "group": [
         "relicsFull"
       ]
@@ -965,7 +995,19 @@
           }
         },
         {
+          "name": "rhodes_screen_relic_list",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
           "name": "rhodes_ocr_region_relic_list_text",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_relic_detail_name",
           "option": {
             "enabled": true
           }

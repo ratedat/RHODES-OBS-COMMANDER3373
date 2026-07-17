@@ -315,7 +315,8 @@ public sealed record RhodesSukiSettings(
     bool HudVisible = false,
     int HudX = -1,
     int HudY = -1,
-    string HudVisibleParts = "");
+    string HudVisibleParts = "",
+    bool AdbConnectionValidated = false);
 
 public sealed record MaaSessionSnapshot(
     string State,
