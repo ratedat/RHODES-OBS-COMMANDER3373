@@ -21,7 +21,12 @@ public static class RhodesPublicDebugPolicy
 
     public static bool IsCampaignAllowed(string? campaignId)
     {
-        return string.Equals(campaignId, SarkazCampaignId, StringComparison.Ordinal);
+        return !string.IsNullOrWhiteSpace(campaignId);
+    }
+
+    public static bool IsCampaignAllowed(string? campaignId, RhodesDistributionProfile distributionProfile)
+    {
+        return !distributionProfile.IsPublicDebug || IsCampaignAllowed(campaignId);
     }
 
     public static bool IsProfileAllowed(string? profileId)
@@ -29,19 +34,34 @@ public static class RhodesPublicDebugPolicy
         return !string.IsNullOrWhiteSpace(profileId) && AllowedProfileIds.Contains(profileId);
     }
 
+    public static bool IsProfileAllowed(string? profileId, RhodesDistributionProfile distributionProfile)
+    {
+        return !distributionProfile.IsPublicDebug || IsProfileAllowed(profileId);
+    }
+
     public static SukiRunStateSnapshot ApplyCampaign(SukiRunStateSnapshot state)
     {
-        return IsCampaignAllowed(state.CampaignId)
-            ? state
-            : state with { CampaignId = SarkazCampaignId };
+        return state;
+    }
+
+    public static SukiRunStateSnapshot ApplyCampaign(
+        SukiRunStateSnapshot state,
+        RhodesDistributionProfile distributionProfile)
+    {
+        return distributionProfile.IsPublicDebug ? ApplyCampaign(state) : state;
     }
 
     public static IReadOnlyList<SukiCampaignPreview> FilterCampaigns(IEnumerable<SukiCampaignPreview> campaigns)
     {
-        var filtered = campaigns
-            .Where(campaign => IsCampaignAllowed(campaign.Id))
-            .ToArray();
-        return filtered.Length > 0 ? filtered : campaigns.ToArray();
+        return campaigns.ToArray();
+    }
+
+    public static IReadOnlyList<SukiCampaignPreview> FilterCampaigns(
+        IEnumerable<SukiCampaignPreview> campaigns,
+        RhodesDistributionProfile distributionProfile)
+    {
+        var available = campaigns.ToArray();
+        return distributionProfile.IsPublicDebug ? FilterCampaigns(available) : available;
     }
 
     public static IReadOnlyList<MaaResourceProfilePreview> FilterProfiles(IEnumerable<MaaResourceProfilePreview> profiles)
@@ -54,5 +74,13 @@ public static class RhodesPublicDebugPolicy
             .Where(byId.ContainsKey)
             .Select(id => byId[id])
             .ToArray();
+    }
+
+    public static IReadOnlyList<MaaResourceProfilePreview> FilterProfiles(
+        IEnumerable<MaaResourceProfilePreview> profiles,
+        RhodesDistributionProfile distributionProfile)
+    {
+        var available = profiles.ToArray();
+        return distributionProfile.IsPublicDebug ? FilterProfiles(available) : available;
     }
 }

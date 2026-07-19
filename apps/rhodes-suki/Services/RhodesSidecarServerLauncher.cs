@@ -9,8 +9,14 @@ namespace RhodesSuki.Services;
 /// </summary>
 public sealed class RhodesSidecarServerLauncher : IDisposable
 {
+    private readonly RhodesNodeRuntimeManager _nodeRuntime;
     private Process? _process;
     private string _lastError = "";
+
+    public RhodesSidecarServerLauncher(RhodesNodeRuntimeManager? nodeRuntime = null)
+    {
+        _nodeRuntime = nodeRuntime ?? new RhodesNodeRuntimeManager();
+    }
 
     public bool IsOwnedProcessRunning => _process is { HasExited: false };
 
@@ -70,11 +76,19 @@ public sealed class RhodesSidecarServerLauncher : IDisposable
         }
 
         var port = ResolvePort(apiUrl);
+        var nodeExecutable = _nodeRuntime.ResolveNodeExecutable();
+        if (string.IsNullOrWhiteSpace(nodeExecutable))
+        {
+            return new RhodesSidecarLaunchResult(
+                false,
+                "Node.jsが見つかりません。出力画面の「Node.js導入」を実行してください。");
+        }
+
         try
         {
             var startInfo = new ProcessStartInfo
             {
-                FileName = "node",
+                FileName = nodeExecutable,
                 WorkingDirectory = Path.GetDirectoryName(Path.GetDirectoryName(script)) ?? "",
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -105,7 +119,7 @@ public sealed class RhodesSidecarServerLauncher : IDisposable
         {
             return new RhodesSidecarLaunchResult(
                 false,
-                $"起動失敗: {ex.Message} / Node.js が必要です。手動起動: npm run dev");
+                $"起動失敗: {ex.Message} / Node.js状態を確認し、再導入してください。");
         }
     }
 

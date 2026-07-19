@@ -335,20 +335,38 @@ foreach ($campaign in $Campaigns) {
       $category = Clean-WikiText $matches.cat
       continue
     }
-    if ($line -match '^#shadowheader\(3,(?:(?:No\.(?<num>\d+))|(?<code>PCS\d+))\s*(?<name>.*?)(?:\s*\[#(?<anchor>[^\]]+)\])?\)$') {
-      $isNumberedRelic = $matches.ContainsKey('num') -and -not [string]::IsNullOrWhiteSpace($matches.num)
-      $num = if ($isNumberedRelic) { [int]$matches.num } else { $null }
-      $code = if ($matches.ContainsKey('code') -and -not [string]::IsNullOrWhiteSpace($matches.code)) { $matches.code } else { $null }
-      $relicName = Clean-WikiText $matches.name
-      $anchor = if ($matches.ContainsKey('anchor') -and -not [string]::IsNullOrWhiteSpace($matches.anchor)) { $matches.anchor } elseif ($isNumberedRelic) { 'No' + $num } else { $code }
+    $headerLineIndex = $ri
+    $headerMatch = [regex]::Match($line, '^#shadowheader\(3,(?:(?:No\.(?<num>\d+))|(?<code>PCS\d+))\s*(?<name>.*?)(?:\s*\[#(?<anchor>[^\]]+)\])?\)$')
+    $fallbackNumber = $null
+    $fallbackName = $null
+    if (-not $headerMatch.Success) {
+      $anchorMatch = [regex]::Match($line, '^#aname\(No(?<num>\d+)\)$')
+      if ($anchorMatch.Success -and $ri + 1 -lt $relicLines.Count) {
+        $nextLine = $relicLines[$ri + 1].Trim()
+        $fallbackHeader = [regex]::Match($nextLine, '^#shadowheader\(3,(?<name>[^\)]+)\)$')
+        if ($fallbackHeader.Success -and $fallbackHeader.Groups['name'].Value -notmatch '^(?:No\.|PCS\d+)') {
+          $fallbackNumber = [int]$anchorMatch.Groups['num'].Value
+          $fallbackName = $fallbackHeader.Groups['name'].Value
+          $headerLineIndex = $ri + 1
+        }
+      }
+    }
+
+    if ($headerMatch.Success -or $null -ne $fallbackNumber) {
+      $isNumberedRelic = $null -ne $fallbackNumber -or -not [string]::IsNullOrWhiteSpace($headerMatch.Groups['num'].Value)
+      $num = if ($null -ne $fallbackNumber) { $fallbackNumber } elseif ($isNumberedRelic) { [int]$headerMatch.Groups['num'].Value } else { $null }
+      $code = if ($headerMatch.Success -and -not [string]::IsNullOrWhiteSpace($headerMatch.Groups['code'].Value)) { $headerMatch.Groups['code'].Value } else { $null }
+      $relicName = Clean-WikiText $(if ($null -ne $fallbackNumber) { $fallbackName } else { $headerMatch.Groups['name'].Value })
+      $explicitAnchor = if ($headerMatch.Success) { $headerMatch.Groups['anchor'].Value } else { $null }
+      $anchor = if (-not [string]::IsNullOrWhiteSpace($explicitAnchor)) { $explicitAnchor } elseif ($isNumberedRelic) { 'No' + $num } else { $code }
       $blockEnd = $relicLines.Count - 1
-      for ($bi = $ri + 1; $bi -lt $relicLines.Count; $bi++) {
-        if ($relicLines[$bi].Trim() -match '^#shadowheader\(3,(?:No\.|PCS\d+)') {
+      for ($bi = $headerLineIndex + 1; $bi -lt $relicLines.Count; $bi++) {
+        if ($relicLines[$bi].Trim() -match '^(?:#aname\(No\d+\)|#shadowheader\(3,(?:No\.|PCS\d+))') {
           $blockEnd = $bi - 1
           break
         }
       }
-      $details = Get-RelicDetailsFromBlock $relicLines[$ri..$blockEnd]
+      $details = Get-RelicDetailsFromBlock $relicLines[$headerLineIndex..$blockEnd]
 
       if ($isNumberedRelic) { $numbers.Add($num) }
       $idSuffix = if ($isNumberedRelic) { '{0:D3}' -f $num } else { $code.ToLowerInvariant() }

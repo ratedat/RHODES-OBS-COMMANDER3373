@@ -179,6 +179,9 @@ public static class RhodesStateApiClient
         preferences["sukiOutputSeparateWindow"] = outputPreferences.SeparateWindow;
         preferences["sukiOutputTransparentBackground"] = outputPreferences.TransparentBackground;
         preferences["sukiOutputParts"] = ToOutputPartsJson(outputPreferences.Parts);
+        preferences["sukiOverlayLayout"] = ToOverlayLayoutJson(
+            RhodesOverlayLayoutCatalog.Normalize(outputPreferences.OverlayLayout));
+        ApplySarkazSpecialOverlayPreference(root, outputPreferences.Parts);
 
         var currentMode = JsonString(root, "mode");
         if (outputPreferences.TournamentMode)
@@ -189,6 +192,36 @@ public static class RhodesStateApiClient
         RhodesRunStateStore.PruneAbandonedRunValues(root);
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
         return root.ToJsonString(IndentedWriteOptions);
+    }
+
+    private static void ApplySarkazSpecialOverlayPreference(
+        JsonObject root,
+        IReadOnlyList<SukiOutputPartState> outputParts)
+    {
+        var specialPart = outputParts.FirstOrDefault(part =>
+            part.Id.Equals("special", StringComparison.OrdinalIgnoreCase));
+        if (specialPart is null)
+            return;
+
+        var run = root["run"] as JsonObject;
+        if (run is null || !JsonString(run, "campaignId").Equals(RhodesPublicDebugPolicy.SarkazCampaignId, StringComparison.Ordinal))
+            return;
+
+        var special = run["special"] as JsonObject;
+        if (special is null)
+        {
+            special = [];
+            run["special"] = special;
+        }
+
+        var campaign = special[RhodesPublicDebugPolicy.SarkazCampaignId] as JsonObject;
+        if (campaign is null)
+        {
+            campaign = [];
+            special[RhodesPublicDebugPolicy.SarkazCampaignId] = campaign;
+        }
+
+        campaign["thoughtOverlayVisible"] = specialPart.Enabled;
     }
 
     public static string ClearCurrentRunInStateJson(string stateJson)
@@ -205,9 +238,31 @@ public static class RhodesStateApiClient
         {
             run.Remove(propertyName);
         }
+        RhodesRunStateStore.ClearBossSelectionsForCampaign(root, JsonString(run, "campaignId"));
+        root["bossFlags"] = new JsonArray();
         root["operators"] = new JsonArray();
         root["relics"] = new JsonArray();
+        root["usedRelicIds"] = new JsonArray();
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
+        return root.ToJsonString(IndentedWriteOptions);
+    }
+
+    public static string ApplyBossSelectionToStateJson(
+        string stateJson,
+        string campaignId,
+        string field,
+        IEnumerable<string> selectedIds,
+        bool allowsMultiple)
+    {
+        var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson) as JsonObject
+            ?? new JsonObject { ["version"] = 1 };
+        RhodesRunStateStore.ApplyBossSelection(
+            root,
+            campaignId,
+            field,
+            selectedIds,
+            allowsMultiple,
+            DateTimeOffset.UtcNow);
         return root.ToJsonString(IndentedWriteOptions);
     }
 
@@ -236,6 +291,26 @@ public static class RhodesStateApiClient
                 ["hideExcluded"] = part.HideExcluded,
                 ["width"] = Math.Max(1, part.Width),
                 ["height"] = Math.Max(1, part.Height),
+            });
+        }
+
+        return array;
+    }
+
+    private static JsonArray ToOverlayLayoutJson(IEnumerable<SukiOverlayLayoutState> parts)
+    {
+        var array = new JsonArray();
+        foreach (var part in parts)
+        {
+            array.Add(new JsonObject
+            {
+                ["id"] = part.Id,
+                ["enabled"] = part.Enabled,
+                ["x"] = part.X,
+                ["y"] = part.Y,
+                ["width"] = part.Width,
+                ["height"] = part.Height,
+                ["zIndex"] = part.ZIndex,
             });
         }
 

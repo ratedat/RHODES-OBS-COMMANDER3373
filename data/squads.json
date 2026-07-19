@@ -1,8 +1,8 @@
 {
     "meta":  {
-                 "generatedAt":  "2026-06-22",
+                 "generatedAt":  "2026-07-18",
                  "source":  "arknights.wikiru.jp PukiWiki source pages",
-                 "note":  "Extracted for OBS overlay state display. Relics keep names/categories only; long guide text and images are not copied."
+                 "note":  "Extracted for OBS overlay state display. Relics include names, categories, prices, exchange flags, base effect text, and flavor text. Difficulty-dependent variants are generated separately."
              },
     "squads":  [
                    {
@@ -839,37 +839,46 @@
                                     ]
                    },
                    {
-                       "id":  "is6_sui_squad_11",
-                       "campaignId":  "is6_sui",
-                       "name":  "観光客分隊",
-                       "effect":  "銭匣容量+1、振り銭の際に通宝を追加で1枚振り出す",
-                       "upgrades":  [
-                                        {
-                                            "effect":  "銭匣容量+2[+1]、遊覧券+3、振り銭の際に通宝を追加で2枚[+1]振り出す"
-                                        }
-                                    ]
+                       "id": "is6_sui_squad_11",
+                       "campaignId": "is6_sui",
+                       "name": "観光客分隊",
+                       "effect": "銭匣容量+1、振り銭の際に通宝を追加で1枚振り出す",
+                       "upgrades": [
+                           {
+                               "effect": "銭匣容量+2[+1]、遊覧券+3、振り銭の際に通宝を追加で2枚[+1]振り出す"
+                           },
+                           {
+                               "effect": "銭匣容量+2、遊覧券+4[+1]、振り銭の際に通宝を追加で3枚[+2]振り出す。初めから通宝「花-烽火台」を所持"
+                           }
+                       ]
                    },
                    {
-                       "id":  "is6_sui_squad_12",
-                       "campaignId":  "is6_sui",
-                       "name":  "司歳台分隊",
-                       "effect":  "招集券保留数上限+1、新エリアに入るたび、招集券保留数が上限に達していない場合、ランダムな招集券を1枚獲得し、保留する",
-                       "upgrades":  [
-                                        {
-                                            "effect":  "招集券保留数上限+2[+1]、新エリアに入るたび、招集券保留数が上限に達していない場合、ランダムな招集券を1枚獲得し、保留する"
-                                        }
-                                    ]
+                       "id": "is6_sui_squad_12",
+                       "campaignId": "is6_sui",
+                       "name": "司歳台分隊",
+                       "effect": "招集券保留数上限+1、新エリアに入るたび、招集券保留数が上限に達していない場合、ランダムな招集券を1枚獲得し、保留する",
+                       "upgrades": [
+                           {
+                               "effect": "招集券保留数上限+2[+1]、新エリアに入るたび、招集券保留数が上限に達していない場合、ランダムな招集券を1枚獲得し、保留する"
+                           },
+                           {
+                               "effect": "招集券保留上限+3[+2]、新エリアに入るたび、招集券保留数が上限に達していない場合、ランダムな上級招集券を2枚獲得し、保留する。【燭火の導き】に入るたび、希望+2"
+                           }
+                       ]
                    },
                    {
-                       "id":  "is6_sui_squad_13",
-                       "campaignId":  "is6_sui",
-                       "name":  "天師府分隊",
-                       "effect":  "第二、第四エリアで【歳獣の残識】に入った際、燭火+1。【安全な片隅】から【歳獣の残識】に入れるようになる",
-                       "upgrades":  [
-                                        {
-                                            "effect":  "%%第二、第四エリアで%%【歳獣の残識】に入るたび、燭火+1。【安全な片隅】から【歳獣の残識】に入れるようになる"
-                                        }
-                                    ]
+                       "id": "is6_sui_squad_13",
+                       "campaignId": "is6_sui",
+                       "name": "天師府分隊",
+                       "effect": "第二、第四エリアで【歳獣の残識】に入った際、燭火+1。【安全な片隅】から【歳獣の残識】に入れるようになる",
+                       "upgrades": [
+                           {
+                               "effect": "%%第二、第四エリアで%%【歳獣の残識】に入るたび、燭火+1。【安全な片隅】から【歳獣の残識】に入れるようになる"
+                           },
+                           {
+                               "effect": "【歳獣の残識】に入るたび、燭火+2[+1]。【安全な片隅】から【歳獣の残識】に入れるようになる。【拾遺】【伝説】【雑疑】【禍乱】をそれぞれ全て通過するごとに秘宝を獲得"
+                           }
+                       ]
                    },
                    {
                        "id":  "is6_sui_squad_14",
@@ -984,6 +993,27 @@
                                                        "effect":  "初期耐久値が1になる。スポットを通過するたびに、耐久値-1（1以下にはならない）。全てのオペレーターの攻撃力+25%、攻撃速度+25、最大HP+50%、ブロック数+1"
                                                    }
                                                ]
+                   },
+                   {
+                       "id": "is6_sui_squad_17",
+                       "campaignId": "is6_sui",
+                       "name": "代理人分隊",
+                       "effect": "一部の非戦闘スポットに追加の選択肢が出現。非戦闘スポット・【雑疑】を通過するたび、一定確率で希望、最大耐久値、招集券保留上限、源石錐のいずれかが+1",
+                       "upgrades": []
+                   },
+                   {
+                       "id": "is6_sui_squad_18",
+                       "campaignId": "is6_sui",
+                       "name": "知学分隊",
+                       "effect": "初期招集時、上級エリート招集券を追加で1枚獲得し、【怪しい旅商人】で上級エリート招集券が販売される。初めから通宝「聖詔神を封ず」を所持",
+                       "upgrades": []
+                   },
+                   {
+                       "id": "is6_sui_squad_19",
+                       "campaignId": "is6_sui",
+                       "name": "商人分隊",
+                       "effect": "通宝交換時に源石錐+3。【怪しい旅商人】に必ず縦のパスが出現し、商品価格-50％。初めから通宝「触鎖の代幣」を所持",
+                       "upgrades": []
                    }
                ]
 }

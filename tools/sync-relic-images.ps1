@@ -72,13 +72,24 @@ function Get-ImageMapForCampaign($Campaign) {
   for ($i = 0; $i -lt $lines.Count; $i++) {
     $line = $lines[$i].Trim()
     $header = [regex]::Match($line, '^#shadowheader\(3,(?<label>No\.?\d+|PCS\d+)')
-    if (-not $header.Success) { continue }
-    $anchor = Normalize-Anchor $header.Groups['label'].Value
-    $end = $lines.Count - 1
-    for ($j = $i + 1; $j -lt $lines.Count; $j++) {
-      if ($lines[$j].Trim() -match '^#shadowheader\(3,(?:No\.?\d+|PCS\d+)') { $end = $j - 1; break }
+    $blockStart = $i
+    $anchor = if ($header.Success) { Normalize-Anchor $header.Groups['label'].Value } else { $null }
+    if (-not $header.Success) {
+      $anchorMatch = [regex]::Match($line, '^#aname\((?<label>No\d+)\)$')
+      if ($anchorMatch.Success -and $i + 1 -lt $lines.Count) {
+        $nextHeader = [regex]::Match($lines[$i + 1].Trim(), '^#shadowheader\(3,(?<name>[^\)]+)\)$')
+        if ($nextHeader.Success -and $nextHeader.Groups['name'].Value -notmatch '^(?:No\.|PCS\d+)') {
+          $anchor = Normalize-Anchor $anchorMatch.Groups['label'].Value
+          $blockStart = $i + 1
+        }
+      }
     }
-    $block = ($lines[$i..$end] -join "`n")
+    if ([string]::IsNullOrWhiteSpace($anchor)) { continue }
+    $end = $lines.Count - 1
+    for ($j = $blockStart + 1; $j -lt $lines.Count; $j++) {
+      if ($lines[$j].Trim() -match '^(?:#aname\(No\d+\)|#shadowheader\(3,(?:No\.?\d+|PCS\d+))') { $end = $j - 1; break }
+    }
+    $block = ($lines[$blockStart..$end] -join "`n")
     $image = [regex]::Match($block, '&(?:attachref|ref)\((?<path>img/[^,\);\s]+)')
     if ($image.Success) {
       Add-ImageMapEntry $map $Campaign.id $anchor $image.Groups['path'].Value

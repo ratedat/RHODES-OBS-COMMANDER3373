@@ -34,8 +34,16 @@ test("MAA recognition policy defines the retained run target boundary once", () 
   assert.deepEqual(retainedRunStatusFields, manifest.runRecognition.retainedFields);
   assert.deepEqual(retainedRunRecognitionIds, manifest.runRecognition.retainedIds);
   assert.deepEqual(abandonedRunFieldIds, manifest.runRecognition.abandonedFields);
-  assert.deepEqual(retainedCandidateKinds, ["runStatus", "operator", "relic", "thought", "age", "revelation", "coin"]);
-  assert.deepEqual(retainedRunStatusFields, ["ingot", "difficulty", "squadId", "squadRandomEffectOptionId", "idea"]);
+  assert.deepEqual(retainedCandidateKinds, ["runStatus", "operator", "relic", "thought", "age", "mizuki", "revelation", "coin"]);
+  assert.deepEqual(retainedRunStatusFields, [
+    "ingot",
+    "difficulty",
+    "squadId",
+    "squadRandomEffectOptionId",
+    "idea",
+    "performanceId",
+    "hallucinations",
+  ]);
   assert.deepEqual(maaRecognitionIdTokens("RhodesOcrRegion_run_command_level"), [
     "rhodes",
     "ocr",
@@ -108,4 +116,37 @@ test("MAA resource generator refuses abandoned run value targets even if source 
   assert.equal(pipeline.RhodesTemplate_runStatusFull_run_top_hope, undefined);
   assert.equal(pipeline.RhodesOcrRegion_run_ingot.recognition, "OCR");
   assert.equal(pipeline.RhodesTemplate_runStatusFull_run_ingot.recognition, "TemplateMatch");
+});
+
+test("MAA resource generator batches ordered squad templates into one Or recognition", () => {
+  const pipeline = generatePipeline({
+    maaTasks: {},
+    scanProfiles: {
+      profiles: [
+        {
+          id: "runStatusFull",
+          templateOcrRegions: [
+            {
+              idPrefix: "run.squad.icon.is5_sarkaz.batch",
+              templatePaths: [
+                "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_01.png",
+                "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_02.png",
+              ],
+              templateIds: ["is5_sarkaz_squad_01", "is5_sarkaz_squad_02"],
+              searchRoi: { x: 58, y: 632, width: 50, height: 88 },
+              threshold: 0.72,
+              method: 5,
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  const node = pipeline.RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch;
+  assert.equal(node.recognition, "Or");
+  assert.equal(node.any_of.length, 2);
+  assert.equal(node.any_of[1].recognition, "TemplateMatch");
+  assert.equal(node.any_of[1].template, "run/SquadIconRight_is5_sarkaz_squad_02.png");
+  assert.deepEqual(node.attach.templateIds, ["is5_sarkaz_squad_01", "is5_sarkaz_squad_02"]);
 });

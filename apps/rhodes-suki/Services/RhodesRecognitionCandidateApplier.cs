@@ -7,6 +7,9 @@ namespace RhodesSuki.Services;
 
 public static class RhodesRecognitionCandidateApplier
 {
+    public const string NoAgeId = "__none__";
+    public const string NoMizukiSelectionId = "__none__";
+    private const string Is3CampaignId = "is3_mizuki";
     private const string Is4CampaignId = "is4_sami";
     private const string Is5CampaignId = "is5_sarkaz";
     private const string Is6CampaignId = "is6_sui";
@@ -35,6 +38,58 @@ public static class RhodesRecognitionCandidateApplier
         return Apply(state, candidates, now, runStatusOnly: false);
     }
 
+    public static MaaCandidatePreview CreateNoAgeCandidate() => new(
+        "age",
+        "時代なし",
+        NoAgeId,
+        "時代未検出",
+        1.0,
+        CampaignId: Is5CampaignId,
+        RecognitionKey: "maa-local:age:none",
+        AgeId: NoAgeId);
+
+    public static MaaCandidatePreview CreateNoHallucinationCandidate() => new(
+        "runStatus",
+        "幻覚なし",
+        "",
+        "幻覚未検出",
+        1.0,
+        Field: "hallucinations",
+        CampaignId: "is2_phantom",
+        RecognitionKey: "maa-local:hallucinations:none");
+
+    public static MaaCandidatePreview CreateNoPerformanceCandidate() => new(
+        "runStatus",
+        "演目なし",
+        "",
+        "演目未検出",
+        1.0,
+        Field: "performanceId",
+        CampaignId: "is2_phantom",
+        RecognitionKey: "maa-local:performance:none");
+
+    public static MaaCandidatePreview CreateNoMizukiHordeCallCandidate() => new(
+        "mizuki",
+        "大群の呼び声なし",
+        NoMizukiSelectionId,
+        "大群の呼び声未検出",
+        1.0,
+        CampaignId: Is3CampaignId,
+        RecognitionKey: "maa-local:mizuki:horde:none",
+        FieldId: "hordeCalls",
+        EffectId: NoMizukiSelectionId);
+
+    public static MaaCandidatePreview CreateNoMizukiRejectionCandidate() => new(
+        "mizuki",
+        "拒絶反応なし",
+        NoMizukiSelectionId,
+        "拒絶反応未検出",
+        1.0,
+        CampaignId: Is3CampaignId,
+        RecognitionKey: "maa-local:mizuki:rejection:none",
+        FieldId: "rejectionReaction",
+        EffectId: NoMizukiSelectionId);
+
     private static SukiCandidateApplySummary Apply(
         JsonObject state,
         IEnumerable<MaaCandidatePreview> candidates,
@@ -48,6 +103,8 @@ public static class RhodesRecognitionCandidateApplier
         var applied = new List<string>();
         var outcomes = new List<SukiCandidateApplyOutcome>();
         var handledIndexes = ApplyCampaignCandidates(state, candidateList, applied);
+        if (!runStatusOnly)
+            handledIndexes.UnionWith(ApplyIs3SpecialCandidates(state, candidateList, applied));
         if (!runStatusOnly)
             handledIndexes.UnionWith(ApplyIs5SpecialCandidates(state, candidateList, applied));
         foreach (var index in handledIndexes.OrderBy(value => value))
@@ -112,6 +169,14 @@ public static class RhodesRecognitionCandidateApplier
             return $"thought:{CandidateId(candidate.ThoughtId, candidate.Value)}";
         if (CandidateIsKind(candidate, "age"))
             return $"age:{CandidateId(candidate.AgeId, candidate.Value)}";
+        if (CandidateIsKind(candidate, "mizuki"))
+        {
+            var fieldId = string.IsNullOrWhiteSpace(candidate.FieldId) ? "special" : candidate.FieldId.Trim();
+            var value = CandidateId(
+                candidate.OperatorId,
+                CandidateId(candidate.EffectId, candidate.Value));
+            return $"mizuki:{fieldId}:{value}";
+        }
         if (CandidateIsKind(candidate, "revelation"))
             return $"revelation:{CandidateId(candidate.EffectId, candidate.Value)}";
         if (CandidateIsKind(candidate, "coin"))
@@ -133,6 +198,8 @@ public static class RhodesRecognitionCandidateApplier
             return RelicIgnoredReason(state, candidate);
         if (CandidateIsKind(candidate, "thought") || CandidateIsKind(candidate, "age"))
             return Is5SpecialIgnoredReason(candidate);
+        if (CandidateIsKind(candidate, "mizuki"))
+            return MizukiSpecialIgnoredReason(state, candidate);
         if (CandidateIsKind(candidate, "revelation"))
             return "not-is4-or-invalid-revelation-slot";
         if (CandidateIsKind(candidate, "coin"))
@@ -204,6 +271,31 @@ public static class RhodesRecognitionCandidateApplier
             ? CandidateId(candidate.ThoughtId, candidate.Value)
             : CandidateId(candidate.AgeId, candidate.Value);
         return string.IsNullOrWhiteSpace(id) ? "missing-special-id" : "unsupported-is5-special";
+    }
+
+    private static string MizukiSpecialIgnoredReason(JsonObject state, MaaCandidatePreview candidate)
+    {
+        if (!CandidateCampaignIs(candidate, Is3CampaignId))
+            return "campaign-mismatch";
+
+        var run = state["run"] as JsonObject;
+        if (run is not null && !CandidateCampaignMatchesCurrentRun(run, candidate))
+            return "campaign-mismatch";
+
+        if (candidate.FieldId.Equals("rejectionReaction", StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(candidate.OperatorId)
+            && !StringSetContains(state, "operators", candidate.OperatorId))
+        {
+            return "operator-not-recruited";
+        }
+
+        return candidate.FieldId switch
+        {
+            "key" or "light" => "invalid-mizuki-number",
+            "hordeCalls" => "missing-horde-call-id",
+            "rejectionReaction" => "missing-or-conflicting-rejection-data",
+            _ => "unsupported-mizuki-field",
+        };
     }
 
     private static bool StringSetContains(JsonObject state, string propertyName, string value)
@@ -298,7 +390,7 @@ public static class RhodesRecognitionCandidateApplier
             return false;
 
         if (CandidateIsKind(candidate, "operator"))
-            return ApplyStringSetCandidate(state, "operators", candidate.OperatorId, candidate.Value, applied, "operator");
+            return ApplyOperatorCandidate(state, candidate, applied);
 
         if (CandidateIsKind(candidate, "relic"))
             return ApplyRelicCandidate(state, candidate, applied);
@@ -312,6 +404,60 @@ public static class RhodesRecognitionCandidateApplier
         return false;
     }
 
+    private static bool ApplyOperatorCandidate(
+        JsonObject state,
+        MaaCandidatePreview candidate,
+        ICollection<string> applied)
+    {
+        var operatorId = CandidateId(candidate.OperatorId, candidate.Value);
+        if (string.IsNullOrWhiteSpace(operatorId))
+            return false;
+
+        if (!RhodesMaaAmiyaRoleResolver.IsRoleResolvedCandidate(candidate))
+            return ApplyStringSetCandidate(state, "operators", operatorId, string.Empty, applied, "operator");
+
+        var changed = false;
+        var values = new HashSet<string>(StringComparer.Ordinal);
+        var array = new JsonArray();
+        if (state["operators"] is JsonArray existing)
+        {
+            foreach (var item in existing)
+            {
+                var text = item?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+
+                if (RhodesMaaAmiyaRoleResolver.IsAmiyaOperatorId(text)
+                    && !text.Equals(operatorId, StringComparison.Ordinal))
+                {
+                    changed = true;
+                    continue;
+                }
+
+                if (!values.Add(text))
+                {
+                    changed = true;
+                    continue;
+                }
+
+                array.Add(text);
+            }
+        }
+
+        if (values.Add(operatorId))
+        {
+            array.Add(operatorId);
+            changed = true;
+        }
+
+        if (!changed)
+            return false;
+
+        state["operators"] = array;
+        applied.Add($"operator:{operatorId}");
+        return true;
+    }
+
     private static HashSet<int> ApplyIs5SpecialCandidates(
         JsonObject state,
         IReadOnlyList<MaaCandidatePreview> candidates,
@@ -321,6 +467,141 @@ public static class RhodesRecognitionCandidateApplier
         handled.UnionWith(ApplyThoughtCandidates(state, candidates, applied));
         handled.UnionWith(ApplyAgeCandidates(state, candidates, applied));
         return handled;
+    }
+
+    private static HashSet<int> ApplyIs3SpecialCandidates(
+        JsonObject state,
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        ICollection<string> applied)
+    {
+        var run = EnsureObject(state, "run");
+        if (!JsonString(run, "campaignId").Equals(Is3CampaignId, StringComparison.Ordinal))
+            return [];
+
+        var handled = new HashSet<int>();
+        var campaign = EnsureCampaignSpecialFromRun(run, Is3CampaignId);
+        if (campaign is null)
+            return handled;
+
+        foreach (var field in new[] { "key", "light" })
+        {
+            var best = candidates
+                .Select((candidate, index) => (Candidate: candidate, Index: index))
+                .Where(item => CandidateIsKind(item.Candidate, "mizuki")
+                    && item.Candidate.FieldId.Equals(field, StringComparison.Ordinal)
+                    && CandidateCampaignIs(item.Candidate, Is3CampaignId))
+                .Select(item => (item.Candidate, item.Index, Value: ParseMizukiNumber(item.Candidate.Value, field)))
+                .Where(item => item.Value is not null)
+                .OrderByDescending(item => item.Candidate.Confidence ?? 0)
+                .ThenBy(item => item.Index)
+                .FirstOrDefault();
+            if (best.Value is null)
+                continue;
+
+            campaign[field] = best.Value.Value;
+            handled.Add(best.Index);
+            applied.Add($"mizuki:{field}:{best.Value.Value.ToString(CultureInfo.InvariantCulture)}");
+        }
+
+        var horde = candidates
+            .Select((candidate, index) => (Candidate: candidate, Index: index, EffectId: CandidateId(candidate.EffectId, candidate.Value)))
+            .Where(item => CandidateIsKind(item.Candidate, "mizuki")
+                && item.Candidate.FieldId.Equals("hordeCalls", StringComparison.Ordinal)
+                && CandidateCampaignIs(item.Candidate, Is3CampaignId)
+                && !string.IsNullOrWhiteSpace(item.EffectId))
+            .ToArray();
+        if (horde.Length > 0)
+        {
+            var hordeCalls = new JsonArray();
+            foreach (var effectId in horde.Select(item => item.EffectId)
+                .Where(effectId => !effectId.Equals(NoMizukiSelectionId, StringComparison.Ordinal))
+                .Distinct(StringComparer.Ordinal))
+            {
+                hordeCalls.Add(effectId);
+            }
+            campaign["hordeCalls"] = hordeCalls;
+            foreach (var item in horde)
+            {
+                handled.Add(item.Index);
+                applied.Add($"mizuki:hordeCalls:{item.EffectId}");
+            }
+        }
+
+        var recognizedOperatorIds = candidates
+            .Where(candidate => CandidateIsKind(candidate, "operator"))
+            .Select(candidate => CandidateId(candidate.OperatorId, candidate.Value))
+            .Where(operatorId => !string.IsNullOrWhiteSpace(operatorId))
+            .ToHashSet(StringComparer.Ordinal);
+        var targetRows = candidates
+            .Select((candidate, index) => (Candidate: candidate, Index: index, OperatorId: candidate.OperatorId.Trim()))
+            .Where(item => CandidateIsKind(item.Candidate, "mizuki")
+                && item.Candidate.FieldId.Equals("rejectionReaction", StringComparison.Ordinal)
+                && CandidateCampaignIs(item.Candidate, Is3CampaignId)
+                && !string.IsNullOrWhiteSpace(item.OperatorId)
+                && (StringSetContains(state, "operators", item.OperatorId)
+                    || recognizedOperatorIds.Contains(item.OperatorId)))
+            .ToArray();
+
+        var rejection = candidates
+            .Select((candidate, index) => (Candidate: candidate, Index: index, EffectId: CandidateId(candidate.EffectId, candidate.Value)))
+            .Where(item => CandidateIsKind(item.Candidate, "mizuki")
+                && item.Candidate.FieldId.Equals("rejectionReaction", StringComparison.Ordinal)
+                && CandidateCampaignIs(item.Candidate, Is3CampaignId)
+                && !string.IsNullOrWhiteSpace(item.Candidate.EffectId)
+                && !string.IsNullOrWhiteSpace(item.EffectId))
+            .OrderByDescending(item => item.Candidate.Confidence ?? 0)
+            .ThenBy(item => item.Index)
+            .FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(rejection.EffectId))
+        {
+            if (rejection.EffectId.Equals(NoMizukiSelectionId, StringComparison.Ordinal))
+            {
+                campaign.Remove("rejectionReaction");
+                handled.Add(rejection.Index);
+                applied.Add("mizuki:rejectionReaction:none");
+                return handled;
+            }
+
+            var operatorIds = new JsonArray();
+            foreach (var operatorId in targetRows.Select(item => item.OperatorId).Distinct(StringComparer.Ordinal))
+                operatorIds.Add(operatorId);
+            campaign["rejectionReaction"] = new JsonObject
+            {
+                ["effectId"] = rejection.EffectId,
+                ["operatorIds"] = operatorIds,
+            };
+            handled.Add(rejection.Index);
+            applied.Add($"mizuki:rejectionReaction:{rejection.EffectId}");
+            foreach (var target in targetRows)
+            {
+                handled.Add(target.Index);
+                applied.Add($"mizuki:rejectionReaction:operator:{target.OperatorId}");
+            }
+        }
+        else if (targetRows.Length > 0
+            && campaign["rejectionReaction"] is JsonObject existingRejection
+            && !string.IsNullOrWhiteSpace(JsonString(existingRejection, "effectId")))
+        {
+            var operatorIds = new JsonArray();
+            foreach (var operatorId in targetRows.Select(item => item.OperatorId).Distinct(StringComparer.Ordinal))
+                operatorIds.Add(operatorId);
+            existingRejection["operatorIds"] = operatorIds;
+            foreach (var target in targetRows)
+            {
+                handled.Add(target.Index);
+                applied.Add($"mizuki:rejectionReaction:operator:{target.OperatorId}");
+            }
+        }
+
+        return handled;
+    }
+
+    private static int? ParseMizukiNumber(string value, string field)
+    {
+        if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
+            return null;
+        var maximum = field.Equals("light", StringComparison.Ordinal) ? 100 : 99;
+        return number is >= 0 && number <= maximum ? number : null;
     }
 
     private static bool ApplyRunStatusCandidate(JsonObject state, MaaCandidatePreview candidate, ICollection<string> applied)
@@ -344,6 +625,10 @@ public static class RhodesRecognitionCandidateApplier
                 return ApplyString(run, field, candidate.Value, applied, clearSquad: true);
             case "squadRandomEffectOptionId":
                 return ApplyString(run, field, candidate.Value, applied);
+            case "performanceId":
+                return ApplyNullableString(run, field, candidate.Value, applied);
+            case "hallucinations":
+                return ApplyPhantomHallucinations(run, candidate, applied);
             case "campaignId":
                 return ApplyCampaignContextCandidate(state, candidate, applied);
             case "idea":
@@ -391,6 +676,35 @@ public static class RhodesRecognitionCandidateApplier
             run["squadRandomEffectOptionId"] = null;
         }
         applied.Add(field);
+        return true;
+    }
+
+    private static bool ApplyNullableString(JsonObject run, string field, string value, ICollection<string> applied)
+    {
+        var text = value.Trim();
+        if (string.IsNullOrWhiteSpace(text))
+            run.Remove(field);
+        else
+            run[field] = text;
+        applied.Add(field);
+        return true;
+    }
+
+    private static bool ApplyPhantomHallucinations(
+        JsonObject run,
+        MaaCandidatePreview candidate,
+        ICollection<string> applied)
+    {
+        if (!JsonString(run, "campaignId").Equals("is2_phantom", StringComparison.Ordinal))
+            return false;
+
+        var campaign = EnsureObject(EnsureObject(run, "special"), "is2_phantom");
+        var values = RhodesHallucinationCatalog.NormalizeRecognizedNames([candidate.Value]);
+        if (values.Count == 0)
+            campaign.Remove("hallucinations");
+        else
+            campaign["hallucinations"] = new JsonArray(values.Select(value => JsonValue.Create(value)).ToArray());
+        applied.Add("hallucinations");
         return true;
     }
 
@@ -471,6 +785,7 @@ public static class RhodesRecognitionCandidateApplier
             });
         }
         campaign["thought"] = thought;
+        campaign["thoughtOverlayVisible"] = true;
 
         var handled = new HashSet<int>();
         foreach (var item in valid)
@@ -512,8 +827,9 @@ public static class RhodesRecognitionCandidateApplier
             .OrderByDescending(item => item.Candidate.Confidence ?? 0)
             .ThenBy(item => item.Index)
             .First();
-        var resolvedAgeId = ResolveAgeVariantId(best.AgeId, RunDifficulty(run));
-        campaign["age"] = resolvedAgeId;
+        campaign["age"] = best.AgeId.Equals(NoAgeId, StringComparison.Ordinal)
+            ? null
+            : ResolveAgeVariantId(best.AgeId, RunDifficulty(run));
 
         var handled = new HashSet<int>();
         foreach (var item in valid)
@@ -554,7 +870,56 @@ public static class RhodesRecognitionCandidateApplier
             return false;
         }
 
-        return ApplyStringSetCandidate(state, "relics", candidate.RelicId, candidate.Value, applied, "relic");
+        var relicId = CandidateId(candidate.RelicId, candidate.Value);
+        var ownedChanged = ApplyStringSetCandidate(state, "relics", relicId, "", applied, "relic");
+        var usageChanged = ApplyRelicUsageState(state, candidate, relicId, applied);
+        return ownedChanged || usageChanged;
+    }
+
+    private static bool ApplyRelicUsageState(
+        JsonObject state,
+        MaaCandidatePreview candidate,
+        string relicId,
+        ICollection<string> applied)
+    {
+        var usageState = candidate.StateId.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(relicId)
+            || usageState is not ("used" or "unused")
+            || !RhodesRelicUsagePolicy.SupportsUsedFlag(candidate.Label))
+        {
+            return false;
+        }
+
+        var orderedIds = new List<string>();
+        var usedIds = new HashSet<string>(StringComparer.Ordinal);
+        if (state["usedRelicIds"] is JsonArray existing)
+        {
+            foreach (var item in existing)
+            {
+                var value = item?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(value) || !usedIds.Add(value))
+                    continue;
+                orderedIds.Add(value);
+            }
+        }
+
+        var changed = usageState == "used"
+            ? usedIds.Add(relicId)
+            : usedIds.Remove(relicId);
+        if (!changed)
+            return false;
+
+        if (usageState == "used")
+            orderedIds.Add(relicId);
+        else
+            orderedIds.RemoveAll(id => id.Equals(relicId, StringComparison.Ordinal));
+
+        var array = new JsonArray();
+        foreach (var id in orderedIds)
+            array.Add(id);
+        state["usedRelicIds"] = array;
+        applied.Add($"relic-usage:{relicId}:{usageState}");
+        return true;
     }
 
     private static bool ApplyRevelationCandidate(JsonObject state, MaaCandidatePreview candidate, ICollection<string> applied)
@@ -828,7 +1193,18 @@ public static class RhodesRecognitionCandidateApplier
     private static void ResetRunValues(JsonObject run)
     {
         // difficultyTierId は difficulty からの導出値なので、等級と一緒に破棄する。
-        foreach (var propertyName in new[] { "squad", "difficulty", "difficultyTierId", "ingot", "idea", "special" }
+        foreach (var propertyName in new[]
+            {
+                "squad",
+                "squadId",
+                "squadRandomEffectOptionId",
+                "performanceId",
+                "difficulty",
+                "difficultyTierId",
+                "ingot",
+                "idea",
+                "special",
+            }
             .Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {
             run.Remove(propertyName);

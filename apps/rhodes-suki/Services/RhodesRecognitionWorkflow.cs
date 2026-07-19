@@ -64,7 +64,8 @@ public static class RhodesRecognitionWorkflow
     public static RhodesRecognitionCandidateConversionResult ConvertCandidates(
         string? profileId,
         IEnumerable<MaaTaskRunResult> taskResults,
-        RhodesMaaCandidateApiResult apiResult)
+        RhodesMaaCandidateApiResult apiResult,
+        string? activeCampaignId = null)
     {
         var results = taskResults as IReadOnlyList<MaaTaskRunResult> ?? taskResults.ToArray();
         if (results.Count == 0)
@@ -80,7 +81,7 @@ public static class RhodesRecognitionWorkflow
                 apiResult.Error);
         }
 
-        var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(profileId, results);
+        var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(profileId, results, activeCampaignId);
         if (apiResult.HasCandidates)
         {
             var merged = RhodesMaaCandidateMerger.Merge(apiResult.Candidates, localCandidates);

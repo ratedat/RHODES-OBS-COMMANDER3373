@@ -11,11 +11,22 @@ public static class RhodesWorkspaceLayoutRegistry
             new SukiWorkspaceSectionPreview(
                 "run",
                 "ラン取得値",
-                "源石錐・等級・分隊とIS固有値をここでレビューします。"),
+                "源石錐・等級・分隊、ボスと現在の統合戦略をレビューします。"),
             [
                 new SukiWorkspaceSectionPreview("values", "共通取得値", "源石錐、等級、分隊など、全ISで保持する取得値です。"),
-                new SukiWorkspaceSectionPreview("special", "IS固有値", "思案、啓示、灯火など、現在ISだけが持つ値です。"),
+                new SukiWorkspaceSectionPreview("boss", "ボス選択", "到達したボスを選択し、ラン状態とOBS表示へ反映します。"),
                 new SukiWorkspaceSectionPreview("campaign", "IS切替", "現在ランの統合戦略とキャンペーン固有フィールドを切り替えます。"),
+            ]),
+        new(
+            "special",
+            new SukiWorkspaceSectionPreview(
+                "special",
+                "IS特殊値",
+                "現在の統合戦略に応じて、思案・銭・啓示などの固有値を管理します。"),
+            [
+                new SukiWorkspaceSectionPreview("values", "現在の特殊値", "選択中の統合戦略が持つ固有値と認識プロファイルです。"),
+                new SukiWorkspaceSectionPreview("manual", "手動入力", "ADBを利用できない大会運用向けに固有値を直接編集します。"),
+                new SukiWorkspaceSectionPreview("recognition", "特殊値認識", "現在の統合戦略に対応するMAA-OCRプロファイルを実行します。"),
             ]),
         new(
             "choices",

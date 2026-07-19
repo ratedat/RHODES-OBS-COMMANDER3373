@@ -12,6 +12,7 @@ const excludedPortableEntries = new Set([
   "RHODES OBS COMMANDER3373 Debug Logs",
   "glm-ocr-runtime",
   "ollama-runtime",
+  "nodejs-runtime",
 ]);
 
 function run(command, args, options = {}) {
@@ -73,6 +74,8 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
     ["THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"],
     ["docs/adb-setup.md", "docs/adb-setup.md"],
     ["docs/debugger-adb-report-guide.md", "docs/debugger-adb-report-guide.md"],
+    ["docs/discord-public-debug-guide.md", "docs/discord-public-debug-guide.md"],
+    ["docs/discord-public-debug-guide.md", "DISCORD_USAGE.md"],
     ["docs/sarkaz-test-guide.md", "docs/sarkaz-test-guide.md"],
   ];
   for (const [source, target] of copies) {
@@ -88,16 +91,17 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
 1. ZIPをすべて展開します。ZIP内から直接起動しないでください。
 2. \`RhodesSuki.exe\` を実行します。
 3. 「ランタイム」でADBを自動検出し、「接続・撮影」で1280x720の画像が取得できることを確認します。
-4. 上部の「ADB取得・認識・反映」または各認識画面を実行します。
+4. 「ラン」または「選択」画面の認識ボタンを実行します。
 
 ## 不具合報告
 
-「デバッグ」→「バグ報告ZIP」→「作成」を押し、生成されたZIPを報告へ添付してください。
+画面上部の「報告ZIP」を押し、生成されたZIPを報告へ添付してください。
 過去ログ、個人設定、GLM/Ollama本体やモデルはこの配布ZIPに含めていません。
 
 ## OBS Overlay / Sidecar
 
-OBS出力を使う場合はNode.js 22以降が別途必要です。「出力」画面で配信サーバーを起動し、Overlay URLをOBSブラウザソースへ追加します。
+OBS出力を使う場合は「出力」画面の「Node.js導入」から管理版Node.jsを任意導入できます。インストーラーや管理者権限は不要です。
+導入後に配信サーバーを起動し、Overlay URLまたは部品別URLの「コピー」からOBSブラウザソースへ追加します。PATH上にNode.jsがある場合はそのまま利用できます。
 Web表示ソースは配布内の \`app/server.mjs\` に同梱しています。ADB/OCR検証だけならNode.jsは不要です。
 
 ## 対象と制約
@@ -107,6 +111,7 @@ Web表示ソースは配布内の \`app/server.mjs\` に同梱しています。
 - OCRはMAA-OCRが既定です。GLM/Ollamaは任意導入で、このZIPには含まれません。
 - Android Back keyeventは使いません。タップとスワイプは指定矩形内でランダム化されます。
 
+Discordへ貼り付ける短い手順は \`DISCORD_USAGE.md\` にあります。
 詳細は \`docs/sarkaz-test-guide.md\`、\`docs/debugger-adb-report-guide.md\`、\`docs/adb-setup.md\` を参照してください。
 
 Source: https://github.com/ratedat/RHODES-OBS-COMMANDER3373
@@ -116,6 +121,18 @@ Revision: ${sourceRevision}${sourceStatus ? ` (${sourceStatus})` : ""}
   await fs.writeFile(
     path.join(targetRoot, "BUILD_INFO.txt"),
     `revision=${sourceRevision}\nstatus=${sourceStatus || "clean"}\nbuiltAt=${new Date().toISOString()}\n`,
+    "utf8",
+  );
+}
+
+async function writeDistributionProfile(targetRoot) {
+  const profile = {
+    schemaVersion: 1,
+    channel: "public-debug",
+  };
+  await fs.writeFile(
+    path.join(targetRoot, "distribution-profile.json"),
+    `${JSON.stringify(profile, null, 2)}\n`,
     "utf8",
   );
 }
@@ -192,6 +209,7 @@ await fs.rm(zipPath, { force: true });
 await copyPortablePayload(packageRoot);
 await addWebOverlayRuntime(packageRoot);
 await resetPublicState(packageRoot);
+await writeDistributionProfile(packageRoot);
 await addPublicDocuments(packageRoot, revision, sourceStatus);
 
 run("tar.exe", ["-a", "-c", "-f", zipPath, "-C", releaseRoot, packageName]);

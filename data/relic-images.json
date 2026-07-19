@@ -1,18 +1,18 @@
 {
     "version":  1,
     "meta":  {
-                 "generatedAt":  "2026-06-22",
+                 "generatedAt":  "2026-07-18",
                  "source":  "arknights.wikiru.jp relic list image refs",
                  "assetRoot":  "assets/relics/wikiru"
              },
     "summary":  {
-                    "relics":  1327,
-                    "withImages":  1327,
+                    "relics":  1360,
+                    "withImages":  1360,
                     "missingImages":  0,
                     "failedDownloads":  0,
-                    "downloaded":  0,
-                    "cached":  1327,
-                    "uniqueSourceImages":  626
+                    "downloaded":  20,
+                    "cached":  1340,
+                    "uniqueSourceImages":  647
                 },
     "images":  [
                    {
@@ -10288,6 +10288,38 @@
                        "localPath":  "assets/relics/wikiru/img/sggo_218.png"
                    },
                    {
+                       "relicId": "is6_sui_relic_219",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No219",
+                       "sourcePath": "img/sggo_219_dlc2.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3231395F646C63322E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_219_dlc2.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_220",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No220",
+                       "sourcePath": "img/sggo_220_dlc2.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232305F646C63322E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_220_dlc2.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_221",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No221",
+                       "sourcePath": "img/sggo_221_dlc2.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232315F646C63322E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_221_dlc2.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_222",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No222",
+                       "sourcePath": "img/sggo_222_dlc2.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232325F646C63322E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_222_dlc2.png"
+                   },
+                   {
                        "relicId":  "is6_sui_relic_223",
                        "campaignId":  "is6_sui",
                        "sourceAnchor":  "No223",
@@ -10630,6 +10662,238 @@
                        "sourcePath":  "img/sggo_265.png",
                        "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236352E706E67.png",
                        "localPath":  "assets/relics/wikiru/img/sggo_265.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_266",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No266",
+                       "sourcePath": "img/sggo_266.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236362E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_266.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_267",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No267",
+                       "sourcePath": "img/sggo_267.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236372E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_267.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_268",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No268",
+                       "sourcePath": "img/sggo_268.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236382E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_268.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_269",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No269",
+                       "sourcePath": "img/sggo_269.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236392E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_269.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_270",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No270",
+                       "sourcePath": "img/sggo_270.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237302E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_270.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_271",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No271",
+                       "sourcePath": "img/sggo_271.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237312E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_271.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_272",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No272",
+                       "sourcePath": "img/sggo_272.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237322E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_272.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_273",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No273",
+                       "sourcePath": "img/sggo_273.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237332E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_273.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_274",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No274",
+                       "sourcePath": "img/sggo_274.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237342E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_274.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_275",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No275",
+                       "sourcePath": "img/sggo_275.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237352E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_275.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_276",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No276",
+                       "sourcePath": "img/sggo_276.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237362E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_276.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_277",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No277",
+                       "sourcePath": "img/sggo_277.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237372E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_277.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_278",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No278",
+                       "sourcePath": "img/sggo_278.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237382E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_278.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_279",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No279",
+                       "sourcePath": "img/sggo_279.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237392E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_279.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_280",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No280",
+                       "sourcePath": "img/sggo_280.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3238302E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_280.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_281",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No281",
+                       "sourcePath": "img/sggo_281.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3238312E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/sggo_281.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_282",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No282",
+                       "sourcePath": "img/pcso_PCS01.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063736F5F50435330312E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/pcso_PCS01.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_283",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No283",
+                       "sourcePath": "img/ewso_023.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3032332E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_023.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_284",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No284",
+                       "sourcePath": "img/ewso_024.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3032342E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_024.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_285",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No285",
+                       "sourcePath": "img/mcao_128.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6D63616F5F3132382E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/mcao_128.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_286",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No286",
+                       "sourcePath": "img/ewso_029.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3032392E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_029.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_287",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No287",
+                       "sourcePath": "img/ewso_030.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3033302E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_030.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_288",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No288",
+                       "sourcePath": "img/ewso_092.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3039322E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_092.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_289",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No289",
+                       "sourcePath": "img/pcso_135.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063736F5F3133352E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/pcso_135.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_290",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No290",
+                       "sourcePath": "img/ewso_014.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3031342E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_014.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_291",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No291",
+                       "sourcePath": "img/ewso_015.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3031352E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_015.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_292",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No292",
+                       "sourcePath": "img/ewso_016.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3031362E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_016.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_293",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No293",
+                       "sourcePath": "img/ewso_017.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3031372E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_017.png"
+                   },
+                   {
+                       "relicId": "is6_sui_relic_294",
+                       "campaignId": "is6_sui",
+                       "sourceAnchor": "No294",
+                       "sourcePath": "img/ewso_085.png",
+                       "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3038352E706E67.png",
+                       "localPath": "assets/relics/wikiru/img/ewso_085.png"
                    }
                ],
     "missing":  [

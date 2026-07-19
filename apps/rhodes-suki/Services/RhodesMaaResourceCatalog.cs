@@ -19,6 +19,11 @@ public static class RhodesMaaResourceCatalog
         ["is4RevelationFull"] = "啓示",
         ["is5ThoughtFull"] = "思案",
         ["is5AgeFull"] = "時代",
+        ["is2HallucinationsFull"] = "幻覚",
+        ["is2PerformanceFull"] = "演目",
+        ["is3KeyFull"] = "源石錐・鍵",
+        ["is3LightHordeFull"] = "灯火・大群",
+        ["is3RejectionFull"] = "拒絶反応",
         ["is6CoinsFull"] = "通宝",
     };
 
@@ -30,6 +35,11 @@ public static class RhodesMaaResourceCatalog
         ["is4RevelationFull"] = 40,
         ["is5ThoughtFull"] = 50,
         ["is5AgeFull"] = 60,
+        ["is2HallucinationsFull"] = 65,
+        ["is2PerformanceFull"] = 66,
+        ["is3KeyFull"] = 67,
+        ["is3LightHordeFull"] = 68,
+        ["is3RejectionFull"] = 69,
         ["is6CoinsFull"] = 70,
     };
 
@@ -91,6 +101,45 @@ public static class RhodesMaaResourceCatalog
         }
 
         return 1;
+    }
+
+    public static IReadOnlyList<string> LoadCompositeTemplateIds(string entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry))
+            return [];
+
+        foreach (var relativePath in new[] { ManualPipelineSource, GeneratedPipelineSource })
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+                continue;
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                if (!document.RootElement.TryGetProperty(entry.Trim(), out var node)
+                    || node.ValueKind != JsonValueKind.Object
+                    || !node.TryGetProperty("attach", out var attach)
+                    || attach.ValueKind != JsonValueKind.Object
+                    || !attach.TryGetProperty("templateIds", out var templateIds)
+                    || templateIds.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                return templateIds.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString() ?? "")
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .ToArray();
+            }
+            catch
+            {
+                // Contract validation reports malformed resources; candidate conversion remains empty.
+            }
+        }
+
+        return [];
     }
 
     public static MaaTemplateOcrConfig? LoadTemplateOcrConfig(string entry)

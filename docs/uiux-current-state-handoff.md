@@ -37,28 +37,25 @@ UI/UX改善では、見た目だけでなく次の作業を迷わず行えるこ
 | 領域 | 役割 | 主な実装 |
 | --- | --- | --- |
 | Top context header | アプリ名、IS選択、ラン概要、ADB状態、保存/接続/撮影 | `apps/rhodes-suki/Views/MainWindow.axaml` |
-| Left workspace nav | `ラン`, `選択`, `認識`, `出力`, `ランタイム`, `デバッグ` | `RhodesWorkspaceRegistry.cs` |
+| Left workspace nav | `ラン`, `特殊値`, `選択`, `認識`, `出力`, `ランタイム`, `デバッグ` | `RhodesWorkspaceRegistry.cs` |
 | Center workspace | 選択中ワークスペースの主操作 | `MainWindow.axaml`, `MainWindowViewModel.cs` |
 | Right inspector | 選択中の証跡、候補、スクショ、診断 | `MainWindow.axaml`, `RefreshInspectorRows()` |
 
-ワークスペースは固定です。新しいIS固有値、認識プロファイル、出力部品、ランタイム機能が増えても、トップレベルのタブを増やすのではなく、この6領域内のセクション、サブパネル、インスペクタで扱います。
+ワークスペースは7領域です。IS固有値は種類と個数が多いため専用の `特殊値` に分離し、それ以外の新要素は既存領域内のセクション、サブパネル、インスペクタで扱います。
 
 ## ワークスペース仕様
 
 ### ラン
 
-目的: 現在ランの取得値とIS固有値を確認、編集、認識へ送る。
+目的: 現在ランの共通取得値、ボス、統合戦略を確認・編集する。
 
 扱う値:
 
 - 源石錐
 - 等級
 - 分隊
-- IS固有値
-  - IS#3: 啓示、呼び声など
-  - IS#4: 灯火、崩壊値、啓示板など
-  - IS#5: 思案、構想、時代など
-  - IS#6: コイン、時間系など
+- ボス
+- 現在の統合戦略
 
 関連ファイル:
 
@@ -77,9 +74,34 @@ UI/UX改善では、見た目だけでなく次の作業を迷わず行えるこ
 - `Campaigns`
 - `SelectedCampaign`
 - `RunFieldPreviews`
-- `SpecialValuePreviews`
 - `CampaignPreviews`
 - `RunContextSummary`
+
+### 特殊値
+
+目的: 現在の統合戦略に固有の値を、ランの共通値から分離して確認・認識・手動編集する。
+
+扱う値:
+
+- IS#4: 啓示など
+- IS#5: 思案、構想、時代など
+- IS#6: 銭など
+
+主な実装:
+
+- `apps/rhodes-suki/Views/Workspaces/SpecialWorkspaceView.axaml`
+- `apps/rhodes-suki/Services/RhodesWorkspaceLayoutRegistry.cs`
+- `apps/rhodes-suki/Services/RhodesRunCatalog.cs`
+- `data/campaigns.json`
+- `data/selectable-effects.json`
+
+主なUIバインディング:
+
+- `SpecialValuePreviews`
+- `ManualThoughtEditors`
+- `ManualIdea`
+- `ManualAgeOptions`
+- `IsSarkazCampaignSelected`
 
 ### 選択
 

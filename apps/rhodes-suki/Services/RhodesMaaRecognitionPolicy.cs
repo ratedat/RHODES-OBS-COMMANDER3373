@@ -17,6 +17,11 @@ public static class RhodesMaaRecognitionPolicy
 
     public static IReadOnlyCollection<string> AbandonedRunFields => Policy.Value.AbandonedRunFields;
 
+    public static bool RequiresManualDifficulty(string? campaignId)
+    {
+        return campaignId is "is2_phantom" or "is3_mizuki" or "is4_sami";
+    }
+
     public static bool IsRetainedRecognitionSource(string? id, string? candidateField = "")
     {
         return !IsAbandonedRunRecognitionId(id)
@@ -54,7 +59,9 @@ public static class RhodesMaaRecognitionPolicy
     {
         var retainedId = RetainedRunRecognitionId(id);
         return !string.IsNullOrWhiteSpace(retainedId)
-            && !Policy.Value.RetainedRunRecognitionIds.Contains(retainedId);
+            && !Policy.Value.RetainedRunRecognitionIds.Any(item =>
+                retainedId.Equals(item, StringComparison.Ordinal)
+                || retainedId.StartsWith($"{item}.", StringComparison.Ordinal));
     }
 
     private static IReadOnlyList<string> IdTokens(string? value)

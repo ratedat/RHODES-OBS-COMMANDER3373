@@ -1,0 +1,314 @@
+<UserControl
+    x:Class="RhodesSuki.Views.Workspaces.SpecialWorkspaceView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Spacing="14" Margin="20">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding SpecialLayout.Header.Title}" Classes="h1" />
+          <TextBlock Text="{Binding CampaignHeaderTitle}" FontSize="14" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding SpecialLayout.Header.Detail}" Classes="caption" TextWrapping="Wrap" />
+        </StackPanel>
+        <Button Grid.Column="1"
+                Content="認識へ移動"
+                Command="{Binding SetWorkspaceCommand}"
+                CommandParameter="recognition"
+                VerticalAlignment="Top" />
+      </Grid>
+
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <StackPanel Spacing="2">
+            <TextBlock Text="{Binding SpecialValuesSection.Title}" Classes="h2" />
+            <TextBlock Text="{Binding SpecialValuesSection.Detail}" Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding SpecialValuePreviews}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="choiceCard"
+                        Width="360"
+                        MinHeight="96"
+                        Margin="0,0,10,10"
+                        Command="{Binding DataContext.RunProfileRecognitionAndApplyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding ProfileId}"
+                        HorizontalContentAlignment="Stretch">
+                  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="3">
+                    <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1" Text="認識・反映" Classes="caption" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Value}" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Detail}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card" IsVisible="{Binding IsPhantomCampaignSelected}">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Text="ファントム特殊値の手動入力" Classes="h2" />
+              <TextBlock Text="演目と幻覚を更新します。幻覚は複数選択できます。" Classes="caption" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="primary" Content="特殊値を反映" Command="{Binding ApplyManualPhantomValuesCommand}" />
+          </Grid>
+
+          <Grid ColumnDefinitions="Auto,360,*" ColumnSpacing="8">
+            <TextBlock Text="演目" Classes="caption" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding ManualPerformanceOptions}" SelectedItem="{Binding SelectedManualPerformance, Mode=TwoWay}" />
+          </Grid>
+
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Text="幻覚" FontWeight="SemiBold" />
+              <TextBlock Text="ラジオ式の選択カード / 複数選択可" Classes="caption" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Text="{Binding ManualHallucinationSelectionSummary}" Classes="caption" VerticalAlignment="Center" />
+          </Grid>
+
+          <ItemsControl ItemsSource="{Binding ManualHallucinationOptions}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="choiceCard"
+                        Classes.selected="{Binding IsSelected}"
+                        Width="300"
+                        MinHeight="112"
+                        Margin="0,0,10,10"
+                        Padding="10"
+                        HorizontalContentAlignment="Stretch"
+                        Command="{Binding DataContext.ToggleManualHallucinationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}">
+                  <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="22,*,Auto" ColumnSpacing="7" RowSpacing="4">
+                    <Border Width="18" Height="18" CornerRadius="9" BorderBrush="#6D8386" BorderThickness="1.5" VerticalAlignment="Center">
+                      <TextBlock Text="●" FontSize="12" Foreground="#36E2B6" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsSelected}" />
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="2" Text="{Binding Category}" Classes="caption" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding MapLabel}" Classes="caption" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Effect}" TextWrapping="Wrap" MaxLines="3" />
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <ItemsControl ItemsSource="{Binding ActiveManualHallucinationFusions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="#18241E" BorderBrush="#3E725F" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,6">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="{Binding Name, StringFormat='複合幻覚: {0}'}" FontWeight="SemiBold" Foreground="#77E3C2" />
+                    <TextBlock Text="{Binding Effect}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Text="演目なし、または幻覚を未選択にして反映すると該当値を解除します。" Classes="caption" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card" IsVisible="{Binding IsMizukiCampaignSelected}">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Text="ミヅキ特殊値の手動入力" Classes="h2" />
+              <TextBlock Text="鍵・灯火・大群の呼び声・拒絶反応と、その影響を受ける招集済みオペレーターを更新します。" Classes="caption" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="primary" Content="特殊値を反映" Command="{Binding ApplyManualMizukiValuesCommand}" />
+          </Grid>
+
+          <WrapPanel>
+            <TextBlock Text="鍵" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+            <NumericUpDown Width="120" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding ManualMizukiKey, Mode=TwoWay}" Margin="0,0,18,6" />
+            <TextBlock Text="灯火" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+            <NumericUpDown Width="120" Minimum="0" Maximum="100" Increment="1" FormatString="0" Value="{Binding ManualMizukiLight, Mode=TwoWay}" Margin="0,0,10,6" />
+          </WrapPanel>
+
+          <TextBlock Text="大群の呼び声（複数選択可）" FontWeight="SemiBold" />
+          <ItemsControl ItemsSource="{Binding ManualMizukiHordeCallOptions}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="choiceCard"
+                        Classes.selected="{Binding IsSelected}"
+                        Width="320"
+                        MinHeight="82"
+                        Margin="0,0,10,10"
+                        Padding="9"
+                        HorizontalContentAlignment="Stretch"
+                        Command="{Binding DataContext.ToggleManualMizukiHordeCallCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}">
+                  <Grid ColumnDefinitions="42,*" ColumnSpacing="9">
+                    <Border Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                      <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="3">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+                    </StackPanel>
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <StackPanel Spacing="6">
+            <TextBlock Text="拒絶反応（単一選択）" FontWeight="SemiBold" />
+            <ComboBox Width="540"
+                      HorizontalAlignment="Left"
+                      MaxDropDownHeight="460"
+                      ItemsSource="{Binding ManualMizukiRejectionOptions}"
+                      SelectedItem="{Binding SelectedManualMizukiRejection, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid Width="500" ColumnDefinitions="48,*" ColumnSpacing="10">
+                    <Border Width="44" Height="44" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                      <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding GroupLabel}" Classes="caption" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="{Binding SelectedManualMizukiRejection.Effect}"
+                       Classes="caption"
+                       TextWrapping="Wrap"
+                       MaxLines="3"
+                       MaxWidth="740"
+                       HorizontalAlignment="Left" />
+          </StackPanel>
+
+          <StackPanel Spacing="3">
+            <TextBlock Text="影響するオペレーター" FontWeight="SemiBold" />
+            <TextBlock Text="現在招集済みのオペレーターだけを表示します。複数選択できます。" Classes="caption" />
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding ManualMizukiOperatorTargets}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="choiceCard"
+                        Classes.selected="{Binding IsSelected}"
+                        Width="230"
+                        Height="62"
+                        Margin="0,0,8,8"
+                        Padding="8"
+                        HorizontalContentAlignment="Stretch"
+                        Command="{Binding DataContext.ToggleManualMizukiOperatorTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}">
+                  <Grid ColumnDefinitions="42,*" ColumnSpacing="9">
+                    <Border Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                      <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card" IsVisible="{Binding IsSarkazCampaignSelected}">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Text="サルカズ特殊値の手動入力" Classes="h2" />
+              <TextBlock Text="ADBを使用しない大会運用では、構想・時代・思案をここから更新します。" Classes="caption" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="primary" Content="特殊値を反映" Command="{Binding ApplyManualSarkazValuesCommand}" />
+          </Grid>
+
+          <WrapPanel>
+            <TextBlock Text="構想" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+            <NumericUpDown Width="130" Minimum="0" Maximum="999" Increment="1" FormatString="0" Value="{Binding ManualIdea, Mode=TwoWay}" Margin="0,0,16,6" />
+            <TextBlock Text="時代" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
+            <ComboBox Width="360" ItemsSource="{Binding ManualAgeOptions}" SelectedItem="{Binding SelectedManualAge, Mode=TwoWay}" Margin="0,0,10,6" />
+          </WrapPanel>
+
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock Text="思案（種類別個数）" FontSize="13" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="1" Text="画像または詳細ボタンで内容を確認できます" Classes="caption" />
+          </Grid>
+          <Border Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="8" MaxHeight="560">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding ManualThoughtEditors}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Width="336" Margin="0,0,8,8" Padding="7" Background="#121A1B" CornerRadius="5">
+                      <Grid ColumnDefinitions="44,*,34,86" ColumnSpacing="8">
+                        <Border Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                          <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}"
+                                 Width="40"
+                                 Height="40"
+                                 Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Name}" />
+                        <Button Grid.Column="2"
+                                Width="32"
+                                Height="32"
+                                Padding="0"
+                                Content="ⓘ"
+                                FontSize="16"
+                                Command="{Binding DataContext.ShowThoughtDetailCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"
+                                AutomationProperties.Name="思案の詳細を表示"
+                                ToolTip.Tip="思案の詳細を表示" />
+                        <NumericUpDown Grid.Column="3" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+
+          <Border IsVisible="{Binding IsThoughtDetailVisible}" Background="#121A1B" BorderBrush="#3B4A4C" BorderThickness="1" CornerRadius="6" Padding="12">
+            <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="12">
+              <Border Width="88" Height="88" Background="#0C1011" CornerRadius="5" ClipToBounds="True" VerticalAlignment="Top">
+                <Image Source="{Binding SelectedThoughtDetail.ImagePath, Converter={StaticResource BitmapPathConverter}}"
+                       Width="88"
+                       Height="88"
+                       Stretch="UniformToFill" />
+              </Border>
+              <StackPanel Grid.Column="1" Spacing="5">
+                <TextBlock Text="{Binding SelectedThoughtDetail.Name}" FontSize="14" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding SelectedThoughtDetail.DetailMeta}" Classes="caption" />
+                <TextBlock Text="{Binding SelectedThoughtDetail.Effect}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding SelectedThoughtDetail.FlavorText}" Classes="caption" FontStyle="Italic" TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="2"
+                      Width="32"
+                      Height="32"
+                      Padding="0"
+                      Content="✕"
+                      Command="{Binding CloseThoughtDetailCommand}"
+                      AutomationProperties.Name="思案の詳細を閉じる"
+                      ToolTip.Tip="閉じる" />
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

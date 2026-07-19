@@ -2,6 +2,7 @@ import { bossDisplaySubline, bossDisplayTitle, renderBossCard, renderBossChip } 
 import { renderOperatorControlRow as renderOperatorControlRowComponent, renderRelicControlRow as renderRelicControlRowComponent } from "./components/choice-cards.js";
 import { renderOverlayCompact as renderOverlayCompactComponent, renderOverlayDefault as renderOverlayDefaultComponent, renderOverlayDense as renderOverlayDenseComponent } from "./components/overlay-layouts.js";
 import { overlayPartOptions, renderOverlayPart as renderOverlayPartComponent } from "./components/overlay-parts.js";
+import { renderCustomOverlayLayout as renderCustomOverlayLayoutComponent } from "./components/overlay-custom-layout.js";
 import { renderEffectList } from "./components/effects.js";
 import * as specialControls from "./components/special-controls.js";
 import { renderCompactSpecialPicker as renderCompactSpecialPickerComponent, renderSpecialField as renderSpecialFieldComponent } from "./components/special-fields.js";
@@ -13,6 +14,7 @@ import { createLookupMaps } from "./domain/master-maps.js";
 import { applyDifficultyTier, difficultyEffectTexts, difficultySummary as summarizeDifficultyGrade, getDifficultyGradeConfig as readDifficultyGradeConfig, getDifficultyTierLabel as readDifficultyTierLabel, getSelectedDifficultyGrade as readSelectedDifficultyGrade } from "./domain/difficulty.js";
 import { isActiveManualRule, summarizeRelicEffects as summarizeRelicEffectMetrics, summarizeTextEffects } from "./domain/effect-metrics.js";
 import { sortOperators as sortOperatorsByPreference } from "./domain/operators.js";
+import { prioritizeOwnedRelics, supportsRelicUsedFlag } from "./domain/relic-usage.js";
 import { buildStartTemplateSummary, getEffectiveRelicIds, mergeEffectiveSpecial, phaseLabel } from "./domain/start-templates.js";
 import { controlModeOptions, getControlMode, normalizeControlMode } from "./domain/ui-modes.js";
 import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
@@ -27,6 +29,7 @@ import { mediaUrl } from "./lib/media.js";
 import { normalizePreferences } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
 import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
+import { installOverlayLayoutEditor, isOverlayEditorMode } from "./overlay/layout-editor.js";
 import { RUN_STAT_FIELDS, formatRunStatValue, normalizeRunStats, runStatDisplayItems } from "./domain/run-stats.js";
 import { normalizeAdbSettings } from "./domain/adb-settings.js";
 
@@ -36,6 +39,7 @@ const view = resolveAppView(location.pathname, location.search);
 const overlayPart = resolveOverlayPart(routeParams.get("part") || location.pathname.match(/^\/overlay\/part\/([^/]+)/)?.[1]);
 const overlayLayout = resolveOverlayLayout(routeParams.get("layout"));
 const overlaySize = resolveOverlaySize(routeParams.get("size") || routeParams.get("scale"));
+const overlayEditorMode = isOverlayEditorMode(routeParams);
 if (view === "overlay") document.documentElement.classList.add("overlay-mode");
 
 const ui = {
@@ -63,6 +67,8 @@ let state = null;
 let maps = null;
 let saveTimer = null;
 let lastStateJson = "";
+let disposeOverlayLayoutEditor = null;
+let overlayEditorInteractionActive = false;
 const saveRequestTracker = createSaveRequestTracker();
 
 
@@ -408,7 +414,7 @@ function normalizeSpecialFieldSelections() {
       }
       if (field.overlayToggle) {
         const key = getSpecialOverlayToggleKey(field);
-        special[key] = Boolean(special[key]);
+        special[key] = key in special ? Boolean(special[key]) : field.overlayDefaultVisible === true;
       }
     }
   }
@@ -461,7 +467,8 @@ function getTemplateRelicIds() {
 }
 
 function getOwnedRelics() {
-  return getEffectiveRelicIdList().map((id) => maps.relic.get(id)).filter(Boolean);
+  const relics = getEffectiveRelicIdList().map((id) => maps.relic.get(id)).filter(Boolean);
+  return prioritizeOwnedRelics(relics, state.usedRelicIds);
 }
 
 function getEffectiveSpecial(campaignId = getCampaign()?.id) {
@@ -664,6 +671,9 @@ function ensureStateShape() {
   if (state.run.performanceId && !getCampaignPerformances(state.run.campaignId).some((item) => item.id === state.run.performanceId)) state.run.performanceId = null;
   normalizeSpecialFieldSelections();
   state.relics = Array.isArray(state.relics) ? state.relics : [];
+  state.usedRelicIds = Array.isArray(state.usedRelicIds)
+    ? state.usedRelicIds.filter((id) => state.relics.includes(id))
+    : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
   normalizeBossSelections();
@@ -814,7 +824,14 @@ function renderRelicControlRow(item, active, excludedOrOptions = false) {
   const options = typeof excludedOrOptions === "object" ? excludedOrOptions : { excluded: Boolean(excludedOrOptions), showExclude: true };
   const manual = new Set(state.relics || []).has(item.id);
   const template = getTemplateRelicIds().has(item.id);
-  return renderRelicControlRowComponent(item, active, relicEffectForDisplay(item), { manual, template, ...options });
+  const used = new Set(state.usedRelicIds || []).has(item.id);
+  return renderRelicControlRowComponent(item, active, relicEffectForDisplay(item), {
+    manual,
+    template,
+    used,
+    supportsUsedFlag: supportsRelicUsedFlag(item),
+    ...options,
+  });
 }
 
 function renderOperatorControlRow(item, active, excludedOrOptions = false) {
@@ -1002,8 +1019,12 @@ function renderOverlayDense(args) {
 
 function renderOverlay() {
   cancelOverlayAutoScroll();
+  disposeOverlayLayoutEditor?.();
+  disposeOverlayLayoutEditor = null;
   app.dataset.loading = "false";
-  app.className = overlayPart ? `overlay-app overlay-part overlay-part-${overlayPart} overlay-size-${overlaySize}` : `overlay-app overlay-${overlayLayout} overlay-size-${overlaySize}`;
+  app.className = overlayPart
+    ? `overlay-app overlay-part overlay-part-${overlayPart} overlay-size-${overlaySize}`
+    : `overlay-app overlay-${overlayLayout} overlay-size-${overlaySize}${overlayEditorMode ? " overlay-custom-editor" : ""}`;
   document.body.className = "overlay-body";
   const campaign = getCampaign();
   const squad = getSelectedSquad();
@@ -1028,6 +1049,31 @@ function renderOverlay() {
   if (overlayLayout === "vertical" || overlayLayout === "horizontal") {
     app.innerHTML = renderOverlayDense({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, orientation: overlayLayout });
     setupOverlayAutoScroll(app);
+    return;
+  }
+  if (overlayLayout === "custom") {
+    app.innerHTML = renderCustomOverlayLayoutComponent(
+      state.preferences.sukiOverlayLayout,
+      { campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, runDifficulty: state.run.difficulty, updatedAt: state.updatedAt },
+      renderOverlayContext(),
+    );
+    setupOverlayAutoScroll(app);
+    if (overlayEditorMode) {
+      disposeOverlayLayoutEditor = installOverlayLayoutEditor({
+        root: app,
+        getLayout: () => state.preferences.sukiOverlayLayout,
+        onLayoutInput: (layout) => {
+          state.preferences.sukiOverlayLayout = layout;
+        },
+        onLayoutCommit: (layout) => {
+          state.preferences.sukiOverlayLayout = layout;
+          scheduleSave();
+        },
+        onInteractionChange: (active) => {
+          overlayEditorInteractionActive = active;
+        },
+      });
+    }
     return;
   }
   app.innerHTML = renderOverlayDefaultComponent({
@@ -1088,6 +1134,7 @@ registerControlEvents(app, getControlEventContext());
 
 async function pollOverlay() {
   try {
+    if (overlayEditorInteractionActive) return;
     const next = await apiJson(stateUrl);
     state = next;
     ensureStateShape();

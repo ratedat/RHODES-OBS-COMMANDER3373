@@ -30,9 +30,10 @@ public static class RhodesChoiceFilter
             return string.IsNullOrWhiteSpace(query) || Normalize(item.SearchText).Contains(query, StringComparison.Ordinal);
         });
 
+        var ordered = filtered.OrderBy(RhodesRelicUsagePolicy.OwnedDisplayPriority);
         return (options.ShowSelectedFirst
-                ? filtered.OrderByDescending(item => item.IsSelected).ThenBy(item => item.SortOrder).ThenBy(item => item.Name, StringComparer.Ordinal)
-                : filtered.OrderBy(item => item.SortOrder).ThenBy(item => item.Name, StringComparer.Ordinal))
+                ? ordered.ThenByDescending(item => item.IsSelected).ThenBy(item => item.SortOrder).ThenBy(item => item.Name, StringComparer.Ordinal)
+                : ordered.ThenBy(item => item.SortOrder).ThenBy(item => item.Name, StringComparer.Ordinal))
             .ToArray();
     }
 

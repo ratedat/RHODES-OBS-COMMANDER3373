@@ -12,6 +12,7 @@ const preservedTopLevelEntries = new Set([
   "RHODES OBS COMMANDER3373 Debug Logs",
   "glm-ocr-runtime",
   "ollama-runtime",
+  "nodejs-runtime",
 ]);
 
 function assertSafeOutputPath() {
@@ -119,6 +120,43 @@ async function copyRequiredMasterData() {
   }
 }
 
+async function copyWebOverlayRuntime() {
+  const source = path.join(repoRoot, "app");
+  const target = path.join(outputDir, "app");
+  await fs.rm(target, { recursive: true, force: true });
+  await fs.cp(source, target, { recursive: true });
+  await fs.copyFile(path.join(repoRoot, "package.json"), path.join(outputDir, "package.json"));
+  await fs.access(path.join(target, "server.mjs"));
+}
+
+async function copyWebOverlayAssets() {
+  const source = path.join(repoRoot, "assets", "bosses");
+  const target = path.join(outputDir, "assets", "bosses");
+  await fs.access(source);
+  await fs.rm(target, { recursive: true, force: true });
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.cp(source, target, { recursive: true });
+
+  const campaigns = JSON.parse(await fs.readFile(path.join(repoRoot, "data", "campaigns.json"), "utf8"));
+  const referencedBossAssets = new Set();
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    if (typeof value.localPath === "string" && value.localPath.startsWith("assets/bosses/")) {
+      referencedBossAssets.add(value.localPath);
+    }
+    Object.values(value).forEach(visit);
+  };
+  visit(campaigns);
+
+  for (const relativePath of referencedBossAssets) {
+    await fs.access(path.join(outputDir, relativePath));
+  }
+}
+
 async function collectSummary(directory) {
   let topLevel = 0;
   let files = 0;
@@ -172,6 +210,8 @@ await removeFilesByExtension(outputDir, ".pdb");
 await moveMaaAgentBinaryToLibs();
 await copyMaaNativeRuntimeToRuntimes();
 await copyRequiredMasterData();
+await copyWebOverlayRuntime();
+await copyWebOverlayAssets();
 
 const exePath = path.join(outputDir, "RhodesSuki.exe");
 await fs.access(exePath);

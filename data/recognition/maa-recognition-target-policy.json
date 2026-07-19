@@ -8,6 +8,7 @@
       "relic",
       "thought",
       "age",
+      "mizuki",
       "revelation",
       "coin"
     ]
@@ -18,7 +19,9 @@
       "difficulty",
       "squadId",
       "squadRandomEffectOptionId",
-      "idea"
+      "idea",
+      "performanceId",
+      "hallucinations"
     ],
     "retainedIds": [
       "run.squad.info.panel",
@@ -32,6 +35,7 @@
       "run.idea",
       "run.idea.current",
       "run.squad.card",
+      "run.squad.icon",
       "run.squad.name",
       "run.difficulty.grade",
       "run.difficulty.block"

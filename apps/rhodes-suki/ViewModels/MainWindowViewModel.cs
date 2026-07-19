@@ -17,6 +17,8 @@ namespace RhodesSuki.ViewModels;
 public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly RhodesMaaSession _session;
+    private readonly RhodesDistributionProfile _distributionProfile;
+    private readonly SemaphoreSlim _bossSelectionSaveLock = new(1, 1);
     private IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private readonly IReadOnlyList<SukiChoiceItem> _allOperators = [];
     private readonly IReadOnlyList<SukiChoiceItem> _allRelics = [];
@@ -91,11 +93,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private SukiSquadOption? _selectedManualSquadRandomEffect;
     private bool _adbConnectionValidated;
     private int _manualIdea;
+    private int _manualMizukiKey;
+    private int _manualMizukiLight;
     private SukiSpecialEffectOption? _selectedManualAge;
+    private SukiSpecialEffectOption? _selectedManualPerformance;
+    private SukiSpecialEffectOption? _selectedManualMizukiRejection;
+    private SukiThoughtCountEditor? _selectedThoughtDetail;
     private bool _isClearRunConfirmationVisible;
     private bool _isHudVisible;
     private bool _isHudClickThrough;
-    private readonly RhodesSidecarServerLauncher _sidecarServer = new();
+    private readonly RhodesNodeRuntimeManager _nodeRuntime;
+    private readonly RhodesSidecarServerLauncher _sidecarServer;
+    private RhodesNodeRuntimeStatus _nodeRuntimeStatus;
     private string _sidecarServerStatus = "未確認";
     private string _selectedRoiPreviewKey = "";
     private int[] _roiDragOrigin = [];
@@ -120,6 +129,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private MaaResourceExecutionPlan? _lastResourceExecutionPlan;
     private SukiOcrEngineOption? _selectedOcrEngine;
     private SukiCampaignPreview? _selectedCampaign;
+    private bool _campaignSelectionSyncEnabled;
     private MaaTaskDiagnosticsSnapshot _resourceTaskDiagnostics = MaaTaskDiagnosticsSnapshot.Empty;
     private bool _operatorShowSelectedFirst;
     private bool _operatorHideExcluded;
@@ -131,6 +141,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _outputTournamentMode;
     private bool _outputTransparentBackground = true;
     private int _outputScrollSpeed = 13;
+    private SukiOverlayLayoutPreview? _selectedOverlayLayoutItem;
     private bool _showRoiOverlay = true;
     private int _roiSnapStep = 1;
     private bool _isBusy;
@@ -144,6 +155,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         _session = session;
         _maaFrameworkStatus = maaStatus;
+        _nodeRuntime = new RhodesNodeRuntimeManager();
+        _sidecarServer = new RhodesSidecarServerLauncher(_nodeRuntime);
+        _nodeRuntimeStatus = _nodeRuntime.Probe();
         _sessionState = sessionSnapshot.State;
         _sessionDetail = sessionSnapshot.Detail;
         _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
@@ -169,14 +183,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "SukiUI/Avalonia版を正規デスクトップとして固定",
         ];
 
+        _distributionProfile = RhodesDistributionProfile.LoadDefault();
         var runCatalog = RhodesRunCatalog.LoadDefault();
-        _runState = RhodesPublicDebugPolicy.ApplyCampaign(runCatalog.Current);
-        WorkspaceNav = new ObservableCollection<SukiWorkspaceNavItem>(RhodesWorkspaceRegistry.Items);
+        _runState = RhodesPublicDebugPolicy.ApplyCampaign(runCatalog.Current, _distributionProfile);
+        WorkspaceNav = new ObservableCollection<SukiWorkspaceNavItem>(
+            RhodesWorkspaceRegistry.ItemsFor(_distributionProfile));
         RunLayout = RhodesWorkspaceLayoutRegistry.For("run");
+        SpecialLayout = RhodesWorkspaceLayoutRegistry.For("special");
         ChoicesLayout = RhodesWorkspaceLayoutRegistry.For("choices");
         OutputLayout = RhodesWorkspaceLayoutRegistry.For("output");
         DebugLayout = RhodesWorkspaceLayoutRegistry.For("debug");
-        RunSpecialSection = WorkspaceSection(RunLayout, "special");
+        SpecialValuesSection = WorkspaceSection(SpecialLayout, "values");
         RunCampaignSection = WorkspaceSection(RunLayout, "campaign");
         OutputPartsSection = WorkspaceSection(OutputLayout, "parts");
         DebugMigrationSection = WorkspaceSection(DebugLayout, "migration");
@@ -194,6 +211,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             outputPart.PropertyChanged += (_, _) => RefreshInspectorRows();
         }
+        OverlayLayoutItems = new ObservableCollection<SukiOverlayLayoutPreview>(RhodesOverlayLayoutCatalog.BuildPreviews());
+        foreach (var layoutItem in OverlayLayoutItems)
+            layoutItem.PropertyChanged += (_, _) => RefreshInspectorRows();
+        SelectedOverlayLayoutItem = OverlayLayoutItems.FirstOrDefault();
         DebugLogLines =
         [
             "Suki shell ready.",
@@ -211,7 +232,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "auto") ?? AdbPresets.FirstOrDefault();
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodId);
-        Campaigns = new ObservableCollection<SukiCampaignPreview>(RhodesPublicDebugPolicy.FilterCampaigns(runCatalog.Campaigns));
+        Campaigns = new ObservableCollection<SukiCampaignPreview>(
+            RhodesPublicDebugPolicy.FilterCampaigns(runCatalog.Campaigns, _distributionProfile));
         _allOperators = runCatalog.Operators;
         _allRelics = runCatalog.Relics;
         FilteredOperators = [];
@@ -235,7 +257,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ?? OcrEngineOptions.FirstOrDefault();
         _selectedCampaign = Campaigns.FirstOrDefault(campaign => campaign.Id == _runState.CampaignId) ?? Campaigns.FirstOrDefault();
         ResourceProfiles = new ObservableCollection<MaaResourceProfilePreview>(
-            RhodesPublicDebugPolicy.FilterProfiles(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks)));
+            RhodesPublicDebugPolicy.FilterProfiles(
+                RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks),
+                _distributionProfile));
         ResourceTasks = [];
         ResourceTaskResults = [];
         CandidateResults = [];
@@ -273,12 +297,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunSelectedProfileRecognitionCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAsync);
         RunSelectedProfileRecognitionAndApplyCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAndApplyAsync);
         RunProfileRecognitionAndApplyCommand = new AsyncRelayCommand(parameter => RunProfileRecognitionAndApplyAsync(parameter as string));
+        RunCommonRecognitionAndApplyCommand = new AsyncRelayCommand(RunCommonRecognitionAndApplyAsync);
         RefreshFrameRecordHistoryCommand = new AsyncRelayCommand(RefreshFrameRecordHistoryAsync);
         LoadFrameRecordHistoryCommand = new AsyncRelayCommand(parameter => LoadFrameRecordHistoryAsync(parameter as RhodesFrameRecordHistoryItem));
         ReplayFrameRecordRecognitionCommand = new AsyncRelayCommand(parameter => ReplayFrameRecordRecognitionAsync(parameter as RhodesFrameRecordHistoryItem));
         RefreshRecognitionScanHistoryCommand = new AsyncRelayCommand(RefreshRecognitionScanHistoryAsync);
         LoadRecognitionScanHistoryCommand = new AsyncRelayCommand(parameter => LoadRecognitionScanHistoryAsync(parameter as RhodesRecognitionScanHistoryItem));
         OpenPreviewUrlCommand = new AsyncRelayCommand(OpenPreviewUrlAsync);
+        ResetOverlayLayoutCommand = new AsyncRelayCommand(ResetOverlayLayoutAsync);
+        AdjustSelectedOverlayLayoutCommand = new AsyncRelayCommand(AdjustSelectedOverlayLayoutAsync);
+        RefreshNodeRuntimeCommand = new AsyncRelayCommand(RefreshNodeRuntimeAsync);
+        InstallNodeRuntimeCommand = new AsyncRelayCommand(InstallNodeRuntimeAsync);
+        UninstallNodeRuntimeCommand = new AsyncRelayCommand(UninstallNodeRuntimeAsync);
         RunAllResourceTasksCommand = new AsyncRelayCommand(RunAllResourceTasksAsync);
         ExportResourceTaskResultsCommand = new AsyncRelayCommand(ExportResourceTaskResultsAsync);
         ExportSelectedRoiDraftCommand = new AsyncRelayCommand(ExportSelectedRoiDraftAsync);
@@ -303,6 +333,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ApplyManualRunValuesCommand = new AsyncRelayCommand(ApplyManualRunValuesAsync);
         ApplyManualSarkazValuesCommand = new AsyncRelayCommand(ApplyManualSarkazValuesAsync);
+        ApplyManualPhantomValuesCommand = new AsyncRelayCommand(ApplyManualPhantomValuesAsync);
+        ApplyManualMizukiValuesCommand = new AsyncRelayCommand(ApplyManualMizukiValuesAsync);
+        ToggleManualHallucinationCommand = new AsyncRelayCommand(ToggleManualHallucinationAsync);
+        ToggleManualMizukiHordeCallCommand = new AsyncRelayCommand(ToggleManualMizukiHordeCallAsync);
+        ToggleManualMizukiOperatorTargetCommand = new AsyncRelayCommand(ToggleManualMizukiOperatorTargetAsync);
+        ShowThoughtDetailCommand = new AsyncRelayCommand(parameter =>
+        {
+            SelectedThoughtDetail = parameter as SukiThoughtCountEditor;
+            return Task.CompletedTask;
+        });
+        CloseThoughtDetailCommand = new AsyncRelayCommand(() =>
+        {
+            SelectedThoughtDetail = null;
+            return Task.CompletedTask;
+        });
         ShowClearRunConfirmationCommand = new AsyncRelayCommand(() => { IsClearRunConfirmationVisible = true; return Task.CompletedTask; });
         CancelClearRunCommand = new AsyncRelayCommand(() => { IsClearRunConfirmationVisible = false; return Task.CompletedTask; });
         ConfirmClearRunCommand = new AsyncRelayCommand(ConfirmClearRunAsync);
@@ -316,7 +361,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SetChoiceTabCommand = new AsyncRelayCommand(SetChoiceTabAsync);
         OpenRecognitionProfileCommand = new AsyncRelayCommand(OpenRecognitionProfileAsync);
         SetCurrentCampaignCommand = new AsyncRelayCommand(SetCurrentCampaignAsync);
+        ToggleBossOptionCommand = new AsyncRelayCommand(ToggleBossOptionAsync);
         ToggleChoiceSelectedCommand = new AsyncRelayCommand(ToggleChoiceSelectedAsync);
+        ToggleRelicUsedCommand = new AsyncRelayCommand(ToggleRelicUsedAsync);
         ToggleChoiceExcludedCommand = new AsyncRelayCommand(ToggleChoiceExcludedAsync);
         ClearVisibleChoicesCommand = new AsyncRelayCommand(ClearVisibleChoicesAsync);
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull") ?? ResourceProfiles.FirstOrDefault();
@@ -334,6 +381,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshManualRunEditors();
         RefreshOverlayPartLinks();
         RefreshAdbDiagnosticSteps();
+        _campaignSelectionSyncEnabled = true;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -346,13 +394,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public SukiWorkspaceLayout RunLayout { get; }
 
+    public SukiWorkspaceLayout SpecialLayout { get; }
+
     public SukiWorkspaceLayout ChoicesLayout { get; }
 
     public SukiWorkspaceLayout OutputLayout { get; }
 
     public SukiWorkspaceLayout DebugLayout { get; }
 
-    public SukiWorkspaceSectionPreview RunSpecialSection { get; }
+    public SukiWorkspaceSectionPreview SpecialValuesSection { get; }
 
     public SukiWorkspaceSectionPreview RunCampaignSection { get; }
 
@@ -381,6 +431,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string WorkspaceActionCountLabel => $"{WorkspaceActions.Count}件";
 
     public ObservableCollection<SukiOutputPartPreview> OutputParts { get; }
+
+    public ObservableCollection<SukiOverlayLayoutPreview> OverlayLayoutItems { get; }
 
     public ObservableCollection<string> DebugLogLines { get; }
 
@@ -532,6 +584,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetProperty(ref _workspaceTab, value))
                 return;
             OnPropertyChanged(nameof(IsRunWorkspaceVisible));
+            OnPropertyChanged(nameof(IsSpecialWorkspaceVisible));
             OnPropertyChanged(nameof(IsChoicesWorkspaceVisible));
             OnPropertyChanged(nameof(IsRecognitionWorkspaceVisible));
             OnPropertyChanged(nameof(IsOutputWorkspaceVisible));
@@ -576,6 +629,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CampaignHeaderTitle));
             OnPropertyChanged(nameof(CampaignHeaderDetail));
             OnPropertyChanged(nameof(ManualDifficultyMaximum));
+            OnPropertyChanged(nameof(IsSarkazCampaignSelected));
+            OnPropertyChanged(nameof(IsPhantomCampaignSelected));
+            OnPropertyChanged(nameof(IsMizukiCampaignSelected));
+            OnPropertyChanged(nameof(IsManualDifficultyCampaign));
+            OnPropertyChanged(nameof(ManualDifficultyGuidance));
+            OnPropertyChanged(nameof(RunCommonRecognitionLabel));
+            if (_campaignSelectionSyncEnabled
+                && value is not null
+                && !string.Equals(value.Id, _runState.CampaignId, StringComparison.Ordinal))
+            {
+                SetCurrentCampaignCommand.Execute(value);
+            }
         }
     }
 
@@ -603,6 +668,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>入力中の等級に対応する多元化珍品tierのプレビュー (例: 多元化珍品: 創作的)。</summary>
     public string ManualDifficultyTierLabel =>
         RhodesDifficultyTierCatalog.DescribeTier(SelectedCampaign?.Id ?? _runState.CampaignId, ManualDifficulty);
+
+    public bool IsManualDifficultyCampaign => RhodesMaaRecognitionPolicy.RequiresManualDifficulty(
+        SelectedCampaign?.Id ?? _runState.CampaignId);
+
+    public string ManualDifficultyGuidance => IsManualDifficultyCampaign
+        ? "この統合戦略は等級を画面から取得できません。現在の等級を手動入力してください。"
+        : "";
 
     public ObservableCollection<SukiSquadOption> ManualSquadOptions { get; } = [];
 
@@ -633,9 +705,69 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set => SetProperty(ref _manualIdea, Math.Clamp(value, 0, 999));
     }
 
+    public int ManualMizukiKey
+    {
+        get => _manualMizukiKey;
+        set => SetProperty(ref _manualMizukiKey, Math.Clamp(value, 0, 99));
+    }
+
+    public int ManualMizukiLight
+    {
+        get => _manualMizukiLight;
+        set => SetProperty(ref _manualMizukiLight, Math.Clamp(value, 0, 100));
+    }
+
     public ObservableCollection<SukiThoughtCountEditor> ManualThoughtEditors { get; } = [];
 
+    public SukiThoughtCountEditor? SelectedThoughtDetail
+    {
+        get => _selectedThoughtDetail;
+        set
+        {
+            if (!SetProperty(ref _selectedThoughtDetail, value))
+                return;
+            OnPropertyChanged(nameof(IsThoughtDetailVisible));
+        }
+    }
+
+    public bool IsThoughtDetailVisible => SelectedThoughtDetail is not null;
+
     public ObservableCollection<SukiSpecialEffectOption> ManualAgeOptions { get; } = [];
+
+    public ObservableCollection<SukiSpecialEffectOption> ManualPerformanceOptions { get; } = [];
+
+    public ObservableCollection<SukiHallucinationOption> ManualHallucinationOptions { get; } = [];
+
+    public ObservableCollection<SukiToggleEffectOption> ManualMizukiHordeCallOptions { get; } = [];
+
+    public ObservableCollection<SukiOperatorTargetOption> ManualMizukiOperatorTargets { get; } = [];
+
+    public ObservableCollection<SukiSpecialEffectOption> ManualMizukiRejectionOptions { get; } = [];
+
+    public ObservableCollection<SukiHallucinationFusion> ActiveManualHallucinationFusions { get; } = [];
+
+    public string ManualHallucinationSelectionSummary
+    {
+        get
+        {
+            var selected = ManualHallucinationOptions.Where(option => option.IsSelected).Select(option => option.Name).ToArray();
+            return selected.Length == 0 ? "幻覚なし" : $"選択中 {selected.Length}件: {string.Join(" / ", selected)}";
+        }
+    }
+
+    public SukiSpecialEffectOption? SelectedManualPerformance
+    {
+        get => _selectedManualPerformance;
+        set => SetProperty(ref _selectedManualPerformance, value);
+    }
+
+    public SukiSpecialEffectOption? SelectedManualMizukiRejection
+    {
+        get => _selectedManualMizukiRejection;
+        set => SetProperty(ref _selectedManualMizukiRejection, value);
+    }
+
+    public ObservableCollection<SukiBossSectionEditor> BossSections { get; } = [];
 
     public SukiSpecialEffectOption? SelectedManualAge
     {
@@ -650,6 +782,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public bool IsRunWorkspaceVisible => WorkspaceTab == "run";
+
+    public bool IsSpecialWorkspaceVisible => WorkspaceTab == "special";
+
+    public bool IsSarkazCampaignSelected => string.Equals(
+        SelectedCampaign?.Id ?? _runState.CampaignId,
+        RhodesPublicDebugPolicy.SarkazCampaignId,
+        StringComparison.Ordinal);
+
+    public bool IsPhantomCampaignSelected => string.Equals(
+        SelectedCampaign?.Id ?? _runState.CampaignId,
+        "is2_phantom",
+        StringComparison.Ordinal);
+
+    public bool IsMizukiCampaignSelected => string.Equals(
+        SelectedCampaign?.Id ?? _runState.CampaignId,
+        "is3_mizuki",
+        StringComparison.Ordinal);
+
+    public string RunCommonRecognitionLabel => IsSarkazCampaignSelected
+        ? "共通値・時代をADB取得・認識・反映"
+        : IsPhantomCampaignSelected
+            ? "共通値・幻覚・演目をADB取得・認識・反映"
+            : IsMizukiCampaignSelected
+                ? "共通値・源石錐・鍵・灯火・大群・拒絶反応・オペをADB取得・認識・反映"
+                : "共通値をADB取得・認識・反映";
 
     public bool IsChoicesWorkspaceVisible => WorkspaceTab == "choices";
 
@@ -1042,6 +1199,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public SukiOverlayLayoutPreview? SelectedOverlayLayoutItem
+    {
+        get => _selectedOverlayLayoutItem;
+        set
+        {
+            if (ReferenceEquals(_selectedOverlayLayoutItem, value))
+                return;
+            if (_selectedOverlayLayoutItem is not null)
+                _selectedOverlayLayoutItem.IsSelected = false;
+            _selectedOverlayLayoutItem = value;
+            if (_selectedOverlayLayoutItem is not null)
+                _selectedOverlayLayoutItem.IsSelected = true;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasSelectedOverlayLayoutItem));
+        }
+    }
+
+    public bool HasSelectedOverlayLayoutItem => SelectedOverlayLayoutItem is not null;
+
     public string SessionState
     {
         get => _sessionState;
@@ -1172,6 +1348,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             _rhodesApiStatus = new SukiOptionalRuntimeStatus("RHODES API", "未確認", "API URLが変更されました。状態同期で確認してください。", false, false);
             OnPropertyChanged(nameof(OverlayUrl));
+            OnPropertyChanged(nameof(CustomOverlayUrl));
             OnPropertyChanged(nameof(SidecarUrl));
             RefreshOverlayPartLinks();
             RefreshRuntimeCapabilities();
@@ -1182,7 +1359,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>OBSブラウザソースに設定するURL。</summary>
     public string OverlayUrl => $"{RhodesApiUrl}/overlay";
 
+    public string CustomOverlayUrl => $"{RhodesApiUrl}/overlay?layout=custom";
+
     public string SidecarUrl => $"{RhodesApiUrl}/sidecar";
+
+    public string NodeRuntimeState => _nodeRuntimeStatus.State;
+
+    public string NodeRuntimeDetail => _nodeRuntimeStatus.Detail;
 
     /// <summary>部品単位でOBSへ追加するためのURL一覧。</summary>
     public ObservableCollection<SukiOverlayPartLink> OverlayPartLinks { get; } = [];
@@ -1578,6 +1761,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand RunProfileRecognitionAndApplyCommand { get; }
 
+    public ICommand RunCommonRecognitionAndApplyCommand { get; }
+
     public ICommand RefreshFrameRecordHistoryCommand { get; }
 
     public ICommand LoadFrameRecordHistoryCommand { get; }
@@ -1589,6 +1774,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand LoadRecognitionScanHistoryCommand { get; }
 
     public ICommand OpenPreviewUrlCommand { get; }
+
+    public ICommand ResetOverlayLayoutCommand { get; }
+
+    public ICommand AdjustSelectedOverlayLayoutCommand { get; }
+
+    public ICommand RefreshNodeRuntimeCommand { get; }
+
+    public ICommand InstallNodeRuntimeCommand { get; }
+
+    public ICommand UninstallNodeRuntimeCommand { get; }
 
     public ICommand RunAllResourceTasksCommand { get; }
 
@@ -1636,9 +1831,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand ApplyManualRunValuesCommand { get; }
     public ICommand ApplyManualSarkazValuesCommand { get; }
+    public ICommand ApplyManualPhantomValuesCommand { get; }
+    public ICommand ApplyManualMizukiValuesCommand { get; }
+    public ICommand ToggleManualHallucinationCommand { get; }
+    public ICommand ToggleManualMizukiHordeCallCommand { get; }
+    public ICommand ToggleManualMizukiOperatorTargetCommand { get; }
+    public ICommand ShowThoughtDetailCommand { get; }
+    public ICommand CloseThoughtDetailCommand { get; }
     public ICommand ShowClearRunConfirmationCommand { get; }
     public ICommand CancelClearRunCommand { get; }
     public ICommand ConfirmClearRunCommand { get; }
+    public ICommand ToggleBossOptionCommand { get; }
 
     public ICommand StartSidecarServerCommand { get; }
 
@@ -1661,6 +1864,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand SetCurrentCampaignCommand { get; }
 
     public ICommand ToggleChoiceSelectedCommand { get; }
+
+    public ICommand ToggleRelicUsedCommand { get; }
 
     public ICommand ToggleChoiceExcludedCommand { get; }
 
@@ -1759,7 +1964,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             HudRelics,
             _allRelics
                 .Where(item => item.CampaignId == SelectedCampaign?.Id && item.IsSelected && !item.IsExcluded)
-                .OrderBy(item => item.SortOrder)
+                .OrderBy(RhodesRelicUsagePolicy.OwnedDisplayPriority)
+                .ThenBy(item => item.SortOrder)
                 .ThenBy(item => item.Name, StringComparer.Ordinal));
         OnPropertyChanged(nameof(IsHudRelicsVisible));
     }
@@ -1769,6 +1975,50 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _sidecarServerStatus;
         private set => SetProperty(ref _sidecarServerStatus, string.IsNullOrWhiteSpace(value) ? "未確認" : value);
+    }
+
+    private Task RefreshNodeRuntimeAsync()
+    {
+        return RunBusyAsync(() =>
+        {
+            UpdateNodeRuntimeStatus(_nodeRuntime.Probe());
+            StatusMessage = $"Node.js状態: {NodeRuntimeState} / {NodeRuntimeDetail}";
+            return Task.CompletedTask;
+        });
+    }
+
+    private Task InstallNodeRuntimeAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            StatusMessage = $"Node.js v{RhodesNodeRuntimeManager.NodeVersion}をダウンロード・検証しています (約36MB)。";
+            var result = await _nodeRuntime.InstallAsync();
+            UpdateNodeRuntimeStatus(result.Status);
+            StatusMessage = result.Message;
+        });
+    }
+
+    private Task UninstallNodeRuntimeAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            if (_sidecarServer.IsOwnedProcessRunning)
+            {
+                _sidecarServer.Stop();
+                SidecarServerStatus = "停止";
+            }
+
+            var result = await _nodeRuntime.UninstallAsync();
+            UpdateNodeRuntimeStatus(result.Status);
+            StatusMessage = result.Message;
+        });
+    }
+
+    private void UpdateNodeRuntimeStatus(RhodesNodeRuntimeStatus status)
+    {
+        _nodeRuntimeStatus = status;
+        OnPropertyChanged(nameof(NodeRuntimeState));
+        OnPropertyChanged(nameof(NodeRuntimeDetail));
     }
 
     private async Task StartSidecarServerAsync()
@@ -1787,6 +2037,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             var launch = _sidecarServer.Start(RhodesApiUrl);
+            UpdateNodeRuntimeStatus(_nodeRuntime.Probe());
             if (!launch.Succeeded)
             {
                 SidecarServerStatus = "起動失敗";
@@ -1984,13 +2235,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         foreach (var item in _allOperators)
             item.IsSelected = state.SelectedOperatorIds.Contains(item.Id);
         foreach (var item in _allRelics)
+        {
             item.IsSelected = state.SelectedRelicIds.Contains(item.Id);
+            item.IsUsed = item.IsSelected && state.UsedRelicIds.Contains(item.Id);
+        }
         RefreshChoiceLists();
     }
 
     private void ReloadRunStateFromStore()
     {
-        _runState = RhodesPublicDebugPolicy.ApplyCampaign(RhodesRunCatalog.LoadDefault().Current);
+        _runState = RhodesPublicDebugPolicy.ApplyCampaign(
+            RhodesRunCatalog.LoadDefault().Current,
+            _distributionProfile);
         var campaign = Campaigns.FirstOrDefault(item => string.Equals(item.Id, _runState.CampaignId, StringComparison.Ordinal));
         if (campaign is not null && !string.Equals(campaign.Id, SelectedCampaign?.Id, StringComparison.Ordinal))
             SelectedCampaign = campaign;
@@ -2004,6 +2260,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private IEnumerable<SukiSpecialValuePreview> BuildSpecialValuePreviews()
     {
         var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
+        if (campaignId == "is2_phantom")
+        {
+            yield return new SukiSpecialValuePreview(
+                "演目",
+                string.IsNullOrWhiteSpace(_runState.Performance) ? "演目なし" : _runState.Performance,
+                "手動入力",
+                "",
+                string.IsNullOrWhiteSpace(_runState.PerformanceId) ? "取得値なし" : _runState.PerformanceId);
+        }
         var specialFields = (_runState.SpecialFields ?? Array.Empty<SukiSpecialFieldState>())
             .Where(field => string.Equals(field.CampaignId, campaignId, StringComparison.Ordinal))
             .ToArray();
@@ -2070,6 +2335,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (WorkspaceTab == "run")
         {
             yield return new SukiInspectorRow("共通取得値", $"{RunFieldPreviews.Count}項目", "runStatusFull");
+            yield break;
+        }
+
+        if (WorkspaceTab == "special")
+        {
             yield return new SukiInspectorRow("固有値", $"{SpecialValuePreviews.Count}項目", SelectedCampaign?.Id ?? "");
             yield break;
         }
@@ -2200,7 +2470,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RhodesApiUrl = string.IsNullOrWhiteSpace(settings.RhodesApiUrl) ? "http://127.0.0.1:5173" : settings.RhodesApiUrl;
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == settings.SelectedAdbPresetId) ?? SelectedAdbPreset;
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile =>
-            RhodesPublicDebugPolicy.IsProfileAllowed(settings.SelectedResourceProfileId)
+            RhodesPublicDebugPolicy.IsProfileAllowed(settings.SelectedResourceProfileId, _distributionProfile)
             && profile.Id == settings.SelectedResourceProfileId) ?? SelectedResourceProfile;
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(settings.AdbInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(settings.AdbScreencapMethodId);
@@ -2209,6 +2479,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         InitializeHudPartOptions(settings.HudVisibleParts);
         IsHudVisible = settings.HudVisible;
         _adbConnectionValidated = settings.AdbConnectionValidated;
+        ApplyOverlayLayoutStates(settings.OverlayLayout);
     }
 
     private async Task SaveSettingsAsync()
@@ -2240,7 +2511,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             HudX,
             HudY,
             RhodesHudPartCatalog.SerializeEnabledIds(HudPartOptions),
-            _adbConnectionValidated);
+            _adbConnectionValidated,
+            OverlayLayoutItems.Select(item => item.ToState()).ToArray());
     }
 
     private async Task<string> SaveAdbSettingsToApiStateAsync()
@@ -2335,7 +2607,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         };
         if (string.IsNullOrWhiteSpace(campaignId))
             return;
-        if (!RhodesPublicDebugPolicy.IsCampaignAllowed(campaignId))
+        if (!RhodesPublicDebugPolicy.IsCampaignAllowed(campaignId, _distributionProfile))
         {
             StatusMessage = "公開デバッグではIS#5 サルカズの炉辺奇談のみを対象にします。";
             return;
@@ -2370,9 +2642,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         item.IsSelected = !item.IsSelected;
         if (item.IsSelected)
             item.IsExcluded = false;
-        RefreshChoiceAfterSelectionMutation(item.Kind);
+        else if (string.Equals(item.Kind, "relic", StringComparison.Ordinal))
+            item.IsUsed = false;
+        if (string.Equals(item.Kind, "relic", StringComparison.Ordinal) && item.SupportsUsedFlag)
+            RefreshRelicChoices();
+        else
+            RefreshChoiceAfterSelectionMutation(item.Kind);
         PersistChoiceStateInBackground();
         StatusMessage = $"{item.Name}: {(item.IsSelected ? "選択しました。" : "選択を解除しました。")}";
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleRelicUsedAsync(object? parameter)
+    {
+        if (parameter is not SukiChoiceItem { Kind: "relic", SupportsUsedFlag: true } item)
+            return Task.CompletedTask;
+
+        if (!item.IsSelected)
+        {
+            StatusMessage = $"{item.Name}: 所持中の秘宝だけ使用状態を変更できます。";
+            return Task.CompletedTask;
+        }
+
+        item.IsUsed = !item.IsUsed;
+        RefreshRelicSummaries();
+        PersistChoiceStateInBackground();
+        StatusMessage = $"{item.Name}: {(item.IsUsed ? "使用済みにしました。" : "未使用に戻しました。")}";
         return Task.CompletedTask;
     }
 
@@ -2383,7 +2678,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         item.IsExcluded = !item.IsExcluded;
         if (item.IsExcluded)
+        {
             item.IsSelected = false;
+            if (string.Equals(item.Kind, "relic", StringComparison.Ordinal))
+                item.IsUsed = false;
+        }
         RefreshChoiceAfterExclusionMutation(item.Kind);
         PersistChoiceStateInBackground();
         StatusMessage = $"{item.Name}: {(item.IsExcluded ? "表示除外にしました。" : "表示除外を解除しました。")}";
@@ -2402,6 +2701,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         foreach (var item in target)
         {
             item.IsSelected = false;
+            if (string.Equals(item.Kind, "relic", StringComparison.Ordinal))
+                item.IsUsed = false;
         }
 
         RefreshChoiceAfterBulkMutation(ChoiceTab == "relics" ? "relic" : "operator");
@@ -3927,6 +4228,127 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private async Task ApplyManualPhantomValuesAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            const string campaignId = "is2_phantom";
+            var hallucinations = ManualHallucinationOptions
+                .Where(option => option.IsSelected)
+                .Select(option => option.Name)
+                .ToArray();
+            var candidates = new MaaCandidatePreview[]
+            {
+                new(
+                    "runStatus",
+                    string.IsNullOrWhiteSpace(SelectedManualPerformance?.Id) ? "演目なし" : "演目 (手動入力)",
+                    SelectedManualPerformance?.Id ?? "",
+                    "手動入力",
+                    1.0,
+                    Field: "performanceId",
+                    CampaignId: campaignId),
+                new(
+                    "runStatus",
+                    hallucinations.Length == 0 ? "幻覚なし" : "幻覚 (手動入力)",
+                    string.Join(" / ", hallucinations),
+                    "手動入力",
+                    1.0,
+                    Field: "hallucinations",
+                    CampaignId: campaignId),
+            };
+
+            await ApplyCandidatesPipelineAsync(candidates);
+            RefreshInspectorRows();
+        });
+    }
+
+    private async Task ApplyManualMizukiValuesAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            const string campaignId = "is3_mizuki";
+            var candidates = new List<MaaCandidatePreview>
+            {
+                new("mizuki", "鍵 (手動入力)", ManualMizukiKey.ToString(CultureInfo.InvariantCulture), "手動入力", 1.0, CampaignId: campaignId, FieldId: "key"),
+                new("mizuki", "灯火 (手動入力)", ManualMizukiLight.ToString(CultureInfo.InvariantCulture), "手動入力", 1.0, CampaignId: campaignId, FieldId: "light"),
+            };
+
+            var hordeCalls = ManualMizukiHordeCallOptions.Where(option => option.IsSelected).ToArray();
+            if (hordeCalls.Length == 0)
+            {
+                candidates.Add(RhodesRecognitionCandidateApplier.CreateNoMizukiHordeCallCandidate());
+            }
+            else
+            {
+                candidates.AddRange(hordeCalls.Select(option => new MaaCandidatePreview(
+                    "mizuki",
+                    $"{option.Name} (手動入力)",
+                    option.Id,
+                    "手動入力",
+                    1.0,
+                    CampaignId: campaignId,
+                    FieldId: "hordeCalls",
+                    EffectId: option.Id)));
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedManualMizukiRejection?.Id))
+            {
+                candidates.Add(RhodesRecognitionCandidateApplier.CreateNoMizukiRejectionCandidate());
+            }
+            else
+            {
+                candidates.Add(new MaaCandidatePreview(
+                    "mizuki",
+                    $"{SelectedManualMizukiRejection.Name} (手動入力)",
+                    SelectedManualMizukiRejection.Id,
+                    "手動入力",
+                    1.0,
+                    CampaignId: campaignId,
+                    FieldId: "rejectionReaction",
+                    EffectId: SelectedManualMizukiRejection.Id));
+                candidates.AddRange(ManualMizukiOperatorTargets
+                    .Where(option => option.IsSelected)
+                    .Select(option => new MaaCandidatePreview(
+                        "mizuki",
+                        $"{option.Name} (拒絶反応対象)",
+                        option.Id,
+                        "手動入力",
+                        1.0,
+                        OperatorId: option.Id,
+                        CampaignId: campaignId,
+                        FieldId: "rejectionReaction")));
+            }
+
+            await ApplyCandidatesPipelineAsync(candidates);
+            RefreshInspectorRows();
+        });
+    }
+
+    private Task ToggleManualHallucinationAsync(object? parameter)
+    {
+        if (parameter is not SukiHallucinationOption option || !ManualHallucinationOptions.Contains(option))
+            return Task.CompletedTask;
+
+        option.IsSelected = !option.IsSelected;
+        RefreshActiveManualHallucinationFusions();
+        OnPropertyChanged(nameof(ManualHallucinationSelectionSummary));
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleManualMizukiHordeCallAsync(object? parameter)
+    {
+        if (parameter is SukiToggleEffectOption option && ManualMizukiHordeCallOptions.Contains(option))
+            option.IsSelected = !option.IsSelected;
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleManualMizukiOperatorTargetAsync(object? parameter)
+    {
+        if (parameter is SukiOperatorTargetOption option && ManualMizukiOperatorTargets.Contains(option))
+            option.IsSelected = !option.IsSelected;
+        return Task.CompletedTask;
+    }
+
     private async Task ConfirmClearRunAsync()
     {
         await RunBusyAsync(async () =>
@@ -3967,13 +4389,219 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ?? SukiSquadOption.KeepCurrent;
         ManualIdea = _runState.Idea;
         RefreshManualSarkazEditors();
+        RefreshManualPhantomEditors();
+        RefreshManualMizukiEditors();
         RefreshManualSquadRandomEffectOptions();
+        RefreshBossSections();
         OnPropertyChanged(nameof(ManualDifficultyMaximum));
         OnPropertyChanged(nameof(ManualDifficultyTierLabel));
+        OnPropertyChanged(nameof(IsManualDifficultyCampaign));
+        OnPropertyChanged(nameof(ManualDifficultyGuidance));
+    }
+
+    private void RefreshManualPhantomEditors()
+    {
+        var performances = new[] { new SukiSpecialEffectOption("", "演目なし") }
+            .Concat(RhodesRunCatalog.LoadPerformanceOptions("is2_phantom"))
+            .ToArray();
+        ReplaceCollection(ManualPerformanceOptions, performances);
+        SelectedManualPerformance = performances.FirstOrDefault(option =>
+            option.Id.Equals(_runState.PerformanceId, StringComparison.Ordinal)) ?? performances[0];
+
+        var hallucinationState = (_runState.SpecialFields ?? [])
+            .FirstOrDefault(field => field.CampaignId == "is2_phantom" && field.FieldId == "hallucinations");
+        var selectedNames = hallucinationState is null || hallucinationState.Detail == "取得値なし"
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : RhodesHallucinationCatalog.NormalizeRecognizedNames([hallucinationState.Detail])
+                .ToHashSet(StringComparer.Ordinal);
+        ReplaceCollection(
+            ManualHallucinationOptions,
+            RhodesHallucinationCatalog.LoadDefault().Options.Select(option => new SukiHallucinationOption(
+                option.Id,
+                option.Name,
+                option.MapLabel,
+                option.Effect,
+                option.FlavorText,
+                option.Category,
+                option.Aliases,
+                selectedNames.Contains(option.Name))));
+        RefreshActiveManualHallucinationFusions();
+        OnPropertyChanged(nameof(ManualHallucinationSelectionSummary));
+    }
+
+    private void RefreshManualMizukiEditors()
+    {
+        const string campaignId = "is3_mizuki";
+        var fields = (_runState.SpecialFields ?? [])
+            .Where(field => field.CampaignId.Equals(campaignId, StringComparison.Ordinal))
+            .ToDictionary(field => field.FieldId, StringComparer.Ordinal);
+
+        ManualMizukiKey = fields.TryGetValue("key", out var key)
+            && int.TryParse(key.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var keyValue)
+                ? keyValue
+                : 0;
+        ManualMizukiLight = fields.TryGetValue("light", out var light)
+            && int.TryParse(light.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lightValue)
+                ? lightValue
+                : 0;
+
+        var selectedHordeIds = fields.TryGetValue("hordeCalls", out var horde)
+            ? (horde.SelectedIds ?? []).ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+        ReplaceCollection(
+            ManualMizukiHordeCallOptions,
+            RhodesRunCatalog.LoadSpecialEffectOptions(campaignId, "hordeCall")
+                .Select(option => new SukiToggleEffectOption(option, selectedHordeIds.Contains(option.Id))));
+
+        var rejectionOptions = new[] { new SukiSpecialEffectOption("", "拒絶反応なし") }
+            .Concat(RhodesRunCatalog.LoadSpecialEffectOptions(campaignId, "rejectionReaction"))
+            .ToArray();
+        ReplaceCollection(ManualMizukiRejectionOptions, rejectionOptions);
+        var rejection = fields.GetValueOrDefault("rejectionReaction");
+        SelectedManualMizukiRejection = rejectionOptions.FirstOrDefault(option => option.Id == rejection?.EffectId)
+            ?? rejectionOptions[0];
+
+        var selectedOperatorIds = (rejection?.OperatorIds ?? []).ToHashSet(StringComparer.Ordinal);
+        ReplaceCollection(
+            ManualMizukiOperatorTargets,
+            _allOperators
+                .Where(option => option.IsSelected)
+                .Select(option => new SukiOperatorTargetOption(
+                    option.Id,
+                    option.Name,
+                    option.ImagePath,
+                    selectedOperatorIds.Contains(option.Id))));
+    }
+
+    private void RefreshActiveManualHallucinationFusions()
+    {
+        ReplaceCollection(
+            ActiveManualHallucinationFusions,
+            RhodesHallucinationCatalog.ResolveActiveFusions(
+                ManualHallucinationOptions.Where(option => option.IsSelected).Select(option => option.Name)));
+    }
+
+    private void RefreshBossSections()
+    {
+        foreach (var section in BossSections)
+            section.PropertyChanged -= BossSectionPropertyChanged;
+
+        var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
+        ReplaceCollection(
+            BossSections,
+            RhodesBossSelectionCatalog.LoadSections(campaignId, _runState.BossSelections));
+
+        foreach (var section in BossSections)
+            section.PropertyChanged += BossSectionPropertyChanged;
+    }
+
+    private void BossSectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not SukiBossSectionEditor section)
+            return;
+
+        var shouldPersist = section.AllowsMultiple
+            ? e.PropertyName == nameof(SukiBossSectionEditor.SelectedIds)
+            : e.PropertyName == nameof(SukiBossSectionEditor.SelectedOption);
+        if (!shouldPersist)
+            return;
+
+        _ = PersistBossSelectionAsync(
+            section.CampaignId,
+            section.Field,
+            section.SelectedIds.ToArray(),
+            section.AllowsMultiple);
+    }
+
+    private Task ToggleBossOptionAsync(object? parameter)
+    {
+        if (parameter is not SukiBossOption option)
+            return Task.CompletedTask;
+
+        BossSections.FirstOrDefault(section =>
+                section.Field.Equals(option.Field, StringComparison.Ordinal))
+            ?.Toggle(option);
+        return Task.CompletedTask;
+    }
+
+    private async Task PersistBossSelectionAsync(
+        string campaignId,
+        string field,
+        IReadOnlyList<string> selectedIds,
+        bool allowsMultiple)
+    {
+        await _bossSelectionSaveLock.WaitAsync();
+        try
+        {
+            var api = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
+            if (api.Succeeded)
+            {
+                var updatedJson = RhodesStateApiClient.ApplyBossSelectionToStateJson(
+                    api.StateJson,
+                    campaignId,
+                    field,
+                    selectedIds,
+                    allowsMultiple);
+                var saved = await RhodesStateApiClient.SaveAsync(RhodesApiUrl, updatedJson);
+                if (saved.Succeeded)
+                {
+                    await RhodesRunStateStore.ReplaceStateJsonAsync(updatedJson);
+                    _rhodesApiStatus = new SukiOptionalRuntimeStatus(
+                        "RHODES API",
+                        "接続済み",
+                        "ボス選択を同期しました。",
+                        true,
+                        false);
+                }
+                else
+                {
+                    await RhodesRunStateStore.SaveBossSelectionAsync(
+                        campaignId,
+                        field,
+                        selectedIds,
+                        allowsMultiple);
+                    _rhodesApiStatus = new SukiOptionalRuntimeStatus(
+                        "RHODES API",
+                        "同期失敗",
+                        saved.Error,
+                        false,
+                        false);
+                }
+            }
+            else
+            {
+                await RhodesRunStateStore.SaveBossSelectionAsync(
+                    campaignId,
+                    field,
+                    selectedIds,
+                    allowsMultiple);
+                _rhodesApiStatus = new SukiOptionalRuntimeStatus(
+                    "RHODES API",
+                    "未接続",
+                    $"ローカルへ保存しました。{api.Error}",
+                    false,
+                    false);
+            }
+
+            ReloadRunStateFromStore();
+            RefreshRuntimeCapabilities();
+            StatusMessage = selectedIds.Count == 0
+                ? "ボス選択を解除しました。"
+                : $"ボス選択を保存しました: {string.Join(" / ", selectedIds)}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"ボス選択を保存できませんでした: {ex.Message}";
+        }
+        finally
+        {
+            _bossSelectionSaveLock.Release();
+        }
     }
 
     private void RefreshManualSarkazEditors()
     {
+        var selectedThoughtId = SelectedThoughtDetail?.Id ?? "";
         var thoughtCounts = (_runState.SpecialFields ?? [])
             .FirstOrDefault(field => field.CampaignId == RhodesPublicDebugPolicy.SarkazCampaignId && field.FieldId == "thought")
             ?.Detail ?? "";
@@ -3983,7 +4611,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         ReplaceCollection(ManualThoughtEditors,
             RhodesRunCatalog.LoadSpecialEffectOptions(RhodesPublicDebugPolicy.SarkazCampaignId, "thought")
-                .Select(option => new SukiThoughtCountEditor(option.Id, option.Name, currentCounts.GetValueOrDefault(option.Name))));
+                .Select(option => new SukiThoughtCountEditor(option, currentCounts.GetValueOrDefault(option.Name))));
+        SelectedThoughtDetail = ManualThoughtEditors.FirstOrDefault(item => item.Id == selectedThoughtId);
 
         var ages = new[] { new SukiSpecialEffectOption("", "時代なし") }
             .Concat(RhodesRunCatalog.LoadSpecialEffectOptions(RhodesPublicDebugPolicy.SarkazCampaignId, "age"))
@@ -4073,14 +4702,107 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private async Task RunCommonRecognitionAndApplyAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var profileIds = IsSarkazCampaignSelected
+                ? new[] { "runStatusFull", "is5AgeFull" }
+                : IsPhantomCampaignSelected
+                    ? new[] { "runStatusFull", "is2HallucinationsFull", "is2PerformanceFull" }
+                    : IsMizukiCampaignSelected
+                        ? new[] { "runStatusFull", "is3KeyFull", "is3LightHordeFull", "is3RejectionFull", "operatorsFull" }
+                        : new[] { "runStatusFull" };
+            foreach (var profileId in profileIds)
+            {
+                if (!TrySelectRecognitionProfile(profileId))
+                    return;
+
+                StatusMessage = $"{SelectedResourceProfile?.DisplayName ?? profileId}の撮影・認識・反映を開始します。";
+                if (!await RunSelectedProfileRecognitionAndApplyCoreAsync())
+                    return;
+            }
+
+            TrySelectRecognitionProfile("runStatusFull");
+            StatusMessage = IsSarkazCampaignSelected
+                ? "共通値と時代の撮影・認識・反映が完了しました。"
+                : IsPhantomCampaignSelected
+                    ? "共通値・幻覚・演目の撮影・認識・反映が完了しました。"
+                    : IsMizukiCampaignSelected
+                        ? "共通値・鍵・灯火・大群の呼び声・拒絶反応・オペレーターの撮影・認識・反映が完了しました。"
+                        : "共通値の撮影・認識・反映が完了しました。";
+        });
+    }
+
     private async Task<bool> RunSelectedProfileRecognitionAndApplyCoreAsync()
     {
         if (!await RunAllResourceTasksCoreAsync())
             return false;
-        if (!await ConvertResourceTaskResultsCoreAsync())
+        var converted = await ConvertResourceTaskResultsCoreAsync();
+        EnsureAgeResetCandidateWhenUndetected();
+        EnsureHallucinationResetCandidateWhenUndetected();
+        EnsurePerformanceResetCandidateWhenUndetected();
+        EnsureMizukiResetCandidatesWhenUndetected();
+        if (!converted && CandidateResults.Count == 0)
             return false;
         await ApplyCandidateResultsCoreAsync();
         return true;
+    }
+
+    private void EnsureAgeResetCandidateWhenUndetected()
+    {
+        if (!string.Equals(SelectedResourceProfile?.Id, "is5AgeFull", StringComparison.Ordinal)
+            || CandidateResults.Any(candidate => candidate.Kind.Equals("age", StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        CandidateResults.Add(RhodesRecognitionCandidateApplier.CreateNoAgeCandidate());
+        StatusMessage = "時代を検出できなかったため、時代なしを反映します。";
+    }
+
+    private void EnsureHallucinationResetCandidateWhenUndetected()
+    {
+        if (!string.Equals(SelectedResourceProfile?.Id, "is2HallucinationsFull", StringComparison.Ordinal)
+            || CandidateResults.Any(candidate => candidate.Field.Equals("hallucinations", StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        CandidateResults.Add(RhodesRecognitionCandidateApplier.CreateNoHallucinationCandidate());
+        StatusMessage = "幻覚を検出できなかったため、幻覚なしを反映します。";
+    }
+
+    private void EnsurePerformanceResetCandidateWhenUndetected()
+    {
+        if (!string.Equals(SelectedResourceProfile?.Id, "is2PerformanceFull", StringComparison.Ordinal)
+            || CandidateResults.Any(candidate => candidate.Field.Equals("performanceId", StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        CandidateResults.Add(RhodesRecognitionCandidateApplier.CreateNoPerformanceCandidate());
+        StatusMessage = "演目を検出できなかったため、演目なしを反映します。";
+    }
+
+    private void EnsureMizukiResetCandidatesWhenUndetected()
+    {
+        if (string.Equals(SelectedResourceProfile?.Id, "is3LightHordeFull", StringComparison.Ordinal)
+            && !CandidateResults.Any(candidate => candidate.Kind.Equals("mizuki", StringComparison.OrdinalIgnoreCase)
+                && candidate.FieldId.Equals("hordeCalls", StringComparison.Ordinal)))
+        {
+            CandidateResults.Add(RhodesRecognitionCandidateApplier.CreateNoMizukiHordeCallCandidate());
+            StatusMessage = "大群の呼び声を検出できなかったため、選択なしを反映します。";
+        }
+
+        if (string.Equals(SelectedResourceProfile?.Id, "is3RejectionFull", StringComparison.Ordinal)
+            && !CandidateResults.Any(candidate => candidate.Kind.Equals("mizuki", StringComparison.OrdinalIgnoreCase)
+                && candidate.FieldId.Equals("rejectionReaction", StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(candidate.EffectId)))
+        {
+            CandidateResults.Add(RhodesRecognitionCandidateApplier.CreateNoMizukiRejectionCandidate());
+            StatusMessage = "拒絶反応を検出できなかったため、拒絶反応なしを反映します。";
+        }
     }
 
     private bool TrySelectRecognitionProfile(string? profileId)
@@ -4088,7 +4810,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (string.IsNullOrWhiteSpace(profileId))
             return SelectedResourceProfile is not null;
 
-        if (!RhodesPublicDebugPolicy.IsProfileAllowed(profileId))
+        if (!RhodesPublicDebugPolicy.IsProfileAllowed(profileId, _distributionProfile))
         {
             StatusMessage = $"公開デバッグ対象外の認識プロファイルです: {profileId}";
             return false;
@@ -4177,7 +4899,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 if (!await LoadFrameRecordImageCoreAsync(item))
                     return;
 
-                if (RhodesPublicDebugPolicy.IsProfileAllowed(item.ProfileId))
+                if (RhodesPublicDebugPolicy.IsProfileAllowed(item.ProfileId, _distributionProfile))
                 {
                     SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == item.ProfileId) ?? SelectedResourceProfile;
                     _lastResourceExecutionPlan = null;
@@ -4233,11 +4955,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             await RunTemplateOcrExpansionsAsync(execution.TaskResults, _lastCapture);
+            await RunThoughtLoadOcrExpansionsAsync(execution.TaskResults, _lastCapture);
 
             RefreshInspectorRows();
             var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
                 plan.ProfileId,
-                ResourceTaskResults);
+                ResourceTaskResults,
+                SelectedCampaign?.Id ?? _runState.CampaignId);
             LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                 ResourceTaskResults,
                 plan.ProfileId,
@@ -4367,7 +5091,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var replayCandidates = payload.Candidates;
         if (replayCandidates.Count == 0 && payload.TaskResults.Count > 0)
         {
-            replayCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(payload.ProfileId, payload.TaskResults);
+            replayCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+                payload.ProfileId,
+                payload.TaskResults,
+                SelectedCampaign?.Id ?? _runState.CampaignId);
             candidateApplySummary = $"保存ログ再候補化(local): {payload.ProfileId} / 候補{replayCandidates.Count}件";
         }
 
@@ -4430,6 +5157,86 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return Task.CompletedTask;
+    }
+
+    public void MarkObsUrlCopied(string? url)
+    {
+        StatusMessage = string.IsNullOrWhiteSpace(url)
+            ? "OBS URLをコピーできませんでした。"
+            : $"OBSへ貼り付けるURLをコピーしました: {url}";
+    }
+
+    public void SelectOverlayLayoutItem(SukiOverlayLayoutPreview? item)
+    {
+        if (item is not null)
+            SelectedOverlayLayoutItem = item;
+    }
+
+    public void MoveOverlayLayoutItem(SukiOverlayLayoutPreview? item, double previewDeltaX, double previewDeltaY)
+    {
+        if (item is null)
+            return;
+        SelectedOverlayLayoutItem = item;
+        item.X += (int)Math.Round(previewDeltaX * 2, MidpointRounding.AwayFromZero);
+        item.Y += (int)Math.Round(previewDeltaY * 2, MidpointRounding.AwayFromZero);
+        StatusMessage = $"{item.Label}を移動しました。保存して反映するとOBSへ反映されます。";
+    }
+
+    public void ResizeOverlayLayoutItem(SukiOverlayLayoutPreview? item, double previewDeltaX, double previewDeltaY)
+    {
+        if (item is null)
+            return;
+        SelectedOverlayLayoutItem = item;
+        item.Width += (int)Math.Round(previewDeltaX * 2, MidpointRounding.AwayFromZero);
+        item.Height += (int)Math.Round(previewDeltaY * 2, MidpointRounding.AwayFromZero);
+        StatusMessage = $"{item.Label}のサイズを変更しました。保存して反映するとOBSへ反映されます。";
+    }
+
+    private Task ResetOverlayLayoutAsync()
+    {
+        ApplyOverlayLayoutStates(RhodesOverlayLayoutCatalog.BuildDefaultStates());
+        StatusMessage = "Overlayレイアウトを初期配置へ戻しました。保存して反映するとOBSへ反映されます。";
+        return Task.CompletedTask;
+    }
+
+    private Task AdjustSelectedOverlayLayoutAsync(object? parameter)
+    {
+        var item = SelectedOverlayLayoutItem;
+        if (item is null)
+            return Task.CompletedTask;
+
+        switch (parameter as string)
+        {
+            case "left": item.X -= 8; break;
+            case "right": item.X += 8; break;
+            case "up": item.Y -= 8; break;
+            case "down": item.Y += 8; break;
+            case "narrower": item.Width -= 16; break;
+            case "wider": item.Width += 16; break;
+            case "shorter": item.Height -= 16; break;
+            case "taller": item.Height += 16; break;
+            case "back": item.ZIndex -= 1; break;
+            case "front": item.ZIndex += 1; break;
+        }
+        StatusMessage = $"{item.Label}を調整しました。保存して反映するとOBSへ反映されます。";
+        return Task.CompletedTask;
+    }
+
+    private void ApplyOverlayLayoutStates(IEnumerable<SukiOverlayLayoutState>? states)
+    {
+        var normalized = RhodesOverlayLayoutCatalog.Normalize(states);
+        foreach (var state in normalized)
+        {
+            var item = OverlayLayoutItems.FirstOrDefault(candidate => candidate.Id == state.Id);
+            if (item is null)
+                continue;
+            item.Enabled = state.Enabled;
+            item.Width = state.Width;
+            item.Height = state.Height;
+            item.X = state.X;
+            item.Y = state.Y;
+            item.ZIndex = state.ZIndex;
+        }
     }
 
     private async Task<string> SyncRunStateFromApiCoreAsync()
@@ -4525,7 +5332,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 {
                     var failedScreenCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
                         plan.ProfileId,
-                        ResourceTaskResults);
+                        ResourceTaskResults,
+                        SelectedCampaign?.Id ?? _runState.CampaignId);
                     LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                         ResourceTaskResults,
                         plan.ProfileId,
@@ -4553,13 +5361,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 execution.TaskResults,
                 _lastCapture,
                 operatorScanTracker: operatorScanTracker);
+            await RunThoughtLoadOcrExpansionsAsync(execution.TaskResults, _lastCapture);
+            await RetryLowConfidenceInitialFrameAsync(plan, runtimePlan, operatorScanTracker);
             await RunScrollRecognitionFramesAsync(plan, operatorScanTracker);
             RefreshInspectorRows();
             if (ResourceTaskResults.Any())
             {
                 var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
                     plan.ProfileId,
-                    ResourceTaskResults);
+                    ResourceTaskResults,
+                    SelectedCampaign?.Id ?? _runState.CampaignId);
                 LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                     ResourceTaskResults,
                     plan.ProfileId,
@@ -4609,6 +5420,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var request = workItem.Request;
+                    var cardResults = new List<MaaTaskRunResult>();
                     var result = await _session.RunResourceRecognitionAsync(
                         request.Entry,
                         request.PayloadJson,
@@ -4616,9 +5428,35 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         cancellationToken,
                         request.Scale);
                     ResourceTaskResults.Add(result);
-                    var resolved = RhodesMaaLocalCandidateConverter.FromTaskResults(
+                    cardResults.Add(result);
+                    var roleRequest = RhodesMaaAmiyaRoleResolver.BuildRequest(request, result);
+                    if (roleRequest is not null)
+                    {
+                        var roleResult = await _session.RunResourceRecognitionAsync(
+                            roleRequest.Entry,
+                            roleRequest.PayloadJson,
+                            encodedImage,
+                            cancellationToken);
+                        ResourceTaskResults.Add(roleResult);
+                        cardResults.Add(roleResult);
+                    }
+                    var resolvedOperators = RhodesMaaLocalCandidateConverter.FromTaskResults(
                         "operatorsFull",
-                        [result]).Count > 0;
+                        cardResults)
+                        .Where(candidate => candidate.Kind.Equals("operator", StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+                    if (IsMizukiCampaignSelected && resolvedOperators.Length == 1)
+                    {
+                        var rejectionDetection = RhodesMizukiRejectionCardDetector.Detect(encodedImage, request);
+                        if (rejectionDetection.IsAffected)
+                        {
+                            ResourceTaskResults.Add(RhodesMizukiRejectionCardDetector.CreateTaskResult(
+                                request,
+                                resolvedOperators[0],
+                                rejectionDetection));
+                        }
+                    }
+                    var resolved = resolvedOperators.Length > 0;
                     operatorScanTracker.RecordResult(workItem.Fingerprint, resolved);
                     RefreshResourceTaskDiagnostics();
                     StatusMessage = $"{request.Entry}: {result.Status}";
@@ -4642,6 +5480,98 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private async Task RunThoughtLoadOcrExpansionsAsync(
+        IEnumerable<MaaTaskRunResult> frameResults,
+        byte[] encodedImage,
+        CancellationToken cancellationToken = default)
+    {
+        var resolvedThoughtIds = ResourceTaskResults
+            .Where(result => result.Succeeded
+                && result.Hit
+                && RhodesMaaThoughtLoadOcrExpander.TryReadDisplayedLoad(result.RecognitionDetailJson, out _))
+            .Select(result => result.Entry)
+            .Where(entry => entry.StartsWith("thought.card.load.", StringComparison.Ordinal))
+            .Select(entry => entry["thought.card.load.".Length..])
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var thoughtListResult in frameResults.Where(result =>
+                     result.Succeeded
+                     && result.Hit
+                     && result.Entry.Equals("RhodesOcrRegion_is5_thought_list_text", StringComparison.Ordinal)))
+        {
+            var requests = RhodesMaaThoughtLoadOcrExpander.BuildRequests(
+                thoughtListResult.RecognitionDetailJson,
+                resolvedThoughtIds);
+            foreach (var request in requests)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var result = await _session.RunResourceRecognitionAsync(
+                    request.Entry,
+                    request.PayloadJson,
+                    encodedImage,
+                    cancellationToken,
+                    request.Scale);
+                ResourceTaskResults.Add(result);
+                if (result.Succeeded
+                    && result.Hit
+                    && RhodesMaaThoughtLoadOcrExpander.TryReadDisplayedLoad(result.RecognitionDetailJson, out _))
+                    resolvedThoughtIds.Add(request.Entry["thought.card.load.".Length..]);
+                RefreshResourceTaskDiagnostics();
+                StatusMessage = $"{request.Entry}: {result.Status}";
+            }
+        }
+    }
+
+    private async Task RetryLowConfidenceInitialFrameAsync(
+        MaaResourceExecutionPlan plan,
+        MaaResourceExecutionPlan runtimePlan,
+        RhodesOperatorScanTracker? operatorScanTracker,
+        CancellationToken cancellationToken = default)
+    {
+        var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+            plan.ProfileId,
+            ResourceTaskResults,
+            SelectedCampaign?.Id ?? _runState.CampaignId);
+        var decision = RhodesRecognitionRetryPolicy.Evaluate(
+            plan.ProfileId,
+            ResourceTaskResults,
+            candidates,
+            SelectedCampaign?.Id ?? _runState.CampaignId);
+        if (!decision.ShouldRetry)
+            return;
+
+        StatusMessage = $"低信頼フレームを1回だけ再撮影します: {decision.Reason}";
+        await Task.Delay(80, cancellationToken);
+        if (!await ForceCaptureAsync() || _lastCapture.Length == 0)
+            return;
+
+        var retryExecution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
+            runtimePlan,
+            (entry, token) =>
+            {
+                var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, token);
+            },
+            result =>
+            {
+                ResourceTaskResults.Add(result);
+                RefreshResourceTaskDiagnostics();
+            },
+            cancellationToken);
+        if (!retryExecution.Succeeded)
+        {
+            StatusMessage = $"低信頼フレームの再試行に失敗しました: {retryExecution.Error}";
+            return;
+        }
+
+        await RunTemplateOcrExpansionsAsync(
+            retryExecution.TaskResults,
+            _lastCapture,
+            cancellationToken,
+            operatorScanTracker);
+        await RunThoughtLoadOcrExpansionsAsync(retryExecution.TaskResults, _lastCapture, cancellationToken);
+    }
+
     private async Task RunScrollRecognitionFramesAsync(
         MaaResourceExecutionPlan plan,
         RhodesOperatorScanTracker? operatorScanTracker = null,
@@ -4658,14 +5588,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (taskEntries.Length == 0)
             return;
         var initialCandidateCount = CurrentLocalCandidateCount(plan.ProfileId);
-        if (RhodesRecognitionRuntimePlan.ShouldSkipScroll(plan.ProfileId, initialCandidateCount))
+        var expectedCandidateCount = plan.ProfileId == "relicsFull"
+            ? RhodesRelicOwnedCountReader.FromTaskResults(ResourceTaskResults)?.Count
+            : null;
+        if (RhodesRecognitionRuntimePlan.ShouldSkipScroll(plan.ProfileId, initialCandidateCount, expectedCandidateCount))
         {
-            StatusMessage = $"秘宝候補{initialCandidateCount}件: スクロール不要の表示として終了しました。";
+            StatusMessage = $"秘宝候補{initialCandidateCount}/{expectedCandidateCount}件: 所持数と一致したため終了しました。";
             return;
         }
         var scanRegion = RhodesRecognitionScrollPlan.LoadScanRegionDefault(plan.ProfileId);
 
         var previousPassScrolls = 0;
+        var reachedExpectedCandidateCount = false;
         foreach (var pass in passes)
         {
             var maxScrolls = pass.MirrorPreviousPassScrolls
@@ -4720,7 +5654,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     ? stableCandidates + 1
                     : 0;
                 previousCandidateCount = candidateCount;
-                StatusMessage = $"{pass.Label}: {executedScrolls}/{maxScrolls} / 候補{candidateCount}件";
+                var candidateProgress = expectedCandidateCount.HasValue
+                    ? $"{candidateCount}/{expectedCandidateCount.Value}"
+                    : candidateCount.ToString();
+                StatusMessage = $"{pass.Label}: {executedScrolls}/{maxScrolls} / 候補{candidateProgress}件";
+
+                if (RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount(
+                        plan.ProfileId,
+                        candidateCount,
+                        expectedCandidateCount))
+                {
+                    reachedExpectedCandidateCount = true;
+                    break;
+                }
 
                 if (executedScrolls >= pass.MinScrolls
                     && operatorScanTracker?.CanStopCurrentViewport == true)
@@ -4740,6 +5686,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             previousPassScrolls = executedScrolls;
+            if (reachedExpectedCandidateCount)
+            {
+                StatusMessage = $"秘宝候補{CurrentLocalCandidateCount(plan.ProfileId)}/{expectedCandidateCount}件: 所持数と一致したため終了しました。";
+                break;
+            }
             if (plan.ProfileId == "operatorsFull"
                 && stableFrames > 0
                 && operatorScanTracker?.CanStopScan == true)
@@ -4794,10 +5745,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             encodedImage,
             cancellationToken,
             operatorScanTracker);
+        await RunThoughtLoadOcrExpansionsAsync(frameResults, encodedImage, cancellationToken);
     }
 
     private int CurrentLocalCandidateCount(string profileId) =>
-        RhodesMaaLocalCandidateConverter.FromTaskResults(profileId, ResourceTaskResults).Count;
+        RhodesMaaLocalCandidateConverter.FromTaskResults(
+            profileId,
+            ResourceTaskResults,
+            SelectedCampaign?.Id ?? _runState.CampaignId).Count;
 
 
     private async Task<bool> ConvertResourceTaskResultsCoreAsync()
@@ -4814,7 +5769,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RhodesApiUrl,
             profileId,
             ResourceTaskResults);
-        var conversion = RhodesRecognitionWorkflow.ConvertCandidates(profileId, ResourceTaskResults, apiResult);
+        var conversion = RhodesRecognitionWorkflow.ConvertCandidates(
+            profileId,
+            ResourceTaskResults,
+            apiResult,
+            SelectedCampaign?.Id ?? _runState.CampaignId);
 
         CandidateResults.Clear();
         foreach (var candidate in conversion.Candidates)
@@ -4888,7 +5847,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             LastResourceTaskResultsPath = await SaveResourceTaskResultsAsync(
                 ResourceTaskResults,
                 SelectedResourceProfile?.Id,
-                RhodesMaaLocalCandidateConverter.FromTaskResults(CandidateApiProfileId(), ResourceTaskResults),
+                RhodesMaaLocalCandidateConverter.FromTaskResults(
+                    CandidateApiProfileId(),
+                    ResourceTaskResults,
+                    SelectedCampaign?.Id ?? _runState.CampaignId),
                 executionPlan: CurrentResourceExecutionPlan);
             StatusMessage = $"{task.Entry}: {result.Status} / 証跡保存: {LastResourceTaskResultsPath}";
         });
@@ -5101,7 +6063,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var selectedProfileId = SelectedResourceProfile?.Id;
         _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
         MaaResourceContract = RhodesMaaResourceCatalog.ValidateContract();
-        ReplaceCollection(ResourceProfiles, RhodesPublicDebugPolicy.FilterProfiles(RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks)));
+        ReplaceCollection(
+            ResourceProfiles,
+            RhodesPublicDebugPolicy.FilterProfiles(
+                RhodesMaaResourceCatalog.ProfileGroups(_allResourceTasks),
+                _distributionProfile));
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => string.Equals(profile.Id, selectedProfileId, StringComparison.Ordinal))
             ?? ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull")
             ?? ResourceProfiles.FirstOrDefault();
@@ -5251,7 +6217,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 part.ScrollEnabled,
                 part.HideExcluded,
                 part.Width,
-                part.Height)).ToArray());
+                part.Height)).ToArray(),
+            OverlayLayoutItems.Select(item => item.ToState()).ToArray());
     }
 
     private SukiChoiceCatalogFilterState OperatorChoiceFilterState()
@@ -5393,17 +6360,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (currentCandidates.Length > 0)
             return currentCandidates;
 
-        return RhodesMaaLocalCandidateConverter.FromTaskResults(CandidateApiProfileId(), taskResults);
+        return RhodesMaaLocalCandidateConverter.FromTaskResults(
+            CandidateApiProfileId(),
+            taskResults,
+            SelectedCampaign?.Id ?? _runState.CampaignId);
     }
 
-    private static IReadOnlyDictionary<string, string> CandidateSourceEntries(
+    private IReadOnlyDictionary<string, string> CandidateSourceEntries(
         string? profileId,
         IEnumerable<MaaTaskRunResult> taskResults)
     {
         var entries = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var taskResult in taskResults)
         {
-            var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(profileId, [taskResult]);
+            var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+                profileId,
+                [taskResult],
+                SelectedCampaign?.Id ?? _runState.CampaignId);
             foreach (var candidate in candidates)
             {
                 var key = CandidateComparisonKey(candidate);

@@ -7,6 +7,8 @@ namespace RhodesSuki.Services;
 
 public static class RhodesRunStateStore
 {
+    public const string StartupCampaignId = "is2_phantom";
+
     private static readonly SemaphoreSlim WriteLock = new(1, 1);
     // TypeInfoResolver必須: JsonArray.Add<T>で作られたノード(JsonValueCustomized)は、
     // リゾルバ無しのoptionsをToJsonStringへ渡すとMakeReadOnlyで例外になる。
@@ -54,6 +56,28 @@ public static class RhodesRunStateStore
         {
             var state = await LoadStateNodeAsync(path);
             ApplyRunContext(state, campaignId, now ?? DateTimeOffset.UtcNow);
+            await WriteJsonAtomicAsync(path, state);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
+    }
+
+    public static async Task SaveBossSelectionAsync(
+        string campaignId,
+        string field,
+        IEnumerable<string> selectedIds,
+        bool allowsMultiple,
+        string? statePath = null,
+        DateTimeOffset? now = null)
+    {
+        var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
+        await WriteLock.WaitAsync();
+        try
+        {
+            var state = await LoadStateNodeAsync(path);
+            ApplyBossSelection(state, campaignId, field, selectedIds, allowsMultiple, now ?? DateTimeOffset.UtcNow);
             await WriteJsonAtomicAsync(path, state);
         }
         finally
@@ -112,9 +136,13 @@ public static class RhodesRunStateStore
         {
             var state = await LoadStateNodeAsync(path);
             var run = EnsureObject(state, "run");
+            var campaignId = JsonString(run, "campaignId");
             ResetRunValues(run);
+            ClearBossSelectionsForCampaign(state, campaignId);
+            state["bossFlags"] = new JsonArray();
             state["operators"] = new JsonArray();
             state["relics"] = new JsonArray();
+            state["usedRelicIds"] = new JsonArray();
             state["updatedAt"] = (now ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("O");
             await WriteJsonAtomicAsync(path, state);
         }
@@ -122,6 +150,59 @@ public static class RhodesRunStateStore
         {
             WriteLock.Release();
         }
+    }
+
+    public static async Task PrepareForStartupAsync(
+        string? statePath = null,
+        DateTimeOffset? now = null)
+    {
+        var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
+        await WriteLock.WaitAsync();
+        try
+        {
+            var state = await LoadStateNodeAsync(path);
+            ApplyStartupReset(state, now ?? DateTimeOffset.UtcNow);
+            await WriteJsonAtomicAsync(path, state);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
+    }
+
+    public static JsonObject ApplyStartupReset(JsonObject state, DateTimeOffset now)
+    {
+        var adb = state["adb"]?.DeepClone();
+        var preferences = state["preferences"]?.DeepClone();
+        var theme = state["theme"]?.DeepClone();
+
+        state.Clear();
+        state["version"] = 1;
+        if (theme is not null)
+            state["theme"] = theme;
+        state["mode"] = "casual";
+        state["run"] = new JsonObject
+        {
+            ["campaignId"] = StartupCampaignId,
+        };
+        state["operators"] = new JsonArray();
+        state["relics"] = new JsonArray();
+        state["usedRelicIds"] = new JsonArray();
+        state["bossFlags"] = new JsonArray();
+        state["bossSelections"] = new JsonObject();
+        state["pendingSuggestions"] = new JsonArray();
+        state["tournament"] = new JsonObject
+        {
+            ["pendingState"] = null,
+            ["lastSubmissionAt"] = null,
+            ["submittedBy"] = null,
+        };
+        if (adb is not null)
+            state["adb"] = adb;
+        if (preferences is not null)
+            state["preferences"] = preferences;
+        state["updatedAt"] = now.UtcDateTime.ToString("O");
+        return state;
     }
 
     public static JsonObject ApplyChoices(
@@ -136,6 +217,9 @@ public static class RhodesRunStateStore
         NormalizeOcrEnginePreference(state);
         state["operators"] = ToJsonArray(operators.Where(item => item.IsSelected).Select(item => item.Id));
         state["relics"] = ToJsonArray(relics.Where(item => item.IsSelected).Select(item => item.Id));
+        state["usedRelicIds"] = ToJsonArray(relics
+            .Where(item => item.IsSelected && item.SupportsUsedFlag && item.IsUsed)
+            .Select(item => item.Id));
         state["updatedAt"] = now.UtcDateTime.ToString("O");
 
         var preferences = EnsureObject(state, "preferences");
@@ -151,6 +235,49 @@ public static class RhodesRunStateStore
         preferences["relicGridColumns"] = Math.Clamp(options.RelicGridColumns, 1, 4);
 
         return state;
+    }
+
+    public static JsonObject ApplyBossSelection(
+        JsonObject state,
+        string campaignId,
+        string field,
+        IEnumerable<string> selectedIds,
+        bool allowsMultiple,
+        DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(campaignId))
+            throw new ArgumentException("campaignId is required.", nameof(campaignId));
+        if (string.IsNullOrWhiteSpace(field))
+            throw new ArgumentException("field is required.", nameof(field));
+
+        var values = selectedIds
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var allSelections = EnsureObject(state, "bossSelections");
+        var campaignSelections = EnsureObject(allSelections, campaignId.Trim());
+        if (allowsMultiple)
+            campaignSelections[field.Trim()] = ToJsonArray(values);
+        else
+            campaignSelections[field.Trim()] = values.FirstOrDefault();
+        state["version"] ??= 1;
+        state["updatedAt"] = now.UtcDateTime.ToString("O");
+        return state;
+    }
+
+    public static bool ClearBossSelectionsForCampaign(JsonObject state, string campaignId)
+    {
+        if (string.IsNullOrWhiteSpace(campaignId)
+            || state["bossSelections"] is not JsonObject allSelections
+            || allSelections[campaignId] is not JsonObject campaignSelections)
+        {
+            return false;
+        }
+
+        var changed = campaignSelections.Count > 0;
+        campaignSelections.Clear();
+        return changed;
     }
 
     public static JsonObject ApplyRunContext(JsonObject state, string campaignId, DateTimeOffset now)
@@ -234,7 +361,18 @@ public static class RhodesRunStateStore
     private static void ResetRunValues(JsonObject run)
     {
         // difficultyTierId は difficulty からの導出値なので、等級と一緒に破棄する。
-        foreach (var propertyName in new[] { "squad", "difficulty", "difficultyTierId", "ingot", "idea", "special" }
+        foreach (var propertyName in new[]
+            {
+                "squad",
+                "squadId",
+                "squadRandomEffectOptionId",
+                "performanceId",
+                "difficulty",
+                "difficultyTierId",
+                "ingot",
+                "idea",
+                "special",
+            }
             .Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {
             run.Remove(propertyName);

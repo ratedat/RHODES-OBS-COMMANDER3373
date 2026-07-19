@@ -540,6 +540,42 @@
           "relicId": "is6_sui_relic_182"
         }
       ]
+    },
+    {
+      "id": "is6_sui_squad_18_decree_coin",
+      "campaignId": "is6_sui",
+      "title": "知学分隊 開始通宝",
+      "phase": "runStart",
+      "trigger": {
+        "type": "squad",
+        "squadId": "is6_sui_squad_18"
+      },
+      "operations": [
+        {
+          "type": "addCoin",
+          "fieldId": "coins",
+          "coinId": "is6_sui_selectable_coin_is6_copper_s4",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "is6_sui_squad_19_token_coin",
+      "campaignId": "is6_sui",
+      "title": "商人分隊 開始通宝",
+      "phase": "runStart",
+      "trigger": {
+        "type": "squad",
+        "squadId": "is6_sui_squad_19"
+      },
+      "operations": [
+        {
+          "type": "addCoin",
+          "fieldId": "coins",
+          "coinId": "is6_sui_selectable_coin_is6_copper_r14",
+          "count": 1
+        }
+      ]
     }
   ]
 }

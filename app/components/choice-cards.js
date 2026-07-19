@@ -3,11 +3,15 @@ import { assetUrl, html, stars } from "../lib/format.js";
 export function renderRelicControlRow(item, active, effectText, meta = {}) {
   const autoOnly = meta.template && !meta.manual;
   const excluded = Boolean(meta.excluded);
+  const usedButton = meta.supportsUsedFlag && active
+    ? `<button type="button" class="choice-used-button ${meta.used ? "active" : ""}" data-action="toggle-relic-used" data-id="${html(item.id)}" aria-pressed="${meta.used ? "true" : "false"}">${meta.used ? "使用済" : "未使用"}</button>`
+    : "";
   const excludeButton = meta.showExclude === false ? "" : `<button type="button" class="choice-exclude-button ${excluded ? "active" : ""}" data-action="toggle-relic-excluded" data-id="${html(item.id)}" aria-pressed="${excluded ? "true" : "false"}">${excluded ? "除外中" : "表示除外"}</button>`;
   const badges = [
     autoOnly ? '<span class="item-badge template">自動</span>' : '',
     meta.manual && meta.template ? '<span class="item-badge template">手動+自動</span>' : '',
     excluded ? '<span class="item-badge excluded">除外</span>' : '',
+    meta.used ? '<span class="item-badge used">使用済</span>' : '',
   ].filter(Boolean).join("");
   return `
     <div class="item-row relic-choice ${active ? "active" : ""} ${autoOnly ? "template-active" : ""} ${excluded ? "choice-excluded" : ""}">
@@ -20,6 +24,7 @@ export function renderRelicControlRow(item, active, effectText, meta = {}) {
         </span>
       </button>
       <div class="item-badges">${badges}</div>
+      ${usedButton}
       ${excludeButton}
     </div>
   `;

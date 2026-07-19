@@ -46,9 +46,284 @@ public sealed record SukiSpecialValuePreview(
     string ProfileId,
     string Detail);
 
-public sealed record SukiSpecialEffectOption(string Id, string Name)
+public sealed record SukiSpecialEffectOption(
+    string Id,
+    string Name,
+    string GroupLabel = "",
+    string Effect = "",
+    string FlavorText = "",
+    string Category = "",
+    int Price = 0,
+    string ThoughtRank = "",
+    string ThoughtLoad = "",
+    string ImagePath = "")
 {
+    public string DetailMeta => string.Join(
+        " / ",
+        new[]
+        {
+            GroupLabel,
+            ThoughtRank,
+            ThoughtLoad,
+            Price > 0 ? $"消費構想 {Price}" : "",
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
     public override string ToString() => Name;
+}
+
+public sealed class SukiHallucinationOption : INotifyPropertyChanged
+{
+    private bool _isSelected;
+
+    public SukiHallucinationOption(
+        string id,
+        string name,
+        string mapLabel,
+        string effect,
+        string flavorText,
+        string category,
+        IReadOnlyList<string> aliases,
+        bool isSelected = false)
+    {
+        Id = id;
+        Name = name;
+        MapLabel = mapLabel;
+        Effect = effect;
+        FlavorText = flavorText;
+        Category = category;
+        Aliases = aliases;
+        _isSelected = isSelected;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string Id { get; }
+    public string Name { get; }
+    public string MapLabel { get; }
+    public string Effect { get; }
+    public string FlavorText { get; }
+    public string Category { get; }
+    public IReadOnlyList<string> Aliases { get; }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value)
+                return;
+            _isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
+}
+
+public sealed class SukiToggleEffectOption : INotifyPropertyChanged
+{
+    private bool _isSelected;
+
+    public SukiToggleEffectOption(SukiSpecialEffectOption option, bool isSelected = false)
+    {
+        Option = option;
+        _isSelected = isSelected;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public SukiSpecialEffectOption Option { get; }
+    public string Id => Option.Id;
+    public string Name => Option.Name;
+    public string Effect => Option.Effect;
+    public string ImagePath => Option.ImagePath;
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value)
+                return;
+            _isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
+}
+
+public sealed class SukiOperatorTargetOption : INotifyPropertyChanged
+{
+    private bool _isSelected;
+
+    public SukiOperatorTargetOption(string id, string name, string imagePath, bool isSelected = false)
+    {
+        Id = id;
+        Name = name;
+        ImagePath = imagePath;
+        _isSelected = isSelected;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string Id { get; }
+    public string Name { get; }
+    public string ImagePath { get; }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value)
+                return;
+            _isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
+}
+
+public sealed record SukiHallucinationFusion(
+    string Id,
+    IReadOnlyList<string> RequiredIds,
+    string Name,
+    string Effect);
+
+public sealed record SukiHallucinationCatalogSnapshot(
+    IReadOnlyList<SukiHallucinationOption> Options,
+    IReadOnlyList<SukiHallucinationFusion> Fusions,
+    string SourceTitle,
+    string SourceUrl,
+    string SourceCheckedAt);
+
+public sealed class SukiBossOption : INotifyPropertyChanged
+{
+    private bool _isSelected;
+
+    public SukiBossOption(
+        string field,
+        string id,
+        string stageName,
+        string bossName,
+        string optionLabel,
+        string imagePath,
+        double sortOrder,
+        bool isSelected = false)
+    {
+        Field = field;
+        Id = id;
+        StageName = stageName;
+        BossName = bossName;
+        OptionLabel = optionLabel;
+        ImagePath = imagePath;
+        SortOrder = sortOrder;
+        _isSelected = isSelected;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string Field { get; }
+
+    public string Id { get; }
+
+    public string StageName { get; }
+
+    public string BossName { get; }
+
+    public string OptionLabel { get; }
+
+    public string ImagePath { get; }
+
+    public double SortOrder { get; }
+
+    public string DisplayName => string.IsNullOrWhiteSpace(Id)
+        ? "未選択"
+        : string.IsNullOrWhiteSpace(BossName)
+            ? StageName
+            : $"{StageName} / {BossName}";
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value)
+                return;
+            _isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
+
+    public override string ToString() => DisplayName;
+}
+
+public sealed class SukiBossSectionEditor : INotifyPropertyChanged
+{
+    private SukiBossOption? _selectedOption;
+
+    public SukiBossSectionEditor(
+        string campaignId,
+        string id,
+        string field,
+        string label,
+        string helper,
+        bool allowsMultiple,
+        IReadOnlyList<SukiBossOption> options)
+    {
+        CampaignId = campaignId;
+        Id = id;
+        Field = field;
+        Label = label;
+        Helper = helper;
+        AllowsMultiple = allowsMultiple;
+        Options = options;
+        _selectedOption = allowsMultiple ? null : options.FirstOrDefault(option => option.IsSelected)
+            ?? options.FirstOrDefault(option => string.IsNullOrWhiteSpace(option.Id));
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string CampaignId { get; }
+
+    public string Id { get; }
+
+    public string Field { get; }
+
+    public string Label { get; }
+
+    public string Helper { get; }
+
+    public bool AllowsMultiple { get; }
+
+    public bool IsSingleSelection => !AllowsMultiple;
+
+    public IReadOnlyList<SukiBossOption> Options { get; }
+
+    public SukiBossOption? SelectedOption
+    {
+        get => _selectedOption;
+        set
+        {
+            if (AllowsMultiple || ReferenceEquals(_selectedOption, value))
+                return;
+            _selectedOption = value;
+            foreach (var option in Options)
+                option.IsSelected = ReferenceEquals(option, value) && !string.IsNullOrWhiteSpace(option.Id);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOption)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedIds)));
+        }
+    }
+
+    public IReadOnlyList<string> SelectedIds => Options
+        .Where(option => option.IsSelected && !string.IsNullOrWhiteSpace(option.Id))
+        .Select(option => option.Id)
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
+
+    public void Toggle(SukiBossOption option)
+    {
+        if (!AllowsMultiple || !Options.Contains(option))
+            return;
+        option.IsSelected = !option.IsSelected;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedIds)));
+    }
 }
 
 public sealed class SukiThoughtCountEditor : INotifyPropertyChanged
@@ -56,14 +331,23 @@ public sealed class SukiThoughtCountEditor : INotifyPropertyChanged
     private int _count;
 
     public SukiThoughtCountEditor(string id, string name, int count = 0)
+        : this(new SukiSpecialEffectOption(id, name), count)
     {
-        Id = id;
-        Name = name;
+    }
+
+    public SukiThoughtCountEditor(SukiSpecialEffectOption option, int count = 0)
+    {
+        Option = option;
         _count = Math.Max(0, count);
     }
 
-    public string Id { get; }
-    public string Name { get; }
+    public SukiSpecialEffectOption Option { get; }
+    public string Id => Option.Id;
+    public string Name => Option.Name;
+    public string DetailMeta => Option.DetailMeta;
+    public string Effect => Option.Effect;
+    public string FlavorText => Option.FlavorText;
+    public string ImagePath => Option.ImagePath;
 
     public int Count
     {
@@ -89,7 +373,10 @@ public sealed record SukiSpecialFieldState(
     string Value,
     string Kind,
     string ProfileId,
-    string Detail);
+    string Detail,
+    string EffectId = "",
+    IReadOnlyList<string>? SelectedIds = null,
+    IReadOnlyList<string>? OperatorIds = null);
 
 public sealed record SukiCampaignWorkspacePreview(
     string Id,
@@ -396,7 +683,13 @@ public sealed record SukiRunStateSnapshot(
     int Ingot = 0,
     int Idea = 0,
     IReadOnlyList<SukiSpecialFieldState>? SpecialFields = null,
-    string OcrEngine = "maa-ocr");
+    string OcrEngine = "maa-ocr",
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? BossSelections = null,
+    string PerformanceId = "",
+    string Performance = "")
+{
+    public IReadOnlySet<string> UsedRelicIds { get; init; } = new HashSet<string>(StringComparer.Ordinal);
+}
 
 public sealed record RhodesRunCatalogSnapshot(
     IReadOnlyList<SukiCampaignPreview> Campaigns,
@@ -451,6 +744,7 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
 {
     private bool _isSelected;
     private bool _isExcluded;
+    private bool _isUsed;
 
     public SukiChoiceItem(
         string kind,
@@ -466,7 +760,8 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
         bool hiddenByDefault,
         string detail = "",
         string searchText = "",
-        string imagePath = "")
+        string imagePath = "",
+        bool supportsUsedFlag = false)
     {
         Kind = kind;
         Id = id;
@@ -481,6 +776,7 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
         HiddenByDefault = hiddenByDefault;
         Detail = detail;
         ImagePath = imagePath;
+        SupportsUsedFlag = supportsUsedFlag;
         SearchText = string.IsNullOrWhiteSpace(searchText)
             ? $"{id} {name} {heading} {operatorClass} {operatorBranch} {campaignId} {category} {detail}"
             : searchText;
@@ -514,6 +810,8 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
 
     public bool HiddenByDefault { get; }
 
+    public bool SupportsUsedFlag { get; }
+
     public string SearchText { get; }
 
     public bool IsSelected
@@ -526,6 +824,22 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
             _isSelected = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectionButtonLabel));
+            OnPropertyChanged(nameof(StateLabel));
+            OnPropertyChanged(nameof(IsUsageToggleVisible));
+        }
+    }
+
+    public bool IsUsed
+    {
+        get => _isUsed;
+        set
+        {
+            var normalized = SupportsUsedFlag && value;
+            if (_isUsed == normalized)
+                return;
+            _isUsed = normalized;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(UsageButtonLabel));
             OnPropertyChanged(nameof(StateLabel));
         }
     }
@@ -548,6 +862,10 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
 
     public string ExclusionButtonLabel => IsExcluded ? "除外解除" : "表示除外";
 
+    public bool IsUsageToggleVisible => SupportsUsedFlag && IsSelected;
+
+    public string UsageButtonLabel => IsUsed ? "使用済" : "未使用";
+
     public string StateLabel
     {
         get
@@ -555,7 +873,7 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
             if (IsSelected && IsExcluded)
                 return "選択 / 除外";
             if (IsSelected)
-                return "選択中";
+                return IsUsed ? "選択中 / 使用済" : "選択中";
             if (IsExcluded)
                 return "除外";
             if (HiddenByDefault)

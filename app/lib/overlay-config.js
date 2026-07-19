@@ -23,7 +23,7 @@ export const overlayScrollSpeedLabels = {
   horizontalOperatorScrollSpeed: "横長 オペレーター",
 };
 
-const overlayLayouts = new Set(["compact", "vertical", "horizontal", "full"]);
+const overlayLayouts = new Set(["compact", "vertical", "horizontal", "full", "custom"]);
 const overlayParts = new Set(["status", "relics", "operators", "effects", "bosses", "special"]);
 
 export function resolveOverlayLayout(value) {

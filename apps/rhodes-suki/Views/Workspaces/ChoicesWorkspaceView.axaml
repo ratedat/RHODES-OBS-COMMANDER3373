@@ -39,7 +39,7 @@
           <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
         </Grid>
 
-        <ItemsControl Grid.Row="2" Classes="choicePane" ItemsSource="{Binding FilteredOperatorRows}">
+        <ItemsControl Grid.Row="2" Classes="choicePane" ItemsSource="{Binding FilteredOperatorRows}" x:Name="OperatorChoicePane">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <ItemsControl ItemsSource="{Binding Items}" HorizontalAlignment="Stretch">
@@ -85,7 +85,7 @@
           <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
         </Grid>
 
-        <ItemsControl Grid.Row="2" Classes="choicePane" ItemsSource="{Binding FilteredRelicRows}">
+        <ItemsControl Grid.Row="2" Classes="choicePane" ItemsSource="{Binding FilteredRelicRows}" x:Name="RelicChoicePane">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <ItemsControl ItemsSource="{Binding Items}" HorizontalAlignment="Stretch">
@@ -96,21 +96,31 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Button Classes="choiceCard" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="118">
-                      <Grid RowDefinitions="Auto,*" RowSpacing="7">
-                        <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
-                          <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
-                            <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
-                          </Border>
-                          <StackPanel Grid.Column="1" Spacing="2">
-                            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" MinHeight="118">
+                      <Button Classes="choiceCard" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="118">
+                        <Grid RowDefinitions="Auto,*" RowSpacing="7">
+                          <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+                            <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
+                              <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                              <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                          </Grid>
+                          <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="3" Opacity="0.58" />
                         </Grid>
-                        <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="3" Opacity="0.58" />
-                      </Grid>
-                    </Button>
+                      </Button>
+                      <Button Grid.Column="1"
+                              Content="{Binding UsageButtonLabel}"
+                              Command="{Binding DataContext.ToggleRelicUsedCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding IsUsageToggleVisible}"
+                              Width="72"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="探索継続効果の使用状態を切り替えます" />
+                    </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

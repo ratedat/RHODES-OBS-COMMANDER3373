@@ -26,6 +26,7 @@ test("thought full scan auto-apply aggregates duplicate thought instances into c
   const result = applyRecognitionScanCompletionToState(state, { profileId: "is5ThoughtFull", suggestions });
 
   assert.deepEqual(result.state.run.special.is5_sarkaz.thought, [{ effectId: "t1", count: 2, stateId: null }]);
+  assert.equal(result.state.run.special.is5_sarkaz.thoughtOverlayVisible, true);
   assert.equal(result.autoApplied.length, 2);
   assert.equal(result.remainingSuggestions.length, 0);
 });

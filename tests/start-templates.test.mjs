@@ -31,3 +31,15 @@ test("squad option templates only activate for the selected random option", () =
   const active = buildStartTemplateSummary(master, { campaignId: "is6_sui", squadId: "is6_sui_squad_16", squadRandomEffectOptionId: "is6_sui_shadow_echo_04" });
   assert.equal(active.relicIds.includes("is6_sui_relic_241"), true);
 });
+
+test("IS#6 Content Addition II squads apply their starting coins", () => {
+  const scholar = buildStartTemplateSummary(master, { campaignId: "is6_sui", squadId: "is6_sui_squad_18" });
+  assert.deepEqual(scholar.specialPatch.is6_sui.coins, [
+    { coinId: "is6_sui_selectable_coin_is6_copper_s4", count: 1, statusId: null, face: "front" },
+  ]);
+
+  const merchant = buildStartTemplateSummary(master, { campaignId: "is6_sui", squadId: "is6_sui_squad_19" });
+  assert.deepEqual(merchant.specialPatch.is6_sui.coins, [
+    { coinId: "is6_sui_selectable_coin_is6_copper_r14", count: 1, statusId: null, face: "front" },
+  ]);
+});

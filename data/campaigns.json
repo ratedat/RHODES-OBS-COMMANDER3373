@@ -5,7 +5,14 @@
     "title": "ファントムと緋き貴石",
     "fullTitle": "統合戦略#2「ファントムと緋き貴石」",
     "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E3%83%95%E3%82%A1%E3%83%B3%E3%83%88%E3%83%A0%E3%81%A8%E7%B7%8B%E3%81%8D%E8%B2%B4%E7%9F%B3%E3%80%8D",
-    "specialFields": [],
+    "specialFields": [
+      {
+        "id": "hallucinations",
+        "label": "幻覚",
+        "type": "effectMultiSelect",
+        "unitLabel": "件"
+      }
+    ],
     "bossFlags": {
       "derivedFromRelics": true,
       "manualOverride": true,
@@ -163,9 +170,20 @@
     "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E3%83%9F%E3%83%85%E3%82%AD%E3%81%A8%E7%B4%BA%E7%A2%A7%E3%81%AE%E6%A8%B9%E3%80%8D",
     "specialFields": [
       {
+        "id": "key",
+        "label": "鍵",
+        "type": "number",
+        "unitLabel": "本"
+      },
+      {
+        "id": "light",
+        "label": "灯火",
+        "type": "number"
+      },
+      {
         "id": "rejectionReaction",
         "label": "拒絶反応",
-        "type": "effectSelect",
+        "type": "operatorEffectAssignment",
         "effectSlot": "rejectionReaction"
       },
       {
@@ -778,6 +796,7 @@
         "unitLabel": "個",
         "hideStateInput": true,
         "overlayToggle": true,
+        "overlayDefaultVisible": true,
         "overlayToggleLabel": "OBS表示"
       },
       {

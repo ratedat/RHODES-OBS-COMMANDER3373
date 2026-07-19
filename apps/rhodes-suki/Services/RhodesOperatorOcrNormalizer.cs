@@ -6,6 +6,7 @@ namespace RhodesSuki.Services;
 
 public static class RhodesOperatorOcrNormalizer
 {
+    private const double MinimumRuleCoverage = 0.70;
     private static readonly Lazy<IReadOnlyDictionary<char, char>> EquivalenceMap = new(LoadEquivalenceMap);
     private static readonly Lazy<IReadOnlyList<OfficialOperatorRule>> OfficialRules = new(LoadOfficialRules);
     private static readonly IReadOnlyDictionary<string, string> MeasuredAliases =
@@ -55,8 +56,8 @@ public static class RhodesOperatorOcrNormalizer
         {
             try
             {
-                if (rule.Pattern.IsMatch(raw)
-                    || !string.Equals(raw, compact, StringComparison.Ordinal) && rule.Pattern.IsMatch(compact))
+                if (RuleMatches(rule, raw)
+                    || !string.Equals(raw, compact, StringComparison.Ordinal) && RuleMatches(rule, compact))
                 {
                     return rule.OperatorId;
                 }
@@ -67,6 +68,14 @@ public static class RhodesOperatorOcrNormalizer
             }
         }
         return null;
+    }
+
+    private static bool RuleMatches(OfficialOperatorRule rule, string value)
+    {
+        var match = rule.Pattern.Match(value);
+        return match.Success
+            && match.Length / (double)Math.Max(1, value.Length) >= MinimumRuleCoverage
+            && (!rule.RequireWholeText || match.Index == 0 && match.Length == value.Length);
     }
 
     private static IReadOnlyDictionary<char, char> LoadEquivalenceMap()
@@ -147,6 +156,14 @@ public static class RhodesOperatorOcrNormalizer
                 if (operatorIds.Length != 1)
                     continue;
 
+                var requireWholeText = localMatches.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.Object
+                                   && item.TryGetProperty("name", out var name)
+                                   && name.ValueKind == JsonValueKind.String)
+                    .Select(item => Normalize(item.GetProperty("name").GetString()))
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .All(name => name.Length <= 2);
+
                 var pattern = patternNode.GetString();
                 if (string.IsNullOrWhiteSpace(pattern))
                     continue;
@@ -154,7 +171,8 @@ public static class RhodesOperatorOcrNormalizer
                 {
                     result.Add(new OfficialOperatorRule(
                         new Regex(pattern, RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(25)),
-                        operatorIds[0]));
+                        operatorIds[0],
+                        requireWholeText));
                 }
                 catch (ArgumentException)
                 {
@@ -176,5 +194,5 @@ public static class RhodesOperatorOcrNormalizer
             : ch;
     }
 
-    private sealed record OfficialOperatorRule(Regex Pattern, string OperatorId);
+    private sealed record OfficialOperatorRule(Regex Pattern, string OperatorId, bool RequireWholeText);
 }

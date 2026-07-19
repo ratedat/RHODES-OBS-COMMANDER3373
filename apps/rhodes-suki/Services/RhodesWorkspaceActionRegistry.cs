@@ -30,8 +30,8 @@ public static class RhodesWorkspaceActionRegistry
             1),
         new(
             "run.recognize-is5-thought",
-            "run",
             "special",
+            "recognition",
             "思案認識",
             "RunProfileRecognitionAndApplyCommand(is5ThoughtFull)",
             "maa-resource.profile",

@@ -29,7 +29,14 @@
           <TextBlock Text="検証ワークベンチ" Classes="caption" />
         </StackPanel>
 
-        <ComboBox Grid.Column="1" Width="250" VerticalAlignment="Center" ItemsSource="{Binding Campaigns}" SelectedItem="{Binding SelectedCampaign, Mode=TwoWay}" ItemTemplate="{StaticResource CampaignComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource CampaignComboItemTemplate}" />
+        <ComboBox Grid.Column="1"
+                  Width="250"
+                  VerticalAlignment="Center"
+                  ItemsSource="{Binding Campaigns}"
+                  SelectedItem="{Binding SelectedCampaign, Mode=TwoWay}"
+                  ItemTemplate="{StaticResource CampaignComboItemTemplate}"
+                  SelectionBoxItemTemplate="{StaticResource CampaignComboItemTemplate}"
+                  ToolTip.Tip="統合戦略テーマを切り替えます。検証用ではIS#2～IS#6を選択できます。" />
 
         <Button Grid.Column="3"
                 Command="{Binding SetWorkspaceCommand}"
@@ -83,6 +90,7 @@
       <Border Grid.Column="1" ClipToBounds="True" MinWidth="0" Classes="panel" Background="#111718">
         <Grid>
           <workspaces:RunWorkspaceView IsVisible="{Binding IsRunWorkspaceVisible}" />
+          <workspaces:SpecialWorkspaceView IsVisible="{Binding IsSpecialWorkspaceVisible}" />
           <workspaces:ChoicesWorkspaceView IsVisible="{Binding IsChoicesWorkspaceVisible}" />
           <workspaces:RecognitionWorkspaceView IsVisible="{Binding IsRecognitionWorkspaceVisible}" />
           <workspaces:OutputWorkspaceView IsVisible="{Binding IsOutputWorkspaceVisible}" />

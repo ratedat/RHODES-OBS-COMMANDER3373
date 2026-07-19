@@ -28,31 +28,53 @@ public static class RhodesMaaLocalCandidateConverter
             ["run.ingot"] = ("ingot", "源石錐", 0, 9999, 0.84),
             ["run.idea"] = ("idea", "構想", 0, 999, 0.70),
             ["run.idea.current"] = ("idea", "構想", 0, 999, 0.82),
-            ["run.difficulty_grade"] = ("difficulty", "等級", 1, 99, 0.78),
+            ["run.difficulty_grade"] = ("difficulty", "等級", 0, 99, 0.78),
         };
 
     public static IReadOnlyList<MaaCandidatePreview> FromTaskResults(
         string? profileId,
-        IEnumerable<MaaTaskRunResult> taskResults)
+        IEnumerable<MaaTaskRunResult> taskResults,
+        string? activeCampaignId = null)
     {
         IEnumerable<MaaCandidatePreview> candidates;
         if (string.IsNullOrWhiteSpace(profileId) || string.Equals(profileId, "all", StringComparison.Ordinal))
-            candidates = AllProfileCandidates(taskResults);
+            candidates = AllProfileCandidates(taskResults, activeCampaignId);
 
         else if (string.Equals(profileId, "runStatusFull", StringComparison.Ordinal))
-            candidates = BestRunStatusCandidates(RunStatusCandidates(taskResults));
+            candidates = BestRunStatusCandidates(RunStatusCandidates(taskResults, activeCampaignId));
 
         else if (string.Equals(profileId, "operatorsFull", StringComparison.Ordinal))
-            candidates = OperatorCandidates(taskResults);
+        {
+            var results = taskResults.ToArray();
+            candidates = OperatorCandidates(results)
+                .Concat(activeCampaignId == "is3_mizuki"
+                    ? MizukiRejectionCardCandidates(results)
+                    : []);
+        }
 
         else if (string.Equals(profileId, "relicsFull", StringComparison.Ordinal))
-            candidates = RelicCandidates(taskResults);
+            candidates = RelicCandidates(taskResults, activeCampaignId);
 
         else if (string.Equals(profileId, "is5ThoughtFull", StringComparison.Ordinal))
             candidates = ThoughtCandidates(taskResults);
 
         else if (string.Equals(profileId, "is5AgeFull", StringComparison.Ordinal))
             candidates = AgeCandidates(taskResults);
+
+        else if (string.Equals(profileId, "is2HallucinationsFull", StringComparison.Ordinal))
+            candidates = HallucinationCandidates(taskResults);
+
+        else if (string.Equals(profileId, "is2PerformanceFull", StringComparison.Ordinal))
+            candidates = PerformanceCandidates(taskResults);
+
+        else if (string.Equals(profileId, "is3KeyFull", StringComparison.Ordinal))
+            candidates = MizukiKeyCandidates(taskResults);
+
+        else if (string.Equals(profileId, "is3LightHordeFull", StringComparison.Ordinal))
+            candidates = MizukiLightAndHordeCandidates(taskResults);
+
+        else if (string.Equals(profileId, "is3RejectionFull", StringComparison.Ordinal))
+            candidates = MizukiRejectionCandidates(taskResults);
 
         else if (string.Equals(profileId, "is4RevelationFull", StringComparison.Ordinal))
             candidates = RevelationCandidates(taskResults);
@@ -66,14 +88,24 @@ public static class RhodesMaaLocalCandidateConverter
         return candidates.Where(RhodesMaaRecognitionPolicy.IsRetainedCandidate).ToArray();
     }
 
-    private static IReadOnlyList<MaaCandidatePreview> AllProfileCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    private static IReadOnlyList<MaaCandidatePreview> AllProfileCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults,
+        string? activeCampaignId)
     {
         var results = taskResults.ToArray();
-        var candidates = BestRunStatusCandidates(RunStatusCandidates(results))
+        var candidates = BestRunStatusCandidates(RunStatusCandidates(results, activeCampaignId))
             .Concat(OperatorCandidates(results))
-            .Concat(RelicCandidates(results))
+            .Concat(RelicCandidates(results, activeCampaignId))
             .Concat(ThoughtCandidates(results))
             .Concat(AgeCandidates(results))
+            .Concat(HallucinationCandidates(results))
+            .Concat(PerformanceCandidates(results))
+            .Concat(MizukiKeyCandidates(results))
+            .Concat(MizukiLightAndHordeCandidates(results))
+            .Concat(MizukiRejectionCandidates(results))
+            .Concat(activeCampaignId == "is3_mizuki"
+                ? MizukiRejectionCardCandidates(results)
+                : [])
             .Concat(RevelationCandidates(results))
             .Concat(CoinCandidates(results));
         return RhodesMaaCandidateMerger.Merge([], candidates);
@@ -90,7 +122,9 @@ public static class RhodesMaaLocalCandidateConverter
             {
                 bestByField[field] = (candidate, index);
             }
-            else if ((candidate.Confidence ?? 0) > (existing.Candidate.Confidence ?? 0))
+            else if (RunStatusCandidatePriority(candidate) > RunStatusCandidatePriority(existing.Candidate)
+                || (RunStatusCandidatePriority(candidate) == RunStatusCandidatePriority(existing.Candidate)
+                    && (candidate.Confidence ?? 0) > (existing.Candidate.Confidence ?? 0)))
             {
                 bestByField[field] = (candidate, existing.Index);
             }
@@ -103,10 +137,20 @@ public static class RhodesMaaLocalCandidateConverter
             .ToArray();
     }
 
-    private static IEnumerable<MaaCandidatePreview> RunStatusCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    private static int RunStatusCandidatePriority(MaaCandidatePreview candidate)
+    {
+        return candidate.Field.Equals("squadId", StringComparison.Ordinal)
+            && candidate.RecognitionKey.StartsWith("maa-local:squad-icon:", StringComparison.Ordinal)
+                ? 1
+                : 0;
+    }
+
+    private static IEnumerable<MaaCandidatePreview> RunStatusCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults,
+        string? activeCampaignId = null)
     {
         var results = taskResults as MaaTaskRunResult[] ?? taskResults.ToArray();
-        var campaignId = RunStatusCampaignId(results);
+        var campaignId = RunStatusCampaignId(results, activeCampaignId);
         foreach (var taskResult in results)
         {
             if (!taskResult.Succeeded)
@@ -122,16 +166,31 @@ public static class RhodesMaaLocalCandidateConverter
                 yield return squadCandidate;
             }
 
+            foreach (var squadCandidate in SquadIconCandidates(taskResult, campaignId))
+            {
+                yield return squadCandidate;
+            }
+
             var regionId = RunStatusRegionId(taskResult.Entry);
             if (string.IsNullOrWhiteSpace(regionId) || !RunStatusFields.TryGetValue(regionId, out var field))
                 continue;
+            if (field.Field.Equals("difficulty", StringComparison.Ordinal)
+                && RhodesMaaRecognitionPolicy.RequiresManualDifficulty(campaignId))
+            {
+                continue;
+            }
 
             var textResult = PrimaryTextResult(taskResult.RecognitionDetailJson);
             if (string.IsNullOrWhiteSpace(textResult.Text))
                 continue;
 
-            var value = NumericValue(textResult.Text, allowRoman: true);
-            if (value is null || value < field.Min || value > field.Max)
+            var maximum = field.Field.Equals("difficulty", StringComparison.Ordinal)
+                ? RhodesRunCatalog.MaxDifficultyForCampaign(campaignId)
+                : field.Max;
+            var value = field.Field.Equals("difficulty", StringComparison.Ordinal)
+                ? DifficultyValue(textResult.Text, maximum)
+                : NumericValue(textResult.Text, allowRoman: true);
+            if (value is null || value < field.Min || value > maximum)
                 continue;
 
             var confidence = Math.Max(field.Confidence, textResult.Confidence ?? 0);
@@ -157,8 +216,13 @@ public static class RhodesMaaLocalCandidateConverter
         }
     }
 
-    private static string RunStatusCampaignId(IReadOnlyList<MaaTaskRunResult> taskResults)
+    private static string RunStatusCampaignId(
+        IReadOnlyList<MaaTaskRunResult> taskResults,
+        string? activeCampaignId)
     {
+        if (!string.IsNullOrWhiteSpace(activeCampaignId))
+            return activeCampaignId;
+
         foreach (var taskResult in taskResults)
         {
             if (!taskResult.Succeeded)
@@ -190,6 +254,11 @@ public static class RhodesMaaLocalCandidateConverter
             return "run.ingot";
         if (entry.Contains("run.idea.current", StringComparison.OrdinalIgnoreCase))
             return "run.idea.current";
+        if (entry.Contains("run.difficulty_grade", StringComparison.OrdinalIgnoreCase)
+            || entry.Contains("run.difficulty.grade", StringComparison.OrdinalIgnoreCase))
+        {
+            return "run.difficulty_grade";
+        }
 
         return entry switch
         {
@@ -249,6 +318,73 @@ public static class RhodesMaaLocalCandidateConverter
         }
     }
 
+    private static IEnumerable<MaaCandidatePreview> SquadIconCandidates(MaaTaskRunResult taskResult, string campaignId)
+    {
+        if (!taskResult.Hit || !TryResolveSquadIcon(taskResult, out var squadId, out var score))
+            yield break;
+
+        var squad = LoadSquads().FirstOrDefault(item =>
+            item.Id.Equals(squadId, StringComparison.Ordinal)
+            && (string.IsNullOrWhiteSpace(campaignId) || item.CampaignId.Equals(campaignId, StringComparison.Ordinal)));
+        if (squad is null)
+            yield break;
+
+        yield return new MaaCandidatePreview(
+            "runStatus",
+            squad.Name,
+            squad.Id,
+            $"右半分アイコン一致 {score:0.000}",
+            score > 0 ? Math.Clamp(score, 0, 1) : 0.90,
+            Field: "squadId",
+            CampaignId: squad.CampaignId,
+            RecognitionKey: $"maa-local:squad-icon:{squad.Id}");
+    }
+
+    private static bool TryResolveSquadIcon(MaaTaskRunResult taskResult, out string squadId, out double score)
+    {
+        squadId = "";
+        score = 0;
+        var templateIds = RhodesMaaResourceCatalog.LoadCompositeTemplateIds(taskResult.Entry);
+        if (templateIds.Count > 0)
+        {
+            if (!RhodesMaaCompositeTemplateResult.TryReadFirstHit(taskResult.RecognitionDetailJson, out var hit)
+                || hit.Index < 0
+                || hit.Index >= templateIds.Count)
+            {
+                return false;
+            }
+
+            squadId = templateIds[hit.Index];
+            score = hit.Score;
+            return !string.IsNullOrWhiteSpace(squadId);
+        }
+
+        if (!TrySquadIdFromIconEntry(taskResult.Entry, out squadId))
+            return false;
+        score = RhodesMaaCompositeTemplateResult.ReadBestScore(taskResult.RecognitionDetailJson);
+        return true;
+    }
+
+    private static bool TrySquadIdFromIconEntry(string entry, out string squadId)
+    {
+        const string generatedMarker = "_run_squad_icon_";
+        const string directMarker = "run.squad.icon.";
+        squadId = "";
+        var generatedIndex = entry.IndexOf(generatedMarker, StringComparison.OrdinalIgnoreCase);
+        if (generatedIndex >= 0)
+        {
+            squadId = entry[(generatedIndex + generatedMarker.Length)..];
+            return !string.IsNullOrWhiteSpace(squadId);
+        }
+
+        var directIndex = entry.IndexOf(directMarker, StringComparison.OrdinalIgnoreCase);
+        if (directIndex < 0)
+            return false;
+
+        squadId = entry[(directIndex + directMarker.Length)..];
+        return !string.IsNullOrWhiteSpace(squadId);
+    }
+
     private static IEnumerable<MaaCandidatePreview> SquadRandomEffectCandidates(
         IReadOnlyList<MaaTaskRunResult> taskResults,
         string campaignId)
@@ -266,10 +402,17 @@ public static class RhodesMaaLocalCandidateConverter
 
         var rawText = string.Join(" ", textResults.Select(result => result.Text));
         var normalizedChoiceText = NormalizeChoiceName(rawText);
-        var squad = LoadSquads()
+        var squads = LoadSquads()
             .Where(item => string.Equals(item.CampaignId, campaignId, StringComparison.Ordinal))
             .Where(item => item.RandomEffectOptions.Count > 0)
-            .FirstOrDefault(item => normalizedChoiceText.Contains(NormalizeChoiceName(item.Name), StringComparison.Ordinal));
+            .ToArray();
+        var iconSquadId = taskResults
+            .Where(taskResult => taskResult.Succeeded && taskResult.Hit)
+            .Select(taskResult => TryResolveSquadIcon(taskResult, out var squadId, out _) ? squadId : "")
+            .FirstOrDefault(squadId => !string.IsNullOrWhiteSpace(squadId));
+        var squad = !string.IsNullOrWhiteSpace(iconSquadId)
+            ? squads.FirstOrDefault(item => item.Id.Equals(iconSquadId, StringComparison.Ordinal))
+            : squads.FirstOrDefault(item => normalizedChoiceText.Contains(NormalizeChoiceName(item.Name), StringComparison.Ordinal));
         if (squad is null)
             yield break;
 
@@ -377,6 +520,7 @@ public static class RhodesMaaLocalCandidateConverter
 
     private static IEnumerable<MaaCandidatePreview> OperatorCandidates(IEnumerable<MaaTaskRunResult> taskResults)
     {
+        var results = taskResults.ToArray();
         var operators = RhodesRunCatalog.LoadDefault().Operators
             .Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
             .ToArray();
@@ -385,12 +529,13 @@ public static class RhodesMaaLocalCandidateConverter
             .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
         var byId = operators.ToDictionary(item => item.Id, StringComparer.Ordinal);
-        var matched = new Dictionary<string, (SukiChoiceItem Operator, string RawText, double? Confidence, int Order)>(
+        var matched = new Dictionary<string, (SukiChoiceItem Operator, string RawText, double? Confidence, int Order, bool RoleResolved)>(
             StringComparer.Ordinal);
         var order = 0;
 
-        foreach (var taskResult in taskResults)
+        for (var taskResultIndex = 0; taskResultIndex < results.Length; taskResultIndex++)
         {
+            var taskResult = results[taskResultIndex];
             if (!taskResult.Succeeded || !IsOperatorNameEntry(taskResult.Entry))
                 continue;
 
@@ -400,6 +545,16 @@ public static class RhodesMaaLocalCandidateConverter
                 {
                     var normalized = RhodesOperatorOcrNormalizer.Normalize(token.Raw);
                     var officialId = RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId(token.Raw);
+                    var roleResolved = false;
+                    if (RhodesMaaAmiyaRoleResolver.ContainsLiteralAmiya(taskResult))
+                    {
+                        var roleOperatorId = RhodesMaaAmiyaRoleResolver.ResolveOperatorId(results, taskResultIndex);
+                        if (!string.IsNullOrWhiteSpace(roleOperatorId))
+                        {
+                            officialId = roleOperatorId;
+                            roleResolved = true;
+                        }
+                    }
                     var op = officialId is not null && byId.TryGetValue(officialId, out var official)
                         ? official
                         : ResolveOperator(normalized, byNormalizedName);
@@ -409,11 +564,13 @@ public static class RhodesMaaLocalCandidateConverter
 
                     if (!matched.TryGetValue(op.Id, out var existing))
                     {
-                        matched[op.Id] = (op, token.Raw, textResult.Confidence, order);
+                        matched[op.Id] = (op, token.Raw, textResult.Confidence, order, roleResolved);
                     }
-                    else if ((textResult.Confidence ?? 0) > (existing.Confidence ?? 0))
+                    else if ((roleResolved && !existing.RoleResolved)
+                        || (roleResolved == existing.RoleResolved
+                            && (textResult.Confidence ?? 0) > (existing.Confidence ?? 0)))
                     {
-                        matched[op.Id] = (op, token.Raw, textResult.Confidence, existing.Order);
+                        matched[op.Id] = (op, token.Raw, textResult.Confidence, existing.Order, roleResolved);
                     }
                 }
             }
@@ -421,7 +578,16 @@ public static class RhodesMaaLocalCandidateConverter
             order++;
         }
 
-        foreach (var item in matched.Values.OrderBy(item => item.Order))
+        var resolvedAmiyaId = matched.Values
+            .Where(item => item.RoleResolved && RhodesMaaAmiyaRoleResolver.IsAmiyaOperatorId(item.Operator.Id))
+            .OrderByDescending(item => item.Confidence ?? 0)
+            .Select(item => item.Operator.Id)
+            .FirstOrDefault();
+        foreach (var item in matched.Values
+            .Where(item => string.IsNullOrWhiteSpace(resolvedAmiyaId)
+                || !RhodesMaaAmiyaRoleResolver.IsAmiyaOperatorId(item.Operator.Id)
+                || item.Operator.Id.Equals(resolvedAmiyaId, StringComparison.Ordinal))
+            .OrderBy(item => item.Order))
         {
             yield return new MaaCandidatePreview(
                 "operator",
@@ -430,7 +596,9 @@ public static class RhodesMaaLocalCandidateConverter
                 item.RawText,
                 Math.Max(0.70, item.Confidence ?? 0),
                 OperatorId: item.Operator.Id,
-                RecognitionKey: $"maa-local:operator:{item.Operator.Id}");
+                RecognitionKey: item.RoleResolved
+                    ? RhodesMaaAmiyaRoleResolver.RoleRecognitionKey(item.Operator.Id)
+                    : $"maa-local:operator:{item.Operator.Id}");
         }
     }
 
@@ -499,10 +667,14 @@ public static class RhodesMaaLocalCandidateConverter
         return previous[right.Length];
     }
 
-    private static IEnumerable<MaaCandidatePreview> RelicCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    private static IEnumerable<MaaCandidatePreview> RelicCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults,
+        string? activeCampaignId)
     {
         var catalog = RhodesRunCatalog.LoadDefault();
-        var campaignId = catalog.Current.CampaignId;
+        var campaignId = string.IsNullOrWhiteSpace(activeCampaignId)
+            ? catalog.Current.CampaignId
+            : activeCampaignId;
         if (string.IsNullOrWhiteSpace(campaignId))
             yield break;
 
@@ -514,7 +686,7 @@ public static class RhodesMaaLocalCandidateConverter
             .GroupBy(item => NormalizeRelicName(item.Name), StringComparer.Ordinal)
             .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
-        var matched = new Dictionary<string, (SukiChoiceItem Relic, string RawText, double? Confidence, int Order)>(
+        var matched = new Dictionary<string, (SukiChoiceItem Relic, string RawText, double? Confidence, int Order, string StateId)>(
             StringComparer.Ordinal);
         var order = 0;
 
@@ -523,7 +695,8 @@ public static class RhodesMaaLocalCandidateConverter
             if (!taskResult.Succeeded || !IsRelicNameEntry(taskResult.Entry))
                 continue;
 
-            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
+            var textResults = PrimaryTextResults(taskResult.RecognitionDetailJson);
+            foreach (var textResult in textResults)
             {
                 foreach (var token in ChoiceNameTokens(textResult.Text))
                 {
@@ -531,13 +704,27 @@ public static class RhodesMaaLocalCandidateConverter
                     if (relic is null)
                         continue;
 
+                    var usageState = RelicUsageState(relic, textResult, textResults);
+
                     if (!matched.TryGetValue(relic.Id, out var existing))
                     {
-                        matched[relic.Id] = (relic, token.Raw, textResult.Confidence, order);
+                        matched[relic.Id] = (relic, token.Raw, textResult.Confidence, order, usageState);
                     }
                     else if ((textResult.Confidence ?? 0) > (existing.Confidence ?? 0))
                     {
-                        matched[relic.Id] = (relic, token.Raw, textResult.Confidence, existing.Order);
+                        matched[relic.Id] = (
+                            relic,
+                            token.Raw,
+                            textResult.Confidence,
+                            existing.Order,
+                            MergeRelicUsageState(existing.StateId, usageState));
+                    }
+                    else
+                    {
+                        matched[relic.Id] = existing with
+                        {
+                            StateId = MergeRelicUsageState(existing.StateId, usageState),
+                        };
                     }
                 }
             }
@@ -555,13 +742,75 @@ public static class RhodesMaaLocalCandidateConverter
                 Math.Max(0.68, item.Confidence ?? 0),
                 RelicId: item.Relic.Id,
                 CampaignId: item.Relic.CampaignId,
-                RecognitionKey: $"maa-local:relic:{item.Relic.Id}");
+                RecognitionKey: $"maa-local:relic:{item.Relic.Id}",
+                StateId: item.StateId);
         }
+    }
+
+    private static string RelicUsageState(
+        SukiChoiceItem relic,
+        OcrTextResult nameResult,
+        IReadOnlyList<OcrTextResult> textResults)
+    {
+        if (!RhodesRelicUsagePolicy.SupportsUsedFlag(relic.Name)
+            || nameResult.X < 0
+            || nameResult.Y < 0
+            || nameResult.Width <= 0
+            || nameResult.Height <= 0)
+        {
+            return "";
+        }
+
+        var nameCenterY = nameResult.Y + (nameResult.Height / 2d);
+        var nameRight = nameResult.X + nameResult.Width;
+        var markerFound = textResults.Any(result =>
+        {
+            if (!IsRelicUsedMarker(result.Text)
+                || result.X < nameRight + 4
+                || result.X > nameResult.X + 330
+                || result.Y < 0
+                || result.Height <= 0)
+            {
+                return false;
+            }
+
+            var markerCenterY = result.Y + (result.Height / 2d);
+            var tolerance = Math.Max(14d, (nameResult.Height + result.Height) * 0.65d);
+            return Math.Abs(markerCenterY - nameCenterY) <= tolerance;
+        });
+        return markerFound ? "used" : "unused";
+    }
+
+    private static bool IsRelicUsedMarker(string value)
+    {
+        var normalized = string.Concat(value
+            .Normalize(NormalizationForm.FormKC)
+            .Where(character => !char.IsWhiteSpace(character)));
+        return normalized.StartsWith("使用", StringComparison.Ordinal)
+            && normalized.Length <= 4
+            && !normalized.Contains("使用後", StringComparison.Ordinal);
+    }
+
+    private static string MergeRelicUsageState(string left, string right)
+    {
+        if (left.Equals("used", StringComparison.OrdinalIgnoreCase)
+            || right.Equals("used", StringComparison.OrdinalIgnoreCase))
+        {
+            return "used";
+        }
+
+        return left.Equals("unused", StringComparison.OrdinalIgnoreCase)
+            || right.Equals("unused", StringComparison.OrdinalIgnoreCase)
+                ? "unused"
+                : "";
     }
 
     private static string NormalizeRelicName(string value)
     {
         return NormalizeChoiceName(value)
+            .Replace("...", "", StringComparison.Ordinal)
+            .Replace("…", "", StringComparison.Ordinal)
+            .Replace("⋯", "", StringComparison.Ordinal)
             .Replace('ァ', 'ア')
             .Replace('ィ', 'イ')
             .Replace('ゥ', 'ウ')
@@ -593,7 +842,13 @@ public static class RhodesMaaLocalCandidateConverter
         if (normalized.Length < 4)
             return null;
 
-        var fuzzy = byNormalizedName
+        var requestsModifiedVariant = normalized.EndsWith("改", StringComparison.Ordinal);
+        var variantCompatibleNames = byNormalizedName
+            .Where(item => item.Key.EndsWith("改", StringComparison.Ordinal) == requestsModifiedVariant)
+            .ToArray();
+        var candidates = variantCompatibleNames.Length > 0 ? variantCompatibleNames : byNormalizedName.ToArray();
+
+        var fuzzy = candidates
             .Where(item => item.Key.Length >= 4 && Math.Abs(item.Key.Length - normalized.Length) <= 2)
             .Select(item => new
             {
@@ -607,7 +862,7 @@ public static class RhodesMaaLocalCandidateConverter
         if (fuzzy.Length == 1)
             return fuzzy[0].Value;
 
-        var prefix = byNormalizedName
+        var prefix = candidates
             .Where(item => normalized.StartsWith(item.Key, StringComparison.Ordinal)
                 && normalized.Length - item.Key.Length <= 2)
             .Take(2)
@@ -657,8 +912,148 @@ public static class RhodesMaaLocalCandidateConverter
         }
     }
 
+    private static IEnumerable<MaaCandidatePreview> HallucinationCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var textResults = taskResults
+            .Where(taskResult => taskResult.Succeeded && IsHallucinationEntry(taskResult.Entry))
+            .SelectMany(taskResult => PrimaryTextResults(taskResult.RecognitionDetailJson))
+            .Where(result => !string.IsNullOrWhiteSpace(result.Text))
+            .ToArray();
+        if (textResults.Length == 0)
+            yield break;
+
+        var rawText = string.Join("\n", textResults.Select(result => result.Text));
+        var names = RhodesHallucinationCatalog.NormalizeRecognizedNames(
+            textResults.Select(result => NormalizeChoiceName(result.Text)));
+        if (names.Count == 0)
+            yield break;
+
+        var value = string.Join(" / ", names);
+        var confidence = textResults.Max(result => result.Confidence ?? 0);
+        yield return new MaaCandidatePreview(
+            "runStatus",
+            "幻覚",
+            value,
+            rawText,
+            Math.Max(0.70, confidence),
+            Field: "hallucinations",
+            CampaignId: "is2_phantom",
+            RecognitionKey: $"maa-local:hallucinations:{string.Join('|', names)}");
+    }
+
+    private static IEnumerable<MaaCandidatePreview> PerformanceCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var textResults = taskResults
+            .Where(taskResult => taskResult.Succeeded && IsPerformanceEntry(taskResult.Entry))
+            .SelectMany(taskResult => PrimaryTextResults(taskResult.RecognitionDetailJson))
+            .Where(result => !string.IsNullOrWhiteSpace(result.Text))
+            .ToArray();
+        if (textResults.Length == 0)
+            yield break;
+
+        var rawText = string.Join("\n", textResults.Select(result => result.Text));
+        var performanceRows = textResults
+            .Where(result => !NormalizeChoiceName(result.Text).Equals("現在の演目", StringComparison.Ordinal))
+            .ToArray();
+        var normalizedText = string.Concat(performanceRows.Select(result => NormalizePerformanceOcr(result.Text)));
+        if (string.IsNullOrWhiteSpace(normalizedText))
+            yield break;
+
+        const string crimsonPrefix = "緋染めの";
+        var isCrimson = performanceRows.Any(result =>
+            BestSubstringEditDistance(NormalizePerformanceOcr(result.Text), crimsonPrefix) <= 2);
+        var matches = RhodesRunCatalog.LoadPerformanceOptions("is2_phantom")
+            .Select(option =>
+            {
+                var japaneseName = NormalizePerformanceOcr(PerformanceJapaneseName(option.Name));
+                var crimson = japaneseName.StartsWith(crimsonPrefix, StringComparison.Ordinal);
+                var coreName = crimson ? japaneseName[crimsonPrefix.Length..] : japaneseName;
+                return new
+                {
+                    Option = option,
+                    IsCrimson = crimson,
+                    CoreName = coreName,
+                    Distance = BestSubstringEditDistance(normalizedText, coreName),
+                };
+            })
+            .Where(item => item.IsCrimson == isCrimson)
+            .OrderBy(item => item.Distance)
+            .ThenByDescending(item => item.CoreName.Length)
+            .ToArray();
+        if (matches.Length == 0 || matches[0].Distance > PerformanceDistanceThreshold(matches[0].CoreName.Length))
+            yield break;
+        if (matches.Length > 1
+            && matches[1].Distance == matches[0].Distance
+            && !matches[1].CoreName.Equals(matches[0].CoreName, StringComparison.Ordinal))
+        {
+            yield break;
+        }
+
+        var match = matches[0].Option;
+        var confidence = performanceRows
+            .Select(result => result.Confidence ?? 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        yield return new MaaCandidatePreview(
+            "runStatus",
+            match.Name,
+            match.Id,
+            rawText,
+            Math.Max(0.70, confidence),
+            Field: "performanceId",
+            CampaignId: "is2_phantom",
+            RecognitionKey: $"maa-local:performance:{match.Id}");
+    }
+
+    private static string PerformanceJapaneseName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        var closingQuote = value.IndexOf('』');
+        return closingQuote >= 0 ? value[..(closingQuote + 1)] : value;
+    }
+
+    private static string NormalizePerformanceOcr(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        return new string(value
+            .Trim()
+            .Normalize(NormalizationForm.FormKC)
+            .Where(char.IsLetterOrDigit)
+            .ToArray());
+    }
+
+    private static int BestSubstringEditDistance(string source, string target)
+    {
+        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(target))
+            return int.MaxValue;
+        if (source.Contains(target, StringComparison.Ordinal))
+            return 0;
+
+        var best = EditDistance(source, target);
+        var minimumLength = Math.Max(1, target.Length - 2);
+        var maximumLength = Math.Min(source.Length, target.Length + 2);
+        for (var length = minimumLength; length <= maximumLength; length++)
+        {
+            for (var start = 0; start + length <= source.Length; start++)
+                best = Math.Min(best, EditDistance(source.Substring(start, length), target));
+        }
+        return best;
+    }
+
+    private static int PerformanceDistanceThreshold(int length) => length switch
+    {
+        <= 2 => 0,
+        <= 5 => 1,
+        _ => 2,
+    };
+
     private static IEnumerable<MaaCandidatePreview> ThoughtCandidates(IEnumerable<MaaTaskRunResult> taskResults)
     {
+        var results = taskResults as MaaTaskRunResult[] ?? taskResults.ToArray();
         var thoughts = LoadSelectableEffects()
             .Where(effect => effect.Slot == "thought" && effect.CampaignId == "is5_sarkaz")
             .ToArray();
@@ -666,15 +1061,17 @@ public static class RhodesMaaLocalCandidateConverter
             .GroupBy(item => NormalizeChoiceName(item.Name), StringComparer.Ordinal)
             .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
-        var aggregates = new Dictionary<string, (MaaCandidatePreview Candidate, int MaxCount)>(StringComparer.Ordinal);
+        var bestCandidates = new Dictionary<string, MaaCandidatePreview>(StringComparer.Ordinal);
+        var maxCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var frames = new List<IReadOnlyList<ThoughtOccurrence>>();
         var firstSeen = new List<string>();
 
-        foreach (var taskResult in taskResults)
+        foreach (var taskResult in results)
         {
             if (!taskResult.Succeeded || !IsThoughtNameEntry(taskResult.Entry))
                 continue;
 
-            var frameCandidates = new List<MaaCandidatePreview>();
+            var frameCandidates = new List<ThoughtOccurrence>();
             foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
             {
                 foreach (var token in ChoiceNameTokens(textResult.Text))
@@ -682,48 +1079,467 @@ public static class RhodesMaaLocalCandidateConverter
                     if (!byNormalizedName.TryGetValue(token.Normalized, out var thought))
                         continue;
 
-                    frameCandidates.Add(new MaaCandidatePreview(
-                        "thought",
-                        thought.Name,
-                        thought.Id,
-                        token.Raw,
-                        Math.Max(0.68, textResult.Confidence ?? 0),
-                        CampaignId: thought.CampaignId,
-                        ThoughtId: thought.Id));
+                    frameCandidates.Add(new ThoughtOccurrence(
+                        new MaaCandidatePreview(
+                            "thought",
+                            thought.Name,
+                            thought.Id,
+                            token.Raw,
+                            Math.Max(0.68, textResult.Confidence ?? 0),
+                            CampaignId: thought.CampaignId,
+                            ThoughtId: thought.Id),
+                        textResult.X,
+                        textResult.Y));
                 }
             }
+            frames.Add(frameCandidates);
 
-            foreach (var group in frameCandidates.GroupBy(candidate => candidate.ThoughtId, StringComparer.Ordinal))
+            foreach (var group in frameCandidates.GroupBy(item => item.Candidate.ThoughtId, StringComparer.Ordinal))
             {
-                var best = group.MaxBy(candidate => candidate.Confidence ?? 0)!;
+                var best = group.MaxBy(item => item.Candidate.Confidence ?? 0)!.Candidate;
                 var frameCount = group.Count();
-                if (!aggregates.TryGetValue(group.Key, out var existing))
+                if (!bestCandidates.TryGetValue(group.Key, out var existing))
                 {
-                    aggregates[group.Key] = (best, frameCount);
+                    bestCandidates[group.Key] = best;
                     firstSeen.Add(group.Key);
-                    continue;
                 }
-
-                var candidate = (best.Confidence ?? 0) > (existing.Candidate.Confidence ?? 0)
-                    ? best
-                    : existing.Candidate;
-                aggregates[group.Key] = (candidate, Math.Max(existing.MaxCount, frameCount));
+                else if ((best.Confidence ?? 0) > (existing.Confidence ?? 0))
+                {
+                    bestCandidates[group.Key] = best;
+                }
+                maxCounts[group.Key] = Math.Max(maxCounts.GetValueOrDefault(group.Key), frameCount);
             }
         }
 
+        var trackedCounts = TrackThoughtOccurrences(frames);
+        var reconciledCounts = ReconcileThoughtCountsFromDisplayedLoad(
+            results,
+            firstSeen,
+            maxCounts,
+            trackedCounts);
         var order = 0;
         foreach (var thoughtId in firstSeen)
         {
-            var aggregate = aggregates[thoughtId];
-            for (var index = 0; index < aggregate.MaxCount; index++)
+            var count = reconciledCounts.GetValueOrDefault(
+                thoughtId,
+                Math.Max(maxCounts.GetValueOrDefault(thoughtId), trackedCounts.GetValueOrDefault(thoughtId)));
+            for (var index = 0; index < count; index++)
             {
-                yield return aggregate.Candidate with
+                yield return bestCandidates[thoughtId] with
                 {
                     RecognitionKey = $"maa-local:thought:{thoughtId}:{order}",
                 };
                 order++;
             }
         }
+    }
+
+    private static IReadOnlyDictionary<string, int> ReconcileThoughtCountsFromDisplayedLoad(
+        IReadOnlyList<MaaTaskRunResult> taskResults,
+        IReadOnlyList<string> thoughtIds,
+        IReadOnlyDictionary<string, int> maxCounts,
+        IReadOnlyDictionary<string, int> trackedCounts)
+    {
+        var totalLoad = taskResults
+            .Where(result => result.Succeeded && IsThoughtTotalLoadEntry(result.Entry))
+            .Select(result => PrimaryTextResult(result.RecognitionDetailJson))
+            .Select(result => new { Value = NumericValue(result.Text), Confidence = result.Confidence ?? 0 })
+            .Where(item => item.Value is >= 0 and <= 999)
+            .OrderByDescending(item => item.Confidence)
+            .Select(item => item.Value)
+            .FirstOrDefault();
+        if (totalLoad is null || thoughtIds.Count == 0)
+            return new Dictionary<string, int>(StringComparer.Ordinal);
+
+        var displayedLoads = new Dictionary<string, (int Value, double Confidence)>(StringComparer.Ordinal);
+        foreach (var taskResult in taskResults.Where(result => result.Succeeded))
+        {
+            var thoughtId = ThoughtIdFromLoadEntry(taskResult.Entry);
+            if (string.IsNullOrWhiteSpace(thoughtId))
+                continue;
+
+            var textResult = PrimaryTextResult(taskResult.RecognitionDetailJson);
+            var value = NumericValue(textResult.Text);
+            if (value is null or < 0 or > 99)
+                continue;
+
+            var confidence = textResult.Confidence ?? 0;
+            if (!displayedLoads.TryGetValue(thoughtId, out var existing) || confidence > existing.Confidence)
+                displayedLoads[thoughtId] = (value.Value, confidence);
+        }
+        if (thoughtIds.Any(id => !displayedLoads.ContainsKey(id)))
+            return new Dictionary<string, int>(StringComparer.Ordinal);
+
+        var counts = thoughtIds.ToDictionary(
+            id => id,
+            id => Math.Max(maxCounts.GetValueOrDefault(id), trackedCounts.GetValueOrDefault(id)),
+            StringComparer.Ordinal);
+        var recognizedLoad = counts.Sum(item => item.Value * displayedLoads[item.Key].Value);
+        var deficit = totalLoad.Value - recognizedLoad;
+        if (deficit <= 0)
+            return counts;
+
+        var repeated = counts
+            .Where(item => item.Value >= 2)
+            .OrderByDescending(item => item.Value)
+            .ToArray();
+        if (repeated.Length == 0 || repeated.Length > 1 && repeated[0].Value == repeated[1].Value)
+            return counts;
+
+        var repeatedId = repeated[0].Key;
+        var repeatedLoad = displayedLoads[repeatedId].Value;
+        if (repeatedLoad <= 0)
+            return counts;
+
+        if (deficit % repeatedLoad != 0)
+            return counts;
+
+        var additional = deficit / repeatedLoad;
+        if (additional is <= 0 or > 99 || counts[repeatedId] + additional > 99)
+            return counts;
+
+        counts[repeatedId] += additional;
+        return counts;
+    }
+
+    private static IReadOnlyDictionary<string, int> TrackThoughtOccurrences(
+        IReadOnlyList<IReadOnlyList<ThoughtOccurrence>> frames)
+    {
+        var positionedFrames = frames
+            .Where(frame => frame.Count > 0 && frame.All(item => item.X >= 0 && item.Y >= 0))
+            .ToArray();
+        if (positionedFrames.Length == 0)
+            return new Dictionary<string, int>(StringComparer.Ordinal);
+
+        var counts = positionedFrames[0]
+            .GroupBy(item => item.Candidate.ThoughtId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        var previous = positionedFrames[0];
+        foreach (var current in positionedFrames.Skip(1))
+        {
+            if (IsStableThoughtViewport(previous, current))
+            {
+                previous = current;
+                continue;
+            }
+
+            var delta = EstimateThoughtScrollDelta(previous, current);
+            if (delta is null)
+            {
+                foreach (var group in current.GroupBy(item => item.Candidate.ThoughtId, StringComparer.Ordinal))
+                    counts[group.Key] = Math.Max(counts.GetValueOrDefault(group.Key), group.Count());
+                previous = current;
+                continue;
+            }
+
+            var usedPrevious = new HashSet<int>();
+            var unmatched = new List<ThoughtOccurrence>();
+            foreach (var occurrence in current.OrderBy(item => item.Y).ThenBy(item => item.X))
+            {
+                var match = previous
+                    .Select((item, index) => (Item: item, Index: index))
+                    .Where(item => !usedPrevious.Contains(item.Index))
+                    .Where(item => SameThoughtTrack(item.Item, occurrence))
+                    .Select(item => (item.Index, Distance: Math.Abs(item.Item.Y + delta.Value - occurrence.Y)))
+                    .Where(item => item.Distance <= 28)
+                    .OrderBy(item => item.Distance)
+                    .FirstOrDefault((-1, int.MaxValue));
+                if (match.Item1 >= 0)
+                    usedPrevious.Add(match.Item1);
+                else
+                    unmatched.Add(occurrence);
+            }
+
+            if (unmatched.Count > 0)
+            {
+                var bottomY = current.Max(item => item.Y);
+                foreach (var occurrence in unmatched.Where(item => bottomY - item.Y <= 32))
+                {
+                    var thoughtId = occurrence.Candidate.ThoughtId;
+                    counts[thoughtId] = counts.GetValueOrDefault(thoughtId) + 1;
+                }
+            }
+            previous = current;
+        }
+        return counts;
+    }
+
+    private static bool IsStableThoughtViewport(
+        IReadOnlyList<ThoughtOccurrence> previous,
+        IReadOnlyList<ThoughtOccurrence> current)
+    {
+        if (previous.Count != current.Count)
+            return false;
+
+        var previousRows = previous.OrderBy(item => item.Candidate.ThoughtId, StringComparer.Ordinal)
+            .ThenBy(ThoughtColumn)
+            .ThenBy(item => item.Y)
+            .ToArray();
+        var currentRows = current.OrderBy(item => item.Candidate.ThoughtId, StringComparer.Ordinal)
+            .ThenBy(ThoughtColumn)
+            .ThenBy(item => item.Y)
+            .ToArray();
+        return previousRows.Zip(currentRows).All(pair =>
+            SameThoughtTrack(pair.First, pair.Second)
+            && Math.Abs(pair.First.Y - pair.Second.Y) <= 8);
+    }
+
+    private static int? EstimateThoughtScrollDelta(
+        IReadOnlyList<ThoughtOccurrence> previous,
+        IReadOnlyList<ThoughtOccurrence> current)
+    {
+        var candidates = previous
+            .SelectMany(left => current
+                .Where(right => SameThoughtTrack(left, right))
+                .Select(right => right.Y - left.Y))
+            .Where(delta => delta is >= -180 and <= -30)
+            .Distinct()
+            .ToArray();
+        if (candidates.Length == 0)
+            return null;
+
+        return candidates
+            .Select(delta => new
+            {
+                Delta = delta,
+                Matches = current.Count(right => previous.Any(left =>
+                    SameThoughtTrack(left, right)
+                    && Math.Abs(left.Y + delta - right.Y) <= 28)),
+            })
+            .OrderByDescending(item => item.Matches)
+            .ThenBy(item => Math.Abs(Math.Abs(item.Delta) - 90))
+            .Select(item => (int?)item.Delta)
+            .FirstOrDefault();
+    }
+
+    private static bool SameThoughtTrack(ThoughtOccurrence left, ThoughtOccurrence right) =>
+        left.Candidate.ThoughtId.Equals(right.Candidate.ThoughtId, StringComparison.Ordinal)
+        && ThoughtColumn(left) == ThoughtColumn(right);
+
+    private static int ThoughtColumn(ThoughtOccurrence occurrence) => occurrence.X < 700 ? 0 : 1;
+
+    private static IEnumerable<MaaCandidatePreview> MizukiKeyCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        foreach (var candidate in MizukiIngotCandidates(taskResults))
+            yield return candidate;
+        foreach (var candidate in MizukiNumericCandidates(taskResults, IsMizukiKeyValueEntry, "key", "鍵", 99, 0.82))
+            yield return candidate;
+    }
+
+    private static IEnumerable<MaaCandidatePreview> MizukiIngotCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var best = taskResults
+            .Where(taskResult => taskResult.Succeeded && IsMizukiIngotValueEntry(taskResult.Entry))
+            .SelectMany(taskResult => PrimaryTextResults(taskResult.RecognitionDetailJson))
+            .Select(result => (Result: result, Value: NumericValue(result.Text)))
+            .Where(item => item.Value is >= 0 and <= 9999)
+            .OrderByDescending(item => item.Result.Confidence ?? 0)
+            .FirstOrDefault();
+        if (best.Value is null)
+            yield break;
+
+        yield return new MaaCandidatePreview(
+            "runStatus",
+            "源石錐",
+            best.Value.Value.ToString(CultureInfo.InvariantCulture),
+            best.Result.Text,
+            Math.Max(0.84, best.Result.Confidence ?? 0),
+            Field: "ingot",
+            CampaignId: "is3_mizuki",
+            RecognitionKey: "maa-local:ingot:is3.ingot_value");
+    }
+
+    private static IEnumerable<MaaCandidatePreview> MizukiLightAndHordeCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        foreach (var candidate in MizukiNumericCandidates(taskResults, IsMizukiLightValueEntry, "light", "灯火", 100, 0.82))
+            yield return candidate;
+
+        var effects = LoadSelectableEffects()
+            .Where(effect => effect.CampaignId == "is3_mizuki" && effect.Slot == "hordeCall")
+            .ToArray();
+        var emitted = new HashSet<string>(StringComparer.Ordinal);
+        var order = 0;
+        foreach (var taskResult in taskResults)
+        {
+            if (!taskResult.Succeeded || !IsMizukiHordeCallEntry(taskResult.Entry))
+                continue;
+
+            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
+            {
+                foreach (var effect in effects)
+                {
+                    if (!MatchesMizukiHordeName(textResult.Text, effect.Name)
+                        || !emitted.Add(effect.Id))
+                    {
+                        continue;
+                    }
+
+                    yield return new MaaCandidatePreview(
+                        "mizuki",
+                        effect.Name,
+                        effect.Id,
+                        textResult.Text,
+                        Math.Max(0.70, textResult.Confidence ?? 0),
+                        CampaignId: "is3_mizuki",
+                        RecognitionKey: $"maa-local:mizuki:horde:{effect.Id}:{order}",
+                        FieldId: "hordeCalls",
+                        EffectId: effect.Id);
+                    order++;
+                }
+            }
+        }
+    }
+
+    private static string NormalizeMizukiHordeName(string value) =>
+        NormalizeChoiceName(value)
+            .Replace(":", "", StringComparison.Ordinal)
+            .Replace("：", "", StringComparison.Ordinal);
+
+    private static bool MatchesMizukiHordeName(string recognizedText, string effectName)
+    {
+        var normalized = NormalizeMizukiHordeName(recognizedText);
+        var canonical = NormalizeMizukiHordeName(effectName);
+        if (string.IsNullOrWhiteSpace(canonical))
+            return false;
+        if (normalized.Contains(canonical, StringComparison.Ordinal))
+            return true;
+
+        const string prefix = "呼び声";
+        var suffix = canonical.StartsWith(prefix, StringComparison.Ordinal)
+            ? canonical[prefix.Length..]
+            : canonical;
+        return suffix.Length >= 2
+            && normalized.Contains("声", StringComparison.Ordinal)
+            && normalized.Length <= 12
+            && normalized.Contains(suffix, StringComparison.Ordinal);
+    }
+
+    private static IEnumerable<MaaCandidatePreview> MizukiRejectionCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var effects = LoadSelectableEffects()
+            .Where(effect => effect.CampaignId == "is3_mizuki" && effect.Slot == "rejectionReaction")
+            .ToArray();
+        var emittedEffects = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var taskResult in taskResults)
+        {
+            if (!taskResult.Succeeded
+                || !IsMizukiRejectionNameEntry(taskResult.Entry))
+            {
+                continue;
+            }
+
+            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
+            {
+                var normalized = NormalizeMizukiRejectionName(textResult.Text);
+                foreach (var effect in effects)
+                {
+                    var effectName = NormalizeChoiceName(effect.Name);
+                    if (string.IsNullOrWhiteSpace(effectName)
+                        || !normalized.Contains(effectName, StringComparison.Ordinal)
+                        || !emittedEffects.Add(effect.Id))
+                    {
+                        continue;
+                    }
+
+                    yield return new MaaCandidatePreview(
+                        "mizuki",
+                        effect.Name,
+                        effect.Id,
+                        textResult.Text,
+                        Math.Max(0.72, textResult.Confidence ?? 0),
+                        CampaignId: "is3_mizuki",
+                        RecognitionKey: $"maa-local:mizuki:rejection:{effect.Id}",
+                        FieldId: "rejectionReaction",
+                        EffectId: effect.Id);
+                }
+            }
+        }
+
+    }
+
+    private static IEnumerable<MaaCandidatePreview> MizukiRejectionCardCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var byId = RhodesRunCatalog.LoadDefault().Operators
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+            .ToDictionary(item => item.Id, StringComparer.Ordinal);
+        var emitted = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var taskResult in taskResults)
+        {
+            if (!RhodesMizukiRejectionCardDetector.TryRead(taskResult, out var operatorId, out var label, out var score)
+                || !emitted.Add(operatorId))
+                continue;
+
+            if (byId.TryGetValue(operatorId, out var op))
+                label = op.Name;
+            if (string.IsNullOrWhiteSpace(label))
+                label = operatorId;
+
+            yield return new MaaCandidatePreview(
+                "mizuki",
+                label,
+                operatorId,
+                "purple-name",
+                score,
+                OperatorId: operatorId,
+                CampaignId: "is3_mizuki",
+                RecognitionKey: $"maa-local:mizuki:rejection-card:{operatorId}",
+                FieldId: "rejectionReaction");
+        }
+    }
+
+    private static string NormalizeMizukiRejectionName(string value) =>
+        NormalizeChoiceName(value)
+            .Replace("障害と異空", "障害と異変", StringComparison.Ordinal);
+
+    private static (SelectableEffectCandidate? Effect, double Score) TryResolveMizukiRejectionTemplate(
+        MaaTaskRunResult taskResult,
+        IReadOnlyList<SelectableEffectCandidate> effects)
+    {
+        var templateIds = RhodesMaaResourceCatalog.LoadCompositeTemplateIds(taskResult.Entry);
+        if (templateIds.Count == 0
+            || !RhodesMaaCompositeTemplateResult.TryReadFirstHit(taskResult.RecognitionDetailJson, out var hit)
+            || hit.Index < 0
+            || hit.Index >= templateIds.Count)
+        {
+            return (null, 0);
+        }
+
+        var effectId = templateIds[hit.Index];
+        return (effects.FirstOrDefault(effect => effect.Id.Equals(effectId, StringComparison.Ordinal)), hit.Score);
+    }
+
+    private static IEnumerable<MaaCandidatePreview> MizukiNumericCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults,
+        Func<string, bool> entryPredicate,
+        string fieldId,
+        string label,
+        int maximum,
+        double minimumConfidence)
+    {
+        var best = taskResults
+            .Where(taskResult => taskResult.Succeeded && entryPredicate(taskResult.Entry))
+            .SelectMany(taskResult => PrimaryTextResults(taskResult.RecognitionDetailJson))
+            .Select(result => (
+                Result: result,
+                Value: NumericValue(
+                    result.Text,
+                    allowLetterEAsEight: fieldId.Equals("light", StringComparison.Ordinal))))
+            .Where(item => item.Value is >= 0 && item.Value <= maximum)
+            .OrderByDescending(item => item.Result.Confidence ?? 0)
+            .FirstOrDefault();
+        if (best.Value is null)
+            yield break;
+
+        yield return new MaaCandidatePreview(
+            "mizuki",
+            label,
+            best.Value.Value.ToString(CultureInfo.InvariantCulture),
+            best.Result.Text,
+            Math.Max(minimumConfidence, best.Result.Confidence ?? 0),
+            CampaignId: "is3_mizuki",
+            RecognitionKey: $"maa-local:mizuki:{fieldId}",
+            FieldId: fieldId);
     }
 
     private static IEnumerable<MaaCandidatePreview> RevelationCandidates(IEnumerable<MaaTaskRunResult> taskResults)
@@ -833,10 +1649,70 @@ public static class RhodesMaaLocalCandidateConverter
             || entry.Contains("is5.age_detail_text", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsHallucinationEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is2_hallucination_top", StringComparison.Ordinal)
+            || entry.Contains("is2.hallucination_top", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPerformanceEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is2_performance_bottom", StringComparison.Ordinal)
+            || entry.Contains("is2.performance_bottom", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMizukiKeyValueEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is3_key_value", StringComparison.Ordinal)
+            || entry.Contains("is3.key_value", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMizukiIngotValueEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is3_ingot_value", StringComparison.Ordinal)
+            || entry.Contains("is3.ingot_value", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMizukiLightValueEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is3_light_value", StringComparison.Ordinal)
+            || entry.Contains("is3.light_value", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMizukiHordeCallEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is3_horde_call_list_text", StringComparison.Ordinal)
+            || entry.Contains("is3.horde_call_list_text", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMizukiRejectionNameEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is3_rejection_name", StringComparison.Ordinal)
+            || entry.Contains("is3.rejection_name", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMizukiRejectionTemplateEntry(string entry)
+    {
+        return entry.Equals("RhodesTemplate_is3RejectionFull_is3_rejection_icon_batch", StringComparison.Ordinal)
+            || entry.Contains("is3.rejection.icon.batch", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsThoughtNameEntry(string entry)
     {
         return entry.Equals("RhodesOcrRegion_is5_thought_list_text", StringComparison.Ordinal)
             || entry.Contains("is5.thought_list_text", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsThoughtTotalLoadEntry(string entry) =>
+        entry.Equals("RhodesOcrRegion_is5_thought_load_current", StringComparison.Ordinal)
+        || entry.Contains("is5.thought_load.current", StringComparison.OrdinalIgnoreCase);
+
+    private static string ThoughtIdFromLoadEntry(string entry)
+    {
+        const string prefix = "thought.card.load.";
+        return entry.StartsWith(prefix, StringComparison.Ordinal)
+            ? entry[prefix.Length..]
+            : "";
     }
 
     private static bool IsRevelationNameEntry(string entry)
@@ -1044,16 +1920,16 @@ public static class RhodesMaaLocalCandidateConverter
         return scored[0];
     }
 
-    private static (string Text, double? Confidence) PrimaryTextResult(string value)
+    private static OcrTextResult PrimaryTextResult(string value)
     {
         var results = PrimaryTextResults(value);
         if (results.Count > 0)
             return results[0];
 
-        return ("", null);
+        return new OcrTextResult("", null, -1, -1, 0, 0);
     }
 
-    private static IReadOnlyList<(string Text, double? Confidence)> PrimaryTextResults(string value)
+    private static IReadOnlyList<OcrTextResult> PrimaryTextResults(string value)
     {
         using var document = ParseRecognitionDetail(value);
         if (document is null)
@@ -1067,7 +1943,7 @@ public static class RhodesMaaLocalCandidateConverter
             root = nested;
         }
 
-        var results = new List<(string Text, double? Confidence)>();
+        var results = new List<OcrTextResult>();
         foreach (var item in PrimaryResults(root))
         {
             if (item.ValueKind != JsonValueKind.Object)
@@ -1076,13 +1952,34 @@ public static class RhodesMaaLocalCandidateConverter
             var text = JsonString(item, "text");
             if (!string.IsNullOrWhiteSpace(text))
             {
-                results.Add((
+                var box = JsonBox(item);
+                results.Add(new OcrTextResult(
                     text.Trim(),
-                    JsonNumber(item, "score") ?? JsonNumber(item, "confidence") ?? JsonNumber(item, "prob")));
+                    JsonNumber(item, "score") ?? JsonNumber(item, "confidence") ?? JsonNumber(item, "prob"),
+                    box.X,
+                    box.Y,
+                    box.Width,
+                    box.Height));
             }
         }
 
         return results;
+    }
+
+    private static (int X, int Y, int Width, int Height) JsonBox(JsonElement item)
+    {
+        if (item.ValueKind != JsonValueKind.Object
+            || !item.TryGetProperty("box", out var box)
+            || box.ValueKind != JsonValueKind.Array)
+        {
+            return (-1, -1, 0, 0);
+        }
+
+        var values = box.EnumerateArray().Take(4).ToArray();
+        return values.Length == 4
+            && values.All(value => value.TryGetInt32(out _))
+            ? (values[0].GetInt32(), values[1].GetInt32(), values[2].GetInt32(), values[3].GetInt32())
+            : (-1, -1, 0, 0);
     }
 
     private static JsonDocument? ParseRecognitionDetail(string value)
@@ -1156,9 +2053,12 @@ public static class RhodesMaaLocalCandidateConverter
         return null;
     }
 
-    private static int? NumericValue(string value, bool allowRoman = false)
+    private static int? NumericValue(
+        string value,
+        bool allowRoman = false,
+        bool allowLetterEAsEight = false)
     {
-        var text = NormalizeDigits(value, allowRoman);
+        var text = NormalizeDigits(value, allowRoman, allowLetterEAsEight);
         if (string.IsNullOrWhiteSpace(text))
             return null;
 
@@ -1167,7 +2067,32 @@ public static class RhodesMaaLocalCandidateConverter
             : null;
     }
 
-    private static string NormalizeDigits(string value, bool allowRoman)
+    private static int? DifficultyValue(string value, int maximum)
+    {
+        var raw = value.Trim();
+        var normalized = NormalizeDigits(value, allowRoman: true);
+        if (maximum == 18
+            && normalized.Length == 1
+            && raw.StartsWith('^')
+            && normalized[0] is >= '0' and <= '8')
+        {
+            normalized = $"1{normalized}";
+        }
+        if (!int.TryParse(normalized, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
+            return null;
+
+        // Sarkaz difficulty stops at 18. MAA-OCR can render the narrow leading 1 as 7,
+        // so repair only the otherwise impossible two-digit 70-78 range.
+        if (maximum == 18 && normalized.Length == 2 && number is >= 70 and <= 78)
+            return number - 60;
+
+        return number;
+    }
+
+    private static string NormalizeDigits(
+        string value,
+        bool allowRoman,
+        bool allowLetterEAsEight = false)
     {
         var chars = new List<char>();
         foreach (var ch in value)
@@ -1199,6 +2124,12 @@ public static class RhodesMaaLocalCandidateConverter
             if (ch is 'イ' or 'ィ' or '亻')
             {
                 chars.Add('1');
+                continue;
+            }
+
+            if (allowLetterEAsEight && ch is 'E' or 'e' or 'Ｅ' or 'ｅ')
+            {
+                chars.Add('8');
                 continue;
             }
 
@@ -1474,6 +2405,19 @@ public static class RhodesMaaLocalCandidateConverter
         string GroupLabel,
         string ParentName,
         string VariantLabel);
+
+    private sealed record OcrTextResult(
+        string Text,
+        double? Confidence,
+        int X,
+        int Y,
+        int Width,
+        int Height);
+
+    private sealed record ThoughtOccurrence(
+        MaaCandidatePreview Candidate,
+        int X,
+        int Y);
 
     private sealed record RunSquadCandidate(
         string Id,

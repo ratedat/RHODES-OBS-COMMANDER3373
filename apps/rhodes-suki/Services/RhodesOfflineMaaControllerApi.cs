@@ -57,11 +57,7 @@ internal sealed class RhodesOfflineMaaControllerApi : IMaaCustomController
     public bool Shell(string command, long timeout, IMaaStringBuffer buffer) =>
         buffer.TrySetValue("", false);
 
-    public bool Inactive()
-    {
-        _connected = false;
-        return true;
-    }
+    public bool Inactive() => true;
 
     public bool GetInfo(IMaaStringBuffer buffer) =>
         buffer.TrySetValue("{\"type\":\"custom\",\"purpose\":\"offline-recognition\"}", false);

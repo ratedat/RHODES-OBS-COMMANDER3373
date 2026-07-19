@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "is2_phantom",
+  "source": {
+    "title": "アークナイツ攻略 Wiki - 統合戦略#2 ファントムと緋き貴石",
+    "url": "https://arknights.wikiru.jp/?統合戦略「ファントムと緋き貴石」",
+    "checkedAt": "2026-07-19"
+  },
+  "options": [
+    {
+      "order": 1,
+      "id": "is2_hallucination_lost",
+      "name": "迷い",
+      "mapLabel": "迷いの",
+      "category": "基本",
+      "effect": "このエリアのマップが広くなる。横方向に2マス増加し、縦方向は最大4列に分岐する。6層では盲目に置き換わる。",
+      "flavorText": "道が四方八方に延びている。あなたは正しい道を選ぶことは難しいだろうと頭を悩ませた。",
+      "aliases": ["迷いの", "迷しの"]
+    },
+    {
+      "order": 2,
+      "id": "is2_hallucination_blind",
+      "name": "盲目",
+      "mapLabel": "盲目",
+      "category": "基本",
+      "effect": "次の行動より後ろにあるイベントの種類を確認できない。戦闘後に演目をドロップしない。",
+      "flavorText": "たとえ事物が眼前に広がっていたとしても、あなたはそれをぼんやりとしか認識できない。",
+      "aliases": []
+    },
+    {
+      "order": 3,
+      "id": "is2_hallucination_wrath",
+      "name": "憤怒",
+      "mapLabel": "憤怒",
+      "category": "基本",
+      "effect": "作戦系スポットが頻繁に出現する。6層では発生しない。",
+      "flavorText": "動く者全てが敵だ。怒りがあなたを支配する。敵を八つ裂きにしろ！",
+      "aliases": []
+    },
+    {
+      "order": 4,
+      "id": "is2_hallucination_lonely",
+      "name": "孤独",
+      "mapLabel": "孤独",
+      "category": "基本",
+      "effect": "★4以上のオペレーター招集時に消費する希望+1、昇進時に消費する希望-1。",
+      "flavorText": "あなたは失うことが怖くなり、なにかを得るよりも、手元にあるすべてを引き留めることだけを考えるようになった。",
+      "aliases": []
+    },
+    {
+      "order": 5,
+      "id": "is2_hallucination_paranoia",
+      "name": "偏執",
+      "mapLabel": "偏執的な",
+      "category": "基本",
+      "effect": "スポットを1つ通るたびに源石錐+1。エリア終了時、源石錐はエリア突入時の数まで戻る。6層では発生しない。",
+      "flavorText": "思いも寄らない富はあなたを狂喜させたが、それを失う恐怖があなたの心にモヤをかけた。",
+      "aliases": ["偏執的な"]
+    },
+    {
+      "order": 6,
+      "id": "is2_hallucination_sensitive",
+      "name": "敏感",
+      "mapLabel": "敏感な",
+      "category": "基本",
+      "effect": "耐久値の獲得量と喪失量が2倍になり、臨時耐久値が無効になる。",
+      "flavorText": "喜びであれ悲しみであれ、あなたは全ての感覚を過度に受け取るようになってしまった。",
+      "aliases": ["敏感な"]
+    },
+    {
+      "order": 7,
+      "id": "is2_hallucination_fear",
+      "name": "恐怖",
+      "mapLabel": "恐怖",
+      "category": "基本",
+      "effect": "敵の攻撃力、防御力、最大HPが110%になる。",
+      "flavorText": "恐怖に支配されたあなたの目には、敵の姿がいっそう大きくなったように見える。",
+      "aliases": []
+    },
+    {
+      "order": 8,
+      "id": "is2_hallucination_desperation",
+      "name": "死力",
+      "mapLabel": "死力",
+      "category": "基本",
+      "effect": "エリアボス以外の敵は毎秒100の確定ダメージを受け、攻撃力150%、攻撃速度+50。味方は毎秒50の確定ダメージを受け、攻撃力+50%、攻撃速度+50。6層では発生しない。",
+      "flavorText": "生命は流れ逝くもの。生存意欲は心の奥底に眠る死力を呼び覚ました。",
+      "aliases": []
+    },
+    {
+      "order": 9,
+      "id": "is2_hallucination_cautious",
+      "name": "慎重",
+      "mapLabel": "慎重",
+      "category": "基本",
+      "effect": "配置可能数-1、編成上限+1。",
+      "flavorText": "あなたは多くの人に同行を持ちかけておきながら、いざ配置するとなると萎縮してしまった。",
+      "aliases": []
+    },
+    {
+      "order": 10,
+      "id": "is2_hallucination_confusion",
+      "name": "錯乱",
+      "mapLabel": "錯乱した",
+      "category": "追加",
+      "effect": "思わぬ遭遇が大量に出現する。離れた後に再び同じエリアへ入ると、劇作家の原稿を1つ獲得する。",
+      "flavorText": "ここはどこだ？　あなたは何をしているのだろう？",
+      "aliases": ["錯乱した"]
+    },
+    {
+      "order": 11,
+      "id": "is2_hallucination_anxious",
+      "name": "焦り",
+      "mapLabel": "焦り",
+      "category": "追加",
+      "effect": "臨時耐久値+5、敵の移動速度+100%。",
+      "flavorText": "あなたは敵に不安を感じる。一体何ならあなたの心を落ち着かせられるだろうか？",
+      "aliases": []
+    },
+    {
+      "order": 12,
+      "id": "is2_hallucination_foolishness",
+      "name": "愚かさ",
+      "mapLabel": "愚かさ",
+      "category": "追加",
+      "effect": "作戦後または古城の賜物で得る秘宝が、確率でほかの秘宝へ入れ替わる。ボスフラグ秘宝も対象。",
+      "flavorText": "あなたには宝物と石ころの区別がつかない。",
+      "aliases": []
+    },
+    {
+      "order": 13,
+      "id": "is2_hallucination_apathy",
+      "name": "無気力",
+      "mapLabel": "無気力",
+      "category": "追加",
+      "effect": "SPの自然回復速度-80%、スキルの必要SP-70%、ストック可能なSP+15。",
+      "flavorText": "あなたは何をするでもなく、ただ両手を下ろしていたい。",
+      "aliases": []
+    }
+  ],
+  "fusions": [
+    {
+      "id": "is2_hallucination_fusion_sensitivity_caution",
+      "requiredIds": ["is2_hallucination_sensitive", "is2_hallucination_cautious"],
+      "name": "敏慎症",
+      "effect": "敵の攻撃力が出現後に徐々に上昇し、50秒で最大+50%。"
+    },
+    {
+      "id": "is2_hallucination_fusion_lost_paranoia",
+      "requiredIds": ["is2_hallucination_lost", "is2_hallucination_paranoia"],
+      "name": "迷執症",
+      "effect": "怪しい旅商人の価格+50%。商品の品質が上昇する。"
+    },
+    {
+      "id": "is2_hallucination_fusion_caution_fear",
+      "requiredIds": ["is2_hallucination_cautious", "is2_hallucination_fear"],
+      "name": "慎怖症",
+      "effect": "味方の再配置時間+100%、最大HP+100%、防御力+100%。"
+    },
+    {
+      "id": "is2_hallucination_fusion_wrath_fear",
+      "requiredIds": ["is2_hallucination_wrath", "is2_hallucination_fear"],
+      "name": "怒怖症",
+      "effect": "緊急作戦に新たな敵が出現する。"
+    },
+    {
+      "id": "is2_hallucination_fusion_paranoia_sensitivity",
+      "requiredIds": ["is2_hallucination_paranoia", "is2_hallucination_sensitive"],
+      "name": "敏執症",
+      "effect": "源石錐の獲得量が2倍になる。耐久値を失うと同量の源石錐を失う。"
+    },
+    {
+      "id": "is2_hallucination_fusion_wrath_blind",
+      "requiredIds": ["is2_hallucination_wrath", "is2_hallucination_blind"],
+      "name": "怒盲症",
+      "effect": "戦闘スポットを通るたびに耐久値-1、源石錐+2。耐久値が1以下の場合は減少しない。"
+    },
+    {
+      "id": "is2_hallucination_fusion_caution_desperation",
+      "requiredIds": ["is2_hallucination_cautious", "is2_hallucination_desperation"],
+      "name": "慎力症",
+      "effect": "敵の登場時と味方の配置時、対象が10秒間凍結する。"
+    }
+  ]
+}

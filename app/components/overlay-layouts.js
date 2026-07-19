@@ -1,4 +1,5 @@
 import { assetUrl, html, stars } from "../lib/format.js";
+import { renderRelicUsedBadge } from "./relic-used-badge.js";
 
 export function renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run }, context) {
   const specialTags = context.getSpecialTags(specialFields, special, { overlay: true });
@@ -36,7 +37,7 @@ export function renderOverlayCompact({ campaign, squad, option, performance, act
         <div class="compact-section-head"><span>Relics</span><span>${relics.length}</span></div>
         <div class="stream-scroll compact-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("compactRelicScrollSpeed")}">
           <div class="compact-relic-strip">
-            ${relics.length ? relics.map((item) => `<img src="${html(assetUrl(item.image?.localPath))}" title="${html(item.name)}" alt="" />`).join("") : `<span class="compact-empty">なし</span>`}
+            ${relics.length ? relics.map((item) => `<div class="compact-relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" />${renderRelicUsedBadge(item)}</div>`).join("") : `<span class="compact-empty">なし</span>`}
           </div>
         </div>
       </section>
@@ -57,9 +58,22 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
   const runStats = context.runStatDisplayItems(run);
   const specialItems = context.getOverlaySpecialEffects(campaign.id, specialFields, special);
   const flags = context.getBossFlagEntries(campaign.id);
-  return `
-    <section class="stream-overlay-shell stream-${orientation}">
-      <header class="stream-head">
+  const isHorizontal = orientation === "horizontal";
+  const inlineBosses = isHorizontal ? "" : flags.map((flag) => context.renderBossChip(flag)).join("");
+  const inlineEffects = !isHorizontal && activeEffects.length ? `<div class="stream-scroll stream-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
+          ${context.renderEffectList(activeEffects, "stream-effect-list", "発動効果なし")}
+        </div>` : "";
+  const horizontalBosses = isHorizontal && flags.length ? `<section class="stream-panel stream-boss-panel">
+        <div class="stream-section-head"><span>Boss</span><strong>${flags.length}</strong></div>
+        <div class="stream-boss-strip">${flags.map((flag) => context.renderBossChip(flag)).join("")}</div>
+      </section>` : "";
+  const horizontalEffects = isHorizontal && activeEffects.length ? `<section class="stream-panel stream-horizontal-effect-panel">
+        <div class="stream-section-head"><span>Effects</span><strong>${activeEffects.length}</strong></div>
+        <div class="stream-scroll stream-horizontal-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
+          ${context.renderEffectList(activeEffects, "stream-horizontal-effect-list", "発動効果なし")}
+        </div>
+      </section>` : "";
+  const head = `<header class="stream-head">
         <div>
           <div class="stream-kicker">IS#${html(campaign.number)} / ${html(context.mode || "manual")}</div>
           <div class="stream-title">${html(campaign.title)}</div>
@@ -67,8 +81,8 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
         <div class="stream-counts">
           <span>秘宝 ${relics.length}</span><span>招集 ${operators.length}</span><span>Boss ${flags.length}</span>
         </div>
-      </header>
-      <section class="stream-run">
+      </header>`;
+  const runPanel = `<section class="stream-run">
         <div class="stream-line"><span>分隊</span><strong>${html(squad?.name || "未選択")}</strong></div>
         ${option?.label || option?.effect ? `<div class="stream-note">${html(option?.label || option?.effect)}</div>` : ""}
         ${performance ? `<div class="stream-note"><strong>演目</strong> ${html(performance.title || performance.name)}</div>` : ""}
@@ -77,29 +91,49 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
           <span class="tag">Tier ${html(context.getDifficultyTierLabel())}</span>
           ${specialTags.map((item) => `<span class="tag info">${html(item.label)} ${html(item.value)}</span>`).join("")}
           ${runStats.map((item) => `<span class="tag">${html(item.label)} ${html(item.value)}</span>`).join("")}
-          ${flags.map((flag) => context.renderBossChip(flag)).join("")}
+          ${inlineBosses}
         </div>
         ${context.renderSpecialOverlayBlock(specialItems, "stream", orientation + "RelicScrollSpeed")}
-        ${activeEffects.length ? `<div class="stream-scroll stream-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
-          ${context.renderEffectList(activeEffects, "stream-effect-list", "発動効果なし")}
-        </div>` : ""}
-      </section>
-      <section class="stream-panel stream-relic-panel">
+        ${inlineEffects}
+      </section>`;
+  const relicPanel = `<section class="stream-panel stream-relic-panel">
         <div class="stream-section-head"><span>Relics</span><strong>${relics.length}</strong></div>
         <div class="stream-scroll stream-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
           <div class="stream-relic-grid">
-            ${relics.length ? relics.map((item) => `<div class="stream-relic-tile" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><strong>${html(item.name)}</strong></div>`).join("") : `<div class="stream-empty">秘宝なし</div>`}
+            ${relics.length ? relics.map((item) => `<div class="stream-relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><strong>${html(item.name)}</strong>${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="stream-empty">秘宝なし</div>`}
           </div>
         </div>
-      </section>
-      <section class="stream-panel stream-operator-panel">
+      </section>`;
+  const operatorPanel = `<section class="stream-panel stream-operator-panel">
         <div class="stream-section-head"><span>Operators</span><strong>${operators.length}</strong></div>
         <div class="stream-scroll stream-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}OperatorScrollSpeed`)}">
           <div class="stream-operator-grid">
             ${operators.length ? operators.map((item) => `<div class="stream-operator-tile"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><strong>${html(item.name)}</strong><span>${stars(item.rarity)} / ${html(item.class || "-")}</span></div></div>`).join("") : `<div class="stream-empty">未招集</div>`}
           </div>
         </div>
+      </section>`;
+
+  if (isHorizontal) {
+    return `
+      <section class="stream-overlay-shell stream-horizontal stream-broadcast">
+        <div class="stream-broadcast-status">
+          ${head}
+          ${runPanel}
+          ${horizontalBosses}
+        </div>
+        ${relicPanel}
+        ${operatorPanel}
+        ${horizontalEffects}
       </section>
+    `;
+  }
+
+  return `
+    <section class="stream-overlay-shell stream-${orientation}">
+      ${head}
+      ${runPanel}
+      ${relicPanel}
+      ${operatorPanel}
     </section>
   `;
 }
@@ -154,7 +188,7 @@ export function renderOverlayDefault({ campaign, squad, option, performance, act
         <section class="overlay-card">
           <div class="overlay-card-header"><span>Relics</span><span>${relics.length}</span></div>
           <div class="overlay-card-body relic-grid">
-            ${relics.length ? relics.map((item) => `<div class="relic-tile" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div>${html(item.name)}</div></div>`).join("") : `<div class="empty-state">秘宝なし</div>`}
+            ${relics.length ? relics.map((item) => `<div class="relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div>${html(item.name)}</div>${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="empty-state">秘宝なし</div>`}
           </div>
         </section>
       </div>

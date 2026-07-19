@@ -109,6 +109,11 @@
         "is4RevelationFull",
         "is5ThoughtFull",
         "is5AgeFull",
+        "is2HallucinationsFull",
+        "is2PerformanceFull",
+        "is3KeyFull",
+        "is3LightHordeFull",
+        "is3RejectionFull",
         "is6CoinsFull"
       ]
     },
@@ -333,9 +338,7 @@
       "generated": true,
       "source": "maa-tasks.ocrRegions",
       "id": "run.difficulty_grade",
-      "profileIds": [
-        "runStatusFull"
-      ],
+      "profileIds": [],
       "scale": 6,
       "numericFallback": true
     }
@@ -355,9 +358,7 @@
       "generated": true,
       "source": "maa-tasks.ocrRegions",
       "id": "run.difficulty_block",
-      "profileIds": [
-        "runStatusFull"
-      ],
+      "profileIds": [],
       "scale": 2
     }
   },
@@ -365,9 +366,9 @@
     "recognition": "OCR",
     "roi": [
       90,
-      84,
-      1100,
-      540
+      24,
+      1180,
+      600
     ],
     "only_rec": false,
     "threshold": 0.3,
@@ -422,6 +423,31 @@
         "is4RevelationFull"
       ],
       "scale": 2
+    }
+  },
+  "RhodesOcrRegion_is5_thought_load_current": {
+    "recognition": "OCR",
+    "roi": [
+      170,
+      230,
+      90,
+      75
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is5.thought_load.current",
+      "profileIds": [
+        "is5ThoughtFull"
+      ],
+      "scale": 3,
+      "numericFallback": {
+        "min": 0,
+        "max": 999
+      }
     }
   },
   "RhodesOcrRegion_is5_thought_list_text": {
@@ -760,6 +786,186 @@
       "scale": 3
     }
   },
+  "RhodesOcrRegion_is3_ingot_value": {
+    "recognition": "OCR",
+    "roi": [
+      1065,
+      8,
+      55,
+      45
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is3.ingot_value",
+      "profileIds": [
+        "is3KeyFull"
+      ],
+      "scale": 6
+    }
+  },
+  "RhodesOcrRegion_is3_key_value": {
+    "recognition": "OCR",
+    "roi": [
+      1210,
+      8,
+      55,
+      45
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is3.key_value",
+      "profileIds": [
+        "is3KeyFull"
+      ],
+      "scale": 6
+    }
+  },
+  "RhodesOcrRegion_is3_light_value": {
+    "recognition": "OCR",
+    "roi": [
+      408,
+      112,
+      32,
+      34
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is3.light_value",
+      "profileIds": [
+        "is3LightHordeFull"
+      ],
+      "scale": 6
+    }
+  },
+  "RhodesOcrRegion_is3_horde_call_list_text": {
+    "recognition": "OCR",
+    "roi": [
+      390,
+      250,
+      550,
+      320
+    ],
+    "only_rec": false,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is3.horde_call_list_text",
+      "profileIds": [
+        "is3LightHordeFull"
+      ],
+      "scale": 3
+    }
+  },
+  "RhodesOcrRegion_is3_rejection_name": {
+    "recognition": "OCR",
+    "roi": [
+      790,
+      345,
+      260,
+      50
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is3.rejection_name",
+      "profileIds": [
+        "is3RejectionFull"
+      ],
+      "scale": 4
+    },
+    "replace": [
+      [
+        "異空",
+        "異変"
+      ]
+    ]
+  },
+  "RhodesOcrRegion_is3_rejection_operators": {
+    "recognition": "OCR",
+    "roi": [
+      710,
+      490,
+      550,
+      90
+    ],
+    "only_rec": false,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is3.rejection_operators",
+      "profileIds": [
+        "is3RejectionFull"
+      ],
+      "scale": 4
+    }
+  },
+  "RhodesOcrRegion_is2_hallucination_top": {
+    "recognition": "OCR",
+    "roi": [
+      480,
+      10,
+      320,
+      34
+    ],
+    "only_rec": false,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is2.hallucination_top",
+      "profileIds": [
+        "is2HallucinationsFull"
+      ],
+      "scale": 4
+    },
+    "replace": [
+      [
+        "帰執的な",
+        "偏執的な"
+      ]
+    ]
+  },
+  "RhodesOcrRegion_is2_performance_bottom": {
+    "recognition": "OCR",
+    "roi": [
+      480,
+      640,
+      360,
+      80
+    ],
+    "only_rec": false,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is2.performance_bottom",
+      "profileIds": [
+        "is2PerformanceFull"
+      ],
+      "scale": 4
+    }
+  },
   "RhodesTemplate_runStatusFull_run_idea_current": {
     "recognition": "TemplateMatch",
     "roi": [
@@ -786,7 +992,8 @@
       },
       "maxMatches": 1,
       "scale": 10,
-      "numericFallback": true
+      "numericFallback": true,
+      "templateIds": null
     }
   },
   "RhodesTemplate_runStatusFull_run_ingot": {
@@ -815,7 +1022,777 @@
       },
       "maxMatches": 1,
       "scale": 10,
-      "numericFallback": true
+      "numericFallback": true,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_difficulty_grade_anchor": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      22,
+      548,
+      122,
+      40
+    ],
+    "template": "run/DifficultyFlag.png",
+    "threshold": 0.85,
+    "method": 5,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.difficulty.grade.anchor",
+      "ocrOffset": {
+        "x": 102,
+        "y": 0,
+        "width": 66,
+        "height": 51
+      },
+      "maxMatches": 1,
+      "scale": 6,
+      "numericFallback": true,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch": {
+    "recognition": "Or",
+    "any_of": [
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_01.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_02.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_03.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_04.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_05.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_06.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_07.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_08.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_09.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_10.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_11.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_12.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_13.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_14.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_15.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_16.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is5_sarkaz_squad_17.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      }
+    ],
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is5_sarkaz.batch",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": [
+        "is5_sarkaz_squad_01",
+        "is5_sarkaz_squad_02",
+        "is5_sarkaz_squad_03",
+        "is5_sarkaz_squad_04",
+        "is5_sarkaz_squad_05",
+        "is5_sarkaz_squad_06",
+        "is5_sarkaz_squad_07",
+        "is5_sarkaz_squad_08",
+        "is5_sarkaz_squad_09",
+        "is5_sarkaz_squad_10",
+        "is5_sarkaz_squad_11",
+        "is5_sarkaz_squad_12",
+        "is5_sarkaz_squad_13",
+        "is5_sarkaz_squad_14",
+        "is5_sarkaz_squad_15",
+        "is5_sarkaz_squad_16",
+        "is5_sarkaz_squad_17"
+      ]
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is2_phantom_batch": {
+    "recognition": "Or",
+    "any_of": [
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_01.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_02.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_03.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_04.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_05.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_06.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_07.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_08.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_09.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          8,
+          632,
+          94,
+          88
+        ],
+        "template": "run/SquadIconFull_is2_phantom_squad_10.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      }
+    ],
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is2_phantom.batch",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": [
+        "is2_phantom_squad_01",
+        "is2_phantom_squad_02",
+        "is2_phantom_squad_03",
+        "is2_phantom_squad_04",
+        "is2_phantom_squad_05",
+        "is2_phantom_squad_06",
+        "is2_phantom_squad_07",
+        "is2_phantom_squad_08",
+        "is2_phantom_squad_09",
+        "is2_phantom_squad_10"
+      ]
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_01": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_01.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_01",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_02": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_02.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_02",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_03": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_03.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_03",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_04": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_04.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_04",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_05": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_05.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_05",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_06": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_06.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_06",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_07": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_07.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_07",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_08": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_08.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_08",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_09": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_09.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_09",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_10": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_10.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_10",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_11": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_11.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_11",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_12": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_12.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_12",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_13": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      8,
+      638,
+      86,
+      82
+    ],
+    "template": "run/SquadIconFull_is3_mizuki_squad_13.png",
+    "threshold": 0.68,
+    "method": 3,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is3_mizuki_squad_13",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": null
     }
   },
   "RhodesTemplate_operatorsFull_operator_recruit_name": {
@@ -844,7 +1821,8 @@
       },
       "maxMatches": 8,
       "scale": 4,
-      "numericFallback": null
+      "numericFallback": null,
+      "templateIds": null
     }
   },
   "RhodesTemplate_operatorsFull_operator_card_name": {
@@ -873,7 +1851,8 @@
       },
       "maxMatches": 16,
       "scale": 1,
-      "numericFallback": null
+      "numericFallback": null,
+      "templateIds": null
     }
   }
 }

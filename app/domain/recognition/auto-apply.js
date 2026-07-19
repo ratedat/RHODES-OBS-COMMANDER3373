@@ -188,7 +188,9 @@ function syncIs5ThoughtFullScanCandidates(state, suggestions = []) {
   if (!thoughtSuggestions.length) return { applied: [], keys: new Set() };
 
   const run = state.run ||= {};
-  ensureIs5Special(run).thought = [...thoughtCounts.entries()].map(([effectId, count]) => ({ effectId, count, stateId: null }));
+  const special = ensureIs5Special(run);
+  special.thought = [...thoughtCounts.entries()].map(([effectId, count]) => ({ effectId, count, stateId: null }));
+  special.thoughtOverlayVisible = true;
   return {
     applied: thoughtSuggestions,
     keys: new Set(thoughtSuggestions.map(suggestionKey).filter(Boolean)),

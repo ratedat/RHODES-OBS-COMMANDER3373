@@ -9,7 +9,9 @@
     ShowInTaskbar="False"
     ShowActivated="False"
     CanResize="False"
-    SizeToContent="WidthAndHeight"
+    SizeToContent="Height"
+    Width="520"
+    MaxHeight="600"
     Title="RHODES HUD">
   <!--
     本人用HUD小窓。MAA本家のログ小窓と同じ「デスクトップ最前面の枠なしウィンドウを
@@ -27,30 +29,35 @@
       <Setter Property="Foreground" Value="#FFFFFF" />
     </Style>
   </Window.Styles>
-  <Border CornerRadius="10" Background="#E6101617" BorderBrush="#3A4A4C" BorderThickness="1" Padding="10" MinWidth="280" MaxWidth="440">
+  <Border CornerRadius="8" Background="#E6101617" BorderBrush="#3A4A4C" BorderThickness="1" Padding="10">
     <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
       <!-- グリップ行: ドラッグ移動 / クリック透過 / 閉じる -->
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Background="Transparent" PointerPressed="GripPointerPressed">
-        <TextBlock Text="RHODES" FontSize="11" FontWeight="Bold" Opacity="0.55" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Text="{Binding CampaignHeaderTitle}" FontSize="11" Opacity="0.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-        <CheckBox Grid.Column="2" Content="クリック透過" FontSize="11" IsChecked="{Binding IsHudClickThrough, Mode=TwoWay}"
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+        <Border Grid.ColumnSpan="2" Background="Transparent" Padding="0,4" PointerPressed="GripPointerPressed"
+                ToolTip.Tip="ドラッグしてHUDを移動">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+            <TextBlock Text="RHODES" FontSize="11" FontWeight="Bold" Opacity="0.7" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding CampaignHeaderTitle}" FontSize="11" Opacity="0.62" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+        <CheckBox Grid.Column="2" Content="透過" FontSize="11" VerticalAlignment="Center" IsChecked="{Binding IsHudClickThrough, Mode=TwoWay}"
                   ToolTip.Tip="ONの間はHUDがマウスを素通しします。解除はメインウィンドウのHUDトグルをOFF→ONしてください。" />
-        <Button Grid.Column="3" Content="✕" Padding="7,1" FontSize="11" Click="CloseClick" />
+        <Button Grid.Column="3" Content="✕" Width="32" Height="28" Padding="0" FontSize="11" Click="CloseClick" ToolTip.Tip="HUDを閉じる" />
       </Grid>
 
       <!-- ラン状態チップ (出力ワークスペースのHUD設定でフィルタ済み) -->
-      <ItemsControl ItemsSource="{Binding HudChips}">
+      <ItemsControl Grid.Row="1" ItemsSource="{Binding HudChips}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <WrapPanel />
+            <UniformGrid Columns="4" />
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Border CornerRadius="6" Padding="8,4" Margin="0,0,6,6" Background="#CC121A1B" BorderBrush="#2B3638" BorderThickness="1" MinWidth="72">
+            <Border CornerRadius="6" Padding="8,5" Margin="0,0,6,0" Background="#CC121A1B" BorderBrush="#2B3638" BorderThickness="1" ToolTip.Tip="{Binding Value}">
               <StackPanel Spacing="0">
                 <TextBlock Text="{Binding Label}" FontSize="10" Opacity="0.6" />
-                <TextBlock Text="{Binding Value}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="200" />
+                <TextBlock Text="{Binding Value}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
               </StackPanel>
             </Border>
           </DataTemplate>
@@ -71,11 +78,14 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Border CornerRadius="6" Padding="5,3" Margin="0,0,6,6" Background="#CC101617" BorderBrush="#324042" BorderThickness="1" MaxWidth="190">
-                    <Grid ColumnDefinitions="24,*" ColumnSpacing="6">
+                    <Grid ColumnDefinitions="24,*,Auto" ColumnSpacing="6">
                       <Border Width="24" Height="24" CornerRadius="4" ClipToBounds="True" Background="#1F282A">
                         <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
                       </Border>
                       <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      <Border Grid.Column="2" IsVisible="{Binding IsUsed}" CornerRadius="8" Padding="5,1" Background="#9B6A3820" BorderBrush="#E3A451" BorderThickness="1" VerticalAlignment="Center">
+                        <TextBlock Text="使用済" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF" />
+                      </Border>
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -86,14 +96,14 @@
       </Border>
 
       <!-- Tier / 直近反映 / 接続状態 -->
-      <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10">
+      <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
         <Border CornerRadius="10" Padding="8,2" IsVisible="{Binding IsHudConnectionVisible}"
                 Background="{Binding ConnectionStatusBackground}" BorderBrush="{Binding ConnectionStatusBorder}" BorderThickness="1" VerticalAlignment="Center">
           <TextBlock Text="{Binding ConnectionStatusLabel}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF" />
         </Border>
-        <TextBlock Text="{Binding ManualDifficultyTierLabel}" IsVisible="{Binding IsHudTierVisible}" FontSize="12" Foreground="#FFFFFF" VerticalAlignment="Center" />
-        <TextBlock Text="{Binding LastCandidateApplySummary}" IsVisible="{Binding IsHudApplySummaryVisible}" FontSize="11" Opacity="0.55" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="240" />
-      </StackPanel>
+        <TextBlock Grid.Column="1" Text="{Binding ManualDifficultyTierLabel}" IsVisible="{Binding IsHudTierVisible}" FontSize="12" Foreground="#FFFFFF" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2" Text="{Binding LastCandidateApplySummary}" IsVisible="{Binding IsHudApplySummaryVisible}" FontSize="11" Opacity="0.55" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding LastCandidateApplySummary}" />
+      </Grid>
     </Grid>
   </Border>
 </Window>

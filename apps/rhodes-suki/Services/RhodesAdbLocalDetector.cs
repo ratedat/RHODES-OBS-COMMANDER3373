@@ -82,26 +82,19 @@ public static class RhodesAdbLocalDetector
 
         var effectivePreset = EffectivePreset(normalizedPreset, selected.Preset);
         var serialCandidates = BuildSerialCandidates(settings.Serial, effectivePreset);
-        var connect = await TryConnectTcpSerialsAsync(selected.Path, serialCandidates, runCommand, cancellationToken);
-        IReadOnlyList<MaaAdbDevicePreview> devices = [];
-        string devicesError = "";
-        try
+        var (devices, devicesError) = await QueryDevicesAsync(selected.Path, runCommand, cancellationToken);
+        RhodesAdbConnectPreview? connect = null;
+        if (!devices.Any(device => device.IsUsable))
         {
-            var devicesResult = await runCommand(selected.Path, ["devices", "-l"], cancellationToken);
-            if (devicesResult.Succeeded)
-                devices = RhodesAdbDeviceProbe.ParseDevices(devicesResult.Output);
-            else
-                devicesError = Shorten(devicesResult.Detail, 180);
-        }
-        catch (Exception ex)
-        {
-            devicesError = Shorten(ex.Message, 180);
+            connect = await TryConnectTcpSerialsAsync(selected.Path, serialCandidates, runCommand, cancellationToken);
+            if (connect is { Succeeded: true })
+                (devices, devicesError) = await QueryDevicesAsync(selected.Path, runCommand, cancellationToken);
         }
 
         var serial = FirstNonEmpty(
-            settings.Serial,
             SelectDetectedSerial(devices, serialCandidates),
-            devices.FirstOrDefault(device => device.IsUsable)?.Serial ?? "");
+            devices.FirstOrDefault(device => device.IsUsable)?.Serial ?? "",
+            connect is { Succeeded: true } ? connect.Address : "");
         var error = string.IsNullOrWhiteSpace(devicesError)
             ? ""
             : $"ADB devices取得失敗: {devicesError}";
@@ -148,7 +141,10 @@ public static class RhodesAdbLocalDetector
         if (candidate.Source.Equals("env", StringComparison.OrdinalIgnoreCase))
             score -= 80;
         if (candidate.Source.Equals("process", StringComparison.OrdinalIgnoreCase))
-            score -= 110;
+            score -= !preset.Equals("auto", StringComparison.OrdinalIgnoreCase)
+                && candidate.Preset.Equals(preset, StringComparison.OrdinalIgnoreCase)
+                    ? 240
+                    : 110;
         if (!preset.Equals("auto", StringComparison.OrdinalIgnoreCase))
             score += candidate.Preset.Equals(preset, StringComparison.OrdinalIgnoreCase) ? -60 : 35;
         else
@@ -163,6 +159,24 @@ public static class RhodesAdbLocalDetector
         if (candidatePath == "adb")
             score += 60;
         return score;
+    }
+
+    private static async Task<(IReadOnlyList<MaaAdbDevicePreview> Devices, string Error)> QueryDevicesAsync(
+        string adbPath,
+        Func<string, IReadOnlyList<string>, CancellationToken, Task<RhodesAdbCommandResult>> runCommand,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await runCommand(adbPath, ["devices", "-l"], cancellationToken);
+            return result.Succeeded
+                ? (RhodesAdbDeviceProbe.ParseDevices(result.Output), "")
+                : ([], Shorten(result.Detail, 180));
+        }
+        catch (Exception ex)
+        {
+            return ([], Shorten(ex.Message, 180));
+        }
     }
 
     private static async Task<RhodesAdbConnectPreview?> TryConnectTcpSerialsAsync(

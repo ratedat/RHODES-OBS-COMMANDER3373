@@ -83,7 +83,7 @@ function initialStateFromExample(example) {
   state.mode = normalizeControlMode("casual");
   state.updatedAt = new Date().toISOString();
   state.run = state.run || {};
-  state.run.campaignId = "is5_sarkaz";
+  state.run.campaignId = "is2_phantom";
   if (!state.run.squadId && typeof state.run.squad === "string") state.run.squadId = state.run.squad;
   state.run.squad = state.run.squad ?? null;
   state.run.squadId = state.run.squadId ?? null;
@@ -92,6 +92,9 @@ function initialStateFromExample(example) {
   state.run.squadRandomEffectOptionId = state.run.squadRandomEffectOptionId ?? null;
   normalizeRunStats(state.run);
   state.relics = Array.isArray(state.relics) ? state.relics : [];
+  state.usedRelicIds = Array.isArray(state.usedRelicIds)
+    ? state.usedRelicIds.filter((id) => state.relics.includes(id))
+    : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
   state.bossSelections = state.bossSelections && typeof state.bossSelections === "object" && !Array.isArray(state.bossSelections) ? state.bossSelections : {};
@@ -109,7 +112,7 @@ function normalizeState(state) {
   next.mode = normalizeControlMode(next.mode);
   next.updatedAt = new Date().toISOString();
   next.run = next.run || {};
-  next.run.campaignId = next.run.campaignId || "is5_sarkaz";
+  next.run.campaignId = next.run.campaignId || "is2_phantom";
   if (!next.run.squadId && typeof next.run.squad === "string") next.run.squadId = next.run.squad;
   next.run.squadId = next.run.squadId || null;
   next.run.squad = next.run.squad ?? null;
@@ -118,6 +121,9 @@ function normalizeState(state) {
   next.run.squadRandomEffectOptionId = next.run.squadRandomEffectOptionId || null;
   normalizeRunStats(next.run);
   next.relics = Array.isArray(next.relics) ? [...new Set(next.relics.filter(Boolean))] : [];
+  next.usedRelicIds = Array.isArray(next.usedRelicIds)
+    ? [...new Set(next.usedRelicIds.filter((id) => next.relics.includes(id)))]
+    : [];
   next.operators = Array.isArray(next.operators) ? [...new Set(next.operators.filter(Boolean))] : [];
   next.bossFlags = Array.isArray(next.bossFlags) ? next.bossFlags.filter(Boolean) : [];
   next.bossSelections = next.bossSelections && typeof next.bossSelections === "object" && !Array.isArray(next.bossSelections) ? next.bossSelections : {};

@@ -80,6 +80,58 @@
       }
     },
     {
+      "id": "run.mizuki_light_horde_detail",
+      "screenId": "mizuki-light-horde-detail",
+      "label": "ミヅキ 灯火・大群の呼び声詳細",
+      "profileIds": [
+        "is3LightHordeFull"
+      ],
+      "recognition": {
+        "type": "OCR",
+        "roi": [
+          380,
+          96,
+          560,
+          100
+        ],
+        "scale": 3,
+        "expected": [
+          "現在の灯火"
+        ],
+        "onlyRec": false,
+        "match": "any",
+        "normalize": [
+          "remove_spaces"
+        ]
+      }
+    },
+    {
+      "id": "run.mizuki_rejection_detail",
+      "screenId": "mizuki-rejection-detail",
+      "label": "ミヅキ 拒絶反応詳細",
+      "profileIds": [
+        "is3RejectionFull"
+      ],
+      "recognition": {
+        "type": "OCR",
+        "roi": [
+          690,
+          315,
+          570,
+          130
+        ],
+        "scale": 3,
+        "expected": [
+          "拒絶反応"
+        ],
+        "onlyRec": false,
+        "match": "any",
+        "normalize": [
+          "remove_spaces"
+        ]
+      }
+    },
+    {
       "id": "run.map_footer",
       "screenId": "run-home",
       "label": "マップ下部フッター",
@@ -90,6 +142,11 @@
         "is4RevelationFull",
         "is5ThoughtFull",
         "is5AgeFull",
+        "is2HallucinationsFull",
+        "is2PerformanceFull",
+        "is3KeyFull",
+        "is3LightHordeFull",
+        "is3RejectionFull",
         "is6CoinsFull"
       ],
       "recognition": {
@@ -277,9 +334,6 @@
     },
     {
       "id": "run.difficulty_grade",
-      "profileIds": [
-        "runStatusFull"
-      ],
       "roi": [
         130,
         552,
@@ -292,9 +346,6 @@
     },
     {
       "id": "run.difficulty_block",
-      "profileIds": [
-        "runStatusFull"
-      ],
       "roi": [
         0,
         520,
@@ -310,9 +361,9 @@
       ],
       "roi": [
         90,
-        84,
-        1100,
-        540
+        24,
+        1180,
+        600
       ],
       "onlyRec": false,
       "scale": 1
@@ -343,6 +394,24 @@
         540
       ],
       "scale": 2
+    },
+    {
+      "id": "is5.thought_load.current",
+      "profileIds": [
+        "is5ThoughtFull"
+      ],
+      "roi": [
+        170,
+        230,
+        90,
+        75
+      ],
+      "onlyRec": true,
+      "scale": 3,
+      "numericFallback": {
+        "min": 0,
+        "max": 999
+      }
     },
     {
       "id": "is5.thought_list_text",
@@ -552,6 +621,130 @@
         280
       ],
       "scale": 3,
+      "onlyRec": false
+    },
+    {
+      "id": "is3.ingot_value",
+      "profileIds": [
+        "is3KeyFull"
+      ],
+      "roi": [
+        1065,
+        8,
+        55,
+        45
+      ],
+      "scale": 6,
+      "onlyRec": true
+    },
+    {
+      "id": "is3.key_value",
+      "profileIds": [
+        "is3KeyFull"
+      ],
+      "roi": [
+        1210,
+        8,
+        55,
+        45
+      ],
+      "scale": 6,
+      "onlyRec": true
+    },
+    {
+      "id": "is3.light_value",
+      "profileIds": [
+        "is3LightHordeFull"
+      ],
+      "roi": [
+        408,
+        112,
+        32,
+        34
+      ],
+      "scale": 6,
+      "onlyRec": true
+    },
+    {
+      "id": "is3.horde_call_list_text",
+      "profileIds": [
+        "is3LightHordeFull"
+      ],
+      "roi": [
+        390,
+        250,
+        550,
+        320
+      ],
+      "scale": 3,
+      "onlyRec": false
+    },
+    {
+      "id": "is3.rejection_name",
+      "profileIds": [
+        "is3RejectionFull"
+      ],
+      "roi": [
+        790,
+        345,
+        260,
+        50
+      ],
+      "scale": 4,
+      "onlyRec": true,
+      "ocrReplace": [
+        [
+          "異空",
+          "異変"
+        ]
+      ]
+    },
+    {
+      "id": "is3.rejection_operators",
+      "profileIds": [
+        "is3RejectionFull"
+      ],
+      "roi": [
+        710,
+        490,
+        550,
+        90
+      ],
+      "scale": 4,
+      "onlyRec": false
+    },
+    {
+      "id": "is2.hallucination_top",
+      "profileIds": [
+        "is2HallucinationsFull"
+      ],
+      "roi": [
+        480,
+        10,
+        320,
+        34
+      ],
+      "scale": 4,
+      "onlyRec": false,
+      "ocrReplace": [
+        [
+          "帰執的な",
+          "偏執的な"
+        ]
+      ]
+    },
+    {
+      "id": "is2.performance_bottom",
+      "profileIds": [
+        "is2PerformanceFull"
+      ],
+      "roi": [
+        480,
+        640,
+        360,
+        80
+      ],
+      "scale": 4,
       "onlyRec": false
     }
   ]

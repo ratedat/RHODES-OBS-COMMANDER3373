@@ -23,17 +23,63 @@ public static class RhodesRunCatalog
         string Slot,
         string SlotLabel,
         string GroupLabel,
-        string Name);
+        string Name,
+        string Effect,
+        string FlavorText,
+        string Category,
+        int Price,
+        string ThoughtRank,
+        string ThoughtLoad,
+        string ImageLocalPath);
 
     public static IReadOnlyList<SukiSpecialEffectOption> LoadSpecialEffectOptions(string campaignId, string slot)
     {
-        var path = ResolveDataPath(ResolveDataRoot(), "selectable-effects.json");
+        var dataRoot = ResolveDataRoot();
+        var path = ResolveDataPath(dataRoot, "selectable-effects.json");
         return LoadSelectableEffects(path)
             .Where(item => item.CampaignId.Equals(campaignId, StringComparison.Ordinal)
                 && item.Slot.Equals(slot, StringComparison.Ordinal))
-            .Select(item => new SukiSpecialEffectOption(item.Id, item.Name))
+            .Select(item => new SukiSpecialEffectOption(
+                item.Id,
+                item.Name,
+                item.GroupLabel,
+                item.Effect,
+                item.FlavorText,
+                item.Category,
+                item.Price,
+                item.ThoughtRank,
+                item.ThoughtLoad,
+                ResolveSelectableEffectImagePath(dataRoot, item)))
             .DistinctBy(item => item.Id, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private static string ResolveSelectableEffectImagePath(string dataRoot, SelectableEffectPreview item)
+    {
+        var configuredPath = ResolveLocalPath(dataRoot, item.ImageLocalPath);
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+            return configuredPath;
+
+        if (!item.CampaignId.Equals("is3_mizuki", StringComparison.Ordinal)
+            || !item.Slot.Equals("rejectionReaction", StringComparison.Ordinal))
+        {
+            return "";
+        }
+
+        var separator = item.Id.LastIndexOf('_');
+        if (separator < 0 || separator == item.Id.Length - 1)
+            return "";
+
+        var fileName = $"MizukiRejection_{item.Id[(separator + 1)..]}.png";
+        return ResolveLocalPath(dataRoot, Path.Combine("assets", "recognition", "templates", "run", fileName)) is { Length: > 0 } sourcePath
+            ? sourcePath
+            : ResolveLocalPath(dataRoot, Path.Combine("resource", "base", "image", "run", fileName));
+    }
+
+    public static IReadOnlyList<SukiSpecialEffectOption> LoadPerformanceOptions(string campaignId)
+    {
+        var dataRoot = ResolveDataRoot();
+        return LoadPerformanceOptions(dataRoot, campaignId);
     }
 
     private static IReadOnlyList<SukiCampaignPreview> LoadCampaigns(string path)
@@ -84,7 +130,14 @@ public static class RhodesRunCatalog
                 JsonString(item, "slot"),
                 JsonString(item, "slotLabel"),
                 JsonString(item, "groupLabel"),
-                JsonString(item, "name")))
+                JsonString(item, "name"),
+                JsonString(item, "effect"),
+                JsonString(item, "flavorText"),
+                JsonString(item, "category"),
+                JsonInt(item, "price"),
+                JsonString(item, "thoughtRank"),
+                JsonString(item, "thoughtLoad"),
+                JsonString(JsonObject(item, "image"), "localPath")))
             .Where(item => !string.IsNullOrWhiteSpace(item.Id))
             .ToArray();
     }
@@ -160,9 +213,11 @@ public static class RhodesRunCatalog
                     false,
                     effect,
                     $"{id} {number} {name} {category} {effect}",
-                    ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")));
+                    ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")),
+                    supportsUsedFlag: RhodesRelicUsagePolicy.SupportsUsedFlag(name));
                 choice.IsSelected = state.SelectedRelicIds.Contains(id);
                 choice.IsExcluded = state.ExcludedRelicIds.Contains(id);
+                choice.IsUsed = state.UsedRelicIds.Contains(id);
                 return choice;
             })
             .Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
@@ -180,9 +235,9 @@ public static class RhodesRunCatalog
     {
         if (!File.Exists(path))
         {
-            var fallbackCampaignId = campaigns.FirstOrDefault(campaign => campaign.Id == "is5_sarkaz")?.Id
+            var fallbackCampaignId = campaigns.FirstOrDefault(campaign => campaign.Id == RhodesRunStateStore.StartupCampaignId)?.Id
                 ?? campaigns.FirstOrDefault()?.Id
-                ?? "is5_sarkaz";
+                ?? RhodesRunStateStore.StartupCampaignId;
             return new SukiRunStateSnapshot(
                 fallbackCampaignId,
                 new HashSet<string>(StringComparer.Ordinal),
@@ -202,7 +257,8 @@ public static class RhodesRunCatalog
         var root = document.RootElement;
         var run = root.TryGetProperty("run", out var runElement) ? runElement : default;
         var preferences = root.TryGetProperty("preferences", out var prefElement) ? prefElement : default;
-        var campaignId = JsonString(run, "campaignId", "is5_sarkaz");
+        var campaignId = JsonString(run, "campaignId", RhodesRunStateStore.StartupCampaignId);
+        var performanceId = JsonString(run, "performanceId");
         return new SukiRunStateSnapshot(
             campaignId,
             ReadStringSet(root, "operators"),
@@ -223,7 +279,51 @@ public static class RhodesRunCatalog
             JsonInt(run, "ingot"),
             ReadSpecialInt(run, campaignId, "idea"),
             BuildSpecialFieldStates(run, campaigns, selectableEffects),
-            SukiOcrEngineCatalog.Normalize(JsonString(preferences, "ocrEngine", SukiOcrEngineCatalog.DefaultId)));
+            SukiOcrEngineCatalog.Normalize(JsonString(preferences, "ocrEngine", SukiOcrEngineCatalog.DefaultId)),
+            ReadBossSelections(root, campaignId),
+            performanceId,
+            ResolvePerformanceDisplayName(dataRoot, campaignId, performanceId))
+        {
+            UsedRelicIds = ReadStringSet(root, "usedRelicIds"),
+        };
+    }
+
+    private static IReadOnlyList<SukiSpecialEffectOption> LoadPerformanceOptions(string dataRoot, string campaignId)
+    {
+        var path = ResolveDataPath(dataRoot, "performances.json");
+        if (!File.Exists(path))
+            return [];
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        if (!root.TryGetProperty("performances", out var performances) || performances.ValueKind != JsonValueKind.Array)
+            return [];
+
+        return performances.EnumerateArray()
+            .Where(item => JsonString(item, "campaignId").Equals(campaignId, StringComparison.Ordinal))
+            .OrderBy(item => JsonInt(item, "order"))
+            .Select(item =>
+            {
+                var name = JsonString(item, "name");
+                return new SukiSpecialEffectOption(
+                    JsonString(item, "id"),
+                    string.IsNullOrWhiteSpace(name) ? JsonString(item, "title") : name,
+                    JsonString(item, "group"),
+                    JsonString(item, "effect"),
+                    JsonString(item, "flavorText"));
+            })
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
+            .ToArray();
+    }
+
+    private static string ResolvePerformanceDisplayName(string dataRoot, string campaignId, string performanceId)
+    {
+        if (string.IsNullOrWhiteSpace(performanceId))
+            return "";
+
+        return LoadPerformanceOptions(dataRoot, campaignId)
+            .FirstOrDefault(item => item.Id.Equals(performanceId, StringComparison.Ordinal))?.Name
+            ?? performanceId;
     }
 
     /// <summary>手動入力UI向け: 現在ISの分隊一覧 (id + 表示名)。</summary>
@@ -459,6 +559,7 @@ public static class RhodesRunCatalog
                 profileId,
                 $"{field.Label}の数値"),
             "effectSelect" => BuildEffectSelectState(campaignId, field, value, kind, profileId, effectsById),
+            "operatorEffectAssignment" => BuildOperatorEffectAssignmentState(campaignId, field, value, kind, profileId, effectsById),
             "effectStackLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, true),
             "effectMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
             "effectRankedMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
@@ -494,7 +595,42 @@ public static class RhodesRunCatalog
             string.IsNullOrWhiteSpace(effectLabel) ? "未選択" : effectLabel,
             kind,
             profileId,
-            string.IsNullOrWhiteSpace(effectId) ? "取得値なし" : effectId);
+            string.IsNullOrWhiteSpace(effectId) ? "取得値なし" : effectId,
+            effectId);
+    }
+
+    private static SukiSpecialFieldState BuildOperatorEffectAssignmentState(
+        string campaignId,
+        SukiCampaignSpecialField field,
+        JsonElement value,
+        string kind,
+        string profileId,
+        IReadOnlyDictionary<string, SelectableEffectPreview> effectsById)
+    {
+        var effectId = value.ValueKind == JsonValueKind.Object ? JsonString(value, "effectId") : "";
+        var operatorIds = value.ValueKind == JsonValueKind.Object
+            && value.TryGetProperty("operatorIds", out var operatorArray)
+            && operatorArray.ValueKind == JsonValueKind.Array
+                ? operatorArray.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString() ?? "")
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray()
+                : [];
+        var effectLabel = ResolveEffectLabel(effectId, effectsById);
+        return new SukiSpecialFieldState(
+            campaignId,
+            field.Id,
+            field.Label,
+            field.Type,
+            string.IsNullOrWhiteSpace(effectLabel) ? "未選択" : effectLabel,
+            kind,
+            profileId,
+            string.IsNullOrWhiteSpace(effectId) ? "取得値なし" : $"{effectLabel} / 対象{operatorIds.Length}名",
+            effectId,
+            string.IsNullOrWhiteSpace(effectId) ? [] : [effectId],
+            operatorIds);
     }
 
     private static SukiSpecialFieldState BuildEffectListState(
@@ -516,16 +652,18 @@ public static class RhodesRunCatalog
             $"{entries.Total}{unit}",
             kind,
             profileId,
-            entries.Labels.Count == 0 ? "取得値なし" : string.Join(" / ", entries.Labels));
+            entries.Labels.Count == 0 ? "取得値なし" : string.Join(" / ", entries.Labels),
+            SelectedIds: entries.Ids);
     }
 
-    private static (int Total, IReadOnlyList<string> Labels) ReadEffectEntries(
+    private static (int Total, IReadOnlyList<string> Labels, IReadOnlyList<string> Ids) ReadEffectEntries(
         JsonElement value,
         IReadOnlyDictionary<string, SelectableEffectPreview> effectsById,
         bool sumCounts)
     {
         var total = 0;
         var labels = new List<string>();
+        var ids = new List<string>();
 
         void AddEntry(string id, int count)
         {
@@ -534,6 +672,7 @@ public static class RhodesRunCatalog
 
             count = Math.Max(1, count);
             total += sumCounts ? count : 1;
+            ids.Add(id);
             var name = ResolveEffectLabel(id, effectsById);
             labels.Add(sumCounts && count > 1 ? $"{name} x{count}" : name);
         }
@@ -568,7 +707,7 @@ public static class RhodesRunCatalog
             }
         }
 
-        return (total, labels);
+        return (total, labels, ids.Distinct(StringComparer.Ordinal).ToArray());
     }
 
     private static string ResolveEffectLabel(string effectId, IReadOnlyDictionary<string, SelectableEffectPreview> effectsById)
@@ -587,6 +726,7 @@ public static class RhodesRunCatalog
         {
             "number" => "数値",
             "effectSelect" => "候補選択",
+            "operatorEffectAssignment" => "反応と対象者",
             "effectStackLoadout" => "個数入力",
             "effectMultiSelect" => "複数選択",
             "effectRankedMultiSelect" => "状態",
@@ -603,8 +743,12 @@ public static class RhodesRunCatalog
             ("is5_sarkaz", "thought") => "is5ThoughtFull",
             ("is5_sarkaz", "idea") => "run.idea.current",
             ("is5_sarkaz", "age") => "is5AgeFull",
-            ("is3_mizuki", "rejectionReaction") => "is3RejectionReaction",
+            ("is2_phantom", "hallucinations") => "is2HallucinationsFull",
+            ("is3_mizuki", "key") => "is3KeyFull",
+            ("is3_mizuki", "light") => "is3LightHordeFull",
+            ("is3_mizuki", "rejectionReaction") => "is3RejectionFull",
             ("is3_mizuki", "revelations") => "is3RevelationFull",
+            ("is3_mizuki", "hordeCalls") => "is3LightHordeFull",
             ("is4_sami", "collapseValue") => "is4CollapseValue",
             ("is4_sami", "paradigmLost") => "is4ParadigmLost",
             ("is4_sami", "revelation") => "is4RevelationFull",
@@ -646,37 +790,14 @@ public static class RhodesRunCatalog
     public static string ResolveStatePath(string dataRoot)
     {
         var preferred = Path.Combine(dataRoot, "current-state.json");
-        var candidates = new[] { preferred }
-            .Concat(CandidateRoots().Select(root => Path.Combine(root, "data", "current-state.json")))
+        if (File.Exists(preferred))
+            return preferred;
+
+        return CandidateRoots()
+            .Select(root => Path.Combine(root, "data", "current-state.json"))
             .Where(File.Exists)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        var projectState = candidates
-            .Where(path => IsProjectRootStatePath(path))
-            .OrderByDescending(File.GetLastWriteTimeUtc)
-            .FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(projectState))
-            return projectState;
-
-        return candidates
-            .OrderByDescending(File.GetLastWriteTimeUtc)
-            .ThenBy(path => IsBuildOutputDataPath(path) ? 1 : 0)
             .FirstOrDefault() ?? preferred;
-    }
-
-    private static bool IsBuildOutputDataPath(string path)
-    {
-        return path.Replace('/', '\\').Contains("\\bin\\", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsProjectRootStatePath(string path)
-    {
-        var dataDirectory = Directory.GetParent(path);
-        var projectRoot = dataDirectory?.Parent;
-        return projectRoot is not null
-            && File.Exists(Path.Combine(projectRoot.FullName, "package.json"))
-            && File.Exists(Path.Combine(projectRoot.FullName, "data", "campaigns.json"));
     }
 
     private static IEnumerable<string> CandidateRoots()
@@ -712,6 +833,39 @@ public static class RhodesRunCatalog
             .ToArray();
     }
 
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ReadBossSelections(
+        JsonElement root,
+        string campaignId)
+    {
+        if (root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty("bossSelections", out var allSelections)
+            || allSelections.ValueKind != JsonValueKind.Object
+            || !allSelections.TryGetProperty(campaignId, out var campaignSelections)
+            || campaignSelections.ValueKind != JsonValueKind.Object)
+        {
+            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        }
+
+        var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (var selection in campaignSelections.EnumerateObject())
+        {
+            var values = selection.Value.ValueKind switch
+            {
+                JsonValueKind.String => new[] { selection.Value.GetString() ?? "" },
+                JsonValueKind.Array => selection.Value.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString() ?? "")
+                    .ToArray(),
+                _ => [],
+            };
+            result[selection.Name] = values
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+        return result;
+    }
+
     private static JsonElement JsonObject(JsonElement element, string propertyName)
     {
         return element.ValueKind == JsonValueKind.Object
@@ -721,7 +875,7 @@ public static class RhodesRunCatalog
             : default;
     }
 
-    private static string ResolveLocalPath(string dataRoot, string relativePath)
+    internal static string ResolveLocalPath(string dataRoot, string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath))
             return "";

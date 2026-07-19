@@ -104,7 +104,9 @@ public static class RhodesMaaGeneratedResourceBuilder
             var index = 0;
             foreach (var config in ArrayProperty(profile, "templateOcrRegions"))
             {
-                if (string.IsNullOrWhiteSpace(JsonString(config, "templatePath")) || !config.TryGetProperty("searchRoi", out _))
+                var hasTemplates = !string.IsNullOrWhiteSpace(JsonString(config, "templatePath"))
+                    || ArrayProperty(config, "templatePaths").Any(item => item.ValueKind == JsonValueKind.String);
+                if (!hasTemplates || !config.TryGetProperty("searchRoi", out _))
                 {
                     index++;
                     continue;
@@ -128,6 +130,7 @@ public static class RhodesMaaGeneratedResourceBuilder
                     ["maxMatches"] = CloneOrNull(config, "maxMatches"),
                     ["scale"] = CloneOrNull(config, "scale"),
                     ["numericFallback"] = CloneOrNull(config, "numericFallback"),
+                    ["templateIds"] = CloneOrNull(config, "templateIds"),
                 });
                 index++;
             }
@@ -193,7 +196,33 @@ public static class RhodesMaaGeneratedResourceBuilder
     private static JsonObject TemplateNode(JsonElement config, JsonObject attach)
     {
         var roi = config.GetProperty("searchRoi");
-        var template = JsonString(config, "templatePath")
+        var templatePaths = ArrayProperty(config, "templatePaths")
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString() ?? "")
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToArray();
+        if (templatePaths.Length > 0)
+        {
+            return new JsonObject
+            {
+                ["recognition"] = "Or",
+                ["any_of"] = new JsonArray(templatePaths
+                    .Select(templatePath => (JsonNode)TemplateRecognition(config, roi, templatePath))
+                    .ToArray()),
+                ["action"] = "DoNothing",
+                ["attach"] = attach,
+            };
+        }
+
+        var node = TemplateRecognition(config, roi, JsonString(config, "templatePath"));
+        node["action"] = "DoNothing";
+        node["attach"] = attach;
+        return node;
+    }
+
+    private static JsonObject TemplateRecognition(JsonElement config, JsonElement roi, string templatePath)
+    {
+        var template = templatePath
             .Replace('\\', '/')
             .Replace("assets/recognition/templates/", "", StringComparison.Ordinal);
         return new JsonObject
@@ -208,8 +237,6 @@ public static class RhodesMaaGeneratedResourceBuilder
             ["threshold"] = JsonDouble(config, "threshold") ?? 0.7,
             ["method"] = JsonInt(config, "method", 5),
             ["order_by"] = JsonString(config, "orderBy", "Score"),
-            ["action"] = "DoNothing",
-            ["attach"] = attach,
         };
     }
 

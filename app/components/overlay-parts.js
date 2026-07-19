@@ -1,4 +1,5 @@
 import { assetUrl, html, stars } from "../lib/format.js";
+import { renderRelicUsedBadge } from "./relic-used-badge.js";
 
 export const overlayPartOptions = [
   { id: "status", title: "Status", label: "ラン状態", hint: "上部バー / 1200x120" },
@@ -49,7 +50,7 @@ function renderStatusPart(args, context) {
 function renderRelicsPart(args, context) {
   const body = args.relics.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("horizontalRelicScrollSpeed")}">
     <div class="overlay-part-relic-grid">
-      ${args.relics.map((item) => `<div class="overlay-part-relic" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span>${html(item.name)}</span></div>`).join("")}
+      ${args.relics.map((item) => `<div class="overlay-part-relic ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span>${html(item.name)}</span>${renderRelicUsedBadge(item)}</div>`).join("")}
     </div>
   </div>` : empty("秘宝なし");
   return section("relics", "Relics", args.relics.length, body);

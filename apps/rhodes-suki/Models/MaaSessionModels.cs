@@ -293,7 +293,8 @@ public sealed record SukiOutputPreferences(
     bool TournamentMode,
     bool TransparentBackground,
     int ScrollSpeed,
-    IReadOnlyList<SukiOutputPartState> Parts);
+    IReadOnlyList<SukiOutputPartState> Parts,
+    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null);
 
 public sealed record SukiOutputPartState(
     string Id,
@@ -302,6 +303,15 @@ public sealed record SukiOutputPartState(
     bool HideExcluded,
     int Width,
     int Height);
+
+public sealed record SukiOverlayLayoutState(
+    string Id,
+    bool Enabled,
+    int X,
+    int Y,
+    int Width,
+    int Height,
+    int ZIndex);
 
 public sealed record RhodesSukiSettings(
     string AdbPath = "adb",
@@ -316,7 +326,8 @@ public sealed record RhodesSukiSettings(
     int HudX = -1,
     int HudY = -1,
     string HudVisibleParts = "",
-    bool AdbConnectionValidated = false);
+    bool AdbConnectionValidated = false,
+    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null);
 
 public sealed record MaaSessionSnapshot(
     string State,
@@ -1018,6 +1029,7 @@ public sealed record MaaCandidatePreview(
                 Part("effect", EffectId),
                 Part("coin", CoinId),
                 Part("status", StatusId),
+                Part("state", StateId),
                 Part("slot", SlotKind),
                 Part("fieldId", FieldId),
                 Part("campaign", CampaignId),

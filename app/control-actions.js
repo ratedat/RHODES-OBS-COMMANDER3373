@@ -83,6 +83,7 @@ export function removeCoinEntry(state, campaignId, fieldId, index) {
 
 export function clearRelics(state) {
   state.relics = [];
+  state.usedRelicIds = [];
 }
 
 export function addBossFlag(state, text) {
@@ -134,6 +135,7 @@ export function updateRunField(state, field, value, checked) {
     state.run.difficulty = null;
     state.run.difficultyTierId = null;
     state.relics = [];
+    state.usedRelicIds = [];
     state.bossFlags = [];
     state.bossSelections ||= {};
     state.bossSelections[value] ||= {};
@@ -259,6 +261,17 @@ export function toggleChoice(state, type, id) {
   if (set.has(id)) set.delete(id);
   else set.add(id);
   state[key] = [...set];
+  if (type === "relic" && !set.has(id)) {
+    state.usedRelicIds = (state.usedRelicIds || []).filter((relicId) => relicId !== id);
+  }
+}
+
+export function toggleRelicUsed(state, id) {
+  if (!id || !(state.relics || []).includes(id)) return;
+  const used = new Set(state.usedRelicIds || []);
+  if (used.has(id)) used.delete(id);
+  else used.add(id);
+  state.usedRelicIds = [...used];
 }
 
 export function toggleChoiceExcluded(state, type, id) {

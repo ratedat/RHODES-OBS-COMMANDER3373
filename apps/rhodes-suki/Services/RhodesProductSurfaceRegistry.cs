@@ -19,7 +19,7 @@ public static class RhodesProductSurfaceRegistry
         new(
             "run.special",
             "campaign-special-field",
-            "run",
+            "special",
             "run.special",
             "campaign-catalog/MAA-OCR",
             "special-field",

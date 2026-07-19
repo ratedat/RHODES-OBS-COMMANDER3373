@@ -32,6 +32,8 @@ test("ADB scan profiles encode the spoken navigation entry points", async () => 
   assert.deepEqual(tapLabels(profiles.get("relicsFull")), ["右側の秘宝を開く"]);
   assert.deepEqual(tapLabels(profiles.get("is5ThoughtFull")), ["思案を開く"]);
   assert.deepEqual(tapLabels(profiles.get("is5AgeFull")), ["時代を開く"]);
+  assert.deepEqual(tapLabels(profiles.get("is2HallucinationsFull")), []);
+  assert.deepEqual(tapLabels(profiles.get("is2PerformanceFull")), []);
   assert.deepEqual(tapLabels(profiles.get("operatorsFull")), ["隊員を開く"]);
 });
 
@@ -65,6 +67,11 @@ test("scan profiles own the server-side OCR engine routing", async () => {
     is4RevelationFull: "maa-ocr",
     is5ThoughtFull: "maa-ocr",
     is5AgeFull: "maa-ocr",
+    is2HallucinationsFull: "maa-ocr",
+    is2PerformanceFull: "maa-ocr",
+    is3KeyFull: "maa-ocr",
+    is3LightHordeFull: "maa-ocr",
+    is3RejectionFull: "maa-ocr",
     is6CoinsFull: "maa-ocr",
   });
   for (const profile of profileList) {
@@ -82,6 +89,8 @@ test("scan profiles own MAA interface group labels and descriptions", async () =
   assert.doesNotMatch(runStatus.interfaceDescription, /希望|耐久値|シールド|指揮Lv/);
   assert.equal(profiles.get("operatorsFull").interfaceLabel, "オペレーター");
   assert.equal(profiles.get("relicsFull").interfaceLabel, "秘宝");
+  assert.equal(profiles.get("is2HallucinationsFull").interfaceLabel, "幻覚");
+  assert.equal(profiles.get("is2PerformanceFull").interfaceLabel, "演目");
 });
 
 test("scan profiles do not carry retired external trigger URLs", async () => {
@@ -101,12 +110,17 @@ test("run status profile is scoped to retained base and IS-specific values only"
     "run.ingot",
     "run.squad_card",
     "run.squad_name",
-    "run.difficulty_grade",
-    "run.difficulty_block",
   ]);
-  assert.deepEqual(profile.templateOcrRegions.map((region) => region.idPrefix), [
+  const templateIds = profile.templateOcrRegions.map((region) => region.idPrefix);
+  assert.deepEqual(templateIds.slice(0, 3), [
     "run.idea.current",
     "run.ingot",
+    "run.difficulty.grade.anchor",
+  ]);
+  assert.deepEqual(templateIds.filter((id) => id.startsWith("run.squad.icon.")), [
+    "run.squad.icon.is5_sarkaz.batch",
+    "run.squad.icon.is2_phantom.batch",
+    ...Array.from({ length: 13 }, (_, index) => `run.squad.icon.is3_mizuki_squad_${String(index + 1).padStart(2, "0")}`),
   ]);
   assert.doesNotMatch(profile.navigationNote, /希望|耐久値|シールド|指揮Lv/);
 });
@@ -141,11 +155,14 @@ test("ADB scan profile taps match the annotated 2560x1440 screenshot scaled to 1
 });
 
 
-test("difficulty grade ROI targets the opened squad panel, not the closed footer badge", async () => {
-  const tasks = await recognitionTasks();
-  const difficultyRegion = tasks.ocrRegions.find((region) => region.id === "run.difficulty_grade");
+test("difficulty OCR is anchored by the opened squad panel DIFFICULTY label", async () => {
+  const profiles = await profilesById();
+  const profile = profiles.get("runStatusFull");
+  const difficultyRegion = profile.templateOcrRegions.find((region) => region.idPrefix === "run.difficulty.grade.anchor");
 
-  assert.deepEqual(difficultyRegion.roi, [130, 552, 78, 66]);
+  assert.equal(difficultyRegion.templatePath, "assets/recognition/templates/run/DifficultyFlag.png");
+  assert.deepEqual(difficultyRegion.searchRoi, { x: 22, y: 548, width: 122, height: 40 });
+  assert.deepEqual(difficultyRegion.ocrOffset, { x: 102, y: 0, width: 66, height: 51 });
   assert.equal(difficultyRegion.numericFallback, true);
 });
 
@@ -202,6 +219,22 @@ test("run status profile includes template anchors for map resources", async () 
   assert.equal(profile.templateOcrRegions.some((region) => region.templatePath === "assets/recognition/templates/run/HopeIcon.png"), false);
   assert.equal(profile.templateOcrRegions.some((region) => region.templatePath === "assets/recognition/templates/run/LifeIcon.png"), false);
   assert.equal(profile.templateOcrRegions.some((region) => region.templatePath === "assets/recognition/templates/run/ShieldIcon.png"), false);
+
+  const squadBatch = profile.templateOcrRegions.find((region) => region.idPrefix === "run.squad.icon.is5_sarkaz.batch");
+  assert.equal(squadBatch.templatePaths.length, 17);
+  assert.equal(squadBatch.templateIds.length, 17);
+  assert.equal(squadBatch.templateIds[13], "is5_sarkaz_squad_14");
+  const phantomSquadBatch = profile.templateOcrRegions.find((region) => region.idPrefix === "run.squad.icon.is2_phantom.batch");
+  assert.equal(phantomSquadBatch.templatePaths.length, 10);
+  assert.equal(phantomSquadBatch.templateIds.length, 10);
+  assert.equal(phantomSquadBatch.templateIds[7], "is2_phantom_squad_08");
+  assert.deepEqual(phantomSquadBatch.searchRoi, { x: 8, y: 632, width: 94, height: 88 });
+  const mizukiSquadTemplates = profile.templateOcrRegions.filter((region) => String(region.idPrefix).startsWith("run.squad.icon.is3_mizuki_squad_"));
+  assert.equal(mizukiSquadTemplates.length, 13);
+  assert.deepEqual(mizukiSquadTemplates[0].searchRoi, { x: 8, y: 638, width: 86, height: 82 });
+  assert.equal(mizukiSquadTemplates[0].method, 3);
+  assert.equal(mizukiSquadTemplates[0].threshold, 0.68);
+  assert.equal(profile.templateOcrRegions.filter((region) => String(region.idPrefix).startsWith("run.squad.icon.")).length, 15);
 });
 
 
@@ -257,17 +290,11 @@ test("vertical full scan profiles sweep down and back up without Android edge ge
 
 
 
-test("relic full scan skips scroll when the opened relic panel has at most nine candidates", async () => {
+test("relic full scan no longer guesses scroll completion from a short candidate list", async () => {
   const profiles = await profilesById();
   const profile = profiles.get("relicsFull");
 
-  assert.deepEqual(profile.scrollGuard, {
-    type: "initialCandidateCountAtMost",
-    candidateKind: "relic",
-    maxCandidates: 9,
-    reason: "relic_panel_not_scrollable",
-    skipRemainingPasses: true,
-  });
+  assert.equal(profile.scrollGuard, undefined);
 });
 test("thought full scan uses the central thought list lane for vertical scrolling", async () => {
   const profiles = await profilesById();
@@ -422,6 +449,34 @@ test("age scan taps the top-center era marker and does not scroll", async () => 
   assert.equal(age.scrollAxis, "none");
 });
 
+test("Phantom hallucination scan reads the complete top label strip without tapping", async () => {
+  const profiles = await profilesById();
+  const tasks = await recognitionTasks();
+  const profile = profiles.get("is2HallucinationsFull");
+  const region = tasks.ocrRegions.find((item) => item.id === "is2.hallucination_top");
+
+  assert.deepEqual(profile.scanRegion, { x: 480, y: 10, width: 320, height: 34 });
+  assert.deepEqual(profile.openSteps, []);
+  assert.deepEqual(profile.restoreSteps, []);
+  assert.equal(profile.maxScrolls, 0);
+  assert.deepEqual(region.roi, [480, 10, 320, 34]);
+  assert.equal(region.onlyRec, false);
+});
+
+test("Phantom performance scan reads the single bottom performance banner without tapping", async () => {
+  const profiles = await profilesById();
+  const tasks = await recognitionTasks();
+  const profile = profiles.get("is2PerformanceFull");
+  const region = tasks.ocrRegions.find((item) => item.id === "is2.performance_bottom");
+
+  assert.deepEqual(profile.scanRegion, { x: 480, y: 640, width: 360, height: 80 });
+  assert.deepEqual(profile.openSteps, []);
+  assert.deepEqual(profile.restoreSteps, []);
+  assert.equal(profile.maxScrolls, 0);
+  assert.deepEqual(region.roi, [480, 640, 360, 80]);
+  assert.equal(region.onlyRec, false);
+});
+
 test("operator and thought scans use bounded passes tuned for their scroll surfaces", async () => {
   const profiles = await profilesById();
   const operator = profiles.get("operatorsFull");
@@ -434,7 +489,7 @@ test("operator and thought scans use bounded passes tuned for their scroll surfa
   assert.ok(operator.scrollPasses.every((pass) => pass.captureDelayMs <= 120));
   assert.equal(operator.scrollPasses[1].mirrorPreviousPassScrolls, false);
 
-  assert.ok(thought.scrollPasses.every((pass) => pass.maxScrolls <= 8));
+  assert.ok(thought.scrollPasses.every((pass) => pass.maxScrolls <= 12));
   assert.ok(thought.scrollPasses.every((pass) => pass.endFingerprintStableCount === 1));
   assert.ok(thought.scrollPasses.every((pass) => pass.candidateStableEndCount === 1));
   assert.ok(thought.scrollPasses.every((pass) => pass.captureDelayMs <= 120));

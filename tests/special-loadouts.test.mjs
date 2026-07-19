@@ -100,6 +100,7 @@ test("IS#5 thought field uses countable effect stack entries without state slots
   assert.equal(field.effectSlot, "thought");
   assert.equal(field.hideStateInput, true);
   assert.equal(field.unitLabel, "個");
+  assert.equal(field.overlayDefaultVisible, true);
 
   assert.deepEqual(mergeEffectStackEntries(field, ["thought-a", "thought-a", { effectId: "thought-b", count: 3 }], campaign.id), [
     { effectId: "thought-a", count: 2, stateId: null },

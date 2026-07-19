@@ -41,17 +41,38 @@ function ocrNode(recognition, attach) {
   return node;
 }
 
-function templateNode(config, attach) {
-  const template = String(config.templatePath ?? "")
+function normalizedTemplatePath(templatePath) {
+  return String(templatePath ?? "")
     .replace(/\\/g, "/")
     .replace(/^assets\/recognition\/templates\//, "");
+}
+
+function templateRecognition(config, templatePath) {
   return {
     recognition: "TemplateMatch",
     roi: [config.searchRoi.x, config.searchRoi.y, config.searchRoi.width, config.searchRoi.height],
-    template,
+    template: normalizedTemplatePath(templatePath),
     threshold: config.threshold ?? 0.7,
     method: config.method ?? 5,
     order_by: config.orderBy ?? "Score",
+  };
+}
+
+function templateNode(config, attach) {
+  const templatePaths = Array.isArray(config.templatePaths)
+    ? config.templatePaths.filter(Boolean)
+    : [];
+  if (templatePaths.length > 0) {
+    return {
+      recognition: "Or",
+      any_of: templatePaths.map((templatePath) => templateRecognition(config, templatePath)),
+      action: "DoNothing",
+      attach,
+    };
+  }
+
+  return {
+    ...templateRecognition(config, config.templatePath),
     action: "DoNothing",
     attach,
   };
@@ -117,7 +138,9 @@ export function generatePipeline({ maaTasks, scanProfiles }) {
 
   for (const profile of scanProfiles.profiles ?? []) {
     for (const [index, config] of (profile.templateOcrRegions ?? []).entries()) {
-      if (!config.templatePath || !config.searchRoi) continue;
+      const hasTemplates = Boolean(config.templatePath)
+        || (Array.isArray(config.templatePaths) && config.templatePaths.length > 0);
+      if (!hasTemplates || !config.searchRoi) continue;
       if (!isRetainedRecognitionSource({ id: config.idPrefix ?? "" })) continue;
       pipeline[nodeName("RhodesTemplate", `${profile.id}.${config.idPrefix ?? index}`)] = templateNode(config, {
         generated: true,
@@ -128,6 +151,7 @@ export function generatePipeline({ maaTasks, scanProfiles }) {
         maxMatches: config.maxMatches ?? null,
         scale: config.scale ?? null,
         numericFallback: config.numericFallback ?? null,
+        templateIds: config.templateIds ?? null,
       });
     }
   }

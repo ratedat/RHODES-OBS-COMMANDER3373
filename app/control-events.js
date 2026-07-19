@@ -215,6 +215,7 @@ export function registerControlEvents(app, context) {
       return;
     }
     if (action === "toggle-relic") { toggleChoiceElement(button, "relic", id, context); return; }
+    if (action === "toggle-relic-used") { context.mutate((state) => controlActions.toggleRelicUsed(state, id)); return; }
     if (action === "toggle-operator") { toggleChoiceElement(button, "operator", id, context); return; }
     if (action === "toggle-relic-excluded") { context.mutate((state) => controlActions.toggleChoiceExcluded(state, "relic", id)); return; }
     if (action === "toggle-operator-excluded") { context.mutate((state) => controlActions.toggleChoiceExcluded(state, "operator", id)); return; }

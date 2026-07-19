@@ -1,8 +1,8 @@
 {
     "meta":  {
-                 "generatedAt":  "2026-06-22",
+                 "generatedAt":  "2026-07-18",
                  "source":  "arknights.wikiru.jp PukiWiki source pages",
-                 "note":  "Extracted for OBS overlay state display. Relics keep names/categories only; long guide text and images are not copied."
+                 "note":  "Extracted for OBS overlay state display. Relics include names, categories, prices, exchange flags, base effect text, and flavor text. Difficulty-dependent variants are generated separately."
              },
     "relics":  [
                    {
@@ -23125,6 +23125,78 @@
                                  }
                    },
                    {
+                       "id": "is6_sui_relic_219",
+                       "campaignId": "is6_sui",
+                       "number": 219,
+                       "name": "追憶儀",
+                       "category": "No.213〜222 伝承の珍品",
+                       "price": null,
+                       "exchange": "不可",
+                       "effect": "獲得時、全ての源石錐と希望を失い、戦闘勝利時の指揮経験値の獲得量、源石錐-50%。見字祠とそれ以前の異境の入口で特別な使い方ができる",
+                       "flavorText": "歳獣の代理人によって創り出された、歳獣に対処するための装置。果てのない回転の中で、歳獣の覚醒に至るあらゆる可能性を暴き出し、ウァンが事前に策を巡らせるための判断材料を提供している。",
+                       "sourceAnchor": "No219",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_219_dlc2.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3231395F646C63322E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_219_dlc2.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_220",
+                       "campaignId": "is6_sui",
+                       "number": 220,
+                       "name": "「イザヨウ」",
+                       "category": "No.213〜222 伝承の珍品",
+                       "price": null,
+                       "exchange": "不可",
+                       "effect": "コストの自然回復速度-50%、探索を違う方向へと導く。古肆で特別な使い方ができる",
+                       "flavorText": "歳獣の代理人たちが記憶を与え合って育てた墨の器鬼。あまり機敏には動けないが、数多の可能性の中で、目覚めかけた歳の意識を傍らから抑え込んでいる。",
+                       "sourceAnchor": "No220",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_220_dlc2.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232305F646C63322E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_220_dlc2.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_221",
+                       "campaignId": "is6_sui",
+                       "number": 221,
+                       "name": "不赦",
+                       "category": "No.213〜222 伝承の珍品",
+                       "price": null,
+                       "exchange": "不可",
+                       "effect": "敵全員の最大HP・防御力+50%。＜「宿傲」＞に「追加の敵を召喚」、一部の＜「身形」＞に「敵を持続的に召喚」の能力を付与",
+                       "flavorText": "歳獣を描き出す際に生まれた珍品。まだ未覚醒だが、歳獣は他者がその身を踏みにじることを許さず、その身体の反射はあらゆる変化の兆しを探し続けている。",
+                       "sourceAnchor": "No221",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_221_dlc2.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232315F646C63322E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_221_dlc2.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_222",
+                       "campaignId": "is6_sui",
+                       "number": 222,
+                       "name": "不息",
+                       "category": "No.213〜222 伝承の珍品",
+                       "price": null,
+                       "exchange": "不可",
+                       "effect": "敵全員の攻撃力+30%。【伺燭客】とその召喚物が歳獣の残識外で戦闘する場合、攻撃力・最大HP-10%。新エリアに入るたび、さらに-10%。「来去処」に入ると、さらに-50%",
+                       "flavorText": "歳獣を描き出す際に生まれた珍品。まだ覚醒していなくとも、歳獣は他者が記憶や思考を弄ぶことを許さず、その感覚の延長が一切の変化を強引に押さえ込んでいる。",
+                       "sourceAnchor": "No222",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_222_dlc2.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232325F646C63322E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_222_dlc2.png"
+                       }
+                   },
+                   {
                        "id":  "is6_sui_relic_223",
                        "campaignId":  "is6_sui",
                        "number":  223,
@@ -23897,6 +23969,528 @@
                                      "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236352E706E67.png",
                                      "localPath":  "assets/relics/wikiru/img/sggo_265.png"
                                  }
+                   },
+                   {
+                       "id": "is6_sui_relic_266",
+                       "campaignId": "is6_sui",
+                       "number": 266,
+                       "name": "驚堂木",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "銭匣内にある他の衡銭1枚につき、全ての味方の最大HP+10%（最大+150%まで）",
+                       "flavorText": "司法を担うとある役人は、言い逃ればかりの犯人に腹を立て、物を叩き壊そうとする衝動に駆られていた。そこで彼女の弟は、この木塊を発明した。これなら、鬱憤を晴らした上で容疑者を威圧できる。素晴らしい発明だ。",
+                       "sourceAnchor": "No266",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_266.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236362E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_266.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_267",
+                       "campaignId": "is6_sui",
+                       "number": 267,
+                       "name": "Blazeのチェーンソー",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "味方が敵を攻撃した際、攻撃対象との距離が近いほど与ダメージが上昇（最大100%まで）",
+                       "flavorText": "彼女は敵を自分もろとも地獄へ引きずり込み、灼熱の炎によって互いの決意を見定める。彼女はこの勝負に敗れたことはない。",
+                       "sourceAnchor": "No267",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_267.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236372E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_267.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_268",
+                       "campaignId": "is6_sui",
+                       "number": 268,
+                       "name": "腕刃輪",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "オペレーターが敵をブロックしているとき、攻撃力+50%",
+                       "flavorText": "白兵戦にて、奇策をもって勝利を収む。",
+                       "sourceAnchor": "No268",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_268.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236382E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_268.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_269",
+                       "campaignId": "is6_sui",
+                       "number": 269,
+                       "name": "古びた石臼",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "味方がダメージを受けるたび、攻撃速度+6（最大10回まで）",
+                       "flavorText": "石臼を引く獣はいつも鞭打たれ、石臼を押す人はいつも罵倒されていたが、真っ先に限界を迎えたのは石臼の方だった。それ以来、石臼は物音を聞くだけで、ひとりでに回り出すようになったという。",
+                       "sourceAnchor": "No269",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_269.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3236392E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_269.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_270",
+                       "campaignId": "is6_sui",
+                       "number": 270,
+                       "name": "鳴脊獣",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "味方がスキル未発動状態の間、攻撃速度が+40まで徐々に上昇していく（最大値になるまでの時間は40秒）。スキル終了時、効果はリセットされる",
+                       "flavorText": "この脊獣は界園全体に時を告げる役目を担っている。職員は脊獣を速やかに飛び立たせ、ひと鳴きで界園に時報を響かせることに多大な労力を費やした。",
+                       "sourceAnchor": "No270",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_270.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237302E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_270.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_271",
+                       "campaignId": "is6_sui",
+                       "number": 271,
+                       "name": "登天の斧",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "全ての味方の攻撃力・最大HP+60％。歳獣の残識に入るたび、全ての味方の攻撃力・最大HP-30%（最大2回まで）",
+                       "flavorText": "かつて一人の木こりが界園に迷い込んだ。彼はなまくらの斧と生きたいという執念だけで、山の麓から見字祠の門前まで道を切り開いた。その後、歳獣の残識を知らない老人は界園の職員として「採用」され、イーは彼が使わなくなった斧をコレクションに加えた。",
+                       "sourceAnchor": "No271",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_271.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237312E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_271.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_272",
+                       "campaignId": "is6_sui",
+                       "number": 272,
+                       "name": "虚実の糸玉",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "味方の周囲8マス内に他の味方がいる場合、自身の防御力+600、術耐性+15",
+                       "flavorText": "ジーが不要と言って捨てた糸を、イーがどこからともなく集めてきたもの。虚なる線と実なる線の双方に一通りの手が加えられた後、界園の片隅に投げ込まれ、獣たちの遊び道具となった。",
+                       "sourceAnchor": "No272",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_272.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237322E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_272.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_273",
+                       "campaignId": "is6_sui",
+                       "number": 273,
+                       "name": "絹の錠",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "味方の周囲8マス内に他の味方がいる場合、自身の最大HP+40%",
+                       "flavorText": "イーが古株の職員同士の結婚立会人を務めた際に贈ったもの。どちらかの心が離れてしまえば、この絹の錠はひとりでに解けるのだが、彼らがここを去って久しい今もなおその気配はない。",
+                       "sourceAnchor": "No273",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_273.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237332E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_273.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_274",
+                       "campaignId": "is6_sui",
+                       "number": 274,
+                       "name": "循矩の残滓",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "オペレーターの攻撃力+50%、手動でスキルを発動したオペレーターは効果を失う",
+                       "flavorText": "矩獣の異様な体の一部であり、現在は百灶博物館に所蔵されている。以前この収蔵品を見学した一行が、不可解にも一糸乱れぬ様子で足並みを揃え、展示室を退出するという出来事があったため、この展示品は直ちに倉庫へ移され、展示禁止の処置が取られた。",
+                       "sourceAnchor": "No274",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_274.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237342E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_274.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_275",
+                       "campaignId": "is6_sui",
+                       "number": 275,
+                       "name": "後土の残滓",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "化境マスにいるオペレーターがスキルを発動すると、30秒間、全てのオペレーターの攻撃力+40%",
+                       "flavorText": "後獣の巨大な体の一部であり、かつては百灶博物館に所蔵されていた。しかし、展示場全体を庭園へと変貌させると、忽然と姿を消してしまった。もしかすると、展示場に新たに生まれた自然と一体化したのかもしれない。",
+                       "sourceAnchor": "No275",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_275.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237352E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_275.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_276",
+                       "campaignId": "is6_sui",
+                       "number": 276,
+                       "name": "勝利の琴",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "味方の攻撃力+15%。耐久値が減少するたびに、攻撃力が追加で+5%（最大17回まで）",
+                       "flavorText": "戦場から凱旋した勇士のみが奏でることを許された琴。戦のたびに記念として楽譜が一つ刻まれていく。百戦を経て、琴の胴は真っ赤に染まったが、勝利の音色は今なお耳に残り続ける。",
+                       "sourceAnchor": "No276",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_276.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237362E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_276.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_277",
+                       "campaignId": "is6_sui",
+                       "number": 277,
+                       "name": "「万霊の処方」",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "状態異常（寒冷/凍結/スタン）中の味方の防御力+1200、術耐性+30",
+                       "flavorText": "この処方を開発した若い医者は、痛みを和らげ、心を落ち着かせることで、医師による治療までの時間を稼ぐためのものに過ぎないと言っていた。だが、多くの人は痛みが消えたことで完治したと思い込み、この処方を実態にそぐわない名で呼んだ。",
+                       "sourceAnchor": "No277",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_277.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237372E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_277.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_278",
+                       "campaignId": "is6_sui",
+                       "number": 278,
+                       "name": "醒覚の塔",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "歳時を1つ醒覚状態にする",
+                       "flavorText": "歳時には抗い難いが、リューは妙案をひらめいた。そうして彼女は、歳獣の代理人たちの助けを借り、歳時を改めることのできるこの宝塔を作り上げたのだった。",
+                       "sourceAnchor": "No278",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_278.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237382E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_278.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_279",
+                       "campaignId": "is6_sui",
+                       "number": 279,
+                       "name": "銭受けの皿",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "花銭が振り出されると、希望+1。衡銭が振り出されると、源石錐+4。厲銭が振り出されると、耐久値を1回復",
+                       "flavorText": "振り銭をする以上、チャリンと音が鳴らなければ気が済まないとして、物好きがわざわざ皿を作り、「投げるものあれば、受けるものあり」などともっともらしいことを言っていた。後にその皿は、いつの間にかこの大地きっての銭を見分ける逸品に育っていたという。",
+                       "sourceAnchor": "No279",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_279.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3237392E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_279.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_280",
+                       "campaignId": "is6_sui",
+                       "number": 280,
+                       "name": "八界くんシール",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "一定確率で通宝が追加で振り出される",
+                       "flavorText": "よく通宝と一緒に売り出されている界園のマスコットのシールだが、木の銭匣から離れようとする友人たちをふっ飛ばしてしまうこともある。",
+                       "sourceAnchor": "No280",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_280.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3238302E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_280.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_281",
+                       "campaignId": "is6_sui",
+                       "number": 281,
+                       "name": "兵鋒",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "銭匣内にある他の衡銭1枚につき、全ての味方の攻撃力+10%（最大+150%まで）",
+                       "flavorText": "禁軍の兵は皆、実力と気運が生み出した偶然の産物である。彼らが使う武器もまた然り。",
+                       "sourceAnchor": "No281",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/sggo_281.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3238312E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/sggo_281.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_282",
+                       "campaignId": "is6_sui",
+                       "number": 282,
+                       "name": "王様の新しき槍",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "耐久値が1の時、全てのオペレーターの攻撃速度+50",
+                       "flavorText": "絶体絶命な状況において、祈りは人々に希望をもたらす。たとえそれが現実から遠くかけ離れていようとも。",
+                       "sourceAnchor": "No282",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/pcso_PCS01.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063736F5F50435330312E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/pcso_PCS01.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_283",
+                       "campaignId": "is6_sui",
+                       "number": 283,
+                       "name": "王様の甲冑",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "シールド値+3、全ての耐久値を同量のシールド値に変換し、戦闘終了後に耐久値-1、シールド値+1",
+                       "flavorText": "かつて王宮の門前や広場には、金色に輝くショーケースがいくつも並んでおり、その中には鑑賞用に各地から集められた宝が置かれていた。しかし今では、その場面を思い返すだけで心が痛む。",
+                       "sourceAnchor": "No283",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_023.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3032332E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_023.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_284",
+                       "campaignId": "is6_sui",
+                       "number": 284,
+                       "name": "王様の延伸",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "耐久値が1の時、全オペレーターが2秒ごとにSPが追加で1回復し、最大HPを3%回復",
+                       "flavorText": "成長し、現実を見定めて、剛毅な心と堅い意志を以て己が武装とし、包容と慈悲を以て友の武装とせよ。",
+                       "sourceAnchor": "No284",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_024.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3032342E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_024.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_285",
+                       "campaignId": "is6_sui",
+                       "number": 285,
+                       "name": "諸王の冠",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "耐久値が1の時、全てのオペレーターの攻撃力+40%（王様の秘宝を3つ以上所持している場合、上昇量が+80%になる）",
+                       "flavorText": "名もなき諸王よ、たとえ王国が滅びようとも、変わらずイベリアを守りたまえ。",
+                       "sourceAnchor": "No285",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/mcao_128.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6D63616F5F3132382E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/mcao_128.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_286",
+                       "campaignId": "is6_sui",
+                       "number": 286,
+                       "name": "魔王の寝台",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "耐久値が上限に達している場合、全オペレーターの防御力+20%、術耐性+10",
+                       "flavorText": "この王位に身を置けば、その安眠は永眠となる。",
+                       "sourceAnchor": "No286",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_029.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3032392E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_029.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_287",
+                       "campaignId": "is6_sui",
+                       "number": 287,
+                       "name": "魔王の御旗",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "耐久値が上限に達している場合、全オペレーターの攻撃速度+50",
+                       "flavorText": "この王位に身を置けば、抗ったとて落命は避けられぬ。",
+                       "sourceAnchor": "No287",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_030.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3033302E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_030.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_288",
+                       "campaignId": "is6_sui",
+                       "number": 288,
+                       "name": "魔王の祭器",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "耐久値が上限に達している場合、全オペレーターの最大HP+60%（魔王の秘宝を3つ以上所持している場合、上昇量が+120%になる）",
+                       "flavorText": "この王位に身を置く者にとって、繁栄は泡沫のように散るが定め。",
+                       "sourceAnchor": "No288",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_092.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3039322E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_092.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_289",
+                       "campaignId": "is6_sui",
+                       "number": 289,
+                       "name": "藻掻く手",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "【緩速師】・【呪詛師】・【祈祷師】の攻撃時、追加で攻撃対象の残りHPの3%にあたる術ダメージを与える",
+                       "flavorText": "ぽたりぽたり、雨垂れが石を穿つ。",
+                       "sourceAnchor": "No289",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/pcso_135.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063736F5F3133352E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/pcso_135.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_290",
+                       "campaignId": "is6_sui",
+                       "number": 290,
+                       "name": "捕食の手",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "【先駆兵】・【突撃兵】・【戦術家】がスキルを発動するたび、自身の攻撃力・防御力+10%（最大10回まで）",
+                       "flavorText": "獣の群れへと飛び込んで、その皮を引き裂く。",
+                       "sourceAnchor": "No290",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_014.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3031342E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_014.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_291",
+                       "campaignId": "is6_sui",
+                       "number": 291,
+                       "name": "砕岩の手",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "【鎌撃士】・【武者】・【闘士】の攻撃が対象の防御を70%無視",
+                       "flavorText": "山を割り地を砕き、土を食らい石を呑み込め。",
+                       "sourceAnchor": "No291",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_015.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3031352E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_015.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_292",
+                       "campaignId": "is6_sui",
+                       "number": 292,
+                       "name": "波紋の手",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "【拡散術師】・【連鎖術師】・【操機術師】がダメージを与えた時、攻撃対象1体につきSP+2",
+                       "flavorText": "ひとたび過れば、轟きが鼓膜を震わす。",
+                       "sourceAnchor": "No292",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_016.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3031362E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_016.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_293",
+                       "campaignId": "is6_sui",
+                       "number": 293,
+                       "name": "長居の手",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "【潜伏者】・【行商人】・【鬼才】配置中、30秒ごとに攻撃力+25%（最大5回まで）",
+                       "flavorText": "戦場は我が家の如し、長くこの地に定住す。",
+                       "sourceAnchor": "No293",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_017.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3031372E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_017.png"
+                       }
+                   },
+                   {
+                       "id": "is6_sui_relic_294",
+                       "campaignId": "is6_sui",
+                       "number": 294,
+                       "name": "花火の手",
+                       "category": "No.240〜294 古びた遺物",
+                       "price": null,
+                       "exchange": "可",
+                       "effect": "【速射手】・【旋輪射手】・【哨戒衛士】が敵にダメージを与えるたびに、25%の確率で追加の弾を1発発射し、攻撃力の200%の範囲物理ダメージを与える",
+                       "flavorText": "ヒュルルル、ドーン。思いがけないサプライズだ。",
+                       "sourceAnchor": "No294",
+                       "image": {
+                           "source": "arknights.wikiru.jp",
+                           "sourcePath": "img/ewso_085.png",
+                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_6577736F5F3038352E706E67.png",
+                           "localPath": "assets/relics/wikiru/img/ewso_085.png"
+                       }
                    }
                ]
 }

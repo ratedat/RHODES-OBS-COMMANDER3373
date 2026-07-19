@@ -34,6 +34,7 @@ public static class RhodesBugReportBundle
         "cache",
         "dist",
         "node_modules",
+        RhodesNodeRuntimeManager.RuntimeDirectoryName,
         "outputs",
         "runtimes",
     };

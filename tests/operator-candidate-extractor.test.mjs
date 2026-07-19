@@ -32,6 +32,8 @@ const operators = [
   { id: "leizi", name: "レイズ", rarity: 5, class: "術師", branch: "連鎖術師" },
   { id: "leizi2", name: "司霆レイズ", rarity: 6, class: "前衛", branch: "解放者" },
   { id: "yu", name: "ユー", rarity: 6, class: "重装", branch: "本源衛士" },
+  { id: "pepe", name: "ペペ", rarity: 6, class: "前衛", branch: "槌撃士" },
+  { id: "akkord", name: "アコルト", rarity: 4, class: "術師", branch: "爆撃術師" },
   { id: "eunectes", name: "ユーネクテス", rarity: 6, class: "重装", branch: "決闘者" },
   { id: "humus", name: "ヒューマス", rarity: 4, class: "前衛", branch: "鎌撃士" },
   { id: "executor2", name: "聖約イグゼキュター", rarity: 6, class: "前衛", branch: "鎌撃士" },
@@ -43,6 +45,9 @@ const operators = [
   { id: "grainbuds", name: "グレインバッズ", rarity: 5, class: "補助", branch: "祈祷師" },
   { id: "lappland", name: "ラップランド", rarity: 5, class: "前衛", branch: "領主" },
   { id: "lappland2", name: "荒蕪ラップランド", rarity: 6, class: "術師", branch: "操機術師" },
+  { id: "amiya", name: "アーミヤ", rarity: 5, class: "術師", branch: "中堅術師" },
+  { id: "amiya2", name: "アーミヤ(前衛)", rarity: 5, class: "前衛", branch: "術戦士" },
+  { id: "amiya3", name: "アーミヤ(医療)", rarity: 5, class: "医療", branch: "呪癒師" },
   { id: "reserve_sniper", name: "予備隊員-狙撃", rarity: 3, class: "狙撃", branch: "速射手" },
   { id: "terraresearchcommission", name: "テラ大陸調査団", rarity: 1, class: "狙撃", branch: "投擲手" },
 ];
@@ -71,14 +76,17 @@ const operatorOcrMap = {
     { pattern: "^レイズ", maaReplacement: "惊蛰", localMatches: [{ id: "leizi", name: "レイズ" }] },
     { pattern: "(司|霆).*レイズ", maaReplacement: "司霆惊蛰", localMatches: [{ id: "leizi2", name: "司霆レイズ" }] },
     { pattern: "^ユー(?:$|[^ネ])", maaReplacement: "余", localMatches: [{ id: "yu", name: "ユー" }, { id: "eunectes", name: "ユーネクテス" }] },
+    { pattern: "^ペペ", maaReplacement: "佩佩", localMatches: [{ id: "pepe", name: "ペペ" }] },
+    { pattern: "アコルト", maaReplacement: "协律", localMatches: [{ id: "akkord", name: "アコルト" }] },
     { pattern: "ヒューマス", maaReplacement: "休谟斯", localMatches: [{ id: "humus", name: "ヒューマス" }] },
     { pattern: "(聖|約|抱).*イクゼキュタ", maaReplacement: "圣约送葬人", localMatches: [{ id: "executor2", name: "聖約イグゼキュター" }] },
     { pattern: "^グ(ム|で|ン)", maaReplacement: "古米", localMatches: [{ id: "gummy", name: "グム" }] },
     { pattern: "^(ラ)?ップランド", maaReplacement: "拉普兰德", localMatches: [{ id: "lappland", name: "ラップランド" }] },
     { pattern: "(荒|蕪|蕉|葉|悪|慈|無|轟).*ラップラン[ドト]?", maaReplacement: "荒芜拉普兰德", localMatches: [{ id: "lappland2", name: "荒蕪ラップランド" }] },
+    { pattern: "アーミヤ", maaReplacement: "阿米娅", localMatches: [{ id: "amiya2", name: "アーミヤ(前衛)" }, { id: "amiya", name: "アーミヤ" }, { id: "amiya3", name: "アーミヤ(医療)" }] },
     { pattern: "^シー(?:$|[^ジシンソニ二ボホポル儿の]|トへ|ーた|ーの)|^(シ|ツ|ン)ー$", maaReplacement: "夕", localMatches: [{ id: "dusk", name: "シー" }] },
   ],
-  equivalenceClasses: [["ン", "ソ"], ["-", "ー", "一"], ["フ", "ブ", "プ"]],
+  equivalenceClasses: [["ン", "ソ"], ["-", "ー", "一"], ["フ", "ブ", "プ"], ["へ", "ベ", "ペ", "ヘ", "べ", "ぺ"]],
 };
 
 test("operator recognition text normalization removes OCR punctuation and MAA equivalence drift", () => {
@@ -131,6 +139,28 @@ test("operator candidate extractor uses MAA regex when OCR has a known Japanese 
 
   assert.equal(candidates[0].operatorId, "blaze");
   assert.equal(candidates[0].source, "maa-ocr-rule");
+});
+
+test("operator candidate extractor rejects a noisy card ROI that only starts like Pepe", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const noisyCandidates = await extractor({
+    ocrResults: [{ text: "ヘベ罠アコルト", regionId: "operator.card.name.6", roi: { x: 925, y: 465, width: 121, height: 18 }, confidence: 0.728168 }],
+  }, { profile: { id: "operatorsFull" }, region: { x: 525, y: 105, width: 1320, height: 833 } });
+  const exactCandidates = await extractor({
+    ocrResults: [{ text: "ペペ", regionId: "operator.card.name.0", roi: { x: 891, y: 291, width: 188, height: 29 }, confidence: 0.8 }],
+  }, { profile: { id: "operatorsFull" }, region: { x: 525, y: 105, width: 1320, height: 833 } });
+
+  assert.deepEqual(noisyCandidates.map((item) => item.operatorId), []);
+  assert.deepEqual(exactCandidates.map((item) => item.operatorId), ["pepe"]);
+});
+
+test("operator candidate extractor keeps ambiguous Amiya OCR as one caster fallback", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
+  const candidates = await extractor({
+    ocrResults: [{ text: "アーミヤ", regionId: "operator.card.name.0", roi: { x: 891, y: 291, width: 188, height: 29 }, confidence: 0.99 }],
+  }, { profile: { id: "operatorsFull" }, region: { x: 525, y: 105, width: 1320, height: 833 } });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["amiya"]);
 });
 
 test("operator candidate extractor keeps the one-letter W operator searchable", async () => {

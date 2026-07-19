@@ -1,6 +1,6 @@
 # Integrated Strategies Data Summary
 
-Generated from arknights.wikiru.jp on 2026-06-22.
+Generated from arknights.wikiru.jp on 2026-07-18.
 
 This summary is for checking extracted overlay data. Full extracted data is in `data/relics.json` and `data/squads.json`.
 
@@ -137,9 +137,8 @@ This summary is for checking extracted overlay data. Full extracted data is in `
 ## 統合戦略#6「歳の界園志異」
 
 - Campaign ID: `is6_sui`
-- Relics: 261
-- Squads: 16
-- Missing relic numbers in source/extraction: 219, 220, 221, 222
+- Relics: 294
+- Squads: 19
 
 ### Relic Categories
 - No.001〜015 多元化珍品: 15
@@ -148,9 +147,9 @@ This summary is for checking extracted overlay data. Full extracted data is in `
 - No.126〜165 専門工具: 40
 - No.166〜206 巧者の利器: 41
 - No.207〜212 戦術装置: 6
-- No.213〜222 伝承の珍品: 6
+- No.213〜222 伝承の珍品: 10
 - No.223〜239 テラの秘密: 17
-- No.240〜294 古びた遺物: 26
+- No.240〜294 古びた遺物: 55
 
 ### Squads
 - 指揮分隊 + upgrades x1
@@ -163,10 +162,12 @@ This summary is for checking extracted overlay data. Full extracted data is in `
 - 高台突破分隊
 - 地面突破分隊
 - 高規格分隊 + upgrades x1
-- 観光客分隊 + upgrades x1
-- 司歳台分隊 + upgrades x1
-- 天師府分隊 + upgrades x1
+- 観光客分隊 + upgrades x2
+- 司歳台分隊 + upgrades x2
+- 天師府分隊 + upgrades x2
 - 百花繚乱分隊
 - 起死回生分隊
 - 歳影反響分隊
-
+- 代理人分隊
+- 知学分隊
+- 商人分隊

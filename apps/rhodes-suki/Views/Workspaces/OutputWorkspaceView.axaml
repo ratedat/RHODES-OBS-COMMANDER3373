@@ -35,7 +35,7 @@
 
     <!-- 配信サーバー: overlay/sidecar/state APIを提供する app/server.mjs をここから管理する -->
     <Border Classes="card">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
         <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
           <TextBlock Text="配信サーバー" Classes="h2" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1" Text="{Binding SidecarServerStatus}" Classes="mono" VerticalAlignment="Center" Margin="8,0,0,0" />
@@ -44,24 +44,47 @@
           <Button Grid.Column="4" Content="Overlayを開く" Command="{Binding OpenPreviewUrlCommand}" CommandParameter="/overlay" />
           <Button Grid.Column="5" Content="Sidecarを開く" Command="{Binding OpenPreviewUrlCommand}" CommandParameter="/sidecar" />
         </Grid>
-        <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
-          <TextBlock Text="Overlay / OBS表示用" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <Grid Grid.Row="1" ColumnDefinitions="150,*,Auto,Auto,Auto" ColumnSpacing="10">
+          <TextBlock Text="Node.js" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
           <StackPanel Grid.Column="1" Spacing="2">
-            <SelectableTextBlock Text="{Binding OverlayUrl}" FontFamily="Consolas" FontSize="12" />
-            <TextBlock Text="ゲーム映像へ重ねる表示専用ページです。OBSのブラウザソースURLへ貼り付けます。操作画面としては使いません。"
+            <TextBlock Text="{Binding NodeRuntimeState}" FontSize="12" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding NodeRuntimeDetail}" Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="2" Content="状態確認" Command="{Binding RefreshNodeRuntimeCommand}" VerticalAlignment="Center" />
+          <Button Grid.Column="3" Content="Node.js導入" Command="{Binding InstallNodeRuntimeCommand}" VerticalAlignment="Center"
+                  ToolTip.Tip="公式LTSのWindows x64 ZIPを検証し、実行フォルダ下へ導入します。管理者権限やインストーラーは使いません。" />
+          <Button Grid.Column="4" Content="削除" Command="{Binding UninstallNodeRuntimeCommand}" VerticalAlignment="Center"
+                  ToolTip.Tip="このアプリが管理するnodejs-runtimeフォルダだけを削除します。PATH上のNode.jsには触れません。" />
+        </Grid>
+        <Grid Grid.Row="2" ColumnDefinitions="150,*,Auto" ColumnSpacing="10">
+          <TextBlock Text="カスタムOverlay" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Spacing="2">
+            <SelectableTextBlock Text="{Binding CustomOverlayUrl}" FontFamily="Consolas" FontSize="12" />
+            <TextBlock Text="下のレイアウト編集で組んだ全パーツを、OBSへ1つのブラウザソースとして追加する推奨URLです。OBSのブラウザソースURLへ貼り付け、幅1920、高さ1080で使用します。"
                        Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
+          <Button Grid.Column="2" Content="URLコピー" CommandParameter="{Binding CustomOverlayUrl}" Click="CopyUrlClick" VerticalAlignment="Center" />
         </Grid>
-        <Grid Grid.Row="2" ColumnDefinitions="150,*" ColumnSpacing="10">
+        <Grid Grid.Row="3" ColumnDefinitions="150,*,Auto" ColumnSpacing="10">
+          <TextBlock Text="既定Overlay" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Spacing="2">
+            <SelectableTextBlock Text="{Binding OverlayUrl}" FontFamily="Consolas" FontSize="12" />
+            <TextBlock Text="従来の固定レイアウトです。カスタム配置を使わない場合だけOBSへ貼り付けます。"
+                       Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="2" Content="URLコピー" CommandParameter="{Binding OverlayUrl}" Click="CopyUrlClick" VerticalAlignment="Center" />
+        </Grid>
+        <Grid Grid.Row="4" ColumnDefinitions="150,*,Auto" ColumnSpacing="10">
           <TextBlock Text="Sidecar / 手動操作用" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
           <StackPanel Grid.Column="1" Spacing="2">
             <SelectableTextBlock Text="{Binding SidecarUrl}" FontFamily="Consolas" FontSize="12" />
             <TextBlock Text="実況・解説・大会運営が手動操作に使うページです。状態の確認・修正用で、通常はOBSソースへ追加しません。"
                        Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
+          <Button Grid.Column="2" Content="URLコピー" CommandParameter="{Binding SidecarUrl}" Click="CopyUrlClick" VerticalAlignment="Center" />
         </Grid>
-        <TextBlock Grid.Row="3" Classes="caption" TextWrapping="Wrap"
-                   Text="どちらもこのPC内のローカルURLです。「起動」はapp/server.mjsをNode.jsで起動します。「停止」はSukiが起動したサーバーだけを終了し、別途起動済みのサーバーは停止しません。" />
+        <TextBlock Grid.Row="5" Classes="caption" TextWrapping="Wrap"
+                   Text="URLコピー後、OBSの「ソース」→「ブラウザ」→「URL」へ貼り付けます。「起動」はapp/server.mjsをNode.jsで起動します。「停止」はSukiが起動したサーバーだけを終了し、別途起動済みのサーバーは停止しません。" />
       </Grid>
     </Border>
 
@@ -91,11 +114,103 @@
       </Grid>
     </Border>
 
-    <!-- 部品単位URL: OBSに個別ブラウザソースとして追加し、位置・サイズはOBS側で自由配置する -->
-    <Expander Header="部品別URL (OBSへ個別ソースとして追加)">
+    <Border Classes="card">
+      <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+          <StackPanel Spacing="2">
+            <TextBlock Text="Overlayレイアウト編集" Classes="h2" />
+            <TextBlock Text="「実出力で編集」ではOBSと同じ描画を見ながら部品をドラッグ・リサイズできます。簡易編集では座標を数値で微調整できます。"
+                       Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1" Content="初期配置" Command="{Binding ResetOverlayLayoutCommand}" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="primary" Content="実出力で編集" Command="{Binding OpenPreviewUrlCommand}" CommandParameter="/overlay?layout=custom&amp;edit=1" VerticalAlignment="Center"
+                  ToolTip.Tip="配信用Overlayそのものを開き、部品名をドラッグして移動、右下のハンドルでサイズ変更します。操作完了時に自動保存します。" />
+          <Button Grid.Column="3" Content="出力のみ確認" Command="{Binding OpenPreviewUrlCommand}" CommandParameter="/overlay?layout=custom" VerticalAlignment="Center" />
+          <Button Grid.Column="4" Content="保存して反映" Command="{Binding SaveSettingsCommand}" VerticalAlignment="Center" />
+        </Grid>
+        <Grid Grid.Row="1" ColumnDefinitions="150,*,Auto" ColumnSpacing="10">
+          <TextBlock Text="OBS用URL" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <SelectableTextBlock Grid.Column="1" Text="{Binding CustomOverlayUrl}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Content="URLコピー" CommandParameter="{Binding CustomOverlayUrl}" Click="CopyUrlClick" />
+        </Grid>
+        <Grid Grid.Row="2" ColumnDefinitions="960,300" ColumnSpacing="14">
+          <Border Background="#091011" BorderBrush="#344245" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+            <ItemsControl Width="960" Height="540" ItemsSource="{Binding OverlayLayoutItems}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <Canvas Width="960" Height="540" Background="#0C1415" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemContainerTheme>
+                <ControlTheme TargetType="ContentPresenter">
+                  <Setter Property="Canvas.Left" Value="{Binding PreviewX}" />
+                  <Setter Property="Canvas.Top" Value="{Binding PreviewY}" />
+                  <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}" />
+                </ControlTheme>
+              </ItemsControl.ItemContainerTheme>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}"
+                          Background="#CC162022" BorderBrush="{Binding SelectionBorderBrush}" BorderThickness="2"
+                          CornerRadius="4" PointerPressed="LayoutItemPointerPressed" ClipToBounds="True">
+                    <Grid RowDefinitions="34,*">
+                      <Thumb DragDelta="LayoutMoveDragDelta" Cursor="SizeAll" Background="#263437" />
+                      <Grid IsHitTestVisible="False" ColumnDefinitions="*,Auto" Margin="8,0">
+                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding ZIndex, StringFormat='前後 {0}'}" FontFamily="Consolas" FontSize="10" Opacity="0.65" VerticalAlignment="Center" />
+                      </Grid>
+                      <StackPanel Grid.Row="1" Margin="8,5" Spacing="2" IsHitTestVisible="False">
+                        <TextBlock Text="{Binding GeometryLabel}" FontFamily="Consolas" FontSize="10" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Id}" FontFamily="Consolas" FontSize="10" Opacity="0.5" />
+                      </StackPanel>
+                      <Thumb Grid.RowSpan="2" Width="22" Height="22" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                             Margin="0,0,2,2" Background="#4FD1B5" Cursor="BottomRightCorner"
+                             DragDelta="LayoutResizeDragDelta" ToolTip.Tip="ドラッグしてサイズ変更" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+
+          <Border Grid.Column="1" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="12">
+            <StackPanel Spacing="10" DataContext="{Binding SelectedOverlayLayoutItem}">
+              <TextBlock Text="選択中の部品" Classes="caption" />
+              <TextBlock Text="{Binding Label, FallbackValue=部品を選択}" FontSize="16" FontWeight="SemiBold" />
+              <CheckBox Content="表示する" IsChecked="{Binding Enabled, Mode=TwoWay}" />
+              <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock Text="X" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Column="1" Minimum="0" Maximum="1920" Increment="1" FormatString="0" Value="{Binding X, Mode=TwoWay}" />
+                <TextBlock Grid.Column="2" Text="Y" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Column="3" Minimum="0" Maximum="1080" Increment="1" FormatString="0" Value="{Binding Y, Mode=TwoWay}" />
+                <TextBlock Grid.Row="1" Text="幅" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="160" Maximum="1920" Increment="8" FormatString="0" Value="{Binding Width, Mode=TwoWay}" />
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="高さ" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="80" Maximum="1080" Increment="8" FormatString="0" Value="{Binding Height, Mode=TwoWay}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                <Button Content="←" Command="{Binding DataContext.AdjustSelectedOverlayLayoutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="left" ToolTip.Tip="左へ8px" />
+                <Button Grid.Column="1" Content="↑" Command="{Binding DataContext.AdjustSelectedOverlayLayoutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="up" ToolTip.Tip="上へ8px" />
+                <Button Grid.Column="2" Content="↓" Command="{Binding DataContext.AdjustSelectedOverlayLayoutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="down" ToolTip.Tip="下へ8px" />
+                <Button Grid.Column="3" Content="→" Command="{Binding DataContext.AdjustSelectedOverlayLayoutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="right" ToolTip.Tip="右へ8px" />
+              </Grid>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                <Button Content="背面へ" Command="{Binding DataContext.AdjustSelectedOverlayLayoutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="back" />
+                <Button Grid.Column="1" Content="前面へ" Command="{Binding DataContext.AdjustSelectedOverlayLayoutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="front" />
+              </Grid>
+              <TextBlock Text="簡易配置です。ヘッダーをドラッグして移動、右下のハンドルでサイズ変更できます。数値入力はOBS上の実ピクセルです。"
+                         Classes="caption" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <!-- 部品単位URL: トラブル時や複数ソース運用向け。通常は上のカスタムURLを使う。 -->
+    <Expander Header="個別ウインドウURL (部品をOBSへ直接追加)" IsExpanded="True">
       <StackPanel Spacing="6" Margin="0,8,0,0">
         <TextBlock Classes="caption" TextWrapping="Wrap"
-                   Text="統合Overlayを分解し、ラン状態・秘宝・オペレーターなどを別々に配置するためのURLです。各URLをOBSのブラウザソースへ個別追加し、各行の目安サイズを幅・高さに設定してください。位置・重なりはOBSの変形で調整できます。URL末尾に ?size=s / ?size=l を付けると表示密度が変わります。" />
+                   Text="通常は上のカスタムOverlay URLを1本だけ使います。部品を別シーンへ出す場合や、OBS側で個別管理したい場合は、ここに表示されたURLを直接追加してください。各URLは選択・コピー・ブラウザ確認できます。" />
         <ItemsControl ItemsSource="{Binding OverlayPartLinks}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
@@ -106,6 +221,7 @@
                     <TextBlock Text="{Binding Hint}" FontSize="11" Opacity="0.55" />
                   </StackPanel>
                   <SelectableTextBlock Grid.Column="1" Text="{Binding Url}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" />
+                  <Button Grid.Column="2" Content="コピー" CommandParameter="{Binding Url}" Click="CopyUrlClick" Padding="10,4" VerticalAlignment="Center" />
                   <Button Grid.Column="3" Content="開く" Command="{Binding DataContext.OpenPreviewUrlCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Path}" Padding="10,4" VerticalAlignment="Center" />
                 </Grid>
               </Border>

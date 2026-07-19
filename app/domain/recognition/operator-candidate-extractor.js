@@ -222,6 +222,8 @@ const operatorClassAliases = new Map([
   ["特殊", "特殊"],
 ]);
 
+const amiyaOperatorIds = new Set(["amiya", "amiya2", "amiya3"]);
+
 function normalizeOperatorClass(value) {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
@@ -277,10 +279,14 @@ function stripOperatorLineNoise(normalizedText) {
     .replace(/[^0-9A-Za-zぁ-んァ-ヶー一-龠]+$/g, "");
 }
 
-function maaRuleCanUseText(pattern, text) {
+function maaRuleCanUseText(pattern, text, operator) {
   if (pattern?.pattern === "^ユー(?:$|[^ネ])") return text === "ユー";
   if (String(pattern?.pattern || "").startsWith("^シー(?:") && /^シー[ゴコ]$/i.test(text)) return false;
   if (pattern?.pattern === "^シュウ" && /^シ[ュユ]ウ[アァ]?ルツ$/i.test(text)) return false;
+  const match = pattern?.regex?.exec(text);
+  if (!match) return false;
+  if (match[0].length / Math.max(1, text.length) < 0.7) return false;
+  if (operator?.normalizedName?.length <= 2 && (match.index !== 0 || match[0].length !== text.length)) return false;
   return true;
 }
 
@@ -290,7 +296,7 @@ function maaRuleHitsForRow(row, db, operatorOcrMap) {
   if (!compactVariants.length) return [];
   return db
     .flatMap((operator) => operator.ocrPatterns
-      .filter((pattern) => compactVariants.some((text) => maaRuleCanUseText(pattern, text) && pattern.regex.test(text)))
+      .filter((pattern) => compactVariants.some((text) => maaRuleCanUseText(pattern, text, operator)))
       .map((pattern) => ({
         operator,
         rawText: row.text,
@@ -410,6 +416,14 @@ function suppressOverlappedSuffixCandidates(candidates, db) {
   });
 }
 
+function collapseAmbiguousAmiyaCandidates(candidates) {
+  const amiyaCandidates = candidates.filter((candidate) => amiyaOperatorIds.has(candidate.operatorId));
+  if (amiyaCandidates.length <= 1) return candidates;
+
+  const fallback = amiyaCandidates.find((candidate) => candidate.operatorId === "amiya") || amiyaCandidates[0];
+  return candidates.filter((candidate) => !amiyaOperatorIds.has(candidate.operatorId) || candidate === fallback);
+}
+
 export function createOperatorCandidateExtractor({ operators = [], operatorOcrMap = {} } = {}) {
   const db = buildOperatorRecognitionDb(operators, { operatorOcrMap });
   return async function extractOperatorCandidates(frame, context = {}) {
@@ -434,7 +448,9 @@ export function createOperatorCandidateExtractor({ operators = [], operatorOcrMa
         if (!previous || Number(candidate.confidence || 0) > Number(previous.confidence || 0)) byOperator.set(candidate.operatorId, candidate);
       }
     }
-    return suppressOverlappedSuffixCandidates([...byOperator.values()], scopedDb).sort((a, b) => {
+    return collapseAmbiguousAmiyaCandidates(
+      suppressOverlappedSuffixCandidates([...byOperator.values()], scopedDb),
+    ).sort((a, b) => {
       const ar = rectFrom(a.roi);
       const br = rectFrom(b.roi);
       if (ar && br) return (ar.y - br.y) || (ar.x - br.x);

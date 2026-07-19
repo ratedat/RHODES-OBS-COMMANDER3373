@@ -23,7 +23,7 @@
       "is5_sarkaz": {
         "thought": [],
         "age": null,
-        "thoughtOverlayVisible": false,
+        "thoughtOverlayVisible": true,
         "idea": 0
       },
       "is6_sui": {

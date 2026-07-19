@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using MaaFramework.Binding;
@@ -17,6 +18,10 @@ var tests = new (string Name, Action Run)[]
     ("Candidate preview exposes stable debugger identity", CandidatePreviewIdentity),
     ("MAA candidate API extraction preserves structured ids", CandidateApiExtraction),
     ("MAA candidate merger supplements missing local candidates safely", CandidateMergerSupplementsLocalCandidates),
+    ("MAA candidate merger rejects conflicting API relics for one local OCR row", CandidateMergerPrefersLocalRelicForSameEvidence),
+    ("MAA candidate merger preserves local relic usage evidence", CandidateMergerPreservesRelicUsageEvidence),
+    ("MAA candidate merger keeps only the profession-resolved Amiya form", CandidateMergerPrefersResolvedAmiyaForm),
+    ("MAA candidate merger prefers local thought counts over legacy API slot tracking", CandidateMergerPrefersLocalThoughtCounts),
     ("MAA candidate merger keeps campaign-specific run status fields", CandidateMergerKeepsCampaignRunStatusFields),
     ("Recognition workflow runs resource tasks in plan order", RecognitionWorkflowRunsResourceTasks),
     ("Recognition workflow converts API and local candidates behind one seam", RecognitionWorkflowConvertsCandidates),
@@ -28,11 +33,22 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter keeps the best duplicate run status field", LocalCandidateConverterRunStatusBestDuplicate),
     ("Local MAA candidate converter normalizes numeric OCR drift", LocalCandidateConverterNormalizesNumericDrift),
     ("Local MAA candidate converter normalizes measured squad OCR drift", LocalCandidateConverterNormalizesSquadDrift),
+    ("Local MAA candidate converter prefers squad icon templates over conflicting OCR", LocalCandidateConverterPrefersSquadIconTemplate),
+    ("Local MAA candidate converter keeps the strongest Mizuki squad icon", LocalCandidateConverterKeepsStrongestMizukiSquadIcon),
+    ("Local MAA candidate converter decodes batched squad template results", LocalCandidateConverterDecodesBatchedSquadTemplate),
+    ("Local MAA candidate converter bounds and repairs anchored Sarkaz difficulty", LocalCandidateConverterBoundsSarkazDifficulty),
     ("Local MAA candidate converter extracts random squad effect candidates", LocalCandidateConverterRunStatusSquadRandomEffect),
     ("Local MAA candidate converter extracts exact operator name candidates", LocalCandidateConverterOperators),
+    ("MAA Amiya role resolver targets the profession icon beside a detected card", MaaAmiyaRoleResolverTargetsProfessionIcon),
+    ("Local MAA candidate converter disambiguates Amiya forms by profession", LocalCandidateConverterDisambiguatesAmiyaForms),
     ("Local MAA candidate converter extracts current campaign relic candidates", LocalCandidateConverterRelics),
+    ("Local MAA relic matching keeps modified Phantom variants distinct", LocalCandidateConverterPrefersModifiedPhantomRelic),
     ("Local MAA candidate converter preserves duplicate IS5 thought candidates", LocalCandidateConverterThoughts),
     ("Local MAA candidate converter extracts IS5 age candidates", LocalCandidateConverterAge),
+    ("Local MAA candidate converter combines multiple IS2 hallucinations", LocalCandidateConverterPhantomHallucinations),
+    ("Local MAA candidate converter resolves a single IS2 performance", LocalCandidateConverterPhantomPerformance),
+    ("Local MAA candidate converter extracts IS3 Mizuki special values", LocalCandidateConverterMizukiSpecials),
+    ("Local MAA candidate converter ignores IS3 rejection operator prose", LocalCandidateConverterPrefersMizukiRejectionTemplate),
     ("Local MAA candidate converter extracts IS4 revelation candidates", LocalCandidateConverterRevelation),
     ("Local MAA candidate converter extracts IS6 coin candidates", LocalCandidateConverterCoins),
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
@@ -53,10 +69,14 @@ var tests = new (string Name, Action Run)[]
     ("ADB test API client parses resolution and screenshot details", AdbApiTestParsing),
     ("Suki local ADB detector connects Google Play Games TCP serial", SukiLocalAdbDetectGooglePlay),
     ("Suki local ADB detector prefers explicit MuMu adb path", SukiLocalAdbDetectExplicitMumu),
+    ("Suki local ADB detector uses an existing MuMu device without stale TCP probes", SukiLocalAdbDetectExistingMumuDevice),
     ("Suki ADB connection test workflow reports controller and capture outcomes", SukiAdbConnectionTestWorkflow),
     ("ADB diagnostics checklist explains setup failures and capture readiness", AdbDiagnosticsChecklist),
     ("ADB diagnostics copy text includes report-ready runtime details", AdbDiagnosticsCopyText),
     ("Preview URL builder normalizes RHODES app routes", PreviewUrlBuilder),
+    ("Managed Node runtime prefers the executable beside the app", ManagedNodeRuntimePrefersAppRuntime),
+    ("Managed Node runtime installs only a checksum-verified archive", ManagedNodeRuntimeInstallsVerifiedArchive),
+    ("Managed Node runtime rejects archive path traversal", ManagedNodeRuntimeRejectsArchiveTraversal),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("Suki settings store migrates unusable manual PATH adb settings", SukiSettingsStoreMigratesBareManualAdb),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
@@ -65,10 +85,12 @@ var tests = new (string Name, Action Run)[]
     ("Suki runtime probe workflow aggregates API, optional runtime, and Hyper-V statuses", SukiRuntimeProbeWorkflowAggregatesStatuses),
     ("Runtime capability registry exposes stable core and optional capabilities", RuntimeCapabilityRegistry),
     ("Workspace registry exposes stable Suki navigation", WorkspaceRegistry),
+    ("Workspace registry hides developer workspaces in public debug distributions", PublicDebugWorkspaceRegistry),
     ("Workspace layout registry covers every Suki workspace", WorkspaceLayoutRegistry),
     ("Workspace action registry maps UI commands to workflows", WorkspaceActionRegistry),
     ("Product surface registry assigns every major app element to a workspace", ProductSurfaceRegistry),
     ("Output part registry defines OBS sidecar display blocks", OutputPartRegistry),
+    ("Overlay layout catalog keeps custom OBS parts inside a 1920x1080 canvas", OverlayLayoutCatalog),
     ("Runtime workspace registry exposes focused setup sections", RuntimeWorkspaceRegistry),
     ("Recognition workspace registry exposes the MAA action flow", RecognitionWorkspaceRegistry),
     ("OCR engine catalog exposes only MAA-OCR plus optional GLM", OcrEngineCatalog),
@@ -79,14 +101,19 @@ var tests = new (string Name, Action Run)[]
     ("Recognition navigation restores profile open and close steps", RecognitionNavigationLoadsProfileSteps),
     ("Recognition navigation randomizes taps inside configured areas", RecognitionNavigationRandomizesTapAreas),
     ("Recognition scroll plan loads operator passes and randomizes swipe areas", RecognitionScrollPlanLoadsOperatorPasses),
-    ("Recognition runtime plan removes legacy operator OCR and skips short relic lists", RecognitionRuntimePlanUsesFocusedTasks),
+    ("Recognition runtime plan removes legacy operator OCR and completes relic scans by owned count", RecognitionRuntimePlanUsesFocusedTasks),
+    ("Relic owned count reader extracts the footer count from MAA OCR evidence", RelicOwnedCountReaderExtractsFooterCount),
+    ("Recognition retry policy retries only missing or low-confidence live frames", RecognitionRetryPolicyTargetsLowConfidenceFrames),
+    ("Phantom, Mizuki, and Sami require manual difficulty instead of OCR", ManualDifficultyCampaignPolicy),
     ("Recognition frame fingerprint ignores tiny noise and detects layout changes", RecognitionFrameFingerprintIsPerceptual),
     ("MAA OCR preprocessing crops and scales configured ROI", MaaOcrPreprocessingCropsAndScalesRoi),
     ("MAA operator OCR preprocessing masks and trims the name ROI", MaaOperatorOcrPreprocessingMasksAndTrimsNameRoi),
     ("MAA Japanese operator replaceFull rules resolve local operator ids", MaaJapaneseOperatorRulesResolveLocalIds),
     ("MAA template OCR config exposes operator card offsets", MaaTemplateOcrConfigExposesOperatorOffsets),
     ("MAA template OCR expander builds dynamic name regions", MaaTemplateOcrExpanderBuildsDynamicRegions),
+    ("MAA thought load OCR expander targets displayed card values", MaaThoughtLoadOcrExpanderTargetsDisplayedValues),
     ("Operator scan tracker skips resolved cards and stops on repeated viewports", OperatorScanTrackerCachesResolvedCards),
+    ("Mizuki rejection card detector identifies the purple operator name", MizukiRejectionCardDetectorIdentifiesPurpleBand),
     ("MAA recognition probe payloads target retained fields", RecognitionProbePayloadsTargetRetainedFields),
     ("MAA recognition invocation separates algorithm from parameters", MaaRecognitionInvocationSeparatesAlgorithm),
     ("MAA task diagnostics summarize counts and OCR previews", TaskDiagnostics),
@@ -113,12 +140,21 @@ var tests = new (string Name, Action Run)[]
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
     ("Resource profiles use interface groups", ResourceProfilesUseInterfaceGroups),
     ("Resource profile task filtering follows interface presets", ResourceProfileTaskFilteringFollowsInterfacePresets),
-    ("Public debug policy restricts runtime to IS5 Sarkaz profiles", PublicDebugPolicyRestrictsSarkazScope),
+    ("Distribution policy keeps campaign themes selectable in every build", PublicDebugPolicyRestrictsSarkazScope),
     ("Run field registry exposes retained base and campaign-specific fields", RunFieldRegistryRetainedFields),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
     ("Run catalog exposes Sarkaz difficulty and random squad options", RunCatalogSarkazManualOptions),
+    ("Run catalog exposes Phantom performances and hallucinations", RunCatalogPhantomManualOptions),
+    ("Run catalog exposes Mizuki rejection reaction icons", RunCatalogMizukiRejectionIcons),
+    ("Run catalog exposes Mizuki horde call icons", RunCatalogMizukiHordeCallIcons),
+    ("Hallucination catalog exposes Wiki effects and normalizes overlapping OCR", HallucinationCatalogWikiOptions),
+    ("Run catalog exposes Sarkaz boss selections from campaign data", RunCatalogSarkazBossSelections),
+    ("Run state store persists and clears campaign boss selections", RunStateStoreBossSelections),
+    ("Startup reset keeps ADB settings and starts a clean Phantom run", StartupResetKeepsAdbAndStartsPhantom),
+    ("Choice pane drag scrolling clamps the target offset", ChoicePaneDragScrollMath),
     ("Choice catalog registry builds operator and relic workspace models", ChoiceCatalogRegistryBuildsWorkspaceModels),
     ("Choice filters support selected-first, hidden exclusions, and selected-only", ChoiceFilters),
+    ("Run-saving relics stay first and persist their used flag", RelicUsagePriorityAndPersistence),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
     ("Run state store can replace state from API JSON", StateApiReplacement),
@@ -136,12 +172,18 @@ var tests = new (string Name, Action Run)[]
     ("Run state store switches current campaign without stale run values", RunContextPersistence),
     ("Recognition candidate applier persists safe run status fields", CandidateRunStatusApply),
     ("Recognition candidate applier can apply Sarkaz random squad effect", CandidateRunStatusApplySquadRandomEffect),
+    ("Recognition candidate applier persists Phantom performance and hallucinations", CandidateRunStatusApplyPhantomSpecials),
     ("Recognition candidate applier rejects run status candidates from other campaigns", CandidateRunStatusRejectsOtherCampaign),
     ("Recognition candidate applier keeps current campaign run status duplicates", CandidateRunStatusKeepsCurrentCampaignDuplicate),
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
     ("Recognition candidate applier keeps the best duplicate run status candidate", CandidateRunStatusApplyBestDuplicate),
     ("Recognition candidate applier can select operator and relic candidates", CandidateChoiceApply),
+    ("Recognition candidate applier updates run-saving relic usage", CandidateRelicUsageApply),
+    ("Recognition candidate applier replaces stale Amiya forms", CandidateAmiyaRoleReplacementApply),
     ("Recognition candidate applier can apply IS5 thought and age candidates", CandidateIs5SpecialApply),
+    ("Recognition candidate applier clears IS5 age when detection returns none", CandidateIs5AgeClearApply),
+    ("Recognition candidate applier persists IS3 Mizuki special values", CandidateMizukiSpecialApply),
+    ("Recognition candidate applier updates IS3 rejection targets after operator scan", CandidateMizukiRejectionTargetOnlyApply),
     ("Recognition candidate applier can apply IS4 revelation and IS6 coin candidates", CandidateOtherSpecialApply),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
@@ -366,10 +408,147 @@ static void CandidateMergerSupplementsLocalCandidates()
 
     Equal("ingot|difficulty", string.Join("|", merged.Where(item => item.Kind == "runStatus").Select(item => item.Field)), "merged run status fields");
     Equal("gummy|purestream", string.Join("|", merged.Where(item => item.Kind == "operator").Select(item => item.OperatorId)), "merged operators");
-    Equal("thought_a", string.Join("|", merged.Where(item => item.Kind == "thought").Select(item => item.ThoughtId)), "primary thought preserved without local duplicates");
+    Equal("thought_a|thought_b", string.Join("|", merged.Where(item => item.Kind == "thought").Select(item => item.ThoughtId)), "local MAA thought set replaces primary thought candidates");
     Equal("age_prime", string.Join("|", merged.Where(item => item.Kind == "age").Select(item => item.AgeId)), "local age supplemented");
     Equal("rhetoric_a|cause_a", string.Join("|", merged.Where(item => item.Kind == "revelation").Select(item => item.EffectId)), "merged revelation candidates");
     Equal("coin_a:front|coin_a:back", string.Join("|", merged.Where(item => item.Kind == "coin").Select(item => $"{item.CoinId}:{(string.IsNullOrWhiteSpace(item.Face) ? "front" : item.Face)}")), "merged coin candidates");
+}
+
+static void CandidateMergerPrefersLocalRelicForSameEvidence()
+{
+    var merged = RhodesMaaCandidateMerger.Merge(
+        [
+            new MaaCandidatePreview(
+                "relic",
+                "",
+                "緋滲む貴石",
+                "緋滲む貴石（改)",
+                0.98,
+                RelicId: "is2_phantom_relic_185",
+                CampaignId: "is2_phantom",
+                RecognitionKey: "relic:is2_phantom_relic_185"),
+            new MaaCandidatePreview(
+                "relic",
+                "",
+                "緋滲む貴石（改）",
+                "緋滲む貴石（改)",
+                0.98,
+                RelicId: "is2_phantom_relic_186",
+                CampaignId: "is2_phantom",
+                RecognitionKey: "relic:is2_phantom_relic_186"),
+        ],
+        [
+            new MaaCandidatePreview(
+                "relic",
+                "緋滲む貴石（改）",
+                "is2_phantom_relic_186",
+                "緋滲む貴石（改)",
+                0.96,
+                RelicId: "is2_phantom_relic_186",
+                CampaignId: "is2_phantom",
+                RecognitionKey: "maa-local:relic:is2_phantom_relic_186"),
+            new MaaCandidatePreview(
+                "relic",
+                "苦行者のシュー",
+                "is2_phantom_relic_080",
+                "苦行者のシユ正",
+                0.89,
+                RelicId: "is2_phantom_relic_080",
+                CampaignId: "is2_phantom",
+                RecognitionKey: "maa-local:relic:is2_phantom_relic_080"),
+        ]);
+
+    Equal(
+        "is2_phantom_relic_186|is2_phantom_relic_080",
+        string.Join("|", merged.Where(item => item.Kind == "relic").Select(item => item.RelicId)),
+        "local relic resolution removes a conflicting API variant from the same OCR row");
+}
+
+static void CandidateMergerPreservesRelicUsageEvidence()
+{
+    var merged = RhodesMaaCandidateMerger.Merge(
+        [
+            new MaaCandidatePreview(
+                "relic",
+                "「時の果て」",
+                "is3_mizuki_relic_228",
+                "[時の果て",
+                0.98,
+                RelicId: "is3_mizuki_relic_228",
+                CampaignId: "is3_mizuki"),
+        ],
+        [
+            new MaaCandidatePreview(
+                "relic",
+                "「時の果て」",
+                "is3_mizuki_relic_228",
+                "[時の果て",
+                0.97,
+                RelicId: "is3_mizuki_relic_228",
+                CampaignId: "is3_mizuki",
+                StateId: "used"),
+        ]);
+
+    Equal("used", merged.Single().StateId, "local used marker is retained on the merged relic");
+}
+
+static void CandidateMergerPrefersResolvedAmiyaForm()
+{
+    var merged = RhodesMaaCandidateMerger.Merge(
+        [
+            new MaaCandidatePreview("operator", "アーミヤ", "amiya", "アーミヤ", 0.92, OperatorId: "amiya"),
+            new MaaCandidatePreview("operator", "アーミヤ(前衛)", "amiya2", "アーミヤ", 0.92, OperatorId: "amiya2"),
+            new MaaCandidatePreview("operator", "アーミヤ(医療)", "amiya3", "アーミヤ", 0.92, OperatorId: "amiya3"),
+        ],
+        [
+            new MaaCandidatePreview(
+                "operator",
+                "アーミヤ(前衛)",
+                "amiya2",
+                "アーミヤ",
+                0.99,
+                OperatorId: "amiya2",
+                RecognitionKey: "maa-local:operator-role:amiya2"),
+        ]);
+
+    Equal(
+        "amiya2",
+        string.Join("|", merged.Where(item => item.Kind == "operator").Select(item => item.OperatorId)),
+        "profession-resolved Amiya replaces ambiguous API forms");
+}
+
+static void CandidateMergerPrefersLocalThoughtCounts()
+{
+    var merged = RhodesMaaCandidateMerger.Merge(
+        [
+            Thought("爆破", "thought_blast", "api:blast:0"),
+            Thought("摂食", "thought_eat", "api:eat:0"),
+            Thought("摂食", "thought_eat", "api:eat:1"),
+            Thought("爆破", "thought_blast", "api:blast:1"),
+            Thought("散逸", "thought_scatter", "api:scatter:0"),
+            Thought("巫術", "thought_witchcraft", "api:witchcraft:0"),
+        ],
+        [
+            Thought("爆破", "thought_blast", "maa-local:blast:0"),
+            Thought("巫術", "thought_witchcraft", "maa-local:witchcraft:0"),
+            Thought("散逸", "thought_scatter", "maa-local:scatter:0"),
+            Thought("摂食", "thought_eat", "maa-local:eat:0"),
+        ]);
+
+    Equal(
+        "爆破|巫術|散逸|摂食",
+        string.Join("|", merged.Where(item => item.Kind == "thought").Select(item => item.Label)),
+        "local MAA thought candidates replace legacy API slot counts");
+
+    static MaaCandidatePreview Thought(string label, string id, string key) => new(
+        "thought",
+        label,
+        id,
+        label,
+        0.99,
+        CampaignId: "is5_sarkaz",
+        RecognitionKey: key,
+        ThoughtId: id);
 }
 
 static void CandidateMergerKeepsCampaignRunStatusFields()
@@ -585,6 +764,13 @@ static void LocalCandidateConverterRunStatus()
         ]);
     Equal(false, ambiguousSquad.Any(item => item.Field == "squadId"), "short squad effect fragment is not applied");
 
+    var mizukiSquad = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [M("RhodesOcrRegion_run_squad_name", "最大活用分隊", 0.96)],
+        "is3_mizuki");
+    Equal("is3_mizuki_squad_02", mizukiSquad.Single(item => item.Field == "squadId").Value, "selected campaign resolves Mizuki squad without a campaign marker");
+    Equal("is3_mizuki", mizukiSquad.Single(item => item.Field == "squadId").CampaignId, "selected campaign is retained on Mizuki squad");
+
     static MaaTaskRunResult M(string entry, string text, double score)
     {
         return new MaaTaskRunResult(
@@ -675,6 +861,152 @@ static void LocalCandidateConverterNormalizesSquadDrift()
     Equal("破棘成金分隊", measuredRoiCandidate.Label, "measured squad ROI drift label");
 }
 
+static void LocalCandidateConverterPrefersSquadIconTemplate()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98, "OCR"),
+            M("RhodesOcrRegion_run_squad_name", "支援分隊", 0.99, "OCR"),
+            M(
+                "RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_squad_14",
+                "",
+                0.83,
+                "TemplateMatch"),
+        ]);
+
+    var squad = candidates.Single(item => item.Field == "squadId");
+    Equal("is5_sarkaz_squad_14", squad.Value, "right-half icon template wins over conflicting squad OCR");
+    Equal("破棘成金分隊", squad.Label, "icon template resolves the local squad label");
+
+    static MaaTaskRunResult M(string entry, string text, double score, string algorithm)
+    {
+        var detail = algorithm == "TemplateMatch"
+            ? System.Text.Json.JsonSerializer.Serialize(new
+            {
+                best = new { box = new[] { 62, 636, 42, 84 }, score },
+                filtered = new[] { new { box = new[] { 62, 636, 42, 84 }, score } },
+            })
+            : System.Text.Json.JsonSerializer.Serialize(new { best = new { text, score } });
+        return new MaaTaskRunResult(entry, "Succeeded", true, "detail", detail, algorithm, true);
+    }
+}
+
+static void LocalCandidateConverterKeepsStrongestMizukiSquadIcon()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            Template("RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_01", 0.664720),
+            Template("RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_03", 0.711742),
+            Template("RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_12", 0.667841),
+        ],
+        "is3_mizuki");
+
+    var squad = candidates.Single(item => item.Field == "squadId");
+    Equal("is3_mizuki_squad_03", squad.Value, "strongest Mizuki icon resolves the squad");
+    Equal("人文主義分隊", squad.Label, "strongest Mizuki icon resolves the label");
+
+    static MaaTaskRunResult Template(string entry, double score)
+    {
+        var detail = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            best = new { box = new[] { 15, 645, 67, 67 }, score },
+            filtered = new[] { new { box = new[] { 15, 645, 67, 67 }, score } },
+        });
+        return new MaaTaskRunResult(entry, "Succeeded", true, "detail", detail, "TemplateMatch", true);
+    }
+}
+
+static void LocalCandidateConverterDecodesBatchedSquadTemplate()
+{
+    var childResults = new JsonArray();
+    for (var index = 0; index < 17; index++)
+    {
+        childResults.Add(index == 13
+            ? JsonNode.Parse("""
+              {
+                "algorithm": "TemplateMatch",
+                "box": [62, 636, 42, 84],
+                "detail": {
+                  "best": { "box": [62, 636, 42, 84], "score": 0.905478 }
+                }
+              }
+              """)
+            : JsonNode.Parse("""{ "algorithm": "TemplateMatch" }"""));
+    }
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            new MaaTaskRunResult(
+                "RhodesCandidate_is5_sarkaz_map_select_campaign",
+                "Succeeded",
+                true,
+                "detail",
+                """{"best":{"text":"サルカズの炉辺奇談","score":0.98}}""",
+                "OCR",
+                true),
+            new MaaTaskRunResult(
+                "RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch",
+                "Succeeded",
+                true,
+                "detail",
+                childResults.ToJsonString(),
+                "Or",
+                true),
+        ]);
+
+    var squad = candidates.Single(item => item.Field == "squadId");
+    Equal("is5_sarkaz_squad_14", squad.Value, "batch child index resolves squad id");
+    Equal("破棘成金分隊", squad.Label, "batch child resolves squad label");
+    Equal(true, squad.Confidence is > 0.90 and < 0.91, "batch template keeps native score");
+}
+
+static void LocalCandidateConverterBoundsSarkazDifficulty()
+{
+    var repaired = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98),
+            M("run.difficulty.grade.anchor.0", "78", 0.96),
+        ]);
+    Equal("18", repaired.Single(item => item.Field == "difficulty").Value, "anchored 78 is repaired to Sarkaz difficulty 18");
+
+    var rejected = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98),
+            M("run.difficulty.grade.anchor.0", "98", 0.96),
+        ]);
+    Equal(false, rejected.Any(item => item.Field == "difficulty"), "unexplained out-of-range difficulty remains rejected");
+
+    var accepted = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98),
+            M("run.difficulty.grade.anchor.0", "18", 0.96),
+        ]);
+    Equal("18", accepted.Single(item => item.Field == "difficulty").Value, "anchored Sarkaz difficulty 18 is accepted");
+
+    var caretDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98),
+            M("run.difficulty.grade.anchor.0", "^8", 0.71),
+        ]);
+    Equal("18", caretDrift.Single(item => item.Field == "difficulty").Value, "anchored caret-shaped leading one is repaired");
+
+    static MaaTaskRunResult M(string entry, string text, double score) => new(
+        entry,
+        "Succeeded",
+        true,
+        "detail",
+        System.Text.Json.JsonSerializer.Serialize(new { best = new { text, score } }),
+        "OCR",
+        true);
+}
+
 static void LocalCandidateConverterRunStatusSquadRandomEffect()
 {
     var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -688,6 +1020,19 @@ static void LocalCandidateConverterRunStatusSquadRandomEffect()
     Equal("squadId|squadRandomEffectOptionId", string.Join("|", candidates.Select(item => item.Field)), "local squad random fields");
     Equal("is5_sarkaz_squad_16|is5_sarkaz_mimic_02", string.Join("|", candidates.Select(item => item.Value)), "local squad random values");
 
+    var iconAnchoredCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            M("RhodesCandidate_is5_sarkaz_map_select_campaign", "サルカズの炉辺奇談", 0.98),
+            Template("RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_squad_16", 0.87),
+            M("RhodesOcrRegion_run_squad_name", "_", 0.31),
+            M("RhodesOcrRegion_run_squad_card", "★4以上の【術師】を招集時に消費する希望-2、昇進時に消費する希望-1、【術師】を初めて招集する際、昇進済の状態で招集できる。初めから「生還者の契約」を所持", 0.90),
+        ]);
+    Equal(
+        "is5_sarkaz_squad_16|is5_sarkaz_mimic_02",
+        string.Join("|", iconAnchoredCandidates.Select(item => item.Value)),
+        "squad icon identifies the random-effect squad without readable name OCR");
+
     static MaaTaskRunResult M(string entry, string text, double score)
     {
         return new MaaTaskRunResult(
@@ -699,6 +1044,19 @@ static void LocalCandidateConverterRunStatusSquadRandomEffect()
             "OCR",
             true);
     }
+
+    static MaaTaskRunResult Template(string entry, double score) => new(
+        entry,
+        "Succeeded",
+        true,
+        "detail",
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            best = new { box = new[] { 62, 636, 42, 84 }, score },
+            filtered = new[] { new { box = new[] { 62, 636, 42, 84 }, score } },
+        }),
+        "TemplateMatch",
+        true);
 }
 
 static void LocalCandidateConverterOperators()
@@ -725,10 +1083,14 @@ static void LocalCandidateConverterOperators()
             M("operator.card.name.7", "フメィ―", 0.52),
             M("operator.card.name.8", "■ユリチニル", 0.75),
             M("operator.card.name.9", "下ラコ―ディア", 0.90),
+            M("operator.card.name.10", "ウァン", 0.96),
+            M("operator.card.name.11", "赤刃明霄チェン", 0.96),
+            M("operator.card.name.12", "タラクサカム", 0.96),
+            M("operator.card.name.13", "ジュー", 0.96),
         ]);
 
-    Equal("gummy|purestream|myrtle|wildmane|utage|deepcolor|fang2|hoshiguma2|indigo|may|mlynar|phantom2", string.Join("|", candidates.Select(item => item.OperatorId)), "operator ids");
-    Equal(12, candidates.Count, "operator candidate count");
+    Equal("gummy|purestream|myrtle|wildmane|utage|deepcolor|fang2|hoshiguma2|indigo|may|mlynar|phantom2|wang|ch_en3|taraxacum|ju", string.Join("|", candidates.Select(item => item.OperatorId)), "operator ids");
+    Equal(16, candidates.Count, "operator candidate count");
     Equal(false, candidates.Any(item => item.OperatorId is "fang" or "hoshiguma" or "dusk"), "partial card does not split alternate operators");
     Equal("maa-local:operator:gummy", candidates[0].RecognitionKey, "operator recognition key");
 
@@ -742,6 +1104,112 @@ static void LocalCandidateConverterOperators()
             "detail",
             $"{{\"filtered_results\":[{{\"text\":{encodedText},\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
             "OCR",
+            true);
+    }
+}
+
+static void MaaAmiyaRoleResolverTargetsProfessionIcon()
+{
+    var nameRequest = new MaaDynamicOcrRequest(
+        "operator.card.name.0",
+        661,
+        309,
+        180,
+        23,
+        1,
+        0.99);
+    var nameResult = M("operator.card.name.0", "アーミヤ", 0.99);
+
+    var request = RhodesMaaAmiyaRoleResolver.BuildRequest(nameRequest, nameResult);
+
+    Equal(true, request is not null, "Amiya creates a profession request");
+    Equal("operator.card.amiya-role.0", request?.Entry, "profession request keeps the card slot");
+    using var payload = JsonDocument.Parse(request?.PayloadJson ?? "{}");
+    var alternatives = payload.RootElement.GetProperty("any_of").EnumerateArray().ToArray();
+    Equal("Or", payload.RootElement.GetProperty("recognition").GetString(), "profession request uses one composite match");
+    Equal(3, alternatives.Length, "profession request compares three Amiya forms");
+    Equal("run/AmiyaRoleCaster.png", alternatives[0].GetProperty("template").GetString(), "caster template first");
+    Equal("run/AmiyaRoleMedic.png", alternatives[1].GetProperty("template").GetString(), "medic template second");
+    Equal("run/AmiyaRoleWarrior.png", alternatives[2].GetProperty("template").GetString(), "warrior template third");
+    Equal(
+        "426|219|64|64",
+        string.Join("|", alternatives[0].GetProperty("roi").EnumerateArray().Select(item => item.GetInt32())),
+        "profession ROI is anchored to the measured operator card offset");
+    Equal(
+        null,
+        RhodesMaaAmiyaRoleResolver.BuildRequest(nameRequest, M("operator.card.name.0", "クォーツ", 0.99)),
+        "non-Amiya cards do not pay for profession matching");
+
+    static MaaTaskRunResult M(string entry, string text, double score) => new(
+        entry,
+        "Succeeded",
+        true,
+        "detail",
+        $"{{\"filtered_results\":[{{\"text\":{JsonSerializer.Serialize(text)},\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
+        "OCR",
+        true);
+}
+
+static void LocalCandidateConverterDisambiguatesAmiyaForms()
+{
+    Equal("amiya", Resolve(0), "caster Amiya id");
+    Equal("amiya3", Resolve(1), "medic Amiya id");
+    Equal("amiya2", Resolve(2), "warrior Amiya id");
+
+    var fallback = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [Name("operator.card.name.0", "アーミヤ")]);
+    Equal("amiya", fallback.Single().OperatorId, "missing profession evidence preserves caster fallback");
+
+    var mixedEvidence = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [
+            Name("RhodesOcrRegion_operator_name_left_1", "アーミヤ"),
+            Name("operator.card.name.0", "アーミヤ"),
+            Role("operator.card.amiya-role.0", 2),
+        ]);
+    Equal(
+        "amiya2",
+        string.Join("|", mixedEvidence.Select(item => item.OperatorId)),
+        "profession evidence suppresses generic Amiya fallback candidates");
+    Equal(
+        "maa-local:operator-role:amiya2",
+        mixedEvidence.Single().RecognitionKey,
+        "profession-resolved Amiya candidate records its evidence source");
+
+    static string? Resolve(int roleIndex)
+    {
+        var results = new List<MaaTaskRunResult>
+        {
+            Name("operator.card.name.0", "アーミヤ"),
+            Role("operator.card.amiya-role.0", roleIndex),
+        };
+        return RhodesMaaLocalCandidateConverter.FromTaskResults("operatorsFull", results).Single().OperatorId;
+    }
+
+    static MaaTaskRunResult Name(string entry, string text) => new(
+        entry,
+        "Succeeded",
+        true,
+        "detail",
+        $"{{\"filtered_results\":[{{\"text\":{JsonSerializer.Serialize(text)},\"score\":0.99}}]}}",
+        "OCR",
+        true);
+
+    static MaaTaskRunResult Role(string entry, int roleIndex)
+    {
+        var children = Enumerable.Range(0, 3)
+            .Select(index => index == roleIndex
+                ? new { best = new { box = new[] { 438, 229, 32, 32 }, score = 0.96 } }
+                : null)
+            .ToArray();
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            JsonSerializer.Serialize(new { result = children }),
+            "Or",
             true);
     }
 }
@@ -788,6 +1256,11 @@ static void LocalCandidateConverterRelics()
         string.Join("|", liveRelicDrift.Select(item => item.Label)),
         "live relic suffix and voiced-kana drift");
 
+    var middleDotDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "リーダーモーガン…ラム", 0.95)]);
+    Equal("リーダーモーガン・ラム", middleDotDrift.Single().Label, "relic middle dot ellipsis drift");
+
     var singleRelicDetail = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",
         [M("RhodesOcrRegion_relic_detail_name", "意欲の天秤", 0.93)]);
@@ -813,6 +1286,40 @@ static void LocalCandidateConverterRelics()
         string.Join("|", publicDebugReport.Select(item => item.Label)),
         "public debug relic report converts recognized names");
 
+    var usedRunSavingRelic = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [
+            MRS(
+                "RhodesOcrRegion_relic_list_text",
+                [
+                    ("[時の果て", 0.976846, 968, 367, 94, 20),
+                    ("使用", 0.999977, 1156, 369, 33, 19),
+                ]),
+        ],
+        "is3_mizuki");
+    Equal("is3_mizuki_relic_228", usedRunSavingRelic.Single().RelicId, "run-saving relic id");
+    Equal("used", usedRunSavingRelic.Single().StateId, "same-row used marker is attached to the relic");
+
+    var unusedRunSavingRelic = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [MRS("RhodesOcrRegion_relic_list_text", [("[時の果て", 0.98, 968, 367, 94, 20)])],
+        "is3_mizuki");
+    Equal("unused", unusedRunSavingRelic.Single().StateId, "visible run-saving relic without marker is unused");
+
+    var usedGateAndRescue = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [
+            MRS(
+                "RhodesOcrRegion_relic_list_text",
+                [
+                    ("「門」と「救難」", 0.98, 915, 248, 142, 20),
+                    ("使用済", 0.99, 1150, 248, 48, 20),
+                ]),
+        ],
+        "is5_sarkaz");
+    Equal("is5_sarkaz_relic_265", usedGateAndRescue.Single().RelicId, "gate and rescue relic id");
+    Equal("used", usedGateAndRescue.Single().StateId, "gate and rescue used marker is attached to the relic");
+
     static MaaTaskRunResult M(string entry, string text, double score)
     {
         var encodedText = System.Text.Json.JsonSerializer.Serialize(text);
@@ -835,6 +1342,41 @@ static void LocalCandidateConverterRelics()
         }));
         return new MaaTaskRunResult(entry, "Succeeded", true, "detail", $"{{\"filtered\":{filtered}}}", "OCR", true);
     }
+
+    static MaaTaskRunResult MRS(
+        string entry,
+        IReadOnlyList<(string Text, double Score, int X, int Y, int Width, int Height)> rows)
+    {
+        var filtered = JsonSerializer.Serialize(rows.Select(row => new
+        {
+            text = row.Text,
+            score = row.Score,
+            box = new[] { row.X, row.Y, row.Width, row.Height },
+        }));
+        return new MaaTaskRunResult(entry, "Succeeded", true, "detail", $"{{\"filtered\":{filtered}}}", "OCR", true);
+    }
+}
+
+static void LocalCandidateConverterPrefersModifiedPhantomRelic()
+{
+    var relics = RhodesRunCatalog.LoadDefault().Relics
+        .Where(item => item.Id is "is2_phantom_relic_181" or "is2_phantom_relic_182")
+        .ToArray();
+    Equal(2, relics.Length, "Phantom base and modified relic fixtures");
+
+    var converterType = typeof(RhodesMaaLocalCandidateConverter);
+    var normalize = converterType.GetMethod("NormalizeRelicName", BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("NormalizeRelicName was not found.");
+    var resolve = converterType.GetMethod("ResolveRelic", BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("ResolveRelic was not found.");
+    var byNormalizedName = relics.ToDictionary(
+        item => (string)(normalize.Invoke(null, [item.Name]) ?? ""),
+        item => item,
+        StringComparer.Ordinal);
+    var normalizedOcr = (string)(normalize.Invoke(null, ["リターニアの王第（改)"]) ?? "");
+    var resolved = resolve.Invoke(null, [normalizedOcr, byNormalizedName]) as SukiChoiceItem;
+
+    Equal("is2_phantom_relic_182", resolved?.Id, "modified suffix removes base relic ambiguity");
 }
 
 static void LocalCandidateConverterThoughts()
@@ -870,10 +1412,106 @@ static void LocalCandidateConverterThoughts()
         string.Join("|", overlappingFrames.Select(item => item.Label)),
         "overlapping thought frames do not double-count the same visible card");
 
+    var trackedRepeatedRows = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is5ThoughtFull",
+        [
+            MB(
+                "RhodesOcrRegion_is5_thought_list_text",
+                [
+                    ("築壁", 0.99, 478, 120),
+                    ("巫術", 0.99, 910, 120),
+                    ("走る都市", 0.99, 478, 240),
+                    ("侵略", 0.99, 910, 240),
+                    ("枯れ木と若枝", 0.99, 478, 520),
+                    ("枯れ木と若枝", 0.99, 910, 520),
+                ]),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(420, 540)),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(320, 440, 560)),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(220, 340, 460, 580)),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(120, 240, 360, 480, 600)),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(140, 260, 380, 500, 620)),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(140, 260, 380, 500, 620)),
+        ]);
+    Equal(16, trackedRepeatedRows.Count, "small-step thought tracking counts the full list across identical scrolled rows");
+    Equal(
+        12,
+        trackedRepeatedRows.Count(item => item.Label == "枯れ木と若枝"),
+        "small-step thought tracking restores repeated cards beyond one viewport");
+
+    var legacyLargeStepRows = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is5ThoughtFull",
+        [
+            MB(
+                "RhodesOcrRegion_is5_thought_list_text",
+                [
+                    ("築壁", 0.99, 478, 174),
+                    ("巫術", 0.99, 910, 179),
+                    ("走る都市", 0.99, 478, 299),
+                    ("侵略", 0.99, 910, 298),
+                    ("枯れ木と若枝", 0.99, 478, 539),
+                    ("枯れ木と若枝", 0.99, 910, 537),
+                ]),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(136, 256, 375, 496)),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(110, 230, 352, 470)),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(118, 238, 358, 479)),
+            MB("RhodesOcrRegion_is5_thought_list_text", ThoughtRows(119, 240, 361, 480)),
+        ]);
+    Equal(
+        8,
+        legacyLargeStepRows.Count(item => item.Label == "枯れ木と若枝"),
+        "legacy large-step evidence remains capped at the visible maximum instead of overcounting");
+
+    var displayedLoadReconciled = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is5ThoughtFull",
+        [
+            M("RhodesOcrRegion_is5_thought_load_current", [("49", 0.99)]),
+            M(
+                "RhodesOcrRegion_is5_thought_list_text",
+                [
+                    ("築壁", 0.99),
+                    ("巫術", 0.99),
+                    ("走る都市", 0.99),
+                    ("侵略", 0.99),
+                    ("枯れ木と若枝", 0.99),
+                    ("枯れ木と若枝", 0.99),
+                ]),
+            M("RhodesOcrRegion_is5_thought_list_text", Enumerable.Repeat(("枯れ木と若枝", 0.99), 8).ToArray()),
+            M("thought.card.load.is5_sarkaz_selectable_thought_insp_01", [("4", 0.99)]),
+            M("thought.card.load.is5_sarkaz_selectable_thought_insp_08", [("3", 0.99)]),
+            M("thought.card.load.is5_sarkaz_selectable_thought_insp_20", [("3", 0.99)]),
+            M("thought.card.load.is5_sarkaz_selectable_thought_insp_13", [("3", 0.99)]),
+            M("thought.card.load.is5_sarkaz_selectable_thought_legacy_08", [("3", 0.99)]),
+        ]);
+    Equal(
+        12,
+        displayedLoadReconciled.Count(item => item.Label == "枯れ木と若枝"),
+        "displayed thought loads reconcile hidden duplicates after relic and age modifiers");
+
+    static IReadOnlyList<(string Text, double Score, int X, int Y)> ThoughtRows(params int[] rows) =>
+        rows.SelectMany(y => new[]
+        {
+            ("枯れ木と若枝", 0.99, 478, y),
+            ("枯れ木と若枝", 0.99, 910, y),
+        }).ToArray();
+
     static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
     {
         var resultRows = rows.Select(row =>
             $"{{\"text\":{System.Text.Json.JsonSerializer.Serialize(row.Text)},\"score\":{row.Score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}");
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{string.Join(",", resultRows)}]}}",
+            "OCR",
+            true);
+    }
+
+    static MaaTaskRunResult MB(string entry, IReadOnlyList<(string Text, double Score, int X, int Y)> rows)
+    {
+        var resultRows = rows.Select(row =>
+            $"{{\"text\":{System.Text.Json.JsonSerializer.Serialize(row.Text)},\"score\":{row.Score.ToString(System.Globalization.CultureInfo.InvariantCulture)},\"box\":[{row.X},{row.Y},120,20]}}");
         return new MaaTaskRunResult(
             entry,
             "Succeeded",
@@ -904,6 +1542,238 @@ static void LocalCandidateConverterAge()
         "is5AgeFull",
         [M("RhodesOcrRegion_is5_age_detail_text", "苦難の時代 5歩後に終了\nすべての味方ユニットが配置時に残りHPの70%を失う", 0.99)]);
     Equal("is5_sarkaz_selectable_age_is5_age_03_formation", liveAge.Single().AgeId, "live age OCR resolves the age group only");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        var encodedText = System.Text.Json.JsonSerializer.Serialize(text);
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{{\"text\":{encodedText},\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterPhantomHallucinations()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is2HallucinationsFull",
+        [
+            M(
+                "RhodesOcrRegion_is2_hallucination_top",
+                [
+                    ("偏 執 的 な", 0.97),
+                    ("敏感な", 0.93),
+                    ("偏執的な", 0.91),
+                ]),
+        ]);
+
+    Equal(1, candidates.Count, "hallucination candidate count");
+    Equal("runStatus", candidates[0].Kind, "hallucination candidate kind");
+    Equal("hallucinations", candidates[0].Field, "hallucination field");
+    Equal("is2_phantom", candidates[0].CampaignId, "hallucination campaign");
+    Equal("偏執 / 敏感", candidates[0].Value, "hallucinations normalize to Wiki names and deduplicate");
+    Equal(0.97, candidates[0].Confidence, "hallucination confidence");
+    Equal("maa-local:hallucinations:偏執|敏感", candidates[0].RecognitionKey, "hallucination recognition key");
+
+    static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
+    {
+        var resultRows = rows.Select(row =>
+            $"{{\"text\":{System.Text.Json.JsonSerializer.Serialize(row.Text)},\"score\":{row.Score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}");
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{string.Join(",", resultRows)}]}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterPhantomPerformance()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is2PerformanceFull",
+        [
+            M(
+                "RhodesOcrRegion_is2_performance_bottom",
+                [
+                    ("現在の演目", 0.99),
+                    ("利染砂の「^、リアの輝き「", 0.83),
+                ]),
+        ]);
+
+    Equal(1, candidates.Count, "performance candidate count");
+    Equal("runStatus", candidates[0].Kind, "performance candidate kind");
+    Equal("performanceId", candidates[0].Field, "performance field");
+    Equal("is2_phantom", candidates[0].CampaignId, "performance campaign");
+    Equal("is2_phantom_performance_pcsp20", candidates[0].Value, "performance id");
+    Equal(0.83, candidates[0].Confidence, "performance confidence");
+    Equal("maa-local:performance:is2_phantom_performance_pcsp20", candidates[0].RecognitionKey, "performance recognition key");
+
+    var normal = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is2PerformanceFull",
+        [M("RhodesOcrRegion_is2_performance_bottom", [("現在の演目", 0.99), ("『ヘリアの輝き』", 0.95)])]);
+    Equal("is2_phantom_performance_pcsp7", normal.Single().Value, "normal performance remains distinct from crimson performance");
+
+    var none = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is2PerformanceFull",
+        [M("RhodesOcrRegion_is2_performance_bottom", [("現在の演目", 0.99)])]);
+    Equal(0, none.Count, "performance header alone produces no candidate");
+
+    static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
+    {
+        var resultRows = rows.Select(row =>
+            $"{{\"text\":{System.Text.Json.JsonSerializer.Serialize(row.Text)},\"score\":{row.Score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}");
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{string.Join(",", resultRows)}]}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterMizukiSpecials()
+{
+    Equal(
+        "予備隊具ー近距離",
+        RhodesOperatorOcrNormalizer.Normalize("予備隊具ー近距離"),
+        "observed Mizuki reserve operator OCR normalization");
+    Equal(
+        "予備隊員ー近距離",
+        RhodesOperatorOcrNormalizer.Normalize("予備隊員-近距離"),
+        "reserve operator catalog name normalization");
+    var key = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3KeyFull",
+        [
+            M("RhodesOcrRegion_is3_ingot_value", [("24", 0.97)]),
+            M("RhodesOcrRegion_is3_key_value", [("2", 0.96)]),
+        ]);
+    Equal(2, key.Count, "Mizuki top-right candidate count");
+    Equal("runStatus", key[0].Kind, "Mizuki ingot candidate kind");
+    Equal("ingot", key[0].Field, "Mizuki ingot field");
+    Equal("24", key[0].Value, "Mizuki ingot value");
+    Equal("mizuki", key[1].Kind, "Mizuki key candidate kind");
+    Equal("key", key[1].FieldId, "Mizuki key field");
+    Equal("2", key[1].Value, "Mizuki key value");
+
+    var panel = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3LightHordeFull",
+        [
+            M("RhodesOcrRegion_is3_light_value", [("15", 0.95)]),
+            M(
+                "RhodesOcrRegion_is3_horde_call_list_text",
+                [
+                    ("呼び声栄枯", 0.93),
+                    ("呼び声：給養", 0.91),
+                    ("吟び声：適応", 0.90),
+                    ("呼び声：栄枯", 0.89),
+                ]),
+        ]);
+    Equal(4, panel.Count, "Mizuki light and unique Horde's Call candidates");
+    Equal("15", panel.Single(candidate => candidate.FieldId == "light").Value, "Mizuki light value");
+    Equal(
+        "is3_mizuki_selectable_hordeCall_mcasci15|is3_mizuki_selectable_hordeCall_mcasci16|is3_mizuki_selectable_hordeCall_mcasci19",
+        string.Join('|', panel.Where(candidate => candidate.FieldId == "hordeCalls").Select(candidate => candidate.EffectId)),
+        "Mizuki Horde's Call ids");
+
+    var measuredLightDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3LightHordeFull",
+        [M("RhodesOcrRegion_is3_light_value", [("E", 0.813498)])]);
+    Equal("8", measuredLightDrift.Single().Value, "observed Mizuki light E drift is repaired to 8");
+
+    var rejection = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3RejectionFull",
+        [
+            M("RhodesOcrRegion_is3_rejection_name", [("散漫と異変", 0.94)]),
+            MSpatial(
+                "RhodesOcrRegion_is3_rejection_operators",
+                [
+                    ("距離", 0.90, 193),
+                    ("影響するオペレー夕ー：クルースォフェン、予備隊具ー近", 0.92, 94),
+                ]),
+        ]);
+    Equal(
+        "is3_mizuki_selectable_rejectionReaction_mcasci24",
+        rejection.Single(candidate => !string.IsNullOrWhiteSpace(candidate.EffectId)).EffectId,
+        "Mizuki rejection id");
+    Equal(0, rejection.Count(candidate => !string.IsNullOrWhiteSpace(candidate.OperatorId)), "rejection prose does not infer affected operators");
+    Equal(1, rejection.Count, "Mizuki rejection detail only creates the reaction candidate");
+
+    static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
+    {
+        var resultRows = rows.Select(row =>
+            $"{{\"text\":{System.Text.Json.JsonSerializer.Serialize(row.Text)},\"score\":{row.Score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}");
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{string.Join(",", resultRows)}]}}",
+            "OCR",
+            true);
+    }
+
+    static MaaTaskRunResult MSpatial(string entry, IReadOnlyList<(string Text, double Score, int Y)> rows)
+    {
+        var resultRows = rows.Select(row =>
+            $"{{\"text\":{System.Text.Json.JsonSerializer.Serialize(row.Text)},\"score\":{row.Score.ToString(System.Globalization.CultureInfo.InvariantCulture)},\"box\":[0,{row.Y},100,24]}}");
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{string.Join(",", resultRows)}]}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterPrefersMizukiRejectionTemplate()
+{
+    var childResults = new JsonArray();
+    for (var index = 0; index < 10; index++)
+    {
+        childResults.Add(index == 9
+            ? JsonNode.Parse("""
+              {
+                "algorithm": "TemplateMatch",
+                "box": [711, 374, 79, 60],
+                "detail": {
+                  "best": { "box": [711, 374, 79, 60], "score": 0.934 }
+                }
+              }
+              """)
+            : JsonNode.Parse("""{ "algorithm": "TemplateMatch" }"""));
+    }
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3RejectionFull",
+        [
+            new MaaTaskRunResult(
+                "RhodesTemplate_is3RejectionFull_is3_rejection_icon_batch",
+                "Succeeded",
+                true,
+                "detail",
+                childResults.ToJsonString(),
+                "Or",
+                true),
+            M("RhodesOcrRegion_is3_rejection_name", "注意散漫", 0.99),
+            M("RhodesOcrRegion_is3_rejection_operators", "影響するオペレーター：クルース、フェン", 0.98),
+        ]);
+
+    var effect = candidates.Single(candidate => !string.IsNullOrWhiteSpace(candidate.EffectId));
+    Equal("is3_mizuki_selectable_rejectionReaction_mcasci9", effect.EffectId, "rejection OCR remains authoritative when a template conflicts");
+    Equal("注意散漫", effect.Label, "rejection template cannot override a high-confidence name");
+    Equal(true, effect.Confidence is > 0.98 and < 1.00, "rejection OCR keeps native score");
+    Equal(0, candidates.Count(candidate => !string.IsNullOrWhiteSpace(candidate.OperatorId)), "detail prose never creates rejection targets");
 
     static MaaTaskRunResult M(string entry, string text, double score)
     {
@@ -1092,6 +1962,30 @@ static void AdbPresetMumuRunningVersion()
         ],
         new RhodesAdbApiSettings(true, "auto", "adb", ""));
     Equal("process", sorted[0].Source, "running MuMu process candidate wins when both layouts remain installed");
+
+    var staleSettingsSorted = RhodesAdbLocalDetector.SortCandidates(
+        [
+            new MaaAdbPathCandidatePreview(@"C:\Program Files\Netease\MuMuPlayer\shell\adb.exe", "settings", "mumu", true, true, ""),
+            new MaaAdbPathCandidatePreview(@"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe", "process", "mumu", true, true, ""),
+        ],
+        new RhodesAdbApiSettings(
+            true,
+            "mumu",
+            @"C:\Program Files\Netease\MuMuPlayer\shell\adb.exe",
+            "127.0.0.1:16384"));
+    Equal(
+        @"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe",
+        staleSettingsSorted[0].Path,
+        "running current MuMu overrides a stale saved legacy adb path");
+
+    var manualPath = @"D:\Android\platform-tools\adb.exe";
+    var manualSorted = RhodesAdbLocalDetector.SortCandidates(
+        [
+            new MaaAdbPathCandidatePreview(manualPath, "settings", "custom", true, true, ""),
+            new MaaAdbPathCandidatePreview(@"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe", "process", "mumu", true, true, ""),
+        ],
+        new RhodesAdbApiSettings(true, "auto", manualPath, "emulator-5556"));
+    Equal(manualPath, manualSorted[0].Path, "auto mode keeps an explicitly selected custom adb path");
 }
 
 static void AdbMethodCatalog()
@@ -1393,6 +2287,7 @@ static void AdbApiTestParsing()
 static void SukiLocalAdbDetectGooglePlay()
 {
     var calls = new List<string>();
+    var connected = false;
     var result = RhodesAdbLocalDetector.DetectAsync(
         new RhodesAdbApiSettings(true, "google-play-games-dev", "", ""),
         fileExists: _ => false,
@@ -1402,9 +2297,14 @@ static void SukiLocalAdbDetectGooglePlay()
             if (args[0] == "version")
                 return Task.FromResult(new RhodesAdbCommandResult(0, "Android Debug Bridge version 1.0.41", ""));
             if (args[0] == "connect")
+            {
+                connected = true;
                 return Task.FromResult(new RhodesAdbCommandResult(0, "connected to 127.0.0.1:6520", ""));
+            }
             if (args[0] == "devices")
-                return Task.FromResult(new RhodesAdbCommandResult(0, "List of devices attached\n127.0.0.1:6520 device product:gpg model:Google_Play_Games\n", ""));
+                return Task.FromResult(new RhodesAdbCommandResult(0, connected
+                    ? "List of devices attached\n127.0.0.1:6520 device product:gpg model:Google_Play_Games\n"
+                    : "List of devices attached\n", ""));
             throw new InvalidOperationException("unexpected command");
         }).GetAwaiter().GetResult();
 
@@ -1435,6 +2335,30 @@ static void SukiLocalAdbDetectExplicitMumu()
     Equal(true, result.Succeeded, "local detect succeeded");
     Equal(selectedPath, result.SelectedAdbPath, "selected adb path");
     Equal("127.0.0.1:16384", result.RuntimeSerial, "runtime serial");
+}
+
+static void SukiLocalAdbDetectExistingMumuDevice()
+{
+    var selectedPath = "M:/Program Files/Netease/MuMu Player 12/nx_main/adb.exe";
+    var calls = new List<string>();
+    var result = RhodesAdbLocalDetector.DetectAsync(
+        new RhodesAdbApiSettings(true, "mumu", selectedPath, "127.0.0.1:16384"),
+        fileExists: path => path.Equals(selectedPath, StringComparison.OrdinalIgnoreCase),
+        runCommand: (adbPath, args, _) =>
+        {
+            calls.Add(string.Join(" ", args));
+            if (args[0] == "version")
+                return Task.FromResult(new RhodesAdbCommandResult(0, "Android Debug Bridge version 1.0.41", ""));
+            if (args[0] == "connect")
+                return Task.FromResult(new RhodesAdbCommandResult(1, "", "connection refused"));
+            if (args[0] == "devices")
+                return Task.FromResult(new RhodesAdbCommandResult(0, "List of devices attached\nemulator-5556 device product:Hapburn model:HBN_AL00\n", ""));
+            throw new InvalidOperationException("unexpected command");
+        }).GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "existing MuMu device detection succeeded");
+    Equal("emulator-5556", result.RuntimeSerial, "usable device replaces stale saved serial");
+    Equal(false, calls.Any(call => call.StartsWith("connect ", StringComparison.Ordinal)), "existing device skips stale TCP connect probes");
 }
 
 static void SukiAdbConnectionTestWorkflow()
@@ -1488,7 +2412,11 @@ static void SukiSettingsStore()
                 "mumu",
                 "operatorsFull",
                 SukiAdbMethodCatalog.FastEmulatorMethodId,
-                SukiAdbMethodCatalog.FastEmulatorMethodId),
+                SukiAdbMethodCatalog.FastEmulatorMethodId,
+                OverlayLayout:
+                [
+                    new SukiOverlayLayoutState("status", true, 40, 30, 1200, 120, 2),
+                ]),
             path);
 
         var loaded = RhodesSukiSettingsStore.Load(path);
@@ -1498,6 +2426,8 @@ static void SukiSettingsStore()
         Equal("operatorsFull", loaded.SelectedResourceProfileId, "profile");
         Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, loaded.AdbInputMethodId, "input method");
         Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, loaded.AdbScreencapMethodId, "screencap method");
+        Equal(1, loaded.OverlayLayout?.Count ?? 0, "overlay layout count");
+        Equal(40, loaded.OverlayLayout?[0].X ?? -1, "overlay layout x");
     }
     finally
     {
@@ -1708,6 +2638,88 @@ static void PreviewUrlBuilder()
     Equal("http://localhost:8080/overlay?layout=compact", RhodesPreviewUrlBuilder.Build("http://localhost:8080", "/overlay?layout=compact"), "overlay url");
 }
 
+static void ManagedNodeRuntimePrefersAppRuntime()
+{
+    var baseDirectory = Directory.CreateTempSubdirectory("rhodes-node-runtime-").FullName;
+    try
+    {
+        var runtime = new RhodesNodeRuntimeManager(baseDirectory);
+        Directory.CreateDirectory(Path.GetDirectoryName(runtime.ManagedNodeExecutablePath)!);
+        File.WriteAllText(runtime.ManagedNodeExecutablePath, "node");
+
+        var status = runtime.Probe();
+
+        Equal(true, status.IsAvailable, "managed node available");
+        Equal(true, status.IsManaged, "managed node selected");
+        Equal("導入済み", status.State, "managed node state");
+        Equal(runtime.ManagedNodeExecutablePath, runtime.ResolveNodeExecutable(), "managed node executable");
+    }
+    finally
+    {
+        Directory.Delete(baseDirectory, recursive: true);
+    }
+}
+
+static void ManagedNodeRuntimeInstallsVerifiedArchive()
+{
+    var baseDirectory = Directory.CreateTempSubdirectory("rhodes-node-install-").FullName;
+    try
+    {
+        using var archiveStream = new MemoryStream();
+        using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry($"{RhodesNodeRuntimeManager.DistributionDirectoryName}/node.exe");
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write("node");
+        }
+
+        var bytes = archiveStream.ToArray();
+        var expectedHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        using var installStream = new MemoryStream(bytes);
+        var runtime = new RhodesNodeRuntimeManager(baseDirectory);
+
+        var result = runtime.InstallArchiveAsync(installStream, expectedHash).GetAwaiter().GetResult();
+
+        Equal(true, result.Succeeded, "verified node install result");
+        Equal(true, File.Exists(runtime.ManagedNodeExecutablePath), "verified node executable");
+        Equal(true, result.Status.IsManaged, "verified node managed status");
+    }
+    finally
+    {
+        Directory.Delete(baseDirectory, recursive: true);
+    }
+}
+
+static void ManagedNodeRuntimeRejectsArchiveTraversal()
+{
+    var baseDirectory = Directory.CreateTempSubdirectory("rhodes-node-traversal-").FullName;
+    try
+    {
+        using var archiveStream = new MemoryStream();
+        using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry("../outside.txt");
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write("blocked");
+        }
+
+        var bytes = archiveStream.ToArray();
+        var expectedHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        using var installStream = new MemoryStream(bytes);
+        var runtime = new RhodesNodeRuntimeManager(baseDirectory);
+
+        var result = runtime.InstallArchiveAsync(installStream, expectedHash).GetAwaiter().GetResult();
+
+        Equal(false, result.Succeeded, "traversal install result");
+        Equal(false, File.Exists(Path.Combine(baseDirectory, "outside.txt")), "traversal output absent");
+        Equal(false, File.Exists(runtime.ManagedNodeExecutablePath), "traversal node absent");
+    }
+    finally
+    {
+        Directory.Delete(baseDirectory, recursive: true);
+    }
+}
+
 static void RhodesApiStatusParsing()
 {
     var health = RhodesApiStatusProbe.ParseHealthJson(
@@ -1815,7 +2827,8 @@ static void WorkspaceRegistry()
 {
     var items = RhodesWorkspaceRegistry.Items;
 
-    Equal("run|choices|recognition|output|runtime|debug", string.Join("|", items.Select(item => item.Id)), "workspace order");
+    Equal("run|special|choices|recognition|output|runtime|debug", string.Join("|", items.Select(item => item.Id)), "workspace order");
+    Equal("IS特殊値", RhodesWorkspaceRegistry.TitleFor("special"), "special title");
     Equal("ランタイム", RhodesWorkspaceRegistry.TitleFor("runtime"), "runtime title");
     Equal("ラン取得値", RhodesWorkspaceRegistry.TitleFor("unknown"), "unknown title fallback");
     Equal("choices", RhodesWorkspaceRegistry.Normalize("choices"), "known workspace normalize");
@@ -1824,14 +2837,41 @@ static void WorkspaceRegistry()
     Equal(false, RhodesWorkspaceRegistry.IsKnown("legacy"), "unknown workspace");
 }
 
+static void PublicDebugWorkspaceRegistry()
+{
+    var validationItems = RhodesWorkspaceRegistry.ItemsFor(RhodesDistributionProfile.Validation);
+    var publicDebugItems = RhodesWorkspaceRegistry.ItemsFor(RhodesDistributionProfile.PublicDebug);
+
+    Equal("run|special|choices|recognition|output|runtime|debug", string.Join("|", validationItems.Select(item => item.Id)), "validation workspace order");
+    Equal("run|special|choices|output|runtime", string.Join("|", publicDebugItems.Select(item => item.Id)), "public debug workspace order");
+    Equal(false, publicDebugItems.Any(item => item.Id == "recognition"), "public debug hides recognition workspace");
+    Equal(false, publicDebugItems.Any(item => item.Id == "debug"), "public debug hides debug workspace");
+
+    var directory = Path.Combine(Path.GetTempPath(), "rhodes-distribution-profile", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        Equal("validation", RhodesDistributionProfile.Load(directory).Channel, "missing profile defaults to validation");
+        File.WriteAllText(
+            Path.Combine(directory, RhodesDistributionProfile.FileName),
+            "{\"schemaVersion\":1,\"channel\":\"public-debug\"}");
+        Equal("public-debug", RhodesDistributionProfile.Load(directory).Channel, "packaged profile selects public debug");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+}
+
 static void WorkspaceLayoutRegistry()
 {
     var layouts = RhodesWorkspaceLayoutRegistry.Items;
 
-    Equal("run|choices|recognition|output|runtime|debug", string.Join("|", layouts.Select(item => item.WorkspaceId)), "layout workspace order");
+    Equal("run|special|choices|recognition|output|runtime|debug", string.Join("|", layouts.Select(item => item.WorkspaceId)), "layout workspace order");
     Equal(0, RhodesWorkspaceLayoutRegistry.Validate().Count, "workspace layout validation");
     Equal("ラン取得値", RhodesWorkspaceLayoutRegistry.For("run").Header.Title, "run header title");
-    Equal("values|special|campaign", string.Join("|", RhodesWorkspaceLayoutRegistry.For("run").Sections.Select(item => item.Id)), "run sections");
+    Equal("values|boss|campaign", string.Join("|", RhodesWorkspaceLayoutRegistry.For("run").Sections.Select(item => item.Id)), "run sections");
+    Equal("values|manual|recognition", string.Join("|", RhodesWorkspaceLayoutRegistry.For("special").Sections.Select(item => item.Id)), "special sections");
     Equal("catalog|filters|selection", string.Join("|", RhodesWorkspaceLayoutRegistry.For("choices").Sections.Select(item => item.Id)), "choices sections");
     Equal("parts|preview", string.Join("|", RhodesWorkspaceLayoutRegistry.For("output").Sections.Select(item => item.Id)), "output sections");
     Equal("logs|migration", string.Join("|", RhodesWorkspaceLayoutRegistry.For("debug").Sections.Select(item => item.Id)), "debug sections");
@@ -1849,7 +2889,7 @@ static void WorkspaceActionRegistry()
     Equal("runStatusFull", profileCommand.CommandParameter, "workspace action command parser parameter");
     Equal(null, RhodesWorkspaceActionRegistry.ParseCommandName("ConnectAndCaptureCommand").CommandParameter, "workspace action command parser no parameter");
     Equal(
-        "run|choices|recognition|output|runtime|debug",
+        "run|special|choices|recognition|output|runtime|debug",
         string.Join("|", actions.Select(item => item.WorkspaceId).Distinct()),
         "action workspace coverage");
     Equal(
@@ -1885,13 +2925,17 @@ static void ProductSurfaceRegistry()
 
     Equal(0, RhodesProductSurfaceRegistry.Validate().Count, "surface registry validation");
     Equal(
-        "run|choices|recognition|output|runtime|debug",
+        "run|special|choices|recognition|output|runtime|debug",
         string.Join("|", items.Select(item => item.WorkspaceId).Distinct()),
         "surface workspace coverage");
     Equal(
-        "run.base|run.special",
+        "run.base",
         string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("run").Select(item => item.Id)),
         "run surfaces");
+    Equal(
+        "run.special",
+        string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("special").Select(item => item.Id)),
+        "special surfaces");
     Equal(
         "choices.operators|choices.relics",
         string.Join("|", RhodesProductSurfaceRegistry.ForWorkspace("choices").Select(item => item.Id)),
@@ -1937,6 +2981,27 @@ static void OutputPartRegistry()
     Equal(true, previews[1].ScrollEnabled, "relic output scroll enabled");
     Equal(260, previews.Single(item => item.Id == "run").Width, "run output width");
     Equal(false, previews.Single(item => item.Id == "recognition").Enabled, "recognition output disabled by default");
+}
+
+static void OverlayLayoutCatalog()
+{
+    var defaults = RhodesOverlayLayoutCatalog.BuildDefaultStates();
+    Equal("status|relics|operators|effects|bosses|special", string.Join("|", defaults.Select(item => item.Id)), "layout part order");
+    Equal(0, RhodesOverlayLayoutCatalog.Validate(defaults).Count, "default layout validation");
+
+    var normalized = RhodesOverlayLayoutCatalog.Normalize(
+    [
+        new SukiOverlayLayoutState("status", false, -40, 2000, 4000, 10, 99),
+        new SukiOverlayLayoutState("unknown", true, 10, 10, 100, 100, 1),
+    ]);
+    Equal(6, normalized.Count, "normalized layout count");
+    var status = normalized.Single(item => item.Id == "status");
+    Equal(false, status.Enabled, "status enabled");
+    Equal(0, status.X, "status x clamped");
+    Equal(1000, status.Y, "status y clamped");
+    Equal(1920, status.Width, "status width clamped");
+    Equal(80, status.Height, "status height clamped");
+    Equal(6, status.ZIndex, "status z index clamped");
 }
 
 static void RuntimeWorkspaceRegistry()
@@ -2123,14 +3188,79 @@ static void MaaOfflineSessionInitializesWithoutAdb()
     Equal(true, session.IsTaskerReady, "offline tasker ready");
     Equal(true, session.IsControllerReady, "offline controller connected");
     Equal(true, session.Tasker?.IsInitialized, "offline tasker initialized");
+    Equal(true, session.Tasker?.Resource?.IsLoaded, "offline recognition resource loaded before returning");
 
-    var image = Convert.FromBase64String(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
-    var recognition = session.RunResourceRecognitionAsync(
-        "offline-smoke",
-        """{"recognition":"OCR","roi":[0,0,1,1],"only_rec":true}""",
-        image).GetAwaiter().GetResult();
-    Equal(false, recognition.Status == MaaJobStatus.Invalid.ToString(), $"offline recognition accepted: {recognition.Detail}");
+    var templatePath = Path.Combine(
+        AppContext.BaseDirectory,
+        "resource",
+        "base",
+        "image",
+        "run",
+        "IngotIcon.png");
+    using var template = SKBitmap.Decode(templatePath);
+    Equal(true, template is not null, "packaged template decodes");
+    using var templateFrame = new SKBitmap(1280, 720);
+    templateFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(templateFrame))
+        canvas.DrawBitmap(template!, 200, 100);
+    var templateRecognition = session.RunResourceRecognitionAsync(
+        "offline-template-smoke",
+        """{"recognition":"TemplateMatch","roi":[0,0,1280,720],"template":"run/IngotIcon.png","threshold":0.8,"method":5}""",
+        EncodePng(templateFrame)).GetAwaiter().GetResult();
+    Equal(true, templateRecognition.Succeeded && templateRecognition.Hit, $"packaged TemplateMatch hit: {templateRecognition.Detail}");
+    Equal(true, session.Tasker?.IsInitialized, "offline tasker remains initialized after direct recognition");
+
+    using var ocrFrame = new SKBitmap(120, 60);
+    ocrFrame.Erase(SKColors.Black);
+    using var font = new SKFont(SKTypeface.Default, 48);
+    using (var canvas = new SKCanvas(ocrFrame))
+    using (var paint = new SKPaint { Color = SKColors.White, IsAntialias = true })
+        canvas.DrawText("18", 4, 48, SKTextAlign.Left, font, paint);
+    var ocrRecognition = session.RunResourceRecognitionAsync(
+        "offline-ocr-smoke",
+        """{"recognition":"OCR","roi":[0,0,120,60],"only_rec":true,"threshold":0.1}""",
+        EncodePng(ocrFrame),
+        scaleOverride: 4).GetAwaiter().GetResult();
+    var ocrRows = RhodesMaaOcrDetailRows.FromTaskResults([ocrRecognition]);
+    Equal(true, ocrRecognition.Succeeded && ocrRecognition.Hit, $"packaged MAA-OCR hit: {ocrRecognition.Detail}");
+    Equal(true, ocrRows.Any(row => row.Text == "18"), $"packaged MAA-OCR reads 18: {ocrRecognition.RecognitionDetailJson}");
+
+    var amiyaRoleTemplatePath = Path.Combine(
+        AppContext.BaseDirectory,
+        "resource",
+        "base",
+        "image",
+        "run",
+        "AmiyaRoleMedic.png");
+    using var amiyaRoleTemplate = SKBitmap.Decode(amiyaRoleTemplatePath);
+    Equal(true, amiyaRoleTemplate is not null, "packaged Amiya medic role template decodes");
+    using var amiyaFrame = new SKBitmap(1280, 720);
+    amiyaFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(amiyaFrame))
+        canvas.DrawBitmap(amiyaRoleTemplate!, 438, 229);
+    var amiyaNameResult = new MaaTaskRunResult(
+        "operator.card.name.0",
+        "Succeeded",
+        true,
+        "detail",
+        """{"filtered_results":[{"text":"アーミヤ","score":0.99}]}""",
+        "OCR",
+        true);
+    var amiyaRoleRequest = RhodesMaaAmiyaRoleResolver.BuildRequest(
+        new MaaDynamicOcrRequest("operator.card.name.0", 661, 309, 180, 23, 1, 0.99),
+        amiyaNameResult);
+    var amiyaRoleRecognition = session.RunResourceRecognitionAsync(
+        amiyaRoleRequest!.Entry,
+        amiyaRoleRequest.PayloadJson,
+        EncodePng(amiyaFrame)).GetAwaiter().GetResult();
+    Equal(
+        true,
+        amiyaRoleRecognition.Succeeded && amiyaRoleRecognition.Hit,
+        $"packaged Amiya role templates hit through MAA Or recognition: {amiyaRoleRecognition.Detail}");
+    Equal(
+        "amiya3",
+        RhodesMaaAmiyaRoleResolver.ResolveOperatorId([amiyaNameResult, amiyaRoleRecognition], 0),
+        $"MAA Or recognition resolves medic Amiya: {amiyaRoleRecognition.RecognitionDetailJson}");
 }
 
 static void RecognitionNavigationLoadsProfileSteps()
@@ -2186,6 +3316,14 @@ static void RecognitionScrollPlanLoadsOperatorPasses()
     var thoughtPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "is5ThoughtFull");
     Equal(false, thoughtPasses[1].CollectCandidates, "thought restore pass does not collect");
     Equal(true, thoughtPasses[1].MirrorPreviousPassScrolls, "thought restore mirrors forward pass");
+    Equal(12, thoughtPasses[0].MaxScrolls, "thought scan has enough bounded small steps to reach the list end");
+    var thoughtSwipes = Enumerable.Range(0, 50)
+        .Select(_ => RhodesRecognitionScrollPlan.RandomSwipe(thoughtPasses[0], random))
+        .ToArray();
+    Equal(
+        true,
+        thoughtSwipes.All(point => point.StartY > point.EndY && point.StartY - point.EndY < 120),
+        "thought scan randomizes within a sub-row downward distance");
 
     var relicPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "relicsFull");
     Equal(2, relicPasses[0].CandidateStableEndCount, "relic pass also stops when candidates stabilize");
@@ -2289,6 +3427,7 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
     var relicTasks = new[]
     {
         new MaaResourceTaskPreview("RhodesRelicButton", "button", ""),
+        new MaaResourceTaskPreview("RhodesScreen_run_map_footer_relic", "count", ""),
         new MaaResourceTaskPreview("RhodesScreen_relic_list", "screen", ""),
         new MaaResourceTaskPreview("RhodesOcrRegion_relic_list_text", "list", ""),
         new MaaResourceTaskPreview("RhodesOcrRegion_relic_detail_name", "detail", ""),
@@ -2296,11 +3435,96 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
     var relicPlan = new MaaResourceExecutionPlan(
         "relicsFull", "relics", "test", relicTasks.Select(task => task.Entry).ToArray(), relicTasks, "");
     var focusedRelic = RhodesRecognitionRuntimePlan.PrepareInitial(relicPlan);
-    Equal("RhodesScreen_relic_list|RhodesOcrRegion_relic_list_text|RhodesOcrRegion_relic_detail_name", string.Join("|", focusedRelic.TaskEntries), "relic runtime tasks");
-    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 0), "zero relic candidates must still scroll");
-    Equal(true, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 9), "short relic list skips scroll");
-    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 10), "long relic list scrolls");
+    Equal("RhodesScreen_run_map_footer_relic|RhodesScreen_relic_list|RhodesOcrRegion_relic_list_text|RhodesOcrRegion_relic_detail_name", string.Join("|", focusedRelic.TaskEntries), "relic runtime tasks");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 9), "candidate count alone never skips relic scroll");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 9, 9), "matching owned count skips relic scroll");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 8, 9), "missing relic continues scroll");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 10, 9), "excess false positive does not finish early");
+    Equal(true, RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount("relicsFull", 9, 9), "matching owned count completes scan");
+    Equal(false, RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount("relicsFull", 8, 9), "incomplete count remains active");
     Equal(true, RhodesRecognitionRuntimePlan.IsScrollProfile("is5ThoughtFull"), "thought list uses scroll recognition");
+}
+
+static void RelicOwnedCountReaderExtractsFooterCount()
+{
+    var evidence = RhodesRelicOwnedCountReader.FromTaskResults(
+        [
+            new MaaTaskRunResult(
+                RhodesRelicOwnedCountReader.Entry,
+                "Succeeded",
+                true,
+                "detail",
+                """
+                {
+                  "all": [
+                    { "text": "13", "score": 0.92, "box": [12, 3, 24, 35] },
+                    { "text": "秘宝", "score": 0.98, "box": [40, 4, 42, 34] }
+                  ],
+                  "best": { "text": "秘宝", "score": 0.98 }
+                }
+                """,
+                "OCR",
+                true),
+        ]);
+
+    Equal(true, evidence is not null, "relic footer count evidence exists");
+    Equal(13, evidence!.Count, "relic footer count");
+    Equal("13", evidence.RawText, "relic footer raw text");
+    Equal(true, evidence.Confidence > 0.9, "relic footer confidence");
+}
+
+static void RecognitionRetryPolicyTargetsLowConfidenceFrames()
+{
+    var completeRun = new[]
+    {
+        C("ingot", 0.91),
+        C("difficulty", 0.92),
+        C("squadId", 0.90),
+        C("idea", 0.89),
+    };
+    Equal(false, RhodesRecognitionRetryPolicy.Evaluate("runStatusFull", [], completeRun).ShouldRetry, "complete run frame does not retry");
+    Equal(true, RhodesRecognitionRetryPolicy.Evaluate("runStatusFull", [], completeRun.Where(item => item.Field != "squadId")).ShouldRetry, "missing required run field retries");
+    Equal(true, RhodesRecognitionRetryPolicy.Evaluate("runStatusFull", [], completeRun.Select(item => item.Field == "idea" ? item with { Confidence = 0.55 } : item)).ShouldRetry, "low-confidence run field retries");
+    Equal(true, RhodesRecognitionRetryPolicy.Evaluate("relicsFull", [], []).ShouldRetry, "empty relic frame retries once");
+    Equal(false, RhodesRecognitionRetryPolicy.Evaluate("is5ThoughtFull", [], []).ShouldRetry, "empty thought list may be valid");
+
+    static MaaCandidatePreview C(string field, double confidence) => new(
+        "runStatus",
+        field,
+        "1",
+        "1",
+        confidence,
+        Field: field);
+}
+
+static void ManualDifficultyCampaignPolicy()
+{
+    Equal(true, RhodesMaaRecognitionPolicy.RequiresManualDifficulty("is2_phantom"), "Phantom difficulty is manual");
+    Equal(true, RhodesMaaRecognitionPolicy.RequiresManualDifficulty("is3_mizuki"), "Mizuki difficulty is manual");
+    Equal(true, RhodesMaaRecognitionPolicy.RequiresManualDifficulty("is4_sami"), "Sami difficulty is manual");
+    Equal(false, RhodesMaaRecognitionPolicy.RequiresManualDifficulty("is5_sarkaz"), "Sarkaz difficulty remains recognizable");
+
+    var phantomRun = new[]
+    {
+        C("ingot", 0.91),
+        C("squadId", 0.90),
+    };
+    Equal(
+        false,
+        RhodesRecognitionRetryPolicy.Evaluate("runStatusFull", [], phantomRun, "is2_phantom").ShouldRetry,
+        "Phantom run does not retry for unavailable difficulty and Sarkaz idea");
+    Equal(
+        true,
+        RhodesRecognitionRetryPolicy.Evaluate("runStatusFull", [], phantomRun, "is5_sarkaz").ShouldRetry,
+        "Sarkaz run still requires campaign-specific fields");
+
+    static MaaCandidatePreview C(string field, double confidence) => new(
+        "runStatus",
+        field,
+        "1",
+        "1",
+        confidence,
+        Field: field);
 }
 
 static void RecognitionFrameFingerprintIsPerceptual()
@@ -2411,6 +3635,8 @@ static void MaaJapaneseOperatorRulesResolveLocalIds()
     Equal("purestream", RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("セイリュゥ"), "MAA purestream regex");
     Equal("gummy", RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("グで"), "MAA gummy regex");
     Equal("phantom2", RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("トラコーディア"), "MAA Tragodia regex");
+    Equal("pepe", RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("ペペ"), "exact short operator name remains resolvable");
+    Equal(null, RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("ペペ罠アコルト"), "short operator prefix cannot consume a noisy card ROI");
     Equal(null, RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId("存在しない名前"), "unknown OCR remains unresolved");
 }
 
@@ -2455,6 +3681,54 @@ static void MaaTemplateOcrExpanderBuildsDynamicRegions()
     Equal(2, requests.Count, "right-edge clipped card is ignored");
 }
 
+static void MaaThoughtLoadOcrExpanderTargetsDisplayedValues()
+{
+    var requests = RhodesMaaThoughtLoadOcrExpander.BuildRequests(
+        """
+        {
+          "filtered": [
+            {"box":[478,136,117,17],"score":0.99,"text":"枯れ木と若枝"},
+            {"box":[910,136,118,17],"score":0.98,"text":"枯れ木と若枝"},
+            {"box":[478,256,45,17],"score":0.97,"text":"築壁"}
+          ]
+        }
+        """);
+
+    Equal(2, requests.Count, "one displayed-load OCR request per unique thought type");
+    Equal("thought.card.load.is5_sarkaz_selectable_thought_legacy_08", requests[0].Entry, "repeated thought load entry");
+    Equal(423, requests[0].X, "load ROI targets the number at the card icon bottom-right");
+    Equal(196, requests[0].Y, "load ROI targets the number below the thought title");
+    Equal(48, requests[0].Width, "load ROI width");
+    Equal(42, requests[0].Height, "load ROI height");
+    Equal(4, requests[0].Scale, "small displayed load is enlarged for MAA-OCR");
+
+    Equal(
+        true,
+        RhodesMaaThoughtLoadOcrExpander.TryReadDisplayedLoad(
+            """{"filtered":[{"text":"３","score":0.99}]}""",
+            out var displayedLoad),
+        "full-width displayed load is accepted");
+    Equal(3, displayedLoad, "displayed load is normalized to an integer");
+    Equal(
+        true,
+        RhodesMaaThoughtLoadOcrExpander.TryReadDisplayedLoad(
+            """{"filtered":[{"text":"0","score":0.99}]}""",
+            out var zeroLoad),
+        "relic or age modifiers may reduce a displayed thought load to zero");
+    Equal(0, zeroLoad, "zero displayed load remains a valid post-modifier value");
+    Equal(
+        false,
+        RhodesMaaThoughtLoadOcrExpander.TryReadDisplayedLoad(
+            """{"filtered":[{"text":"負荷","score":0.99}]}""",
+            out _),
+        "non-numeric OCR hit remains unresolved for a later frame");
+
+    var excluded = RhodesMaaThoughtLoadOcrExpander.BuildRequests(
+        """{"filtered":[{"box":[478,136,117,17],"score":0.99,"text":"枯れ木と若枝"}]}""",
+        ["is5_sarkaz_selectable_thought_legacy_08"]);
+    Equal(0, excluded.Count, "resolved thought loads are not OCRed again while scrolling");
+}
+
 static void OperatorScanTrackerCachesResolvedCards()
 {
     using var firstFrame = new SKBitmap(1280, 720);
@@ -2492,6 +3766,40 @@ static void OperatorScanTrackerCachesResolvedCards()
     var changed = tracker.Select(EncodePng(changedFrame), requests);
     Equal(1, changed.WorkItems.Count, "new card fingerprint remains eligible for OCR");
     Equal(0, changed.StableViewportCount, "changed card set resets viewport stability");
+}
+
+static void MizukiRejectionCardDetectorIdentifiesPurpleBand()
+{
+    var request = new MaaDynamicOcrRequest("operator.card.name.0", 1076, 309, 180, 23, 1, 0.99);
+    using var affectedFrame = new SKBitmap(1280, 720);
+    affectedFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(affectedFrame))
+        canvas.DrawRect(new SKRect(1076, 309, 1256, 332), new SKPaint { Color = new SKColor(158, 92, 190) });
+
+    var affected = RhodesMizukiRejectionCardDetector.Detect(EncodePng(affectedFrame), request);
+    Equal(true, affected.IsAffected, "purple rejection band detected");
+    Equal(true, affected.PurpleRatio > 0.9, "purple ratio retained as evidence");
+
+    using var normalFrame = new SKBitmap(1280, 720);
+    normalFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(normalFrame))
+    {
+        canvas.DrawRect(new SKRect(1026, 225, 1186, 263), new SKPaint { Color = new SKColor(86, 57, 114) });
+        canvas.DrawRect(new SKRect(1076, 309, 1256, 332), new SKPaint { Color = SKColors.White });
+    }
+
+    var normal = RhodesMizukiRejectionCardDetector.Detect(EncodePng(normalFrame), request);
+    Equal(false, normal.IsAffected, "normal white name is not a rejection target even on a purple rarity band");
+
+    var marker = RhodesMizukiRejectionCardDetector.CreateTaskResult(
+        request,
+        new MaaCandidatePreview("operator", "スポット", "spot", "スポット", 0.99, OperatorId: "spot"),
+        affected);
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [marker],
+        "is3_mizuki");
+    Equal("spot", candidates.Single().OperatorId, "purple card marker becomes a rejection target candidate");
 }
 
 static void RecognitionProbePayloadsTargetRetainedFields()
@@ -3001,10 +4309,36 @@ static void MaaGeneratedResourceBuilder()
     Equal(324, root["RhodesOcrRegion_run_squad_name"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "generated squad name roi y");
     Equal(false, root.ContainsKey("RhodesOcrRegion_run_hope_current"), "discarded hope node omitted");
     Equal(false, root["RhodesOcrRegion_relic_list_text"]!.AsObject()["only_rec"]!.GetValue<bool>(), "relic list enables text detection");
+    Equal(24, root["RhodesOcrRegion_relic_list_text"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "relic list includes first row names");
+    Equal(600, root["RhodesOcrRegion_relic_list_text"]!.AsObject()["roi"]!.AsArray()[3]!.GetValue<int>(), "relic list covers full visible height");
     Equal("OCR", root["RhodesOcrRegion_relic_detail_name"]!.AsObject()["recognition"]!.GetValue<string>(), "single relic detail name recognition");
     Equal(false, root["RhodesOcrRegion_is5_thought_list_text"]!.AsObject()["only_rec"]!.GetValue<bool>(), "thought list enables text detection");
+    Equal(170, root["RhodesOcrRegion_is5_thought_load_current"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "thought total load roi targets the large numeric value");
+    Equal(230, root["RhodesOcrRegion_is5_thought_load_current"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "thought total load roi excludes the heading text");
     Equal("TemplateMatch", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated template recognition");
     Equal("run/IngotIcon.png", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["template"]!.GetValue<string>(), "generated template path");
+    var squadBatch = root["RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch"]!.AsObject();
+    Equal("Or", squadBatch["recognition"]!.GetValue<string>(), "generated Sarkaz squad recognition is batched");
+    Equal(17, squadBatch["any_of"]!.AsArray().Count, "generated Sarkaz squad batch child count");
+    Equal(
+        "run/SquadIconRight_is5_sarkaz_squad_14.png",
+        squadBatch["any_of"]!.AsArray()[13]!.AsObject()["template"]!.GetValue<string>(),
+        "generated Sarkaz squad batch preserves template order");
+    Equal(
+        "is5_sarkaz_squad_14",
+        squadBatch["attach"]!.AsObject()["templateIds"]!.AsArray()[13]!.GetValue<string>(),
+        "generated Sarkaz squad batch preserves squad ids");
+    var mizukiSquadEntries = root
+        .Where(item => item.Key.StartsWith("RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_", StringComparison.Ordinal))
+        .Select(item => item.Value!.AsObject())
+        .ToArray();
+    Equal(13, mizukiSquadEntries.Length, "generated Mizuki squad template count");
+    Equal(3, mizukiSquadEntries[0]["method"]!.GetValue<int>(), "Mizuki squad templates use measured correlation matching");
+    Equal("[8,638,86,82]", mizukiSquadEntries[0]["roi"]!.ToJsonString(), "Mizuki squad ROI excludes roll count");
+    Equal(
+        "run/DifficultyFlag.png",
+        root["RhodesTemplate_runStatusFull_run_difficulty_grade_anchor"]!.AsObject()["template"]!.GetValue<string>(),
+        "generated difficulty anchor template");
     Equal(
         NormalizeLineEndings(File.ReadAllText(Path.Combine("apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json"))),
         NormalizeLineEndings(generated),
@@ -3059,6 +4393,7 @@ static void MaaGeneratedResourceBuilder()
     Equal(false, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_safe"), "policy rejects unknown run resource entries");
     Equal(false, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_shield"), "policy rejects discarded resource entries");
     Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesOcrRegion_run_ingot"), "policy retains ingot resource entries");
+    Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch"), "policy retains squad icon template family");
     Equal(true, RhodesMaaRecognitionPolicy.IsPublishableEntry("RhodesRunStatusIdeaIcon"), "policy retains manual special icon entry");
     var targetPolicyPath = Path.Combine(
         Directory.GetCurrentDirectory(),
@@ -3082,7 +4417,7 @@ static void MaaGeneratedResourceBuilder()
         .Select(item => item.GetString() ?? "")
         .Where(item => !string.IsNullOrWhiteSpace(item));
     Equal(
-        "age|coin|operator|relic|revelation|runStatus|thought",
+        "age|coin|mizuki|operator|relic|revelation|runStatus|thought",
         string.Join("|", manifestCandidateKinds.OrderBy(item => item, StringComparer.Ordinal)),
         "manifest candidate kinds encode retained recognition targets");
     Equal(
@@ -3096,7 +4431,7 @@ static void MaaGeneratedResourceBuilder()
         .Select(item => item.GetString() ?? "")
         .Where(item => !string.IsNullOrWhiteSpace(item));
     Equal(
-        "difficulty|idea|ingot|squadId|squadRandomEffectOptionId",
+        "difficulty|hallucinations|idea|ingot|performanceId|squadId|squadRandomEffectOptionId",
         string.Join("|", manifestRetainedRunStatusFields.OrderBy(item => item, StringComparer.Ordinal)),
         "manifest run status fields encode retained run recognition targets");
     Equal(
@@ -3414,11 +4749,13 @@ static void BugReportBundleCollectsDebugArtifacts()
     var roiDraftDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.RoiDraftsDirectoryName);
     var roiSessionDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.RoiSessionsDirectoryName);
     var glmDirectory = Path.Combine(debugRoot, "glm-ocr-runtime");
+    var nodeDirectory = Path.Combine(debugRoot, RhodesNodeRuntimeManager.RuntimeDirectoryName);
     var oldBugReportDirectory = Path.Combine(debugRoot, RhodesSukiDebugPaths.BugReportsDirectoryName);
     Directory.CreateDirectory(recognitionDirectory);
     Directory.CreateDirectory(roiDraftDirectory);
     Directory.CreateDirectory(roiSessionDirectory);
     Directory.CreateDirectory(glmDirectory);
+    Directory.CreateDirectory(nodeDirectory);
     Directory.CreateDirectory(oldBugReportDirectory);
 
     try
@@ -3439,6 +4776,7 @@ static void BugReportBundleCollectsDebugArtifacts()
         File.WriteAllText(statePath, """{ "version": 1, "run": { "campaignId": "is5_sarkaz" } }""");
         File.WriteAllText(settingsPath, """{ "AdbSerial": "127.0.0.1:16384" }""");
         File.WriteAllText(Path.Combine(glmDirectory, "model.bin"), "model");
+        File.WriteAllText(Path.Combine(nodeDirectory, "node.exe"), "node");
         File.WriteAllText(Path.Combine(debugRoot, "native.dll"), "native");
         File.WriteAllText(Path.Combine(oldBugReportDirectory, "old.zip"), "old");
 
@@ -3476,6 +4814,7 @@ static void BugReportBundleCollectsDebugArtifacts()
         Equal(true, result.IncludedEntries.Contains("resource/recognition/maa-tasks.json"), "maa tasks included");
         Equal(true, result.IncludedEntries.Contains("resource/recognition/scan-profiles.json"), "scan profiles included");
         Equal(true, result.SkippedEntries.Any(entry => entry.Path.EndsWith("glm-ocr-runtime", StringComparison.OrdinalIgnoreCase)), "glm runtime skipped");
+        Equal(true, result.SkippedEntries.Any(entry => entry.Path.EndsWith(RhodesNodeRuntimeManager.RuntimeDirectoryName, StringComparison.OrdinalIgnoreCase)), "node runtime skipped");
         Equal(true, result.SkippedEntries.Any(entry => entry.Path.EndsWith("native.dll", StringComparison.OrdinalIgnoreCase)), "dll skipped");
 
         using var archive = ZipFile.OpenRead(result.ZipPath);
@@ -3487,6 +4826,7 @@ static void BugReportBundleCollectsDebugArtifacts()
         Equal(true, entries.Contains("resource/pipeline/rhodes-generated.json"), "generated pipeline zip entry");
         Equal(false, entries.Any(entry => entry.Contains("old.zip", StringComparison.OrdinalIgnoreCase)), "old zip excluded");
         Equal(false, entries.Any(entry => entry.Contains("glm-ocr-runtime", StringComparison.OrdinalIgnoreCase)), "glm runtime excluded from zip");
+        Equal(false, entries.Any(entry => entry.Contains(RhodesNodeRuntimeManager.RuntimeDirectoryName, StringComparison.OrdinalIgnoreCase)), "node runtime excluded from zip");
         Equal(false, entries.Any(entry => entry.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)), "dll excluded from zip");
 
         var manifestEntry = archive.GetEntry("manifest.json") ?? throw new InvalidOperationException("manifest missing");
@@ -3914,11 +5254,13 @@ static void ResourceProfileOrder()
         new MaaResourceTaskPreview("run", "基礎情報", "", ["runStatusFull"]),
         new MaaResourceTaskPreview("thought", "思案", "", ["is5ThoughtFull"]),
         new MaaResourceTaskPreview("revelation", "啓示", "", ["is4RevelationFull"]),
+        new MaaResourceTaskPreview("hallucinations", "幻覚", "", ["is2HallucinationsFull"]),
+        new MaaResourceTaskPreview("performance", "演目", "", ["is2PerformanceFull"]),
         new MaaResourceTaskPreview("coins", "通宝", "", ["is6CoinsFull"]),
     };
 
     var profiles = RhodesMaaResourceCatalog.ProfileGroups(tasks).Select(profile => profile.Id).ToArray();
-    Equal("all|runStatusFull|operatorsFull|relicsFull|is4RevelationFull|is5ThoughtFull|is5AgeFull|is6CoinsFull|futureProfile", string.Join("|", profiles), "profile order");
+    Equal("all|runStatusFull|operatorsFull|relicsFull|is4RevelationFull|is5ThoughtFull|is5AgeFull|is2HallucinationsFull|is2PerformanceFull|is6CoinsFull|futureProfile", string.Join("|", profiles), "profile order");
 }
 
 static void ResourceProfilesUseInterfaceGroups()
@@ -3938,6 +5280,22 @@ static void ResourceProfilesUseInterfaceGroups()
     Equal(true, runStatus.Description.Contains("maa-recognition-target-policy.json", StringComparison.Ordinal), "run status target policy source");
     Equal("source: interface.json group/preset", runStatus.SourceSummary, "run status interface source");
     Equal(true, (runStatus.TaskEntries ?? []).Contains("RhodesOcrRegion_run_ingot"), "run status preset includes ingot");
+    Equal(
+        true,
+        (runStatus.TaskEntries ?? []).Contains("RhodesTemplate_runStatusFull_run_difficulty_grade_anchor"),
+        "run status preset includes anchored difficulty OCR");
+    Equal(
+        true,
+        (runStatus.TaskEntries ?? []).Contains("RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch"),
+        "run status preset includes batched Sarkaz squad icon templates");
+    Equal(
+        false,
+        (runStatus.TaskEntries ?? []).Contains("RhodesOcrRegion_run_difficulty_grade"),
+        "run status preset excludes the legacy fixed difficulty ROI");
+    Equal(
+        false,
+        (runStatus.TaskEntries ?? []).Contains("RhodesOcrRegion_run_difficulty_block"),
+        "run status preset excludes the legacy difficulty block OCR");
     Equal(false, (runStatus.TaskEntries ?? []).Contains("RhodesOperatorNameOcr"), "run status preset excludes operator OCR");
     Equal("オペレーター", operators.Label, "operator interface label");
     Equal(true, operators.Description.Contains("オペレーター", StringComparison.Ordinal), "operator interface description");
@@ -4008,7 +5366,7 @@ static void PublicDebugPolicyRestrictsSarkazScope()
         Difficulty: "18",
         Ingot: 20);
     var applied = RhodesPublicDebugPolicy.ApplyCampaign(state);
-    Equal("is5_sarkaz", applied.CampaignId, "campaign forced to IS5");
+    Equal("is6_sui", applied.CampaignId, "campaign remains selectable");
     Equal("指揮分隊", applied.Squad, "run data is preserved while campaign changes");
 
     var campaigns = RhodesPublicDebugPolicy.FilterCampaigns([
@@ -4016,7 +5374,7 @@ static void PublicDebugPolicyRestrictsSarkazScope()
         new SukiCampaignPreview("is5_sarkaz", 5, "IS#5", "サルカズの炉辺奇談", []),
         new SukiCampaignPreview("is6_sui", 6, "IS#6", "歳", []),
     ]);
-    Equal("is5_sarkaz", string.Join("|", campaigns.Select(item => item.Id)), "only Sarkaz campaign remains");
+    Equal("is4_sami|is5_sarkaz|is6_sui", string.Join("|", campaigns.Select(item => item.Id)), "all campaign themes remain selectable");
 
     var profiles = RhodesPublicDebugPolicy.FilterProfiles([
         new MaaResourceProfilePreview("all", "すべて", 9),
@@ -4027,6 +5385,8 @@ static void PublicDebugPolicyRestrictsSarkazScope()
         new MaaResourceProfilePreview("is4RevelationFull", "啓示", 1),
         new MaaResourceProfilePreview("runStatusFull", "基礎情報", 1),
         new MaaResourceProfilePreview("is5ThoughtFull", "思案", 1),
+        new MaaResourceProfilePreview("is2HallucinationsFull", "幻覚", 1),
+        new MaaResourceProfilePreview("is2PerformanceFull", "演目", 1),
     ]);
     Equal(
         "runStatusFull|operatorsFull|relicsFull|is5ThoughtFull|is5AgeFull",
@@ -4034,6 +5394,111 @@ static void PublicDebugPolicyRestrictsSarkazScope()
         "public debug profiles are Sarkaz-only and executable");
     Equal(false, profiles.Any(item => item.Id == "all"), "all profile is hidden from public debug runtime");
     Equal(false, profiles.Any(item => item.Id is "is4RevelationFull" or "is6CoinsFull"), "other IS special profiles are hidden");
+    Equal(false, profiles.Any(item => item.Id == "is2HallucinationsFull"), "Phantom profile stays hidden from public debug runtime");
+    Equal(false, profiles.Any(item => item.Id == "is2PerformanceFull"), "Phantom performance stays hidden from public debug runtime");
+
+    var validationState = RhodesPublicDebugPolicy.ApplyCampaign(state, RhodesDistributionProfile.Validation);
+    Equal("is6_sui", validationState.CampaignId, "validation build preserves selected campaign");
+    Equal(true, RhodesPublicDebugPolicy.IsCampaignAllowed("is4_sami", RhodesDistributionProfile.Validation), "validation build allows another campaign");
+    Equal(true, RhodesPublicDebugPolicy.IsCampaignAllowed("is4_sami", RhodesDistributionProfile.PublicDebug), "public debug allows theme selection");
+    Equal(true, RhodesPublicDebugPolicy.IsProfileAllowed("is2HallucinationsFull", RhodesDistributionProfile.Validation), "validation build allows Phantom recognition");
+    Equal(false, RhodesPublicDebugPolicy.IsProfileAllowed("is2HallucinationsFull", RhodesDistributionProfile.PublicDebug), "public debug rejects Phantom recognition");
+    Equal(true, RhodesPublicDebugPolicy.IsProfileAllowed("is2PerformanceFull", RhodesDistributionProfile.Validation), "validation build allows Phantom performance recognition");
+    Equal(false, RhodesPublicDebugPolicy.IsProfileAllowed("is2PerformanceFull", RhodesDistributionProfile.PublicDebug), "public debug rejects Phantom performance recognition");
+
+    var validationCampaigns = RhodesPublicDebugPolicy.FilterCampaigns([
+        new SukiCampaignPreview("is4_sami", 4, "IS#4", "サーミ", []),
+        new SukiCampaignPreview("is5_sarkaz", 5, "IS#5", "サルカズの炉辺奇談", []),
+        new SukiCampaignPreview("is6_sui", 6, "IS#6", "歳", []),
+    ], RhodesDistributionProfile.Validation);
+    Equal("is4_sami|is5_sarkaz|is6_sui", string.Join("|", validationCampaigns.Select(item => item.Id)), "validation build exposes every campaign");
+
+    var validationProfiles = RhodesPublicDebugPolicy.FilterProfiles([
+        new MaaResourceProfilePreview("runStatusFull", "基礎情報", 1),
+        new MaaResourceProfilePreview("is4RevelationFull", "啓示", 1),
+        new MaaResourceProfilePreview("is5ThoughtFull", "思案", 1),
+        new MaaResourceProfilePreview("is6CoinsFull", "通宝", 1),
+    ], RhodesDistributionProfile.Validation);
+    Equal(
+        "runStatusFull|is4RevelationFull|is5ThoughtFull|is6CoinsFull",
+        string.Join("|", validationProfiles.Select(item => item.Id)),
+        "validation build exposes profiles for every campaign");
+}
+
+static void StartupResetKeepsAdbAndStartsPhantom()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "version": 1,
+          "run": {
+            "campaignId": "is5_sarkaz",
+            "squadId": "is5_sarkaz_squad_01",
+            "difficulty": "18",
+            "ingot": 42,
+            "special": { "is5_sarkaz": { "idea": 7 } }
+          },
+          "adb": {
+            "connectionPreset": "mumu",
+            "adbPath": "M:/MuMu/adb.exe",
+            "serial": "127.0.0.1:16384"
+          },
+          "operators": ["gummy"],
+          "relics": ["is5_sarkaz_relic_265"],
+          "usedRelicIds": ["is5_sarkaz_relic_265"],
+          "bossFlags": ["boss-a"],
+          "bossSelections": { "is5_sarkaz": { "floor3BossId": "boss-a" } },
+          "pendingSuggestions": [{ "type": "relic" }],
+          "effectCalculation": { "summary": { "runResources": ["stale"] } },
+          "tournament": {
+            "pendingState": { "run": { "campaignId": "is5_sarkaz" } },
+            "lastSubmissionAt": "2026-07-18T00:00:00Z",
+            "submittedBy": "external-json"
+          },
+          "staleRuntimeValue": true,
+          "preferences": {
+            "ocrEngine": "maa-ocr",
+            "sukiOverlayLayout": [{ "id": "status", "x": 40 }]
+          }
+        }
+        """)!.AsObject();
+
+    RhodesRunStateStore.ApplyStartupReset(
+        state,
+        DateTimeOffset.Parse("2026-07-19T00:00:00Z"));
+
+    var run = state["run"]!.AsObject();
+    Equal("is2_phantom", run["campaignId"]!.GetValue<string>(), "startup campaign");
+    Equal(1, run.Count, "startup run contains only campaign id");
+    Equal(0, state["operators"]!.AsArray().Count, "startup operators cleared");
+    Equal(0, state["relics"]!.AsArray().Count, "startup relics cleared");
+    Equal(0, state["usedRelicIds"]!.AsArray().Count, "startup relic usage cleared");
+    Equal(0, state["bossFlags"]!.AsArray().Count, "startup boss flags cleared");
+    Equal(0, state["bossSelections"]!.AsObject().Count, "startup boss selections cleared");
+    Equal(0, state["pendingSuggestions"]!.AsArray().Count, "startup suggestions cleared");
+    Equal(false, state.ContainsKey("effectCalculation"), "startup derived effect calculation cleared");
+    Equal(false, state.ContainsKey("staleRuntimeValue"), "startup unknown runtime state cleared");
+    Equal(true, state["tournament"]!["pendingState"] is null, "startup tournament pending state cleared");
+    Equal("casual", state["mode"]!.GetValue<string>(), "startup mode reset");
+    Equal("mumu", state["adb"]!["connectionPreset"]!.GetValue<string>(), "ADB preset preserved");
+    Equal("127.0.0.1:16384", state["adb"]!["serial"]!.GetValue<string>(), "ADB serial preserved");
+    Equal("maa-ocr", state["preferences"]!["ocrEngine"]!.GetValue<string>(), "display preferences preserved");
+
+    var tempRoot = Path.Combine(Path.GetTempPath(), $"rhodes-startup-state-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(tempRoot);
+    try
+    {
+        var preferredStatePath = Path.Combine(tempRoot, "current-state.json");
+        File.WriteAllText(preferredStatePath, "{}");
+        Equal(
+            Path.GetFullPath(preferredStatePath),
+            Path.GetFullPath(RhodesRunCatalog.ResolveStatePath(tempRoot)),
+            "startup state stays beside the selected data root");
+    }
+    finally
+    {
+        Directory.Delete(tempRoot, true);
+    }
 }
 
 static void RunFieldRegistryRetainedFields()
@@ -4092,6 +5557,7 @@ static void RunCatalogLoadsChoices()
               },
               "operators": [],
               "relics": [ "is5_sarkaz_relic_254" ],
+              "usedRelicIds": [ "is5_sarkaz_relic_265" ],
               "preferences": { "ocrEngine": "maa-ocr" }
             }
             """);
@@ -4111,6 +5577,9 @@ static void RunCatalogLoadsChoices()
         Equal(296, is5Relics.Length, "is5 relic count");
         Equal(true, File.Exists(is5Relics.First(item => item.Name == "特選獣肉缶詰").ImagePath), "relic image path");
         Equal(true, catalog.Current.SelectedRelicIds.Contains("is5_sarkaz_relic_254"), "current relic selection");
+        Equal(true, catalog.Current.UsedRelicIds.Contains("is5_sarkaz_relic_265"), "current used relic state");
+        Equal(true, is5Relics.Single(item => item.Id == "is5_sarkaz_relic_265").SupportsUsedFlag, "Gate and Rescue supports used state");
+        Equal(true, catalog.Relics.Where(item => item.Name == "「時の果て」").All(item => item.SupportsUsedFlag), "End of Time supports used state in every campaign");
         Equal("is5_sarkaz", catalog.Current.CampaignId, "current campaign");
         Equal(0, catalog.Current.Idea, "current idea");
         Equal("maa-ocr", catalog.Current.OcrEngine, "current ocr engine");
@@ -4179,6 +5648,180 @@ static void RunCatalogSarkazManualOptions()
     Equal("is5_sarkaz_mimic_01", randomEffects[0].Id, "first random effect id");
     Equal(true, randomEffects[0].Name.Contains("組み合わせ01", StringComparison.Ordinal), "first random effect label");
     Equal(0, RhodesRunCatalog.LoadSquadRandomEffectOptions("is5_sarkaz", "is5_sarkaz_squad_01").Count, "non-random squad has no random options");
+
+    var thought = RhodesRunCatalog.LoadSpecialEffectOptions("is5_sarkaz", "thought")
+        .Single(option => option.Name == "築壁");
+    Equal("妙想", thought.GroupLabel, "thought detail group");
+    Equal("使用後、次の戦闘で味方全員が配置時にシールドを1枚獲得", thought.Effect, "thought detail effect");
+    Equal("✦3", thought.ThoughtRank, "thought detail rank");
+    Equal("▲3", thought.ThoughtLoad, "thought detail load");
+    Equal(6, thought.Price, "thought detail price");
+    Equal(true, File.Exists(thought.ImagePath), "thought detail image path");
+}
+
+static void RunCatalogPhantomManualOptions()
+{
+    var performances = RhodesRunCatalog.LoadPerformanceOptions("is2_phantom");
+    Equal(26, performances.Count, "Phantom performance count");
+    Equal("is2_phantom_performance_pcsp1", performances[0].Id, "first Phantom performance id");
+
+    var tempRoot = Path.Combine(Path.GetTempPath(), $"rhodes-phantom-state-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(tempRoot);
+    try
+    {
+        var statePath = Path.Combine(tempRoot, "current-state.json");
+        File.WriteAllText(
+            statePath,
+            """
+            {
+              "run": {
+                "campaignId": "is2_phantom",
+                "performanceId": "is2_phantom_performance_pcsp1",
+                "special": {
+                  "is2_phantom": {
+                    "hallucinations": ["偏執的な", "盲目"]
+                  }
+                }
+              }
+            }
+            """);
+        var state = RhodesRunCatalog.LoadDefault(statePathOverride: statePath).Current;
+        Equal("is2_phantom_performance_pcsp1", state.PerformanceId, "Phantom performance state id");
+        Equal(true, state.Performance.Contains("凱旋の讃歌", StringComparison.Ordinal), "Phantom performance display name");
+        var hallucinations = state.SpecialFields!.Single(field =>
+            field.CampaignId == "is2_phantom" && field.FieldId == "hallucinations");
+        Equal("2件", hallucinations.Value, "Phantom hallucination count");
+        Equal("偏執的な / 盲目", hallucinations.Detail, "Phantom hallucination labels");
+    }
+    finally
+    {
+        Directory.Delete(tempRoot, true);
+    }
+}
+
+static void RunCatalogMizukiRejectionIcons()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is3_mizuki", "rejectionReaction");
+
+    Equal(10, options.Count, "Mizuki rejection reaction count");
+    Equal(true, options.All(option => !string.IsNullOrWhiteSpace(option.ImagePath)), "Mizuki rejection icon path populated");
+    Equal(true, options.All(option => File.Exists(option.ImagePath)), "Mizuki rejection icon files exist");
+    Equal(
+        "MizukiRejection_mcasci8.png",
+        Path.GetFileName(options.Single(option => option.Name == "造血障害").ImagePath),
+        "Mizuki rejection icon matches its effect id");
+}
+
+static void RunCatalogMizukiHordeCallIcons()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is3_mizuki", "hordeCall");
+
+    Equal(8, options.Count, "Mizuki horde call count");
+    Equal(true, options.All(option => !string.IsNullOrWhiteSpace(option.ImagePath)), "Mizuki horde call icon path populated");
+    Equal(true, options.All(option => File.Exists(option.ImagePath)), "Mizuki horde call icon files exist");
+    Equal(
+        "mcasci12.png",
+        Path.GetFileName(options.Single(option => option.Name == "呼び声：探索").ImagePath),
+        "Mizuki horde call icon matches its effect id");
+}
+
+static void HallucinationCatalogWikiOptions()
+{
+    var catalog = RhodesHallucinationCatalog.LoadDefault();
+    Equal(13, catalog.Options.Count, "Phantom hallucination count");
+    Equal(7, catalog.Fusions.Count, "Phantom hallucination fusion count");
+
+    var confusion = catalog.Options.Single(option => option.Name == "錯乱");
+    Equal("錯乱した", confusion.MapLabel, "confusion map label");
+    Equal(true, confusion.Effect.Contains("思わぬ遭遇", StringComparison.Ordinal), "confusion Wiki effect");
+
+    var normalized = RhodesHallucinationCatalog.NormalizeRecognizedNames(["錯乱した", "迷しの", "錯乱した"]);
+    Equal(2, normalized.Count, "overlapping hallucinations stay multi-select and deduplicate");
+    Equal("錯乱", normalized[0], "confusion canonical name");
+    Equal("迷い", normalized[1], "OCR drift canonical name");
+
+    var fusion = RhodesHallucinationCatalog.ResolveActiveFusions(["迷い", "偏執"]).Single();
+    Equal("迷執症", fusion.Name, "fusion name");
+    Equal(true, fusion.Effect.Contains("商人", StringComparison.Ordinal), "fusion Wiki effect");
+}
+
+static void RunCatalogSarkazBossSelections()
+{
+    var selections = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+    {
+        ["floor3BossId"] = ["is5_f3_silent_merits"],
+        ["floor5BossId"] = ["is5_f5_audience"],
+    };
+    var sections = RhodesBossSelectionCatalog.LoadSections("is5_sarkaz", selections);
+
+    Equal(2, sections.Count, "Sarkaz boss section count");
+    var floor3 = sections.Single(section => section.Field == "floor3BossId");
+    Equal("3層悪路強敵", floor3.Label, "floor 3 section label");
+    Equal(9, floor3.Options.Count(option => !string.IsNullOrWhiteSpace(option.Id)), "floor 3 boss option count");
+    Equal("is5_f3_silent_merits", floor3.SelectedOption?.Id, "floor 3 saved selection");
+    Equal("武勲を語らず", floor3.SelectedOption?.StageName, "floor 3 stage name");
+    Equal(true, File.Exists(floor3.SelectedOption?.ImagePath), "floor 3 boss image path");
+
+    var floor5 = sections.Single(section => section.Field == "floor5BossId");
+    Equal(2, floor5.Options.Count(option => !string.IsNullOrWhiteSpace(option.Id)), "floor 5 boss option count");
+    Equal("is5_f5_audience", floor5.SelectedOption?.Id, "floor 5 saved selection");
+    Equal("「黒き王冠の主」テレシス", floor5.SelectedOption?.BossName, "floor 5 boss name");
+}
+
+static void RunStateStoreBossSelections()
+{
+    var now = DateTimeOffset.Parse("2026-07-18T00:00:00Z");
+    var state = JsonNode.Parse(
+        """
+        {
+          "version": 1,
+          "run": {
+            "campaignId": "is5_sarkaz",
+            "special": { "is5_sarkaz": { "thoughtOverlayVisible": false } }
+          },
+          "bossSelections": {
+            "is4_sami": { "floor3BossId": "is4_existing" }
+          }
+        }
+        """)!.AsObject();
+
+    RhodesRunStateStore.ApplyBossSelection(
+        state,
+        "is5_sarkaz",
+        "floor3BossId",
+        ["is5_f3_silent_merits"],
+        allowsMultiple: false,
+        now: now);
+    Equal(
+        "is5_f3_silent_merits",
+        state["bossSelections"]!["is5_sarkaz"]!["floor3BossId"]!.GetValue<string>(),
+        "single boss selection stored");
+
+    RhodesRunStateStore.ApplyBossSelection(
+        state,
+        "is4_sami",
+        "manualRouteBossIds",
+        ["is4_route_a", "is4_route_b", "is4_route_a"],
+        allowsMultiple: true,
+        now: now);
+    Equal(2, state["bossSelections"]!["is4_sami"]!["manualRouteBossIds"]!.AsArray().Count, "multi boss selection deduplicated");
+
+    RhodesRunStateStore.ClearBossSelectionsForCampaign(state, "is5_sarkaz");
+    Equal(false, state["bossSelections"]!["is5_sarkaz"]!.AsObject().ContainsKey("floor3BossId"), "current campaign boss selection cleared");
+    Equal("is4_existing", state["bossSelections"]!["is4_sami"]!["floor3BossId"]!.GetValue<string>(), "other campaign boss selection retained");
+
+    state["usedRelicIds"] = new JsonArray("is5_sarkaz_relic_265");
+    var clearedJson = RhodesStateApiClient.ClearCurrentRunInStateJson(state.ToJsonString());
+    var cleared = JsonNode.Parse(clearedJson)!.AsObject();
+    Equal(false, cleared["bossSelections"]!["is5_sarkaz"]!.AsObject().Any(), "API clear removes current campaign bosses");
+    Equal(0, cleared["usedRelicIds"]!.AsArray().Count, "API clear removes used relic flags");
+}
+
+static void ChoicePaneDragScrollMath()
+{
+    Equal(140d, RhodesChoicePaneDragScroll.OffsetForDrag(100, -40, 600, 200), "drag upward scrolls down");
+    Equal(0d, RhodesChoicePaneDragScroll.OffsetForDrag(10, 80, 600, 200), "drag downward clamps at top");
+    Equal(400d, RhodesChoicePaneDragScroll.OffsetForDrag(390, -80, 600, 200), "drag upward clamps at bottom");
 }
 
 static void ChoiceCatalogRegistryBuildsWorkspaceModels()
@@ -4290,6 +5933,44 @@ static void ChoiceFilters()
     Equal(true, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(SelectedOnly: true)), "selection rebuilds for selected only");
     Equal(true, RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(new SukiChoiceFilterOptions(HideExcluded: true)), "exclusion rebuilds for hide excluded");
     Equal(false, RhodesChoiceFilter.RequiresFullRefreshAfterExclusionMutation(new SukiChoiceFilterOptions(ShowSelectedFirst: true)), "exclusion keeps list stable for selected first");
+}
+
+static void RelicUsagePriorityAndPersistence()
+{
+    var normal = new SukiChoiceItem(
+        "relic", "normal", "通常秘宝", "No.001", "", "", "is2_phantom", "食品", 0, 1, false)
+    {
+        IsSelected = true,
+    };
+    var endOfTime = new SukiChoiceItem(
+        "relic", "end-of-time", "「時の果て」", "No.174", "", "", "is2_phantom", "巧者の利器", 0, 174, false,
+        supportsUsedFlag: true)
+    {
+        IsSelected = true,
+        IsUsed = true,
+    };
+    var unownedGate = new SukiChoiceItem(
+        "relic", "gate", "「門」と「救難」", "No.265", "", "", "is5_sarkaz", "テラの秘密", 0, 265, false,
+        supportsUsedFlag: true)
+    {
+        IsUsed = true,
+    };
+
+    var ordered = RhodesChoiceFilter.Apply(
+        [normal, endOfTime],
+        new SukiChoiceFilterOptions(CampaignId: "is2_phantom", ShowSelectedFirst: false));
+    Equal("end-of-time|normal", string.Join("|", ordered.Select(item => item.Id)), "owned run-saving relic pinned first");
+    Equal(true, endOfTime.IsUsageToggleVisible, "owned run-saving relic exposes used toggle");
+    Equal(false, unownedGate.IsUsageToggleVisible, "unowned run-saving relic hides used toggle");
+
+    var state = JsonNode.Parse("""{ "run": { "campaignId": "is2_phantom" } }""")!.AsObject();
+    RhodesRunStateStore.ApplyChoices(
+        state,
+        [],
+        [normal, endOfTime, unownedGate],
+        new SukiChoicePersistenceOptions(false, false, false, false, false, false, 2, 2),
+        DateTimeOffset.Parse("2026-07-19T00:00:00Z"));
+    Equal("end-of-time", state["usedRelicIds"]!.AsArray().Single()!.GetValue<string>(), "only owned used relic persisted");
 }
 
 static void ChoiceRows()
@@ -4683,6 +6364,11 @@ static void StateApiSukiPreferencesApply()
             [
                 new SukiOutputPartState("operators", true, false, true, 420, 132),
                 new SukiOutputPartState("relics", true, true, true, 420, 170),
+                new SukiOutputPartState("special", true, true, false, 300, 126),
+            ],
+            [
+                new SukiOverlayLayoutState("status", true, 40, 30, 1200, 120, 2),
+                new SukiOverlayLayoutState("operators", true, 1460, 300, 420, 620, 5),
             ]),
         "maa-ocr"))!.AsObject();
 
@@ -4697,8 +6383,14 @@ static void StateApiSukiPreferencesApply()
     Equal(30, preferences["horizontalOperatorScrollSpeed"]!.GetValue<int>(), "operator scroll speed");
     Equal(true, preferences["sukiOutputSeparateWindow"]!.GetValue<bool>(), "separate window");
     Equal(false, preferences["sukiOutputTransparentBackground"]!.GetValue<bool>(), "transparent background");
-    Equal(2, preferences["sukiOutputParts"]!.AsArray().Count, "output parts count");
+    Equal(3, preferences["sukiOutputParts"]!.AsArray().Count, "output parts count");
     Equal("operators", preferences["sukiOutputParts"]!.AsArray()[0]!.AsObject()["id"]!.GetValue<string>(), "first output part");
+    Equal(6, preferences["sukiOverlayLayout"]!.AsArray().Count, "overlay layout count");
+    Equal(1460, preferences["sukiOverlayLayout"]!.AsArray()[2]!.AsObject()["x"]!.GetValue<int>(), "operator layout x");
+    Equal(
+        true,
+        updated["run"]!.AsObject()["special"]!.AsObject()["is5_sarkaz"]!.AsObject()["thoughtOverlayVisible"]!.GetValue<bool>(),
+        "special output part controls thought overlay visibility");
 }
 
 static void StateApiChoicesApply()
@@ -4752,6 +6444,9 @@ static void RunContextPersistence()
           "run": {
             "campaignId": "is3_mizuki",
             "squad": "分隊A",
+            "squadId": "is3_mizuki_squad_01",
+            "squadRandomEffectOptionId": "is3_mizuki_effect_01",
+            "performanceId": "is2_phantom_performance_pcsp1",
             "difficulty": "等級12",
             "hope": 5,
             "maxHope": 8,
@@ -4776,6 +6471,9 @@ static void RunContextPersistence()
     Equal(false, run.ContainsKey("hope"), "stale hope removed");
     Equal(false, run.ContainsKey("maxHope"), "stale max hope removed");
     Equal(false, run.ContainsKey("squad"), "stale squad removed");
+    Equal(false, run.ContainsKey("squadId"), "stale squad id removed");
+    Equal(false, run.ContainsKey("squadRandomEffectOptionId"), "stale squad random effect removed");
+    Equal(false, run.ContainsKey("performanceId"), "stale performance removed");
     Equal(false, run.ContainsKey("special"), "stale special values removed");
     Equal(false, run.ContainsKey("commandLevel"), "stale command level removed");
     Equal("gummy", updated["operators"]!.AsArray()[0]!.GetValue<string>(), "operators preserved");
@@ -4923,6 +6621,52 @@ static void CandidateRunStatusApplySquadRandomEffect()
     var run = state["run"]!.AsObject();
     Equal("is5_sarkaz_squad_16", run["squadId"]!.GetValue<string>(), "squad id");
     Equal("is5_sarkaz_mimic_02", run["squadRandomEffectOptionId"]!.GetValue<string>(), "random effect id");
+}
+
+static void CandidateRunStatusApplyPhantomSpecials()
+{
+    var state = JsonNode.Parse("""{ "run": { "campaignId": "is2_phantom" } }""")!.AsObject();
+    var candidates = new[]
+    {
+        new MaaCandidatePreview(
+            "runStatus",
+            "演目 (手動入力)",
+            "is2_phantom_performance_pcsp1",
+            "手動入力",
+            1.0,
+            Field: "performanceId",
+            CampaignId: "is2_phantom"),
+        new MaaCandidatePreview(
+            "runStatus",
+            "幻覚 (手動入力)",
+            "偏執的な / 盲目 / 偏執的な",
+            "手動入力",
+            1.0,
+            Field: "hallucinations",
+            CampaignId: "is2_phantom"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.ApplyRunStatus(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-19T00:00:00Z"));
+
+    Equal(2, summary.AppliedCount, "Phantom manual special fields applied");
+    var run = state["run"]!.AsObject();
+    Equal("is2_phantom_performance_pcsp1", run["performanceId"]!.GetValue<string>(), "performance id");
+    var hallucinations = run["special"]!["is2_phantom"]!["hallucinations"]!.AsArray();
+    Equal("偏執|盲目", string.Join("|", hallucinations.Select(item => item!.GetValue<string>())), "hallucinations normalized and deduplicated");
+
+    var cleared = RhodesRecognitionCandidateApplier.ApplyRunStatus(
+        state,
+        [
+            RhodesRecognitionCandidateApplier.CreateNoPerformanceCandidate(),
+            RhodesRecognitionCandidateApplier.CreateNoHallucinationCandidate(),
+        ],
+        DateTimeOffset.Parse("2026-07-19T00:01:00Z"));
+    Equal(2, cleared.AppliedCount, "Phantom manual special fields clear through the same route");
+    Equal(false, run.ContainsKey("performanceId"), "performance cleared");
+    Equal(false, run["special"]!["is2_phantom"]!.AsObject().ContainsKey("hallucinations"), "hallucinations cleared");
 }
 
 static void CandidateRunStatusRejectsOtherCampaign()
@@ -5084,6 +6828,71 @@ static void CandidateChoiceApply()
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "choice updatedAt");
 }
 
+static void CandidateRelicUsageApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": { "campaignId": "is3_mizuki" },
+          "relics": [],
+          "usedRelicIds": []
+        }
+        """)!.AsObject();
+    var used = new MaaCandidatePreview(
+        "relic",
+        "「時の果て」",
+        "is3_mizuki_relic_228",
+        "[時の果て",
+        0.98,
+        RelicId: "is3_mizuki_relic_228",
+        CampaignId: "is3_mizuki",
+        StateId: "used");
+
+    RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [used],
+        DateTimeOffset.Parse("2026-07-19T15:35:40Z"));
+    Equal("is3_mizuki_relic_228", state["relics"]!.AsArray().Single()!.GetValue<string>(), "used relic is owned");
+    Equal("is3_mizuki_relic_228", state["usedRelicIds"]!.AsArray().Single()!.GetValue<string>(), "used relic flag is applied");
+
+    RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [used with { StateId = "unused" }],
+        DateTimeOffset.Parse("2026-07-19T15:36:00Z"));
+    Equal(0, state["usedRelicIds"]!.AsArray().Count, "visible unused relic clears a stale used flag");
+}
+
+static void CandidateAmiyaRoleReplacementApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": { "campaignId": "is5_sarkaz" },
+          "operators": ["gummy", "amiya", "amiya2", "amiya3"]
+        }
+        """)!.AsObject();
+    var candidate = new MaaCandidatePreview(
+        "operator",
+        "アーミヤ(前衛)",
+        "amiya2",
+        "アーミヤ",
+        0.99,
+        OperatorId: "amiya2",
+        RecognitionKey: "maa-local:operator-role:amiya2");
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [candidate],
+        DateTimeOffset.Parse("2026-07-19T00:00:00Z"));
+
+    Equal(1, summary.AppliedCount, "Amiya role replacement apply count");
+    Equal("operator:amiya2", summary.AppliedFields.Single(), "Amiya role replacement applied field");
+    Equal(
+        "gummy|amiya2",
+        string.Join("|", state["operators"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "profession-resolved Amiya removes stale forms from state");
+}
+
 static void CandidateIs5SpecialApply()
 {
     var state = JsonNode.Parse(
@@ -5121,9 +6930,118 @@ static void CandidateIs5SpecialApply()
     Equal(2, thought[0]!.AsObject()["count"]!.GetValue<int>(), "first thought count");
     Equal("thought_b", thought[1]!.AsObject()["effectId"]!.GetValue<string>(), "second thought id");
     Equal(1, thought[1]!.AsObject()["count"]!.GetValue<int>(), "second thought count");
+    Equal(true, special["thoughtOverlayVisible"]!.GetValue<bool>(), "thought overlay enabled after apply");
     Equal("age_prime", special["age"]!.GetValue<string>(), "best age");
     Equal(21, special["idea"]!.GetValue<int>(), "existing idea preserved");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "is5 special updatedAt");
+}
+
+static void CandidateIs5AgeClearApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is5_sarkaz",
+            "difficulty": 18,
+            "special": { "is5_sarkaz": { "age": "is5_sarkaz_selectable_age_is5_age_01_prime" } }
+          }
+        }
+        """)!.AsObject();
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [RhodesRecognitionCandidateApplier.CreateNoAgeCandidate()],
+        DateTimeOffset.Parse("2026-07-18T00:00:00Z"));
+
+    Equal(1, summary.AppliedCount, "age clear apply count");
+    Equal($"age:{RhodesRecognitionCandidateApplier.NoAgeId}", summary.AppliedFields.Single(), "age clear field");
+    var special = state["run"]!.AsObject()["special"]!.AsObject()["is5_sarkaz"]!.AsObject();
+    Equal(true, special["age"] is null, "age is cleared when recognition detects none");
+}
+
+static void CandidateMizukiSpecialApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": { "campaignId": "is3_mizuki" },
+          "operators": ["kroos", "fang"]
+        }
+        """)!.AsObject();
+    var candidates = new[]
+    {
+        new MaaCandidatePreview("mizuki", "鍵", "2", "2", 0.96, CampaignId: "is3_mizuki", FieldId: "key"),
+        new MaaCandidatePreview("mizuki", "灯火", "0", "0", 0.95, CampaignId: "is3_mizuki", FieldId: "light"),
+        new MaaCandidatePreview("mizuki", "呼び声：栄枯", "is3_mizuki_selectable_hordeCall_mcasci15", "呼び声：栄枯", 0.93, CampaignId: "is3_mizuki", FieldId: "hordeCalls", EffectId: "is3_mizuki_selectable_hordeCall_mcasci15"),
+        new MaaCandidatePreview("mizuki", "呼び声：給養", "is3_mizuki_selectable_hordeCall_mcasci16", "呼び声：給養", 0.91, CampaignId: "is3_mizuki", FieldId: "hordeCalls", EffectId: "is3_mizuki_selectable_hordeCall_mcasci16"),
+        new MaaCandidatePreview("mizuki", "障害と異変", "is3_mizuki_selectable_rejectionReaction_mcasci25", "障害と異変", 0.94, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", EffectId: "is3_mizuki_selectable_rejectionReaction_mcasci25"),
+        new MaaCandidatePreview("mizuki", "クルース", "kroos", "クルース", 0.92, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", OperatorId: "kroos"),
+        new MaaCandidatePreview("mizuki", "フェン", "fang", "フェン", 0.92, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", OperatorId: "fang"),
+        new MaaCandidatePreview("mizuki", "予備隊員-近距離", "reserve_melee", "予備隊員-近距離", 0.92, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", OperatorId: "reserve_melee"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-19T06:30:00Z"));
+
+    Equal(7, summary.AppliedCount, "Mizuki special candidates applied");
+    Equal(1, summary.IgnoredCount, "unrecruited rejection target ignored");
+    Equal(
+        "operator-not-recruited",
+        summary.Outcomes.Single(outcome => outcome.Label == "予備隊員-近距離").IgnoredReason,
+        "unrecruited rejection target reason");
+    var special = state["run"]!["special"]!["is3_mizuki"]!.AsObject();
+    Equal(2, special["key"]!.GetValue<int>(), "Mizuki key persisted");
+    Equal(0, special["light"]!.GetValue<int>(), "Mizuki light persisted");
+    Equal(
+        "is3_mizuki_selectable_hordeCall_mcasci15|is3_mizuki_selectable_hordeCall_mcasci16",
+        string.Join('|', special["hordeCalls"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "Mizuki Horde's Calls persisted");
+    var rejection = special["rejectionReaction"]!.AsObject();
+    Equal("is3_mizuki_selectable_rejectionReaction_mcasci25", rejection["effectId"]!.GetValue<string>(), "Mizuki rejection persisted");
+    Equal(
+        "kroos|fang",
+        string.Join('|', rejection["operatorIds"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "Mizuki rejection targets restricted to recruited operators");
+}
+
+static void CandidateMizukiRejectionTargetOnlyApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is3_mizuki",
+            "special": {
+              "is3_mizuki": {
+                "rejectionReaction": {
+                  "effectId": "is3_mizuki_selectable_rejectionReaction_mcasci24",
+                  "operatorIds": []
+                }
+              }
+            }
+          },
+          "operators": ["kroos"]
+        }
+        """)!.AsObject();
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [
+            new MaaCandidatePreview("operator", "スポット", "spot", "スポット", 0.99, OperatorId: "spot"),
+            new MaaCandidatePreview("mizuki", "スポット", "spot", "purple-band", 0.96, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", OperatorId: "spot"),
+            new MaaCandidatePreview("mizuki", "クルース", "kroos", "purple-band", 0.95, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", OperatorId: "kroos"),
+        ],
+        DateTimeOffset.Parse("2026-07-19T14:40:00Z"));
+
+    Equal(3, summary.AppliedCount, "operator and target-only candidates applied");
+    var rejection = state["run"]!["special"]!["is3_mizuki"]!["rejectionReaction"]!.AsObject();
+    Equal(
+        "spot|kroos",
+        string.Join('|', rejection["operatorIds"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "target-only scan updates the existing rejection reaction");
+    Equal(true, state["operators"]!.AsArray().Any(item => item!.GetValue<string>() == "spot"), "newly recognized target is recruited in the same apply batch");
 }
 
 static void CandidateOtherSpecialApply()

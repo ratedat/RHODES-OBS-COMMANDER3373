@@ -13,7 +13,8 @@ public static class RhodesRecognitionRuntimePlan
             "operatorsFull" => plan.TaskEntries.Where(entry =>
                 entry.Equals(OperatorCardTemplateEntry, StringComparison.Ordinal)),
             "relicsFull" => plan.TaskEntries.Where(entry =>
-                entry.Equals("RhodesScreen_relic_list", StringComparison.Ordinal)
+                entry.Equals(RhodesRelicOwnedCountReader.Entry, StringComparison.Ordinal)
+                || entry.Equals("RhodesScreen_relic_list", StringComparison.Ordinal)
                 || entry.Equals("RhodesOcrRegion_relic_list_text", StringComparison.Ordinal)
                 || entry.Equals("RhodesOcrRegion_relic_detail_name", StringComparison.Ordinal)),
             _ => plan.TaskEntries,
@@ -31,8 +32,19 @@ public static class RhodesRecognitionRuntimePlan
     public static bool IsScrollProfile(string profileId) =>
         profileId is "operatorsFull" or "relicsFull" or "is5ThoughtFull";
 
-    public static bool ShouldSkipScroll(string profileId, int initialCandidateCount) =>
-        profileId == "relicsFull" && initialCandidateCount is > 0 and <= 9;
+    public static bool ShouldSkipScroll(
+        string profileId,
+        int initialCandidateCount,
+        int? expectedCandidateCount = null) =>
+        HasReachedExpectedCandidateCount(profileId, initialCandidateCount, expectedCandidateCount);
+
+    public static bool HasReachedExpectedCandidateCount(
+        string profileId,
+        int candidateCount,
+        int? expectedCandidateCount) =>
+        profileId == "relicsFull"
+        && expectedCandidateCount is >= 0
+        && candidateCount == expectedCandidateCount.Value;
 
     public static bool IsTargetScreenConfirmed(
         string profileId,

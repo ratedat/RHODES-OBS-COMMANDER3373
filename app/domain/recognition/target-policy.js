@@ -15,7 +15,6 @@ export const retainedRunRecognitionIds = Object.freeze(stringArray(runRecognitio
 const retainedCandidateKindSet = new Set(retainedCandidateKinds);
 const retainedRunStatusFieldSet = new Set(retainedRunStatusFields);
 const abandonedRunFieldSet = new Set(abandonedRunFieldIds);
-const retainedRunRecognitionIdSet = new Set(retainedRunRecognitionIds);
 
 export function maaRecognitionIdTokens(value) {
   return String(value || "")
@@ -27,7 +26,8 @@ export function maaRecognitionIdTokens(value) {
 
 export function isAbandonedRunRecognitionId(id) {
   const retainedId = retainedRunRecognitionId(id);
-  return retainedId !== "" && !retainedRunRecognitionIdSet.has(retainedId);
+  return retainedId !== "" && !retainedRunRecognitionIds.some((item) =>
+    retainedId === item || retainedId.startsWith(`${item}.`));
 }
 
 export function isAbandonedRunField(fieldId) {

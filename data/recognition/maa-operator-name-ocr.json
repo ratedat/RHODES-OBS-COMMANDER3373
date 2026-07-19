@@ -17925,7 +17925,7 @@
   ],
   "summary": {
     "rawRuleCount": 1034,
-    "localOperatorCount": 430,
+    "localOperatorCount": 432,
     "rulesWithLocalMatches": 402,
     "uniqueMatchedLocalOperators": 405,
     "invalidRegexRules": 0,

@@ -6,7 +6,8 @@ public static class RhodesWorkspaceRegistry
 {
     private static readonly SukiWorkspaceNavItem[] WorkspaceItems =
     [
-        new("run", "ラン", "RUN", "取得値とIS固有値"),
+        new("run", "ラン", "RUN", "共通取得値とボス"),
+        new("special", "特殊値", "SPECIAL", "思案・銭・啓示"),
         new("choices", "選択", "CHOICES", "オペレーターと秘宝"),
         new("recognition", "認識", "RECOGNITION", "OCR/テンプレート候補"),
         new("output", "出力", "OUTPUT", "OBS表示構成"),
@@ -17,9 +18,14 @@ public static class RhodesWorkspaceRegistry
     private static readonly Dictionary<string, SukiWorkspaceNavItem> WorkspaceById = WorkspaceItems
         .ToDictionary(item => item.Id, StringComparer.Ordinal);
 
+    private static readonly IReadOnlyList<SukiWorkspaceNavItem> PublicDebugWorkspaceItems = WorkspaceItems
+        .Where(item => item.Id is not ("recognition" or "debug"))
+        .ToArray();
+
     private static readonly IReadOnlyDictionary<string, string> TitlesById = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["run"] = "ラン取得値",
+        ["special"] = "IS特殊値",
         ["choices"] = "選択カタログ",
         ["recognition"] = "認識ワークフロー",
         ["output"] = "出力 / OBS",
@@ -28,6 +34,11 @@ public static class RhodesWorkspaceRegistry
     };
 
     public static IReadOnlyList<SukiWorkspaceNavItem> Items => WorkspaceItems;
+
+    public static IReadOnlyList<SukiWorkspaceNavItem> ItemsFor(RhodesDistributionProfile profile)
+    {
+        return profile.IsPublicDebug ? PublicDebugWorkspaceItems : WorkspaceItems;
+    }
 
     public static string Normalize(string? workspaceId)
     {

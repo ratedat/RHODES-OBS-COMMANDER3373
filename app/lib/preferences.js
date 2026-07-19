@@ -1,5 +1,6 @@
 import { clampOverlayScrollSpeed, overlayScrollSpeedDefaults } from "./overlay-config.js";
 import { normalizeChoiceFilterIds } from "../domain/choice-filters.js";
+import { normalizeCustomOverlayLayout } from "./overlay-layout-state.js";
 
 export const gridColumnOptions = [1, 2, 3, 4, 5, 6];
 
@@ -63,6 +64,7 @@ export function normalizePreferences(value) {
   for (const field of booleanPreferenceFields) preferences[field] = normalizeBoolean(preferences[field]);
   preferences.operatorExcludedIds = normalizeChoiceFilterIds(preferences.operatorExcludedIds);
   preferences.relicExcludedIds = normalizeChoiceFilterIds(preferences.relicExcludedIds);
+  preferences.sukiOverlayLayout = normalizeCustomOverlayLayout(preferences.sukiOverlayLayout);
   for (const [key, fallback] of Object.entries(overlayScrollSpeedDefaults)) {
     preferences[key] = clampOverlayScrollSpeed(preferences[key], fallback);
   }

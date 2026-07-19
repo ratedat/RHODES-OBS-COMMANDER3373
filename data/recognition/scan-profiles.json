@@ -12,9 +12,7 @@
       "ocrRegionIds": [
         "run.ingot",
         "run.squad_card",
-        "run.squad_name",
-        "run.difficulty_grade",
-        "run.difficulty_block"
+        "run.squad_name"
       ],
       "templateOcrRegions": [
         {
@@ -61,6 +59,217 @@
           "numericFallback": true,
           "numericStartYRatio": 0,
           "scale": 10
+        },
+        {
+          "idPrefix": "run.difficulty.grade.anchor",
+          "templatePath": "assets/recognition/templates/run/DifficultyFlag.png",
+          "searchRoi": {
+            "x": 22,
+            "y": 548,
+            "width": 122,
+            "height": 40
+          },
+          "ocrOffset": {
+            "x": 102,
+            "y": 0,
+            "width": 66,
+            "height": 51
+          },
+          "threshold": 0.85,
+          "method": 5,
+          "maxMatches": 1,
+          "scale": 6,
+          "numericFallback": true
+        },
+        {
+          "idPrefix": "run.squad.icon.is5_sarkaz.batch",
+          "templatePaths": [
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_01.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_02.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_03.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_04.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_05.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_06.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_07.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_08.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_09.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_10.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_11.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_12.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_13.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_14.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_15.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_16.png",
+            "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_17.png"
+          ],
+          "templateIds": [
+            "is5_sarkaz_squad_01",
+            "is5_sarkaz_squad_02",
+            "is5_sarkaz_squad_03",
+            "is5_sarkaz_squad_04",
+            "is5_sarkaz_squad_05",
+            "is5_sarkaz_squad_06",
+            "is5_sarkaz_squad_07",
+            "is5_sarkaz_squad_08",
+            "is5_sarkaz_squad_09",
+            "is5_sarkaz_squad_10",
+            "is5_sarkaz_squad_11",
+            "is5_sarkaz_squad_12",
+            "is5_sarkaz_squad_13",
+            "is5_sarkaz_squad_14",
+            "is5_sarkaz_squad_15",
+            "is5_sarkaz_squad_16",
+            "is5_sarkaz_squad_17"
+          ],
+          "searchRoi": {
+            "x": 58,
+            "y": 632,
+            "width": 50,
+            "height": 88
+          },
+          "threshold": 0.72,
+          "method": 5,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is2_phantom.batch",
+          "templatePaths": [
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_01.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_02.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_03.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_04.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_05.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_06.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_07.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_08.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_09.png",
+            "assets/recognition/templates/run/SquadIconFull_is2_phantom_squad_10.png"
+          ],
+          "templateIds": [
+            "is2_phantom_squad_01",
+            "is2_phantom_squad_02",
+            "is2_phantom_squad_03",
+            "is2_phantom_squad_04",
+            "is2_phantom_squad_05",
+            "is2_phantom_squad_06",
+            "is2_phantom_squad_07",
+            "is2_phantom_squad_08",
+            "is2_phantom_squad_09",
+            "is2_phantom_squad_10"
+          ],
+          "searchRoi": {
+            "x": 8,
+            "y": 632,
+            "width": 94,
+            "height": 88
+          },
+          "threshold": 0.72,
+          "method": 5,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_01",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_01.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_02",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_02.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_03",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_03.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_04",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_04.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_05",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_05.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_06",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_06.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_07",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_07.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_08",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_08.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_09",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_09.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_10",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_10.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_11",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_11.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_12",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_12.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is3_mizuki_squad_13",
+          "templatePath": "assets/recognition/templates/run/SquadIconFull_is3_mizuki_squad_13.png",
+          "searchRoi": { "x": 8, "y": 638, "width": 86, "height": 82 },
+          "threshold": 0.68,
+          "method": 3,
+          "maxMatches": 1
         }
       ],
       "baseResolution": {
@@ -370,12 +579,12 @@
           "label": "表示待ち"
         }
       ],
-      "scanRegion": {
-        "x": 90,
-        "y": 84,
-        "width": 1100,
-        "height": 540
-      },
+    "scanRegion": {
+      "x": 90,
+      "y": 24,
+      "width": 1100,
+      "height": 600
+    },
       "scrollAxis": "vertical",
       "scrollDirection": "two-way",
       "restoreSteps": [
@@ -470,14 +679,7 @@
           "captureDelayMs": 160,
           "candidateStableEndCount": 2
         }
-      ],
-      "scrollGuard": {
-        "type": "initialCandidateCountAtMost",
-        "candidateKind": "relic",
-        "maxCandidates": 9,
-        "reason": "relic_panel_not_scrollable",
-        "skipRemainingPasses": true
-      }
+      ]
     },
     {
       "id": "is4RevelationFull",
@@ -639,7 +841,7 @@
           "label": "閉じる待ち"
         }
       ],
-      "maxScrolls": 8,
+      "maxScrolls": 12,
       "endFingerprintStableCount": 1,
       "captureDelayMs": 120,
       "navigationNote": "思案表示をクリックして思案一覧を開く。構想の個数は下部中央の家型アイコン下に表示される。一覧は左端レールではなく中央のリスト本体を掴み、下端方向、続けて上端方向へ読み切る。上方向の戻しは下方向で実際に動かした回数を最低限ミラーする。",
@@ -647,31 +849,31 @@
         {
           "axis": "vertical",
           "direction": "down",
-          "label": "左レール下端方向スキャン",
+          "label": "思案リスト下方向スキャン",
           "scroll": {
             "start": {
               "x": 640,
-              "y": 610
+              "y": 515
             },
             "end": {
               "x": 640,
-              "y": 150
+              "y": 425
             },
             "startArea": {
               "x": 520,
-              "y": 550,
+              "y": 500,
               "width": 240,
-              "height": 70
+              "height": 30
             },
             "endArea": {
               "x": 520,
-              "y": 78,
+              "y": 410,
               "width": 240,
-              "height": 90
+              "height": 30
             },
-            "durationMs": 560
+            "durationMs": 260
           },
-          "maxScrolls": 8,
+          "maxScrolls": 12,
           "endFingerprintStableCount": 1,
           "captureDelayMs": 120,
           "collectWindow": {
@@ -682,31 +884,31 @@
         {
           "axis": "vertical",
           "direction": "up",
-          "label": "左レール上端方向スキャン",
+          "label": "思案リスト上方向復元",
           "scroll": {
             "start": {
               "x": 640,
-              "y": 150
+              "y": 425
             },
             "end": {
               "x": 640,
-              "y": 610
+              "y": 515
             },
             "startArea": {
               "x": 520,
-              "y": 78,
+              "y": 410,
               "width": 240,
-              "height": 90
+              "height": 30
             },
             "endArea": {
               "x": 520,
-              "y": 550,
+              "y": 500,
               "width": 240,
-              "height": 70
+              "height": 30
             },
-            "durationMs": 560
+            "durationMs": 260
           },
-          "maxScrolls": 8,
+          "maxScrolls": 12,
           "endFingerprintStableCount": 1,
           "captureDelayMs": 120,
           "candidateStableEndCount": 1,
@@ -741,10 +943,10 @@
           },
           "label": "時代を開く",
           "area": {
-              "x": 550,
-              "y": 8,
-              "width": 180,
-              "height": 44
+            "x": 550,
+            "y": 8,
+            "width": 180,
+            "height": 44
           }
         },
         {
@@ -774,10 +976,10 @@
           },
           "label": "時代を閉じる",
           "area": {
-              "x": 550,
-              "y": 8,
-              "width": 180,
-              "height": 44
+            "x": 550,
+            "y": 8,
+            "width": 180,
+            "height": 44
           }
         },
         {
@@ -790,6 +992,269 @@
       "endFingerprintStableCount": 1,
       "captureDelayMs": 120,
       "navigationNote": "サルカズのマップ上部中央にある時代表示をタップし、詳細が開いた場合だけ時代名と段階をOCRする。時代がない場合はタップしても反応しないため候補なしで終了する。"
+    },
+    {
+      "id": "is2HallucinationsFull",
+      "label": "幻覚スキャン",
+      "interfaceLabel": "幻覚",
+      "interfaceDescription": "IS#2の上部中央に表示される幻覚を複数件まとめて取得します。",
+      "campaignId": "is2_phantom",
+      "candidateKind": "runStatus",
+      "ocrEngine": "maa-ocr",
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home"
+      ],
+      "openSteps": [],
+      "targetScreenIds": [
+        "run-home"
+      ],
+      "inferredScreenId": "run-home",
+      "scanRegion": {
+        "x": 480,
+        "y": 10,
+        "width": 320,
+        "height": 34
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "ファントムのマップ上部中央に横並びで表示される幻覚名を直接OCRし、多重発生時はすべて取得する。"
+    },
+    {
+      "id": "is2PerformanceFull",
+      "label": "演目スキャン",
+      "interfaceLabel": "演目",
+      "interfaceDescription": "IS#2の画面下部中央に表示される現在の演目を1件取得します。",
+      "campaignId": "is2_phantom",
+      "candidateKind": "runStatus",
+      "ocrEngine": "maa-ocr",
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home"
+      ],
+      "openSteps": [],
+      "targetScreenIds": [
+        "run-home"
+      ],
+      "inferredScreenId": "run-home",
+      "scanRegion": {
+        "x": 480,
+        "y": 640,
+        "width": 360,
+        "height": 80
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "ファントムのマップ下部中央に表示される現在の演目名を直接OCRし、演目マスターの1件へ照合する。"
+    },
+    {
+      "id": "is3KeyFull",
+      "label": "源石錐・鍵スキャン",
+      "interfaceLabel": "源石錐・鍵",
+      "interfaceDescription": "IS#3の右上に表示される源石錐と鍵の所持数を取得します。",
+      "campaignId": "is3_mizuki",
+      "candidateKind": "mizuki",
+      "ocrEngine": "maa-ocr",
+      "ocrRegionIds": [
+        "is3.ingot_value",
+        "is3.key_value"
+      ],
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home"
+      ],
+      "openSteps": [],
+      "targetScreenIds": [
+        "run-home"
+      ],
+      "inferredScreenId": "run-home",
+      "scanRegion": {
+        "x": 1040,
+        "y": 0,
+        "width": 240,
+        "height": 56
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "ミヅキのマップ右上にある源石錐と青い鍵の数値を、それぞれ独立したROIでOCRする。"
+    },
+    {
+      "id": "is3LightHordeFull",
+      "label": "灯火・大群の呼び声スキャン",
+      "interfaceLabel": "灯火・大群",
+      "interfaceDescription": "IS#3の灯火と、複数発動する大群の呼び声を取得します。",
+      "campaignId": "is3_mizuki",
+      "candidateKind": "mizuki",
+      "ocrEngine": "maa-ocr",
+      "ocrRegionIds": [
+        "is3.light_value",
+        "is3.horde_call_list_text"
+      ],
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home",
+        "mizuki-light-horde-detail"
+      ],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 660,
+            "y": 52
+          },
+          "label": "灯火と大群の呼び声を開く",
+          "area": {
+            "x": 550,
+            "y": 8,
+            "width": 180,
+            "height": 44
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 650,
+          "label": "表示待ち"
+        }
+      ],
+      "targetScreenIds": [
+        "mizuki-light-horde-detail"
+      ],
+      "inferredScreenId": "mizuki-light-horde-detail",
+      "scanRegion": {
+        "x": 368,
+        "y": 96,
+        "width": 584,
+        "height": 536
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 660,
+            "y": 52
+          },
+          "label": "灯火と大群の呼び声を閉じる",
+          "area": {
+            "x": 550,
+            "y": 8,
+            "width": 180,
+            "height": 44
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 300,
+          "label": "閉じる待ち"
+        }
+      ],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "マップ上部中央の固有値表示をタップし、灯火数値と発動済みの大群の呼び声を同じ詳細パネルから取得する。"
+    },
+    {
+      "id": "is3RejectionFull",
+      "label": "拒絶反応スキャン",
+      "interfaceLabel": "拒絶反応",
+      "interfaceDescription": "IS#3の拒絶反応名を取得します。影響対象は続くオペレーター取得でカード背景から判定します。",
+      "campaignId": "is3_mizuki",
+      "candidateKind": "mizuki",
+      "ocrEngine": "maa-ocr",
+      "ocrRegionIds": [
+        "is3.rejection_name"
+      ],
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home",
+        "mizuki-rejection-detail"
+      ],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 840,
+            "y": 678
+          },
+          "label": "拒絶反応を開く",
+          "area": {
+            "x": 750,
+            "y": 646,
+            "width": 190,
+            "height": 66
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 650,
+          "label": "表示待ち"
+        }
+      ],
+      "targetScreenIds": [
+        "mizuki-rejection-detail"
+      ],
+      "inferredScreenId": "mizuki-rejection-detail",
+      "scanRegion": {
+        "x": 680,
+        "y": 310,
+        "width": 590,
+        "height": 325
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 840,
+            "y": 678
+          },
+          "label": "拒絶反応を閉じる",
+          "area": {
+            "x": 750,
+            "y": 646,
+            "width": 190,
+            "height": 66
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 300,
+          "label": "閉じる待ち"
+        }
+      ],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "右下の拒絶反応表示をタップして反応名を取得する。影響対象は続くオペレータースキャンで紫色のカード背景から判定する。"
     },
     {
       "id": "is6CoinsFull",
