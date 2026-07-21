@@ -1,0 +1,528 @@
+<Window
+    x:Class="RhodesAppleDesign.Views.ApplePrototypeWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="RHODES OBS COMMANDER3373 - Design Prototype"
+    Width="1540"
+    Height="940"
+    MinWidth="1080"
+    MinHeight="720"
+    WindowStartupLocation="CenterScreen">
+  <Grid RowDefinitions="74,*,34">
+    <Border Grid.Row="0" Classes="appleToolbar">
+      <Grid ColumnDefinitions="Auto,16,280,*,Auto,8,Auto,8,Auto" VerticalAlignment="Center">
+        <StackPanel Spacing="1" VerticalAlignment="Center">
+          <TextBlock Text="RHODES OBS COMMANDER3373" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="BROADCAST CONTROL" Classes="eyebrow" Foreground="{StaticResource AppleTheme}" />
+        </StackPanel>
+
+        <ComboBox Grid.Column="2" SelectedIndex="1" VerticalAlignment="Center">
+          <ComboBoxItem Content="IS#2 ファントムと緋き貴石" />
+          <ComboBoxItem Content="IS#3 ミヅキと紺碧の樹" />
+          <ComboBoxItem Content="IS#4 探索者と銀氷の果て" />
+          <ComboBoxItem Content="IS#5 サルカズの炉辺奇談" />
+          <ComboBoxItem Content="IS#6 歳の界園志異" />
+        </ComboBox>
+
+        <Button Grid.Column="4" Classes="tertiaryAction" Click="OnOpenAdbSettings" ToolTip.Tip="ADB接続設定" AutomationProperties.Name="ADB接続設定">
+          <Border Classes="statusChip">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Ellipse x:Name="ConnectionStatusIndicator" Width="8" Height="8" Fill="{StaticResource AppleSuccess}" VerticalAlignment="Center" />
+              <TextBlock x:Name="ConnectionStatusLabel" Text="接続OK" FontWeight="SemiBold" />
+              <TextBlock x:Name="ConnectionStatusDetail" Text="emulator-5556 · 1280×720" Classes="caption" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </Button>
+        <Button Grid.Column="6" Classes="primaryAction" Content="取得して反映" Click="OnAcquireClick" />
+        <Button Grid.Column="8" Content="⋯" Width="42" Padding="0" FontSize="21" Click="OnActionClick" Tag="設定・報告メニューを開きます（デザインモック）" ToolTip.Tip="設定と報告" />
+      </Grid>
+    </Border>
+
+    <Grid x:Name="ShellGrid" Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="176" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+
+      <Border x:Name="NavigationPane" Grid.Column="0" Classes="appleSidebar">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <TextBlock Text="ワークスペース" Classes="eyebrow" Margin="10,8,0,10" />
+          <StackPanel Grid.Row="1" Spacing="3">
+            <RadioButton x:Name="RunNavigation" Classes="navItem" GroupName="Workspace" Tag="Run" IsChecked="True" IsCheckedChanged="OnNavigate">
+              <StackPanel Spacing="1">
+                <TextBlock Text="ラン" FontWeight="SemiBold" />
+                <TextBlock Text="取得値とボス" Classes="caption" />
+              </StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="SpecialNavigation" Classes="navItem" GroupName="Workspace" Tag="Special" IsCheckedChanged="OnNavigate">
+              <StackPanel Spacing="1">
+                <TextBlock Text="特殊値" FontWeight="SemiBold" />
+                <TextBlock Text="テーマ固有情報" Classes="caption" />
+              </StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="LibraryNavigation" Classes="navItem" GroupName="Workspace" Tag="Library" IsCheckedChanged="OnNavigate">
+              <StackPanel Spacing="1">
+                <TextBlock Text="選択" FontWeight="SemiBold" />
+                <TextBlock Text="オペレーターと秘宝" Classes="caption" />
+              </StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="OutputNavigation" Classes="navItem" GroupName="Workspace" Tag="Output" IsCheckedChanged="OnNavigate">
+              <StackPanel Spacing="1">
+                <TextBlock Text="出力" FontWeight="SemiBold" />
+                <TextBlock Text="OBSレイアウト" Classes="caption" />
+              </StackPanel>
+            </RadioButton>
+          </StackPanel>
+          <Button Grid.Row="2" Classes="tertiaryAction" HorizontalAlignment="Stretch" Content="設定と報告" Click="OnActionClick" Tag="設定・報告メニューを開きます（デザインモック）" />
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1" Classes="appleWorkspace">
+        <Grid>
+          <ScrollViewer x:Name="RunWorkspace" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="18">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="ラン" Classes="displayTitle" />
+                  <TextBlock Text="配信中に必要な取得値と手動補正をここだけで管理します。" Classes="body" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="dangerAction" Content="ランをクリア" Click="OnActionClick" Tag="ランをクリアしました（デザインモック）" />
+              </Grid>
+
+              <Border x:Name="ResultBanner" Classes="resultBanner" IsVisible="False">
+                <Grid ColumnDefinitions="Auto,12,*,Auto,8,Auto" VerticalAlignment="Center">
+                  <TextBlock Text="✓" FontSize="20" Foreground="{StaticResource AppleSuccess}" />
+                  <StackPanel Grid.Column="2" Spacing="1">
+                    <TextBlock Text="更新しました" FontWeight="SemiBold" />
+                    <TextBlock x:Name="ResultSummaryText" Text="実記録を反映 · 源石錐28 · 秘宝12件 · オペレーター11名" Classes="body" />
+                  </StackPanel>
+                  <Button Grid.Column="3" Classes="tertiaryAction" Content="元に戻す" Click="OnUndoClick" />
+                  <Button Grid.Column="5" Classes="tertiaryAction" Content="閉じる" Click="OnDismissResult" />
+                </Grid>
+              </Border>
+
+              <Border Classes="filterBar">
+                <Grid ColumnDefinitions="Auto,14,*,10,*,10,*,10,*" VerticalAlignment="Center">
+                  <StackPanel Spacing="1" VerticalAlignment="Center">
+                    <TextBlock Text="個別取得" FontWeight="SemiBold" />
+                    <TextBlock Text="必要な項目だけ更新" Classes="caption" />
+                  </StackPanel>
+                  <Button Grid.Column="2" Content="基本情報" Click="OnIndividualAcquireClick" Tag="Basic" ToolTip.Tip="源石錐・等級・分隊を取得して反映" />
+                  <Button Grid.Column="4" Content="特殊値" Click="OnIndividualAcquireClick" Tag="Special" ToolTip.Tip="選択中の統合戦略に固有の値を取得して反映" />
+                  <Button Grid.Column="6" Content="オペレーター" Click="OnIndividualAcquireClick" Tag="Operators" ToolTip.Tip="招集済みオペレーターを取得して反映" />
+                  <Button Grid.Column="8" Content="秘宝" Click="OnIndividualAcquireClick" Tag="Relics" ToolTip.Tip="所持秘宝を取得して反映" />
+                </Grid>
+              </Border>
+
+              <Border Classes="appleCard" Padding="0">
+                <Grid ColumnDefinitions="*,*,*,*">
+                  <Border Classes="metricBand">
+                    <StackPanel Spacing="2"><TextBlock Text="源石錐" Classes="eyebrow" /><TextBlock Text="28" Classes="metricValue" /><TextBlock Text="ADB認識" Classes="caption" Foreground="{StaticResource AppleSuccess}" /></StackPanel>
+                  </Border>
+                  <Border Grid.Column="1" Classes="metricBand">
+                    <StackPanel Spacing="2"><TextBlock Text="等級" Classes="eyebrow" /><TextBlock Text="－" Classes="metricValue" /><TextBlock Text="IS#3は手動入力" Classes="caption" /></StackPanel>
+                  </Border>
+                  <Border Grid.Column="2" Classes="metricBand">
+                    <StackPanel Spacing="2"><TextBlock Text="分隊" Classes="eyebrow" /><TextBlock Text="人文主義分隊" FontSize="19" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="アイコン認識" Classes="caption" /></StackPanel>
+                  </Border>
+                  <Border Grid.Column="3" Classes="metricBand" BorderThickness="0">
+                    <StackPanel Spacing="2"><TextBlock Text="IS特殊値" Classes="eyebrow" /><TextBlock Text="鍵5 · 灯火39" FontSize="19" FontWeight="SemiBold" /><TextBlock Text="呼び声：給養" Classes="caption" /></StackPanel>
+                  </Border>
+                </Grid>
+              </Border>
+
+              <Grid RowDefinitions="Auto,16,Auto">
+                <Border Classes="appleCard">
+                  <StackPanel Spacing="16">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2"><TextBlock Text="手動補正" Classes="sectionTitle" /><TextBlock Text="大会進行中に変わった値だけ修正します。" Classes="body" /></StackPanel>
+                      <Button Grid.Column="1" Classes="primaryAction" Content="反映" Click="OnActionClick" Tag="手動補正を反映しました（デザインモック）" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,12,*,12,*">
+                      <StackPanel Spacing="5"><TextBlock Text="源石錐" Classes="caption" /><NumericUpDown Value="28" Minimum="0" Maximum="999" /></StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="5"><TextBlock Text="等級" Classes="caption" /><NumericUpDown Value="0" Minimum="0" Maximum="99" /></StackPanel>
+                      <StackPanel Grid.Column="4" Spacing="5"><TextBlock Text="分隊" Classes="caption" /><ComboBox SelectedIndex="0"><ComboBoxItem Content="人文主義分隊" /><ComboBoxItem Content="集団分隊" /><ComboBoxItem Content="研究分隊" /></ComboBox></StackPanel>
+                    </Grid>
+                    <Border BorderBrush="{StaticResource AppleSeparator}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="2"><TextBlock Text="鍵・灯火・呼び声" FontWeight="SemiBold" /><TextBlock Text="テーマ固有値は専用画面でまとめて編集します。" Classes="body" /></StackPanel>
+                        <Button Grid.Column="1" Content="特殊値を開く" Click="OnNavigateButton" Tag="Special" />
+                      </Grid>
+                    </Border>
+                  </StackPanel>
+                </Border>
+
+                <Border Grid.Row="2" Classes="appleCard" Padding="0">
+                  <StackPanel Spacing="13">
+                    <Grid ColumnDefinitions="*,Auto" Margin="18,16,18,0">
+                      <StackPanel Spacing="2"><TextBlock Text="ボス選択" Classes="sectionTitle" /><TextBlock Text="到達したボスをステージ別に最大4体まで登録します。" Classes="body" /></StackPanel>
+                      <TextBlock Grid.Column="1" Text="最大4体" Classes="caption" VerticalAlignment="Center" />
+                    </Grid>
+                    <Grid x:Name="BossSelectionGrid" ColumnDefinitions="*,*,*,*">
+                      <Border x:Name="BossSlotFloor3" Padding="18,12,18,18" BorderBrush="{StaticResource AppleSeparator}" BorderThickness="0,0,1,0">
+                        <Grid ColumnDefinitions="72,*" ColumnSpacing="12">
+                          <Border Width="72" Height="72" CornerRadius="7" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_boss_srf.jpg" Stretch="UniformToFill" /></Border>
+                          <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center"><TextBlock Text="3層" Classes="eyebrow" /><TextBlock Text="パスファインダー" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><ComboBox SelectedIndex="0"><ComboBoxItem Content="パスファインダー" /><ComboBoxItem Content="未選択" /></ComboBox></StackPanel>
+                        </Grid>
+                      </Border>
+                      <Border x:Name="BossSlotEncounter" Grid.Column="1" Padding="18,12,18,18" BorderBrush="{StaticResource AppleSeparator}" BorderThickness="0,0,1,0">
+                        <Grid ColumnDefinitions="72,*" ColumnSpacing="12">
+                          <Border Width="72" Height="72" CornerRadius="7" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_boss_gst.jpg" Stretch="UniformToFill" /></Border>
+                          <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center"><TextBlock Text="異相" Classes="eyebrow" /><TextBlock Text="「墓碑」" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><ComboBox SelectedIndex="0"><ComboBoxItem Content="「墓碑」" /><ComboBoxItem Content="未選択" /></ComboBox></StackPanel>
+                        </Grid>
+                      </Border>
+                      <Border x:Name="BossSlotFloor5" Grid.Column="2" Padding="18,12,18,18" BorderBrush="{StaticResource AppleSeparator}" BorderThickness="0,0,1,0">
+                        <Grid ColumnDefinitions="72,*" ColumnSpacing="12">
+                          <Border Width="72" Height="72" CornerRadius="7" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_boss_gir.jpg" Stretch="UniformToFill" /></Border>
+                          <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center"><TextBlock Text="5層" Classes="eyebrow" /><TextBlock Text="「偏執の泡沫」" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><ComboBox SelectedIndex="0"><ComboBoxItem Content="「偏執の泡沫」" /><ComboBoxItem Content="未選択" /></ComboBox></StackPanel>
+                        </Grid>
+                      </Border>
+                      <Border x:Name="BossSlotFloor6" Grid.Column="3" Padding="18,12,18,18">
+                        <Grid ColumnDefinitions="72,*" ColumnSpacing="12">
+                          <Border Width="72" Height="72" CornerRadius="7" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_boss_ska.jpg" Stretch="UniformToFill" /></Border>
+                          <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center"><TextBlock Text="6層" Classes="eyebrow" /><TextBlock Text="イシャームラ" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><ComboBox SelectedIndex="0"><ComboBoxItem Content="イシャームラ、腐蝕された心" /><ComboBoxItem Content="未選択" /></ComboBox></StackPanel>
+                        </Grid>
+                      </Border>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </Grid>
+
+              <Border Classes="appleCard">
+                <Grid ColumnDefinitions="*,Auto,18,Auto">
+                  <StackPanel Spacing="2"><TextBlock Text="現在の選択" Classes="sectionTitle" /><TextBlock Text="オペレーター11名 · 秘宝12件" Classes="body" /></StackPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"><Image Width="38" Height="38" Source="avares://RhodesAppleDesignPrototype/Assets/real_op_fang.png" /><Image Width="38" Height="38" Source="avares://RhodesAppleDesignPrototype/Assets/real_op_wang.png" /><Image Width="38" Height="38" Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_228.png" /></StackPanel>
+                  <Button Grid.Column="3" Content="選択を編集" Click="OnNavigateButton" Tag="Library" />
+                </Grid>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+
+          <ScrollViewer x:Name="SpecialWorkspace" IsVisible="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="18">
+              <StackPanel Spacing="3">
+                <TextBlock Text="特殊値" Classes="displayTitle" />
+                <TextBlock Text="選択中の統合戦略に存在する情報だけを表示します。" Classes="body" />
+              </StackPanel>
+
+              <Border Classes="appleCard" Padding="0">
+                <Grid ColumnDefinitions="Auto,*">
+                  <Border Background="#102B2D" Padding="16,12" BorderBrush="#27565C" BorderThickness="0,0,1,0"><TextBlock Text="IS#3" FontWeight="Bold" Foreground="{StaticResource AppleAccent}" VerticalAlignment="Center" /></Border>
+                  <StackPanel Grid.Column="1" Margin="16,10" Spacing="2"><TextBlock Text="ミヅキと紺碧の樹" FontWeight="SemiBold" /><TextBlock Text="2026-07-19の実機記録を表示しています。" Classes="body" /></StackPanel>
+                </Grid>
+              </Border>
+
+              <Grid ColumnDefinitions="0.7*,0.7*,1.6*" ColumnSpacing="16">
+                <Border Classes="appleCard">
+                  <StackPanel Spacing="9"><TextBlock Text="鍵" Classes="eyebrow" /><TextBlock Text="5" Classes="metricValue" /><TextBlock Text="ADB認識" Classes="caption" Foreground="{StaticResource AppleSuccess}" /></StackPanel>
+                </Border>
+                <Border Grid.Column="1" Classes="appleCard">
+                  <StackPanel Spacing="9"><TextBlock Text="灯火" Classes="eyebrow" /><TextBlock Text="39" Classes="metricValue" /><TextBlock Text="ADB認識" Classes="caption" Foreground="{StaticResource AppleSuccess}" /></StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="appleCard">
+                  <Grid ColumnDefinitions="64,*" ColumnSpacing="14">
+                    <Border Width="64" Height="64" CornerRadius="7" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_call_mcasci16.png" Stretch="UniformToFill" /></Border>
+                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center"><TextBlock Text="呼び声：給養" Classes="sectionTitle" /><TextBlock Text="戦闘後30%でランダムな招集券を追加。全敵の術耐性+15。" Classes="body" TextWrapping="Wrap" /></StackPanel>
+                  </Grid>
+                </Border>
+              </Grid>
+
+              <Border Classes="appleCard">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                  <StackPanel Spacing="12">
+                    <StackPanel Spacing="2"><TextBlock Text="拒絶反応" Classes="sectionTitle" /><TextBlock Text="対象オペレーターのカード背景から判定します。" Classes="body" /></StackPanel>
+                    <TextBlock Text="この記録では拒絶反応なし" FontWeight="SemiBold" />
+                  </StackPanel>
+                  <Button Grid.Column="1" Classes="primaryAction" Content="特殊値を反映" Click="OnActionClick" Tag="鍵5・灯火39・呼び声：給養を反映しました（デザインモック）" />
+                </Grid>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+
+          <Grid x:Name="LibraryWorkspace" IsVisible="False" RowDefinitions="Auto,14,Auto,14,*">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="3"><TextBlock Text="選択" Classes="displayTitle" /><TextBlock Text="検索とフィルターから直接選択します。" Classes="body" /></StackPanel>
+              <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="2"><TextBlock Text="実データ" Classes="caption" HorizontalAlignment="Right" /><TextBlock x:Name="CatalogCountText" Text="日本実装データを読込中" FontWeight="SemiBold" /></StackPanel>
+            </Grid>
+
+            <Border Grid.Row="2" Classes="filterBar">
+              <Grid RowDefinitions="Auto,10,Auto">
+                <Grid ColumnDefinitions="170,8,*,8,Auto">
+                  <StackPanel Orientation="Horizontal" Spacing="2" Background="{StaticResource AppleMaterialFloating}">
+                    <RadioButton Classes="segmented" GroupName="CatalogType" Content="オペレーター" Tag="Operators" IsChecked="True" IsCheckedChanged="OnCatalogTypeChanged" />
+                    <RadioButton Classes="segmented" GroupName="CatalogType" Content="秘宝" Tag="Relics" IsCheckedChanged="OnCatalogTypeChanged" />
+                  </StackPanel>
+                  <TextBox x:Name="OperatorSearchBox" Grid.Column="2" PlaceholderText="名前・職業・職分で検索" TextChanged="OnCatalogFilterChanged" />
+                  <Button Grid.Column="4" Content="表示中を取得" Click="OnCatalogAcquireClick" ToolTip.Tip="現在開いているカタログを個別取得" />
+                </Grid>
+
+                <Grid Grid.Row="2">
+                  <StackPanel x:Name="OperatorFilterPanel" Orientation="Horizontal" Spacing="8">
+                    <ComboBox x:Name="OperatorClassFilter" Width="150" SelectedIndex="0" SelectionChanged="OnCatalogFilterChanged"><ComboBoxItem Content="すべての職業" /><ComboBoxItem Content="先鋒" /><ComboBoxItem Content="前衛" /><ComboBoxItem Content="重装" /><ComboBoxItem Content="狙撃" /><ComboBoxItem Content="術師" /><ComboBoxItem Content="医療" /><ComboBoxItem Content="補助" /><ComboBoxItem Content="特殊" /></ComboBox>
+                    <ComboBox x:Name="OperatorBranchFilter" Width="180" PlaceholderText="すべての職分" SelectionChanged="OnCatalogFilterChanged" />
+                    <ComboBox x:Name="OperatorRarityFilter" Width="150" SelectedIndex="0" SelectionChanged="OnCatalogFilterChanged"><ComboBoxItem Content="すべてのレア度" /><ComboBoxItem Content="★6" /><ComboBoxItem Content="★5" /><ComboBoxItem Content="★4" /><ComboBoxItem Content="★3" /><ComboBoxItem Content="★2" /><ComboBoxItem Content="★1" /></ComboBox>
+                    <ComboBox x:Name="OperatorSortFilter" Width="180" SelectedIndex="0" SelectionChanged="OnCatalogFilterChanged"><ComboBoxItem Content="レア度順" /><ComboBoxItem Content="職業・職分順" /><ComboBoxItem Content="名前順" /></ComboBox>
+                  </StackPanel>
+
+                  <StackPanel x:Name="RelicFilterPanel" Orientation="Horizontal" Spacing="8" IsVisible="False">
+                    <ComboBox x:Name="RelicCategoryFilter" Width="280" PlaceholderText="すべての秘宝種別" SelectionChanged="OnCatalogFilterChanged" />
+                    <ComboBox x:Name="RelicSortFilter" Width="180" SelectedIndex="0" SelectionChanged="OnCatalogFilterChanged"><ComboBoxItem Content="秘宝種別順" /><ComboBoxItem Content="番号順" /><ComboBoxItem Content="入手順" /></ComboBox>
+                  </StackPanel>
+                </Grid>
+              </Grid>
+            </Border>
+
+            <Grid Grid.Row="4">
+                <ListBox x:Name="OperatorCatalogPanel" ItemsSource="{Binding OperatorRows}" Background="Transparent" BorderThickness="0" SelectionMode="Single">
+                  <ListBox.Styles>
+                    <Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" /></Style>
+                  </ListBox.Styles>
+                  <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+                  </ListBox.ItemsPanel>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <ItemsControl ItemsSource="{Binding Items}" Margin="0,0,0,10">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4" ColumnSpacing="10" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button Classes="catalogItem" Classes.selected="{Binding IsSelected}" Margin="0" Click="OnOperatorCatalogItemClick" CommandParameter="{Binding}">
+                              <Grid ColumnDefinitions="50,*" ColumnSpacing="10">
+                                <Border Width="50" Height="50" CornerRadius="6" ClipToBounds="True" Background="#0A0E10"><Image Width="50" Height="50" Source="{Binding Image}" Stretch="UniformToFill" /></Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding Detail}" Classes="caption" TextTrimming="CharacterEllipsis" /></StackPanel>
+                              </Grid>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+
+                <ListBox x:Name="RelicCatalogPanel" ItemsSource="{Binding RelicRows}" IsVisible="False" Background="Transparent" BorderThickness="0" SelectionMode="Single">
+                  <ListBox.Styles>
+                    <Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" /></Style>
+                  </ListBox.Styles>
+                  <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+                  </ListBox.ItemsPanel>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <ItemsControl ItemsSource="{Binding Items}" Margin="0,0,0,10">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4" ColumnSpacing="10" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button Classes="catalogItem" Classes.selected="{Binding IsSelected}" Margin="0" Click="OnRelicCatalogItemClick" CommandParameter="{Binding}">
+                              <Grid ColumnDefinitions="50,*" ColumnSpacing="10">
+                                <Border Width="50" Height="50" CornerRadius="6" ClipToBounds="True" Background="#0A0E10"><Image Width="50" Height="50" Source="{Binding Image}" Stretch="Uniform" /></Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding Detail}" Classes="caption" TextTrimming="CharacterEllipsis" /></StackPanel>
+                              </Grid>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+          </Grid>
+
+          <Grid x:Name="OutputWorkspace" IsVisible="False" RowDefinitions="Auto,14,*">
+            <Grid ColumnDefinitions="Auto,14,*,Auto,12,Auto">
+              <Button Content="← ランへ戻る" Click="OnNavigateButton" Tag="Run" />
+              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="出力レイアウト" Classes="displayTitle" /><TextBlock Text="実データを表示し、ブロックの移動と右下ハンドルでサイズを調整します。" Classes="body" /></StackPanel>
+              <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8">
+                <Button Content="整列" Click="OnResetLayout" />
+                <Button Content="プレビュー" Click="OnActionClick" Tag="OBSプレビューを開きます（デザインモック）" />
+                <Button Classes="primaryAction" Content="保存" Click="OnActionClick" Tag="出力レイアウトを保存しました（デザインモック）" />
+              </StackPanel>
+              <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Button Content="−" Width="36" Padding="0" Click="OnOverlayZoomOut" ToolTip.Tip="縮小" />
+                <Slider x:Name="OverlayZoomSlider" Width="116" Minimum="50" Maximum="180" Value="100" TickFrequency="5" ValueChanged="OnOverlayZoomChanged" />
+                <Button Content="＋" Width="36" Padding="0" Click="OnOverlayZoomIn" ToolTip.Tip="拡大" />
+                <TextBlock x:Name="OverlayZoomLabel" Text="100%" Width="45" TextAlignment="Right" VerticalAlignment="Center" />
+                <Button Content="フィット" Click="OnFitOverlayClick" />
+              </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="2">
+              <Border Background="#070A0C" BorderBrush="{StaticResource AppleSeparator}" BorderThickness="1" CornerRadius="7" Padding="16">
+                <ScrollViewer x:Name="OverlayViewport" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                  <Border x:Name="OverlaySurface" Width="960" Height="540" HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <Viewbox Stretch="Fill">
+                      <Canvas x:Name="OverlayCanvas" Width="960" Height="540" Background="#080B0D">
+                        <Rectangle Width="960" Height="540" Fill="#0B1012" />
+                        <Rectangle Width="960" Height="42" Fill="#176D63" />
+                        <TextBlock Canvas.Left="18" Canvas.Top="11" Text="RHODES OBS COMMANDER3373 · REAL IS#3 SNAPSHOT" FontWeight="Bold" />
+
+                        <Border x:Name="RunBlock" Classes="overlayBlock" Canvas.Left="18" Canvas.Top="64" Width="238" Height="118" PointerPressed="OnOverlayBlockPointerPressed" PointerMoved="OnOverlayBlockPointerMoved" PointerReleased="OnOverlayBlockPointerReleased">
+                          <Grid>
+                            <StackPanel Spacing="5"><TextBlock Text="ラン情報" Foreground="{StaticResource AppleAccent}" FontWeight="Bold" /><TextBlock Text="IS#3 ミヅキと紺碧の樹" FontWeight="SemiBold" /><TextBlock Text="源石錐28 · 人文主義分隊" Classes="caption" /><TextBlock Text="等級は手動入力" Classes="caption" /></StackPanel>
+                            <Border Classes="resizeHandle" Tag="RunBlock" PointerPressed="OnResizePointerPressed" PointerMoved="OnResizePointerMoved" PointerReleased="OnResizePointerReleased"><TextBlock Text="↘" /></Border>
+                          </Grid>
+                        </Border>
+                        <Border x:Name="RelicBlock" Classes="overlayBlock" Canvas.Left="276" Canvas.Top="64" Width="404" Height="176" PointerPressed="OnOverlayBlockPointerPressed" PointerMoved="OnOverlayBlockPointerMoved" PointerReleased="OnOverlayBlockPointerReleased">
+                          <Grid>
+                            <Grid Margin="0,0,14,14" RowDefinitions="Auto,8,*">
+                              <Grid ColumnDefinitions="*,Auto"><TextBlock Text="秘宝" FontWeight="Bold" /><TextBlock Grid.Column="1" Text="12" Foreground="{StaticResource AppleTheme}" /></Grid>
+                              <UniformGrid Grid.Row="2" Columns="6" Rows="2" ColumnSpacing="7" RowSpacing="7">
+                                <Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_001.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_222.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_228.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_262.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_189.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_231.png" Stretch="Uniform" />
+                                <Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_083.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_194.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_218.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_223.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_227.png" Stretch="Uniform" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_relic_075.png" Stretch="Uniform" />
+                              </UniformGrid>
+                            </Grid>
+                            <Border Classes="resizeHandle" Tag="RelicBlock" PointerPressed="OnResizePointerPressed" PointerMoved="OnResizePointerMoved" PointerReleased="OnResizePointerReleased"><TextBlock Text="↘" /></Border>
+                          </Grid>
+                        </Border>
+                        <Border x:Name="OperatorBlock" Classes="overlayBlock" Canvas.Left="18" Canvas.Top="204" Width="238" Height="248" PointerPressed="OnOverlayBlockPointerPressed" PointerMoved="OnOverlayBlockPointerMoved" PointerReleased="OnOverlayBlockPointerReleased">
+                          <Grid>
+                            <Grid Margin="0,0,14,14" RowDefinitions="Auto,8,*">
+                              <Grid ColumnDefinitions="*,Auto"><TextBlock Text="オペレーター" FontWeight="Bold" /><TextBlock Grid.Column="1" Text="11" Foreground="{StaticResource AppleAccent}" /></Grid>
+                              <UniformGrid Grid.Row="2" Columns="4" Rows="3" ColumnSpacing="6" RowSpacing="6">
+                                <Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_fang.png" Stretch="UniformToFill" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_kroos.png" Stretch="UniformToFill" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_wang.png" Stretch="UniformToFill" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_yato.png" Stretch="UniformToFill" />
+                                <Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_adnachiel.png" Stretch="UniformToFill" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_pramanix2.png" Stretch="UniformToFill" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_orchid.png" Stretch="UniformToFill" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_hibiscus.png" Stretch="UniformToFill" />
+                                <Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_spot.png" Stretch="UniformToFill" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_chen3.png" Stretch="UniformToFill" /><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_op_yato2.png" Stretch="UniformToFill" />
+                              </UniformGrid>
+                            </Grid>
+                            <Border Classes="resizeHandle" Tag="OperatorBlock" PointerPressed="OnResizePointerPressed" PointerMoved="OnResizePointerMoved" PointerReleased="OnResizePointerReleased"><TextBlock Text="↘" /></Border>
+                          </Grid>
+                        </Border>
+                        <Border x:Name="BossBlock" Classes="overlayBlock" Canvas.Left="276" Canvas.Top="430" Width="664" Height="106" PointerPressed="OnOverlayBlockPointerPressed" PointerMoved="OnOverlayBlockPointerMoved" PointerReleased="OnOverlayBlockPointerReleased">
+                          <Grid>
+                            <Grid Margin="0,0,14,14" RowDefinitions="Auto,6,*">
+                              <Grid ColumnDefinitions="*,Auto"><TextBlock Text="BOSS ROUTE" Foreground="{StaticResource AppleDanger}" FontWeight="Bold" /><TextBlock Grid.Column="1" Text="最大4体" Classes="caption" /></Grid>
+                              <UniformGrid Grid.Row="2" Columns="4" ColumnSpacing="10">
+                                <Grid ColumnDefinitions="44,*" ColumnSpacing="7" ToolTip.Tip="パスファインダー / パスファインダーの影"><Border Width="44" Height="44" CornerRadius="5" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_boss_srf.jpg" Stretch="UniformToFill" /></Border><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="パスファインダー" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="3層 · 修正" FontSize="10" Foreground="{StaticResource AppleTextSecondary}" /></StackPanel></Grid>
+                                <Grid ColumnDefinitions="44,*" ColumnSpacing="7" ToolTip.Tip="「墓碑」"><Border Width="44" Height="44" CornerRadius="5" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_boss_gst.jpg" Stretch="UniformToFill" /></Border><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="「墓碑」" FontSize="12" FontWeight="SemiBold" /><TextBlock Text="異相" FontSize="10" Foreground="{StaticResource AppleTextSecondary}" /></StackPanel></Grid>
+                                <Grid ColumnDefinitions="44,*" ColumnSpacing="7" ToolTip.Tip="「偏執の泡沫」"><Border Width="44" Height="44" CornerRadius="5" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_boss_gir.jpg" Stretch="UniformToFill" /></Border><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="「偏執の泡沫」" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="5層" FontSize="10" Foreground="{StaticResource AppleTextSecondary}" /></StackPanel></Grid>
+                                <Grid ColumnDefinitions="44,*" ColumnSpacing="7" ToolTip.Tip="イシャームラ、腐蝕された心"><Border Width="44" Height="44" CornerRadius="5" ClipToBounds="True"><Image Source="avares://RhodesAppleDesignPrototype/Assets/real_boss_ska.jpg" Stretch="UniformToFill" /></Border><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="イシャームラ" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="6層" FontSize="10" Foreground="{StaticResource AppleTextSecondary}" /></StackPanel></Grid>
+                              </UniformGrid>
+                            </Grid>
+                            <Border Classes="resizeHandle" Tag="BossBlock" PointerPressed="OnResizePointerPressed" PointerMoved="OnResizePointerMoved" PointerReleased="OnResizePointerReleased"><TextBlock Text="↘" /></Border>
+                          </Grid>
+                        </Border>
+                        <Border x:Name="SpecialBlock" Classes="overlayBlock selected" Canvas.Left="276" Canvas.Top="262" Width="664" Height="156" PointerPressed="OnOverlayBlockPointerPressed" PointerMoved="OnOverlayBlockPointerMoved" PointerReleased="OnOverlayBlockPointerReleased">
+                          <Grid>
+                            <Grid Margin="0,0,14,14" ColumnDefinitions="0.72*,1.35*,1.9*" ColumnSpacing="16">
+                              <StackPanel Spacing="5"><TextBlock Text="鍵" FontWeight="Bold" /><TextBlock Text="5" FontSize="26" FontWeight="SemiBold" /></StackPanel>
+                              <StackPanel Grid.Column="1" Spacing="5"><TextBlock Text="灯火" FontWeight="Bold" /><TextBlock Text="39" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource AppleAccent}" /></StackPanel>
+                              <Grid Grid.Column="2" ColumnDefinitions="54,*" ColumnSpacing="10"><Image Width="54" Height="54" Source="avares://RhodesAppleDesignPrototype/Assets/real_call_mcasci16.png" Stretch="UniformToFill" /><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="呼び声：給養" FontWeight="SemiBold" /><TextBlock Text="戦闘後30%で招集券追加" Classes="caption" /></StackPanel></Grid>
+                            </Grid>
+                            <Border Classes="resizeHandle" Tag="SpecialBlock" PointerPressed="OnResizePointerPressed" PointerMoved="OnResizePointerMoved" PointerReleased="OnResizePointerReleased"><TextBlock Text="↘" /></Border>
+                          </Grid>
+                        </Border>
+                      </Canvas>
+                    </Viewbox>
+                  </Border>
+                </ScrollViewer>
+              </Border>
+
+              <Border Classes="appleCard" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,18,18" Padding="10">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <StackPanel Spacing="1"><TextBlock Text="選択中" Classes="caption" /><TextBlock x:Name="SelectedBlockText" Text="幻覚・演目" FontWeight="SemiBold" /></StackPanel>
+                  <Button Content="URLをコピー" Click="OnActionClick" Tag="個別出力URLをコピーしました（デザインモック）" />
+                  <Button Content="表示設定" Click="OnActionClick" Tag="選択ブロックの表示設定を開きます（デザインモック）" />
+                </StackPanel>
+              </Border>
+            </Grid>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Background="#101518" BorderBrush="#273136" BorderThickness="0,1,0,0" Padding="16,0">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <TextBlock x:Name="GlobalStatusText" Text="ランを表示しています。" Classes="caption" />
+        <TextBlock Grid.Column="1" Text="DESIGN PROTOTYPE · データは保存されません" Classes="caption" />
+      </Grid>
+    </Border>
+
+    <Border x:Name="AdbSettingsOverlay" Grid.RowSpan="3" Background="#B8000000" IsVisible="False">
+      <Border Classes="settingsSheet" Width="540" HorizontalAlignment="Right">
+        <Grid RowDefinitions="Auto,1,*,1,Auto">
+          <Grid Margin="22,18" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+            <StackPanel Spacing="3">
+              <TextBlock Text="ADB接続" Classes="displayTitle" />
+              <TextBlock Text="検出、端末選択、撮影方式をここで設定します。" Classes="body" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="tertiaryAction" Content="閉じる" Click="OnCloseAdbSettings" />
+          </Grid>
+
+          <Border Grid.Row="1" Background="{StaticResource AppleSeparator}" />
+
+          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="22" Spacing="20">
+              <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="接続先" FontSize="17" FontWeight="SemiBold" />
+                    <TextBlock Text="MAA準拠の候補から自動選択できます。" Classes="caption" />
+                  </StackPanel>
+                  <Button Grid.Column="1" Classes="primaryAction" Content="自動検出" Click="OnDetectAdbClick" />
+                </Grid>
+
+                <TextBlock Text="エミュレーター" Classes="eyebrow" />
+                <ComboBox SelectedIndex="0">
+                  <ComboBoxItem Content="自動判定" />
+                  <ComboBoxItem Content="MuMu Player" />
+                  <ComboBoxItem Content="LDPlayer" />
+                  <ComboBoxItem Content="Google Play Games" />
+                  <ComboBoxItem Content="手動設定" />
+                </ComboBox>
+
+                <TextBlock Text="ADB実行ファイル" Classes="eyebrow" />
+                <Grid ColumnDefinitions="*,8,Auto">
+                  <TextBox Text="M:\Program Files\Netease\MuMu Player 12\shell\adb.exe" />
+                  <Button Grid.Column="2" Content="参照" Click="OnActionClick" Tag="ADB実行ファイルを選択します（デザインモック）" />
+                </Grid>
+
+                <TextBlock Text="端末" Classes="eyebrow" />
+                <ComboBox SelectedIndex="0">
+                  <ComboBoxItem Content="emulator-5556 · 1280×720 · device" />
+                  <ComboBoxItem Content="127.0.0.1:16384 · MuMu Player" />
+                  <ComboBoxItem Content="serialを手動入力" />
+                </ComboBox>
+
+                <Border x:Name="AdbDetectionResult" Classes="resultBanner" IsVisible="False">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="1台を検出しました" FontWeight="SemiBold" />
+                    <TextBlock Text="MuMu Player · emulator-5556 · 1280×720" Classes="caption" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <Border Height="1" Background="{StaticResource AppleSeparator}" />
+
+              <Expander Header="撮影・入力の詳細設定">
+                <StackPanel Margin="0,12,0,0" Spacing="10">
+                  <TextBlock Text="撮影方式" Classes="eyebrow" />
+                  <ComboBox SelectedIndex="0">
+                    <ComboBoxItem Content="自動選択（推奨）" />
+                    <ComboBoxItem Content="MuMu高速撮影" />
+                    <ComboBoxItem Content="ADB RawWithGzip" />
+                    <ComboBoxItem Content="ADB Encode" />
+                  </ComboBox>
+                  <TextBlock Text="入力方式" Classes="eyebrow" />
+                  <ComboBox SelectedIndex="0">
+                    <ComboBoxItem Content="自動選択（推奨）" />
+                    <ComboBoxItem Content="MuMu高速入力" />
+                    <ComboBoxItem Content="ADB Shell" />
+                  </ComboBox>
+                  <TextBlock Text="ADB Config" Classes="eyebrow" />
+                  <TextBox Text="{}" AcceptsReturn="True" MinHeight="70" FontFamily="Consolas" />
+                </StackPanel>
+              </Expander>
+            </StackPanel>
+          </ScrollViewer>
+
+          <Border Grid.Row="3" Background="{StaticResource AppleSeparator}" />
+
+          <Grid Grid.Row="4" Margin="22,14" ColumnDefinitions="Auto,*,Auto,8,Auto">
+            <Button Content="接続テスト" Click="OnDetectAdbClick" />
+            <Button Grid.Column="2" Classes="tertiaryAction" Content="キャンセル" Click="OnCloseAdbSettings" />
+            <Button Grid.Column="4" Classes="primaryAction" Content="保存して接続" Click="OnSaveAdbSettings" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Border>
+  </Grid>
+</Window>

@@ -333,10 +333,6 @@ function renderCompactSpecialPicker(field, campaignId, special) {
   return renderCompactSpecialPickerComponent(field, campaignId, special, renderSpecialFieldContext());
 }
 
-function renderCoinFaceOptions(current) {
-  return specialControls.renderCoinFaceOptions(current);
-}
-
 function renderSpecialLoadoutContext() {
   return {
     selectableEffectById: maps.selectableEffect,
@@ -345,7 +341,6 @@ function renderSpecialLoadoutContext() {
     asCoinEntries,
     renderSpecialEffectGroupHeader,
     renderSpecialEffectSelectOptions,
-    renderCoinFaceOptions,
     formatCoinLoadoutValue,
     getEffectStackOptions,
     getStackStateOptions,

@@ -707,7 +707,8 @@ public sealed record SukiChoiceFilterOptions(
     bool ShowSelectedFirst = false,
     bool HideExcluded = false,
     bool SelectedOnly = false,
-    bool IncludeHidden = false);
+    bool IncludeHidden = false,
+    string SortMode = "");
 
 public sealed record SukiChoiceRow(
     int Columns,
@@ -731,7 +732,8 @@ public sealed record SukiChoiceCatalogFilterState(
     bool ShowSelectedFirst = false,
     bool HideExcluded = false,
     bool SelectedOnly = false,
-    int PaneColumns = 2);
+    int PaneColumns = 2,
+    string SortMode = "");
 
 public sealed record SukiChoiceCatalogView(
     SukiChoiceCatalogDescriptor Descriptor,

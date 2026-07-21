@@ -13,6 +13,8 @@
     "suki:build": "dotnet build apps/rhodes-suki/RhodesSuki.csproj",
     "suki:test": "dotnet run --project tests/rhodes-suki/RhodesSuki.ServiceTests.csproj",
     "suki:run": "dotnet run --project apps/rhodes-suki/RhodesSuki.csproj",
+    "apple:build": "dotnet build apps/rhodes-apple-design/RhodesAppleDesign.csproj",
+    "apple:publish": "node tools/publish-apple-design-prototype.mjs",
     "maa:resource:generate": "node tools/generate-maa-resource.mjs",
     "maa:resource:check": "node tools/generate-maa-resource.mjs --check",
     "maa:interface:generate": "node tools/generate-maa-interface.mjs",

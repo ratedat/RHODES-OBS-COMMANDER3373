@@ -1,5 +1,5 @@
 import * as selectableEffects from "./selectable-effects.js";
-import { asCoinEntries, asEffectStackEntries, asRevelationBoardValue, clampCoinCount, mergeCoinEntries, normalizeCoinFace } from "./special-values.js";
+import { asCoinEntries, asEffectStackEntries, asRevelationBoardValue, clampCoinCount, mergeCoinEntries } from "./special-values.js";
 
 export function normalizeEffectStackEntry(field, entry, campaignId, selectableEffectSource = []) {
   return {
@@ -42,10 +42,9 @@ export function normalizeCoinLoadoutEntries(field, campaignId, value, selectable
   const normalized = asCoinEntries(value)
     .filter((entry) => validCoins.has(entry.coinId))
     .map((entry) => ({
-      ...entry,
+      coinId: entry.coinId,
       count: clampCoinCount(entry.count),
       statusId: validStatuses.has(entry.statusId) ? entry.statusId : null,
-      face: normalizeCoinFace(entry.face),
     }));
   return mergeCoinEntries(normalized);
 }

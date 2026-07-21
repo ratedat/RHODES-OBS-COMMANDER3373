@@ -1,5 +1,4 @@
 import { html } from "../lib/format.js";
-import { coinFaceLabels } from "../domain/special-values.js";
 import { specialEffectImageSrc } from "../lib/media.js";
 
 export function renderCoinEntryRow(field, entry, index, statusOptions, context) {
@@ -7,16 +6,13 @@ export function renderCoinEntryRow(field, entry, index, statusOptions, context) 
   if (!coin) return "";
   const status = statusOptions.find((option) => option.id === entry.statusId);
   const imageSrc = specialEffectImageSrc(coin);
-  const meta = [coin.groupLabel || coin.slotLabel || "通宝", status?.name ? `状態:${status.name}` : "状態なし", `面:${coinFaceLabels[entry.face] || entry.face}`].filter(Boolean).join(" / ");
+  const meta = [coin.groupLabel || coin.slotLabel || "通宝", status?.name ? `状態:${status.name}` : "状態なし"].filter(Boolean).join(" / ");
   return `<div class="coin-entry-row">
     ${imageSrc ? `<img src="${html(imageSrc)}" alt="" loading="lazy" />` : `<span class="coin-entry-fallback">${html(coin.name.slice(0, 1))}</span>`}
     <div class="coin-entry-title"><strong>${html(coin.name)}</strong><span>${html(meta)}</span></div>
     <input type="number" min="1" max="99" value="${html(entry.count)}" data-coin-entry-count="${html(field.id)}" data-index="${html(index)}" aria-label="${html(coin.name)}の個数" />
     <select data-coin-entry-status="${html(field.id)}" data-index="${html(index)}" aria-label="${html(coin.name)}の状態">
       ${context.renderSpecialEffectSelectOptions(statusOptions, entry.statusId || "", "状態なし")}
-    </select>
-    <select data-coin-entry-face="${html(field.id)}" data-index="${html(index)}" aria-label="${html(coin.name)}の表裏">
-      ${context.renderCoinFaceOptions(entry.face)}
     </select>
     <button type="button" data-action="remove-coin-entry" data-coin-field="${html(field.id)}" data-index="${html(index)}" aria-label="${html(coin.name)}を削除">×</button>
   </div>`;
@@ -32,7 +28,6 @@ export function renderCoinLoadoutField(field, campaignId, special, context) {
       <select data-coin-input="coin">${context.renderSpecialEffectSelectOptions(coinOptions, "", "通宝を追加")}</select>
       <input type="number" min="1" max="99" value="1" data-coin-input="count" aria-label="追加する通宝の個数" />
       <select data-coin-input="status">${context.renderSpecialEffectSelectOptions(statusOptions, "", "状態なし")}</select>
-      <select data-coin-input="face" aria-label="追加する通宝の表裏">${context.renderCoinFaceOptions("front")}</select>
       <button type="button" data-action="add-coin-entry" data-coin-field="${html(field.id)}">追加</button>
     </div>
     <div class="coin-entry-summary">${html(context.formatCoinLoadoutValue(field, entries) || "未選択")}</div>

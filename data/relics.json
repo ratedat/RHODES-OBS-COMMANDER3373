@@ -1,6 +1,6 @@
 {
     "meta":  {
-                 "generatedAt":  "2026-07-18",
+                 "generatedAt":  "2026-07-21",
                  "source":  "arknights.wikiru.jp PukiWiki source pages",
                  "note":  "Extracted for OBS overlay state display. Relics include names, categories, prices, exchange flags, base effect text, and flavor text. Difficulty-dependent variants are generated separately."
              },
@@ -20504,7 +20504,7 @@
                        "category":  "No.048〜125 闘争の爪牙",
                        "price":  null,
                        "exchange":  "可",
-                       "effect":  "全オペレーターがダメージを受けるたびSP+1、元素損傷を受けるたびSP+1",
+                       "effect":  "オペレーターがダメージを受けるたび自身のSPを1回復、元素損傷を受けるたび自身のSPを1回復",
                        "flavorText":  "Touchの試みにより、自然はしばらくあなたに心を開いた。",
                        "sourceAnchor":  "No73",
                        "image":  {
@@ -21638,7 +21638,7 @@
                        "category":  "No.126〜165 専門工具",
                        "price":  null,
                        "exchange":  "可",
-                       "effect":  "【前衛】が攻撃後SP+2",
+                       "effect":  "【前衛】がダメージを与えるたび自身のSPを2回復",
                        "flavorText":  "戦い続けるほどに強くなる戦士はほとんどいない。戦闘後のストレスを緩和するため、カウンセリングの手配はとても重要だ。",
                        "sourceAnchor":  "No136",
                        "image":  {
@@ -23317,9 +23317,9 @@
                        "sourceAnchor":  "No229",
                        "image":  {
                                      "source":  "arknights.wikiru.jp",
-                                     "sourcePath":  "img/sggo_229.png",
-                                     "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232392E706E67.png",
-                                     "localPath":  "assets/relics/wikiru/img/sggo_229.png"
+                                     "sourcePath":  "img/sggo_225.png",
+                                     "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232352E706E67.png",
+                                     "localPath":  "assets/relics/wikiru/img/sggo_225.png"
                                  }
                    },
                    {

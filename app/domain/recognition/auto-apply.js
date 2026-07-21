@@ -1,11 +1,11 @@
 import { normalizeRunStatValue } from "../run-stats.js";
-import { clampCoinCount, mergeCoinEntries, normalizeCoinFace } from "../special-values.js";
+import { clampCoinCount, mergeCoinEntries } from "../special-values.js";
 
 export const IS4_AUTO_APPLY_CAMPAIGN_ID = "is4_sami";
 export const IS5_AUTO_APPLY_CAMPAIGN_ID = "is5_sarkaz";
 export const IS6_AUTO_APPLY_CAMPAIGN_ID = "is6_sui";
 
-const autoApplyProfiles = new Set(["runStatusFull", "relicsFull", "operatorsFull", "is4RevelationFull", "is5ThoughtFull", "is5AgeFull", "is6CoinsFull"]);
+const autoApplyProfiles = new Set(["runStatusFull", "relicsFull", "operatorsFull", "is4RevelationFull", "is5ThoughtFull", "is5AgeFull", "is6BaseFull", "is6ActiveCoinsFull", "is6CoinsFull"]);
 
 function candidateFromSuggestion(suggestion = {}) {
   return suggestion.candidate && typeof suggestion.candidate === "object" ? suggestion.candidate : suggestion;
@@ -79,6 +79,13 @@ function applyRunStatusCandidate(state, candidate) {
     const value = numericValue(candidate.value);
     if (value === null || value < 0) return false;
     ensureIs5Special(run).idea = Math.min(999, value);
+    return true;
+  }
+
+  if (field === "ticket") {
+    const value = numericValue(candidate.value);
+    if (value === null || value < 0 || currentCampaignId(state) !== IS6_AUTO_APPLY_CAMPAIGN_ID) return false;
+    ensureCampaignSpecial(run, IS6_AUTO_APPLY_CAMPAIGN_ID).ticket = Math.min(999, value);
     return true;
   }
 
@@ -292,7 +299,6 @@ function coinEntryFromCandidate(state, candidate = {}) {
     coinId,
     count: clampCoinCount(candidate.count),
     statusId: candidate.statusId || null,
-    face: normalizeCoinFace(candidate.face),
   };
 }
 
@@ -302,10 +308,11 @@ function syncIs6CoinFullScanCandidates(state, suggestions = []) {
   for (const suggestion of suggestions || []) {
     const candidate = candidateFromSuggestion(suggestion);
     if (!canAutoApplySuggestion(state, suggestion, candidate)) continue;
-    if (suggestion.profileId !== "is6CoinsFull" || candidate.kind !== "coin") continue;
+    if (!["is6ActiveCoinsFull", "is6CoinsFull"].includes(suggestion.profileId) || candidate.kind !== "coin") continue;
     const entry = coinEntryFromCandidate(state, candidate);
     if (!entry) continue;
-    const fieldId = String(candidate.fieldId || "coins").trim() || "coins";
+    const fieldId = String(candidate.fieldId || (suggestion.profileId === "is6ActiveCoinsFull" ? "activeCoins" : "coins")).trim();
+    if (!["activeCoins", "coins"].includes(fieldId)) continue;
     entriesByField.set(fieldId, [...(entriesByField.get(fieldId) || []), entry]);
     coinSuggestions.push(suggestion);
   }
@@ -326,7 +333,7 @@ function canAutoApplySuggestion(state, suggestion, candidate) {
   if (!autoApplyProfiles.has(suggestion.profileId)) return false;
   if (candidate.kind === "operator") return suggestion.profileId === "operatorsFull";
   if (candidate.kind === "runStatus") {
-    return suggestion.profileId === "runStatusFull"
+    return ["runStatusFull", "is6BaseFull"].includes(suggestion.profileId)
       && candidateCampaignMatchesState(state, candidate);
   }
   if (candidate.kind === "relic") return suggestion.profileId === "relicsFull" && candidateCampaignMatchesState(state, candidate);
@@ -347,7 +354,7 @@ function canAutoApplySuggestion(state, suggestion, candidate) {
   }
   if (candidate.kind === "coin") {
     return currentCampaignId(state) === IS6_AUTO_APPLY_CAMPAIGN_ID
-      && suggestion.profileId === "is6CoinsFull"
+      && ["is6ActiveCoinsFull", "is6CoinsFull"].includes(suggestion.profileId)
       && (!candidate.campaignId || candidate.campaignId === IS6_AUTO_APPLY_CAMPAIGN_ID);
   }
   return false;

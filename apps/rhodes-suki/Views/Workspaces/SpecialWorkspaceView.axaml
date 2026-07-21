@@ -3,21 +3,21 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <StackPanel Spacing="14" Margin="20">
+    <StackPanel Spacing="16">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
         <StackPanel Spacing="3">
-          <TextBlock Text="{Binding SpecialLayout.Header.Title}" Classes="h1" />
+          <TextBlock Text="特殊値" Classes="displayTitle" />
           <TextBlock Text="{Binding CampaignHeaderTitle}" FontSize="14" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding SpecialLayout.Header.Detail}" Classes="caption" TextWrapping="Wrap" />
+          <TextBlock Text="テーマ固有の値を取得または手動補正します。" Classes="body" TextWrapping="Wrap" />
         </StackPanel>
         <Button Grid.Column="1"
-                Content="認識へ移動"
-                Command="{Binding SetWorkspaceCommand}"
-                CommandParameter="recognition"
+                Classes="primaryAction"
+                Content="固有値を取得"
+                Command="{Binding RunCurrentSpecialRecognitionAndApplyCommand}"
                 VerticalAlignment="Top" />
       </Grid>
 
-      <Border Classes="card">
+      <Border Classes="appleCard">
         <StackPanel Spacing="10">
           <StackPanel Spacing="2">
             <TextBlock Text="{Binding SpecialValuesSection.Title}" Classes="h2" />
@@ -49,7 +49,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="card" IsVisible="{Binding IsPhantomCampaignSelected}">
+      <Border Classes="appleCard" IsVisible="{Binding IsPhantomCampaignSelected}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <StackPanel Spacing="2">
@@ -67,7 +67,7 @@
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <StackPanel Spacing="2">
               <TextBlock Text="幻覚" FontWeight="SemiBold" />
-              <TextBlock Text="ラジオ式の選択カード / 複数選択可" Classes="caption" />
+              <TextBlock Text="選択カード / 複数選択可" Classes="caption" />
             </StackPanel>
             <TextBlock Grid.Column="1" Text="{Binding ManualHallucinationSelectionSummary}" Classes="caption" VerticalAlignment="Center" />
           </Grid>
@@ -118,7 +118,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="card" IsVisible="{Binding IsMizukiCampaignSelected}">
+      <Border Classes="appleCard" IsVisible="{Binding IsMizukiCampaignSelected}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <StackPanel Spacing="2">
@@ -226,7 +226,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="card" IsVisible="{Binding IsSarkazCampaignSelected}">
+      <Border Classes="appleCard" IsVisible="{Binding IsSarkazCampaignSelected}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <StackPanel Spacing="2">

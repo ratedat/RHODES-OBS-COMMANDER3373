@@ -65,7 +65,7 @@ export const adbConnectionPresetDetails = Object.freeze({
 // https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/src/MaaWpfGui/ViewModels/UserControl/Settings/ConnectSettingsUserControlModel.cs
 export const adbDefaultSerialsByPreset = Object.freeze({
   bluestacks: Object.freeze(["127.0.0.1:5555", "127.0.0.1:5556", "127.0.0.1:5565", "127.0.0.1:5575", "127.0.0.1:5585", "127.0.0.1:5595", "127.0.0.1:5554"]),
-  mumu: Object.freeze(["127.0.0.1:16384", "127.0.0.1:16416", "127.0.0.1:16448", "127.0.0.1:16480", "127.0.0.1:16512", "127.0.0.1:16544", "127.0.0.1:16576"]),
+  mumu: Object.freeze(["127.0.0.1:16384", "127.0.0.1:16416", "127.0.0.1:7555", "127.0.0.1:16448", "127.0.0.1:16480", "127.0.0.1:16512", "127.0.0.1:16544", "127.0.0.1:16576"]),
   ldplayer: Object.freeze(["emulator-5554", "emulator-5556", "emulator-5558", "emulator-5560", "127.0.0.1:5555", "127.0.0.1:5557", "127.0.0.1:5559", "127.0.0.1:5561"]),
   nox: Object.freeze(["127.0.0.1:62001", "127.0.0.1:59865"]),
   xyaz: Object.freeze(["127.0.0.1:21503"]),

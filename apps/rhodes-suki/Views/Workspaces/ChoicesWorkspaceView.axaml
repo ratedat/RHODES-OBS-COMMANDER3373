@@ -2,44 +2,74 @@
     x:Class="RhodesSuki.Views.Workspaces.ChoicesWorkspaceView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
       <StackPanel Spacing="2">
-        <TextBlock Text="{Binding ChoicesLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding ChoicesLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
+        <TextBlock Text="選択" Classes="displayTitle" />
+        <TextBlock Text="検索とフィルターから直接選択します。" Classes="body" />
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <Button Content="オペレーター" Command="{Binding SetChoiceTabCommand}" CommandParameter="operators" />
-        <Button Content="秘宝" Command="{Binding SetChoiceTabCommand}" CommandParameter="relics" />
-        <Button Content="オペ認識" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="operatorsFull" />
-        <Button Content="秘宝認識" Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="relicsFull" />
-        <Button Content="表示中の選択解除" Command="{Binding ClearVisibleChoicesCommand}" />
+        <RadioButton Classes="segmented" Content="オペレーター" GroupName="ChoiceCatalog"
+                     IsChecked="{Binding IsOperatorsPanelVisible, Mode=OneWay}"
+                     Command="{Binding SetChoiceTabCommand}" CommandParameter="operators" />
+        <RadioButton Classes="segmented" Content="秘宝" GroupName="ChoiceCatalog"
+                     IsChecked="{Binding IsRelicsPanelVisible, Mode=OneWay}"
+                     Command="{Binding SetChoiceTabCommand}" CommandParameter="relics" />
+        <Button Classes="primaryAction" Content="表示中を取得"
+                Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="operatorsFull"
+                IsVisible="{Binding IsOperatorsPanelVisible}" />
+        <Button Classes="primaryAction" Content="表示中を取得"
+                Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="relicsFull"
+                IsVisible="{Binding IsRelicsPanelVisible}" />
       </StackPanel>
     </Grid>
 
-    <Border Grid.Row="1" CornerRadius="7" Padding="10,8" Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1">
-      <TextBlock Text="{Binding ChoicePanelTitle}" FontSize="13" FontWeight="SemiBold" />
-    </Border>
+    <Grid Grid.Row="1">
+      <Border Classes="filterBar" IsVisible="{Binding IsOperatorsPanelVisible}">
+        <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+          <Grid ColumnDefinitions="*,150,180,130,160" ColumnSpacing="8">
+            <TextBox Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分で検索" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="職業で絞り込み" />
+            <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="職分で絞り込み" />
+            <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="レア度で絞り込み" />
+            <ComboBox Grid.Column="4" ItemsSource="{Binding OperatorSortOptions}" SelectedItem="{Binding OperatorSortMode, Mode=TwoWay}"
+                      ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}"
+                      ToolTip.Tip="表示順を切り替え" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,84,Auto,Auto,Auto" ColumnSpacing="12">
+            <TextBlock Text="{Binding OperatorListSummary}" Classes="caption" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="表示列" Classes="caption" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Column="2" Minimum="1" Maximum="4" Increment="1" FormatString="0" Value="{Binding OperatorPaneColumns, Mode=TwoWay}" />
+            <CheckBox Grid.Column="3" Content="選択を先頭" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" VerticalAlignment="Center" />
+          </Grid>
+        </Grid>
+      </Border>
+
+      <Border Classes="filterBar" IsVisible="{Binding IsRelicsPanelVisible}">
+        <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+          <Grid ColumnDefinitions="*,260,170" ColumnSpacing="8">
+            <TextBox Text="{Binding RelicSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="秘宝名、番号、効果で検索" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="秘宝種別で絞り込み" />
+            <ComboBox Grid.Column="2" ItemsSource="{Binding RelicSortOptions}" SelectedItem="{Binding RelicSortMode, Mode=TwoWay}"
+                      ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}"
+                      ToolTip.Tip="表示順を切り替え" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,84,Auto,Auto,Auto" ColumnSpacing="12">
+            <TextBlock Text="{Binding RelicListSummary}" Classes="caption" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="表示列" Classes="caption" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Column="2" Minimum="1" Maximum="4" Increment="1" FormatString="0" Value="{Binding RelicPaneColumns, Mode=TwoWay}" />
+            <CheckBox Grid.Column="3" Content="選択を先頭" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" VerticalAlignment="Center" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
 
     <Grid Grid.Row="2">
-      <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsOperatorsPanelVisible}">
-        <Grid ColumnDefinitions="*,150,160,180" ColumnSpacing="8">
-          <TextBox Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分で検索" />
-          <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
-          <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
-          <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
-        </Grid>
-
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,100,Auto,Auto,Auto" ColumnSpacing="14">
-          <TextBlock Text="{Binding OperatorListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
-          <TextBlock Grid.Column="1" Text="列" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-          <NumericUpDown Grid.Column="2" Minimum="1" Maximum="4" Increment="1" FormatString="0" Value="{Binding OperatorPaneColumns, Mode=TwoWay}" />
-          <CheckBox Grid.Column="3" Content="優先表示" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" />
-          <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" />
-          <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" />
-        </Grid>
-
-        <ItemsControl Grid.Row="2" Classes="choicePane" ItemsSource="{Binding FilteredOperatorRows}" x:Name="OperatorChoicePane">
+      <ItemsControl Classes="choicePane" ItemsSource="{Binding FilteredOperatorRows}" x:Name="OperatorChoicePane" IsVisible="{Binding IsOperatorsPanelVisible}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <ItemsControl ItemsSource="{Binding Items}" HorizontalAlignment="Stretch">
@@ -50,7 +80,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Button Classes="choiceCard" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="70">
+                    <Button Classes="catalogItem" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="70">
                       <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
                         <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
                           <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
@@ -68,24 +98,7 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </Grid>
-
-      <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsRelicsPanelVisible}">
-        <Grid ColumnDefinitions="*,260" ColumnSpacing="8">
-          <TextBox Text="{Binding RelicSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="秘宝名、番号、効果で検索" />
-          <ComboBox Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" />
-        </Grid>
-
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,100,Auto,Auto,Auto" ColumnSpacing="14">
-          <TextBlock Text="{Binding RelicListSummary}" FontSize="12" VerticalAlignment="Center" Opacity="0.72" />
-          <TextBlock Grid.Column="1" Text="列" FontSize="12" VerticalAlignment="Center" Opacity="0.66" />
-          <NumericUpDown Grid.Column="2" Minimum="1" Maximum="4" Increment="1" FormatString="0" Value="{Binding RelicPaneColumns, Mode=TwoWay}" />
-          <CheckBox Grid.Column="3" Content="優先表示" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" />
-          <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" />
-          <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" />
-        </Grid>
-
-        <ItemsControl Grid.Row="2" Classes="choicePane" ItemsSource="{Binding FilteredRelicRows}" x:Name="RelicChoicePane">
+      <ItemsControl Classes="choicePane" ItemsSource="{Binding FilteredRelicRows}" x:Name="RelicChoicePane" IsVisible="{Binding IsRelicsPanelVisible}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <ItemsControl ItemsSource="{Binding Items}" HorizontalAlignment="Stretch">
@@ -97,7 +110,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" MinHeight="118">
-                      <Button Classes="choiceCard" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="118">
+                      <Button Classes="catalogItem" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="118">
                         <Grid RowDefinitions="Auto,*" RowSpacing="7">
                           <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
                             <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
@@ -127,7 +140,6 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </Grid>
     </Grid>
   </Grid>
 </UserControl>

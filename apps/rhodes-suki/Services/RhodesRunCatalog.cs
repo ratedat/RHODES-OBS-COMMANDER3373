@@ -564,7 +564,7 @@ public static class RhodesRunCatalog
             "effectMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
             "effectRankedMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
             "revelationBoardLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
-            "coinLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
+            "coinLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, true),
             _ => new SukiSpecialFieldState(
                 campaignId,
                 field.Id,
@@ -692,6 +692,8 @@ public static class RhodesRunCatalog
                     var id = JsonString(item, "effectId");
                     if (string.IsNullOrWhiteSpace(id))
                         id = JsonString(item, "id");
+                    if (string.IsNullOrWhiteSpace(id))
+                        id = JsonString(item, "coinId");
                     AddEntry(id, JsonNullableInt(item, "count") ?? 1);
                 }
             }
@@ -752,6 +754,8 @@ public static class RhodesRunCatalog
             ("is4_sami", "collapseValue") => "is4CollapseValue",
             ("is4_sami", "paradigmLost") => "is4ParadigmLost",
             ("is4_sami", "revelation") => "is4RevelationFull",
+            ("is6_sui", "ticket") => "is6BaseFull",
+            ("is6_sui", "activeCoins") => "is6ActiveCoinsFull",
             ("is6_sui", "coins") => "is6CoinsFull",
             ("is6_sui", "seasonalHours") => "is6SeasonalHours",
             _ => $"{campaignId}.{fieldId}"

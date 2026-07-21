@@ -213,8 +213,8 @@ test("IS6 coin full scan auto-apply replaces and merges current coin entries", (
   const result = applyRecognitionScanCompletionToState(state, { profileId: "is6CoinsFull", suggestions });
 
   assert.deepEqual(result.state.run.special.is6_sui.coins, [
-    { coinId: "coin_a", count: 2, statusId: null, face: "front" },
-    { coinId: "coin_a", count: 7, statusId: "status_a", face: "back" },
+    { coinId: "coin_a", count: 2, statusId: null },
+    { coinId: "coin_a", count: 7, statusId: "status_a" },
   ]);
   assert.deepEqual(result.autoApplied.map((item) => item.recognitionKey), [
     "coin:is6_sui:coin_a:_:front:2",

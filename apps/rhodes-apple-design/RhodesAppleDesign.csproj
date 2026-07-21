@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <AssemblyName>RhodesAppleDesignPrototype</AssemblyName>
+    <RootNamespace>RhodesAppleDesign</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.5" />
+    <PackageReference Include="SukiUI" Version="7.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\data\operators.json" Link="Data\operators.json" />
+    <AvaloniaResource Include="..\..\data\relics.json" Link="Data\relics.json" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\*.png" Link="Assets\Operators\%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\ines_icon.png" Link="Assets\ines_icon.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\amiya3_icon.png" Link="Assets\amiya3_icon.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\ch'en3_icon.png" Link="Assets\chen3_icon.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\ascalon_icon.png" Link="Assets\ascalon_icon.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\ewso_031.png" Link="Assets\relic_031.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\ewso_015.png" Link="Assets\relic_015.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\ewso_055.png" Link="Assets\relic_055.png" />
+    <AvaloniaResource Include="..\..\assets\bosses\wikiru\img\FMT.jpg" Link="Assets\boss_fmt.jpg" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\icon_fang.png" Link="Assets\real_op_fang.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\icon_kroos.png" Link="Assets\real_op_kroos.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\wang_icon.png" Link="Assets\real_op_wang.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\icon_yato.png" Link="Assets\real_op_yato.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\icon_adnachiel.png" Link="Assets\real_op_adnachiel.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\pramanix2_icon.png" Link="Assets\real_op_pramanix2.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\icon_orchid.png" Link="Assets\real_op_orchid.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\icon_hibiscus.png" Link="Assets\real_op_hibiscus.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\icon_spot.png" Link="Assets\real_op_spot.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\ch'en3_icon.png" Link="Assets\real_op_chen3.png" />
+    <AvaloniaResource Include="..\..\assets\operators\wikiru\img\yato2_icon.png" Link="Assets\real_op_yato2.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\mcao_1.png" Link="Assets\real_relic_001.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\mcao_222.png" Link="Assets\real_relic_222.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\pcso_174.png" Link="Assets\real_relic_228.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\mcao_262.png" Link="Assets\real_relic_262.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\pcso_220.png" Link="Assets\real_relic_189.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\mcao_231.png" Link="Assets\real_relic_231.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\mcao_83.png" Link="Assets\real_relic_083.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\mcao_194.png" Link="Assets\real_relic_194.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\mcao_218.png" Link="Assets\real_relic_218.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\mcao_223.png" Link="Assets\real_relic_223.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\pcso_171.png" Link="Assets\real_relic_227.png" />
+    <AvaloniaResource Include="..\..\assets\relics\wikiru\img\pcso_78.png" Link="Assets\real_relic_075.png" />
+    <AvaloniaResource Include="..\..\assets\bosses\wikiru\img\SRF.jpg" Link="Assets\real_boss_srf.jpg" />
+    <AvaloniaResource Include="..\..\assets\bosses\wikiru\img\GST.jpg" Link="Assets\real_boss_gst.jpg" />
+    <AvaloniaResource Include="..\..\assets\bosses\wikiru\img\GIR.jpg" Link="Assets\real_boss_gir.jpg" />
+    <AvaloniaResource Include="..\..\assets\bosses\wikiru\img\SKA.jpg" Link="Assets\real_boss_ska.jpg" />
+    <AvaloniaResource Include="..\..\assets\selectable-effects\is3_mizuki\hordeCall\mcasci16.png" Link="Assets\real_call_mcasci16.png" />
+  </ItemGroup>
+</Project>

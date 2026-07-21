@@ -21,7 +21,7 @@ test("effective relic ids keep manual entries and avoid duplicates", () => {
 test("IS#6 difficulty 3 template merges starting coins with manual coins", () => {
   const summary = buildStartTemplateSummary(master, { campaignId: "is6_sui", difficulty: 3 });
   const special = mergeEffectiveSpecial({ coins: [{ coinId: "is6_sui_selectable_coin_is6_copper_b01", count: 2, face: "front" }] }, summary.specialPatch.is6_sui);
-  assert.deepEqual(special.coins, [{ coinId: "is6_sui_selectable_coin_is6_copper_b01", count: 5, statusId: null, face: "front" }]);
+  assert.deepEqual(special.coins, [{ coinId: "is6_sui_selectable_coin_is6_copper_b01", count: 5, statusId: null }]);
 });
 
 test("squad option templates only activate for the selected random option", () => {
@@ -35,11 +35,11 @@ test("squad option templates only activate for the selected random option", () =
 test("IS#6 Content Addition II squads apply their starting coins", () => {
   const scholar = buildStartTemplateSummary(master, { campaignId: "is6_sui", squadId: "is6_sui_squad_18" });
   assert.deepEqual(scholar.specialPatch.is6_sui.coins, [
-    { coinId: "is6_sui_selectable_coin_is6_copper_s4", count: 1, statusId: null, face: "front" },
+    { coinId: "is6_sui_selectable_coin_is6_copper_s4", count: 1, statusId: null },
   ]);
 
   const merchant = buildStartTemplateSummary(master, { campaignId: "is6_sui", squadId: "is6_sui_squad_19" });
   assert.deepEqual(merchant.specialPatch.is6_sui.coins, [
-    { coinId: "is6_sui_selectable_coin_is6_copper_r14", count: 1, statusId: null, face: "front" },
+    { coinId: "is6_sui_selectable_coin_is6_copper_r14", count: 1, statusId: null },
   ]);
 });

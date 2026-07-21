@@ -86,7 +86,8 @@ public static class RhodesChoiceCatalogRegistry
             CampaignId: filterState.CampaignId,
             ShowSelectedFirst: filterState.ShowSelectedFirst,
             HideExcluded: filterState.HideExcluded,
-            SelectedOnly: filterState.SelectedOnly);
+            SelectedOnly: filterState.SelectedOnly,
+            SortMode: filterState.SortMode);
     }
 
     private static SukiChoiceFilterOptions BuildFilterOptions(

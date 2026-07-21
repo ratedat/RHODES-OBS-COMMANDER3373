@@ -107,6 +107,8 @@ public static class RhodesRecognitionCandidateApplier
             handledIndexes.UnionWith(ApplyIs3SpecialCandidates(state, candidateList, applied));
         if (!runStatusOnly)
             handledIndexes.UnionWith(ApplyIs5SpecialCandidates(state, candidateList, applied));
+        if (!runStatusOnly)
+            handledIndexes.UnionWith(ApplyIs6CoinCandidates(state, candidateList, applied));
         foreach (var index in handledIndexes.OrderBy(value => value))
             outcomes.Add(Outcome(prepared.Active[index].Index, candidateList[index], "applied", AppliedFieldForCandidate(candidateList[index]), ""));
         var ignored = prepared.IgnoredDuplicates.Count;
@@ -225,7 +227,7 @@ public static class RhodesRecognitionCandidateApplier
 
         return field switch
         {
-            "ingot" or "difficulty" or "idea" => int.TryParse(candidate.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)
+            "ingot" or "difficulty" or "idea" or "ticket" => int.TryParse(candidate.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)
                 ? "unsupported-or-invalid-run-field"
                 : "invalid-run-value",
             "squadId" or "squadRandomEffectOptionId" => string.IsNullOrWhiteSpace(candidate.Value)
@@ -596,6 +598,72 @@ public static class RhodesRecognitionCandidateApplier
         return handled;
     }
 
+    private static HashSet<int> ApplyIs6CoinCandidates(
+        JsonObject state,
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        ICollection<string> applied)
+    {
+        var run = EnsureObject(state, "run");
+        if (!JsonString(run, "campaignId").Equals(Is6CampaignId, StringComparison.Ordinal))
+            return [];
+
+        var campaign = EnsureCampaignSpecialFromRun(run, Is6CampaignId);
+        if (campaign is null)
+            return [];
+
+        var handled = new HashSet<int>();
+        foreach (var fieldId in new[] { "activeCoins", "coins" })
+        {
+            var rows = candidates
+                .Select((candidate, index) => (
+                    Candidate: candidate,
+                    Index: index,
+                    CoinId: CandidateId(candidate.CoinId, candidate.Value),
+                    FieldId: string.IsNullOrWhiteSpace(candidate.FieldId) ? "coins" : candidate.FieldId.Trim()))
+                .Where(item => CandidateIsKind(item.Candidate, "coin")
+                    && CandidateCampaignIs(item.Candidate, Is6CampaignId)
+                    && item.FieldId.Equals(fieldId, StringComparison.Ordinal)
+                    && !string.IsNullOrWhiteSpace(item.CoinId))
+                .ToArray();
+            if (rows.Length == 0)
+                continue;
+
+            var grouped = rows
+                .GroupBy(
+                    item => CoinEntryKey(item.CoinId, string.IsNullOrWhiteSpace(item.Candidate.StatusId) ? null : item.Candidate.StatusId.Trim()),
+                    StringComparer.Ordinal)
+                .Select(group => new
+                {
+                    group.First().CoinId,
+                    StatusId = string.IsNullOrWhiteSpace(group.First().Candidate.StatusId) ? null : group.First().Candidate.StatusId.Trim(),
+                    Count = Math.Clamp(group.Sum(item => Math.Clamp(item.Candidate.Count <= 0 ? 1 : item.Candidate.Count, 1, 99)), 1, 99),
+                })
+                .ToArray();
+
+            var entries = new JsonArray();
+            foreach (var entry in grouped)
+            {
+                var node = new JsonObject
+                {
+                    ["coinId"] = entry.CoinId,
+                    ["count"] = entry.Count,
+                };
+                if (!string.IsNullOrWhiteSpace(entry.StatusId))
+                    node["statusId"] = entry.StatusId;
+                entries.Add(node);
+            }
+            campaign[fieldId] = entries;
+
+            foreach (var row in rows)
+            {
+                handled.Add(row.Index);
+                applied.Add($"coin:{fieldId}:{row.CoinId}");
+            }
+        }
+
+        return handled;
+    }
+
     private static int? ParseMizukiNumber(string value, string field)
     {
         if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
@@ -633,6 +701,8 @@ public static class RhodesRecognitionCandidateApplier
                 return ApplyCampaignContextCandidate(state, candidate, applied);
             case "idea":
                 return ApplyIdea(run, candidate, applied);
+            case "ticket":
+                return ApplySuiTicket(run, candidate, applied);
             default:
                 return false;
         }
@@ -735,6 +805,20 @@ public static class RhodesRecognitionCandidateApplier
 
         campaign["idea"] = Math.Min(999, value);
         applied.Add("idea");
+        return true;
+    }
+
+    private static bool ApplySuiTicket(JsonObject run, MaaCandidatePreview candidate, ICollection<string> applied)
+    {
+        if (!JsonString(run, "campaignId").Equals(Is6CampaignId, StringComparison.Ordinal)
+            || !int.TryParse(candidate.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
+        {
+            return false;
+        }
+
+        var campaign = EnsureObject(EnsureObject(run, "special"), Is6CampaignId);
+        campaign["ticket"] = Math.Clamp(value, 0, 999);
+        applied.Add("ticket");
         return true;
     }
 
@@ -983,7 +1067,6 @@ public static class RhodesRecognitionCandidateApplier
             campaign[fieldId] as JsonArray,
             coinId,
             string.IsNullOrWhiteSpace(candidate.StatusId) ? null : candidate.StatusId.Trim(),
-            candidate.Face.Equals("back", StringComparison.OrdinalIgnoreCase) ? "back" : "front",
             Math.Clamp(candidate.Count <= 0 ? 1 : candidate.Count, 1, 99));
         campaign[fieldId] = entries;
         applied.Add($"coin:{coinId}");
@@ -1142,9 +1225,9 @@ public static class RhodesRecognitionCandidateApplier
         return result;
     }
 
-    private static JsonArray MergeCoinEntries(JsonArray? existing, string coinId, string? statusId, string face, int count)
+    private static JsonArray MergeCoinEntries(JsonArray? existing, string coinId, string? statusId, int count)
     {
-        var entries = new Dictionary<string, (string CoinId, string? StatusId, string Face, int Count)>(StringComparer.Ordinal);
+        var entries = new Dictionary<string, (string CoinId, string? StatusId, int Count)>(StringComparer.Ordinal);
         if (existing is not null)
         {
             foreach (var item in existing)
@@ -1157,19 +1240,18 @@ public static class RhodesRecognitionCandidateApplier
                     continue;
 
                 var existingStatusId = JsonString(entry, "statusId");
-                var existingFace = JsonString(entry, "face").Equals("back", StringComparison.OrdinalIgnoreCase) ? "back" : "front";
-                var key = CoinEntryKey(id, existingStatusId, existingFace);
+                var key = CoinEntryKey(id, existingStatusId);
                 var existingCount = Math.Max(1, JsonInt(entry, "count"));
                 entries[key] = entries.TryGetValue(key, out var current)
                     ? current with { Count = Math.Clamp(current.Count + existingCount, 1, 99) }
-                    : (id, string.IsNullOrWhiteSpace(existingStatusId) ? null : existingStatusId, existingFace, Math.Clamp(existingCount, 1, 99));
+                    : (id, string.IsNullOrWhiteSpace(existingStatusId) ? null : existingStatusId, Math.Clamp(existingCount, 1, 99));
             }
         }
 
-        var targetKey = CoinEntryKey(coinId, statusId, face);
+        var targetKey = CoinEntryKey(coinId, statusId);
         entries[targetKey] = entries.TryGetValue(targetKey, out var target)
             ? target with { Count = Math.Clamp(target.Count + count, 1, 99) }
-            : (coinId, statusId, face, count);
+            : (coinId, statusId, count);
 
         var result = new JsonArray();
         foreach (var entry in entries.Values)
@@ -1179,15 +1261,14 @@ public static class RhodesRecognitionCandidateApplier
                 ["coinId"] = entry.CoinId,
                 ["count"] = entry.Count,
                 ["statusId"] = entry.StatusId,
-                ["face"] = entry.Face,
             });
         }
         return result;
     }
 
-    private static string CoinEntryKey(string coinId, string? statusId, string face)
+    private static string CoinEntryKey(string coinId, string? statusId)
     {
-        return $"{coinId}\u001f{statusId ?? ""}\u001f{face}";
+        return $"{coinId}\u001f{statusId ?? ""}";
     }
 
     private static void ResetRunValues(JsonObject run)

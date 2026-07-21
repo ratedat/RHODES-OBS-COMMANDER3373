@@ -36,7 +36,9 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter prefers squad icon templates over conflicting OCR", LocalCandidateConverterPrefersSquadIconTemplate),
     ("Local MAA candidate converter keeps the strongest Mizuki squad icon", LocalCandidateConverterKeepsStrongestMizukiSquadIcon),
     ("Local MAA candidate converter decodes batched squad template results", LocalCandidateConverterDecodesBatchedSquadTemplate),
+    ("Local MAA candidate converter decodes batched Sui squad template results", LocalCandidateConverterDecodesBatchedSuiSquadTemplate),
     ("Local MAA candidate converter bounds and repairs anchored Sarkaz difficulty", LocalCandidateConverterBoundsSarkazDifficulty),
+    ("Local MAA candidate converter bounds anchored Sui difficulty", LocalCandidateConverterBoundsSuiDifficulty),
     ("Local MAA candidate converter extracts random squad effect candidates", LocalCandidateConverterRunStatusSquadRandomEffect),
     ("Local MAA candidate converter extracts exact operator name candidates", LocalCandidateConverterOperators),
     ("MAA Amiya role resolver targets the profession icon beside a detected card", MaaAmiyaRoleResolverTargetsProfessionIcon),
@@ -50,7 +52,9 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter extracts IS3 Mizuki special values", LocalCandidateConverterMizukiSpecials),
     ("Local MAA candidate converter ignores IS3 rejection operator prose", LocalCandidateConverterPrefersMizukiRejectionTemplate),
     ("Local MAA candidate converter extracts IS4 revelation candidates", LocalCandidateConverterRevelation),
+    ("Local MAA candidate converter extracts Sui ingot and ticket values", LocalCandidateConverterSuiBaseValues),
     ("Local MAA candidate converter extracts IS6 coin candidates", LocalCandidateConverterCoins),
+    ("Sui active coin image recognizer classifies slots and counts duplicates", SuiActiveCoinImageRecognizer),
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB presets include current MuMu nx_main layouts", AdbPresetCurrentMumuLayouts),
@@ -411,7 +415,7 @@ static void CandidateMergerSupplementsLocalCandidates()
     Equal("thought_a|thought_b", string.Join("|", merged.Where(item => item.Kind == "thought").Select(item => item.ThoughtId)), "local MAA thought set replaces primary thought candidates");
     Equal("age_prime", string.Join("|", merged.Where(item => item.Kind == "age").Select(item => item.AgeId)), "local age supplemented");
     Equal("rhetoric_a|cause_a", string.Join("|", merged.Where(item => item.Kind == "revelation").Select(item => item.EffectId)), "merged revelation candidates");
-    Equal("coin_a:front|coin_a:back", string.Join("|", merged.Where(item => item.Kind == "coin").Select(item => $"{item.CoinId}:{(string.IsNullOrWhiteSpace(item.Face) ? "front" : item.Face)}")), "merged coin candidates");
+    Equal("coin_a", string.Join("|", merged.Where(item => item.Kind == "coin").Select(item => item.CoinId)), "merged coin candidates ignore obsolete face");
 }
 
 static void CandidateMergerPrefersLocalRelicForSameEvidence()
@@ -963,6 +967,44 @@ static void LocalCandidateConverterDecodesBatchedSquadTemplate()
     Equal(true, squad.Confidence is > 0.90 and < 0.91, "batch template keeps native score");
 }
 
+static void LocalCandidateConverterDecodesBatchedSuiSquadTemplate()
+{
+    var childResults = new JsonArray();
+    for (var index = 0; index < 19; index++)
+    {
+        childResults.Add(index == 18
+            ? JsonNode.Parse("""
+              {
+                "algorithm": "TemplateMatch",
+                "box": [62, 636, 42, 84],
+                "detail": {
+                  "best": { "box": [62, 636, 42, 84], "score": 0.913 }
+                }
+              }
+              """)
+            : JsonNode.Parse("""{ "algorithm": "TemplateMatch" }"""));
+    }
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [
+            new MaaTaskRunResult(
+                "RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch",
+                "Succeeded",
+                true,
+                "detail",
+                childResults.ToJsonString(),
+                "Or",
+                true),
+        ],
+        "is6_sui");
+
+    var squad = candidates.Single(item => item.Field == "squadId");
+    Equal("is6_sui_squad_19", squad.Value, "Sui batch child index resolves squad id");
+    Equal("商人分隊", squad.Label, "Sui batch child resolves squad label");
+    Equal(true, squad.Confidence is > 0.91 and < 0.92, "Sui batch template keeps native score");
+}
+
 static void LocalCandidateConverterBoundsSarkazDifficulty()
 {
     var repaired = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -996,6 +1038,36 @@ static void LocalCandidateConverterBoundsSarkazDifficulty()
             M("run.difficulty.grade.anchor.0", "^8", 0.71),
         ]);
     Equal("18", caretDrift.Single(item => item.Field == "difficulty").Value, "anchored caret-shaped leading one is repaired");
+
+    static MaaTaskRunResult M(string entry, string text, double score) => new(
+        entry,
+        "Succeeded",
+        true,
+        "detail",
+        System.Text.Json.JsonSerializer.Serialize(new { best = new { text, score } }),
+        "OCR",
+        true);
+}
+
+static void LocalCandidateConverterBoundsSuiDifficulty()
+{
+    var accepted = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [M("run.difficulty.grade.anchor.0", "18", 0.96)],
+        "is6_sui");
+    Equal("18", accepted.Single(item => item.Field == "difficulty").Value, "anchored Sui difficulty 18 is accepted");
+
+    var repaired = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [M("run.difficulty.grade.anchor.0", "78", 0.96)],
+        "is6_sui");
+    Equal("18", repaired.Single(item => item.Field == "difficulty").Value, "anchored Sui 78 is repaired to difficulty 18");
+
+    var rejected = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [M("run.difficulty.grade.anchor.0", "79", 0.96)],
+        "is6_sui");
+    Equal(false, rejected.Any(item => item.Field == "difficulty"), "Sui rejects values beyond difficulty 18");
 
     static MaaTaskRunResult M(string entry, string text, double score) => new(
         entry,
@@ -1849,6 +1921,7 @@ static void LocalCandidateConverterCoins()
     Equal("is6_sui", candidates[0].CampaignId, "coin campaign id");
     Equal("coins", candidates[0].FieldId, "coin field id");
     Equal(1, candidates[0].Count, "coin count");
+    Equal("", candidates[0].Face, "coin face is unused");
     Equal("maa-local:coin:is6_sui_selectable_coin_is6_copper_b01:0", candidates[0].RecognitionKey, "coin recognition key");
 
     static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
@@ -1863,6 +1936,83 @@ static void LocalCandidateConverterCoins()
             $"{{\"filtered_results\":[{string.Join(",", resultRows)}]}}",
             "OCR",
             true);
+    }
+}
+
+static void LocalCandidateConverterSuiBaseValues()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6BaseFull",
+        [
+            M("RhodesOcrRegion_is6_ingot_value", "18", 0.94),
+            M("RhodesOcrRegion_is6_ticket_value", "3", 0.92),
+        ],
+        "is6_sui");
+
+    Equal("ingot|ticket", string.Join("|", candidates.Select(item => item.Field)), "Sui base fields");
+    Equal("18|3", string.Join("|", candidates.Select(item => item.Value)), "Sui base values");
+
+    var state = JsonNode.Parse("""{ "run": { "campaignId": "is6_sui" } }""")!.AsObject();
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-21T00:00:00Z"));
+    Equal(2, summary.AppliedCount, "Sui base apply count");
+    Equal(18, state["run"]!["ingot"]!.GetValue<int>(), "Sui ingot persisted");
+    Equal(3, state["run"]!["special"]!["is6_sui"]!["ticket"]!.GetValue<int>(), "Sui ticket persisted");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        var encodedText = JsonSerializer.Serialize(text);
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{{\"text\":{encodedText},\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
+            "OCR",
+            true);
+    }
+}
+
+static void SuiActiveCoinImageRecognizer()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var first = options.Single(option => option.Id.EndsWith("is6_copper_b08", StringComparison.Ordinal));
+    var second = options.Single(option => option.Id.EndsWith("is6_copper_b09", StringComparison.Ordinal));
+    using var frame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul);
+    frame.Erase(new SKColor(31, 42, 41));
+    using (var canvas = new SKCanvas(frame))
+    {
+        Draw(canvas, first.ImagePath, new SKRect(594, 653, 648, 707));
+        Draw(canvas, first.ImagePath, new SKRect(649, 653, 703, 707));
+        Draw(canvas, second.ImagePath, new SKRect(704, 653, 758, 707));
+    }
+
+    var result = RhodesSuiCoinImageRecognizer.Recognize(EncodePng(frame), options);
+    Equal(true, result.Hit, "active coin image result hit");
+    Equal(true, RhodesSuiCoinImageRecognizer.TryRead(result, out var fieldId, out var detections), "active coin image result readable");
+    Equal("activeCoins", fieldId, "active coin field id");
+    Equal(3, detections.Count, $"active coin slot count ({result.RecognitionDetailJson})");
+    Equal(
+        $"{first.Id}|{first.Id}|{second.Id}",
+        string.Join("|", detections.OrderBy(item => item.SlotIndex).Select(item => item.CoinId)),
+        "active coin slot ids");
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6ActiveCoinsFull",
+        [result],
+        "is6_sui");
+    Equal(2, candidates.Count, "active coin kind count");
+    Equal(2, candidates.Single(candidate => candidate.CoinId == first.Id).Count, "duplicate active coin count");
+    Equal(1, candidates.Single(candidate => candidate.CoinId == second.Id).Count, "single active coin count");
+    Equal(true, candidates.All(candidate => candidate.FieldId == "activeCoins"), "active coin candidate field");
+    Equal(true, candidates.All(candidate => string.IsNullOrWhiteSpace(candidate.Face)), "active coin face is unused");
+
+    static void Draw(SKCanvas canvas, string path, SKRect destination)
+    {
+        using var bitmap = SKBitmap.Decode(path);
+        canvas.DrawBitmap(bitmap, destination);
     }
 }
 
@@ -1920,6 +2070,7 @@ static void AdbPresetCurrentMumuLayouts()
 
     Equal(true, paths.Contains(@"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe", StringComparer.OrdinalIgnoreCase), "MuMu 5 adb path");
     Equal(true, paths.Contains(@"C:\Program Files\Netease\MuMuPlayer\shell\adb.exe", StringComparer.OrdinalIgnoreCase), "legacy MuMu adb path");
+    Equal(true, paths.Contains(@"C:\Program Files\Netease\MuMuPlayer\nx_device\15.0\shell\adb.exe", StringComparer.OrdinalIgnoreCase), "MuMu 15 shell adb path");
 }
 
 static void AdbPresetMumuProcessLayout()
@@ -1951,9 +2102,9 @@ static void AdbPresetMumuRunningVersion()
         RhodesAdbPresetCatalog.MuMuAdbPathsFromProcessPath(legacyProcess).First(),
         "legacy running MuMu prefers shell adb");
     Equal(
-        @"C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe",
+        @"C:\Program Files\Netease\MuMuPlayer\nx_device\12.0\shell\adb.exe",
         RhodesAdbPresetCatalog.MuMuAdbPathsFromProcessPath(currentProcess).First(),
-        "current running MuMu prefers nx_main adb");
+        "current running MuMu prefers the active device shell adb");
 
     var sorted = RhodesAdbLocalDetector.SortCandidates(
         [
@@ -2842,8 +2993,8 @@ static void PublicDebugWorkspaceRegistry()
     var validationItems = RhodesWorkspaceRegistry.ItemsFor(RhodesDistributionProfile.Validation);
     var publicDebugItems = RhodesWorkspaceRegistry.ItemsFor(RhodesDistributionProfile.PublicDebug);
 
-    Equal("run|special|choices|recognition|output|runtime|debug", string.Join("|", validationItems.Select(item => item.Id)), "validation workspace order");
-    Equal("run|special|choices|output|runtime", string.Join("|", publicDebugItems.Select(item => item.Id)), "public debug workspace order");
+    Equal("run|special|choices|output", string.Join("|", validationItems.Select(item => item.Id)), "validation workspace order");
+    Equal("run|special|choices|output", string.Join("|", publicDebugItems.Select(item => item.Id)), "public debug workspace order");
     Equal(false, publicDebugItems.Any(item => item.Id == "recognition"), "public debug hides recognition workspace");
     Equal(false, publicDebugItems.Any(item => item.Id == "debug"), "public debug hides debug workspace");
 
@@ -4328,6 +4479,18 @@ static void MaaGeneratedResourceBuilder()
         "is5_sarkaz_squad_14",
         squadBatch["attach"]!.AsObject()["templateIds"]!.AsArray()[13]!.GetValue<string>(),
         "generated Sarkaz squad batch preserves squad ids");
+    Equal(true, root.ContainsKey("RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch"), "generated resource includes the Sui squad batch");
+    var suiSquadBatch = root["RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch"]!.AsObject();
+    Equal("Or", suiSquadBatch["recognition"]!.GetValue<string>(), "generated Sui squad recognition is batched");
+    Equal(19, suiSquadBatch["any_of"]!.AsArray().Count, "generated Sui squad batch child count");
+    Equal(
+        "run/SquadIconRight_is6_sui_squad_19.png",
+        suiSquadBatch["any_of"]!.AsArray()[18]!.AsObject()["template"]!.GetValue<string>(),
+        "generated Sui squad batch preserves template order");
+    Equal(
+        "is6_sui_squad_19",
+        suiSquadBatch["attach"]!.AsObject()["templateIds"]!.AsArray()[18]!.GetValue<string>(),
+        "generated Sui squad batch preserves squad ids");
     var mizukiSquadEntries = root
         .Where(item => item.Key.StartsWith("RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_", StringComparison.Ordinal))
         .Select(item => item.Value!.AsObject())
@@ -4339,6 +4502,10 @@ static void MaaGeneratedResourceBuilder()
         "run/DifficultyFlag.png",
         root["RhodesTemplate_runStatusFull_run_difficulty_grade_anchor"]!.AsObject()["template"]!.GetValue<string>(),
         "generated difficulty anchor template");
+    Equal(
+        "run/DifficultyFlag_is6_sui.png",
+        root["RhodesTemplate_runStatusFull_run_difficulty_grade_is6_sui_anchor"]!.AsObject()["template"]!.GetValue<string>(),
+        "generated Sui difficulty anchor template");
     Equal(
         NormalizeLineEndings(File.ReadAllText(Path.Combine("apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json"))),
         NormalizeLineEndings(generated),
@@ -4431,7 +4598,7 @@ static void MaaGeneratedResourceBuilder()
         .Select(item => item.GetString() ?? "")
         .Where(item => !string.IsNullOrWhiteSpace(item));
     Equal(
-        "difficulty|hallucinations|idea|ingot|performanceId|squadId|squadRandomEffectOptionId",
+        "difficulty|hallucinations|idea|ingot|performanceId|squadId|squadRandomEffectOptionId|ticket",
         string.Join("|", manifestRetainedRunStatusFields.OrderBy(item => item, StringComparer.Ordinal)),
         "manifest run status fields encode retained run recognition targets");
     Equal(
@@ -5286,8 +5453,16 @@ static void ResourceProfilesUseInterfaceGroups()
         "run status preset includes anchored difficulty OCR");
     Equal(
         true,
+        (runStatus.TaskEntries ?? []).Contains("RhodesTemplate_runStatusFull_run_difficulty_grade_is6_sui_anchor"),
+        "run status preset includes anchored Sui difficulty OCR");
+    Equal(
+        true,
         (runStatus.TaskEntries ?? []).Contains("RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch"),
         "run status preset includes batched Sarkaz squad icon templates");
+    Equal(
+        true,
+        (runStatus.TaskEntries ?? []).Contains("RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch"),
+        "run status preset includes batched Sui squad icon templates");
     Equal(
         false,
         (runStatus.TaskEntries ?? []).Contains("RhodesOcrRegion_run_difficulty_grade"),
@@ -5638,7 +5813,7 @@ static void RunCatalogLoadsChoices()
 static void RunCatalogSarkazManualOptions()
 {
     Equal(18, RhodesRunCatalog.MaxDifficultyForCampaign("is5_sarkaz"), "is5 max difficulty");
-    Equal(15, RhodesRunCatalog.MaxDifficultyForCampaign("is6_sui"), "default current max difficulty");
+    Equal(18, RhodesRunCatalog.MaxDifficultyForCampaign("is6_sui"), "current IS6 max difficulty");
 
     var squad = RhodesRunCatalog.LoadSquadOptions("is5_sarkaz")
         .Single(option => option.Name == "奇想天外分隊");
@@ -5891,9 +6066,9 @@ static void ChoiceFilters()
 {
     var items = new[]
     {
-        new SukiChoiceItem("operator", "a", "テンニンカ", "★4 先鋒 / 旗手", "先鋒", "", "", "", 4, 0, false),
-        new SukiChoiceItem("operator", "b", "グム", "★4 重装 / 庇護衛士", "重装", "", "", "", 4, 1, false),
-        new SukiChoiceItem("operator", "c", "チューリップ", "★5 先鋒 / 先駆兵", "先鋒", "", "", "", 5, 2, true),
+        new SukiChoiceItem("operator", "a", "テンニンカ", "★4 先鋒 / 旗手", "先鋒", "旗手", "", "", 4, 0, false),
+        new SukiChoiceItem("operator", "b", "グム", "★4 重装 / 庇護衛士", "重装", "庇護衛士", "", "", 4, 1, false),
+        new SukiChoiceItem("operator", "c", "チューリップ", "★5 先鋒 / 先駆兵", "先鋒", "先駆兵", "", "", 5, 2, true),
     };
     items[1].IsSelected = true;
     items[2].IsExcluded = true;
@@ -5918,6 +6093,9 @@ static void ChoiceFilters()
     var rarity4 = RhodesChoiceFilter.Apply(items, new SukiChoiceFilterOptions(Rarity: "★4")).ToArray();
     Equal(2, rarity4.Length, "rarity filter count");
 
+    var taxonomyOrder = RhodesChoiceFilter.Apply(items.Reverse(), new SukiChoiceFilterOptions(SortMode: "職業・職分順")).ToArray();
+    Equal("テンニンカ", taxonomyOrder[0].Name, "operator taxonomy sort starts with vanguard");
+
     var relics = new[]
     {
         new SukiChoiceItem("relic", "r1", "特選獣肉缶詰", "No.001 食品", "", "", "is5_sarkaz", "食品", 0, 1, false),
@@ -5927,6 +6105,9 @@ static void ChoiceFilters()
     var foodRelics = RhodesChoiceFilter.Apply(relics, new SukiChoiceFilterOptions(CampaignId: "is5_sarkaz", Category: "食品")).ToArray();
     Equal(1, foodRelics.Length, "relic category filter count");
     Equal("特選獣肉缶詰", foodRelics[0].Name, "relic category filter item");
+
+    var numberOrder = RhodesChoiceFilter.Apply(relics.Reverse(), new SukiChoiceFilterOptions(CampaignId: "is5_sarkaz", SortMode: "番号順")).ToArray();
+    Equal("特選獣肉缶詰", numberOrder[0].Name, "relic number sort");
 
     Equal(false, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(HideExcluded: true)), "selection does not rebuild for hide excluded only");
     Equal(false, RhodesChoiceFilter.RequiresFullRefreshAfterSelectionMutation(new SukiChoiceFilterOptions(ShowSelectedFirst: true)), "selection keeps list stable for selected first");
@@ -7065,24 +7246,42 @@ static void CandidateOtherSpecialApply()
     Equal("rhetoric_a", board["rhetorics"]!.AsArray()[0]!.AsObject()["effectId"]!.GetValue<string>(), "revelation rhetoric");
     Equal(2, board["rhetorics"]!.AsArray()[0]!.AsObject()["count"]!.GetValue<int>(), "revelation rhetoric count");
 
-    var coinState = JsonNode.Parse("""{ "run": { "campaignId": "is6_sui" } }""")!.AsObject();
+    var coinState = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is6_sui",
+            "special": {
+              "is6_sui": {
+                "coins": [{ "coinId": "stale_coin", "count": 9, "face": "back" }],
+                "activeCoins": [{ "coinId": "stale_active", "count": 1 }]
+              }
+            }
+          }
+        }
+        """)!.AsObject();
     var coinSummary = RhodesRecognitionCandidateApplier.Apply(
         coinState,
         [
-            new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", Count: 2),
-            new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", StatusId: "status_a", Face: "back", Count: 3),
-            new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", StatusId: "status_a", Face: "back", Count: 4),
+            new MaaCandidatePreview("coin", "保有銭A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", Face: "front", Count: 2),
+            new MaaCandidatePreview("coin", "保有銭A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", Face: "back", Count: 3),
+            new MaaCandidatePreview("coin", "有効銭A", "fallback", "通宝A", 0.9, CampaignId: "is6_sui", FieldId: "activeCoins", CoinId: "coin_a", StatusId: "status_a", Face: "back", Count: 2),
         ],
         DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
 
     Equal(3, coinSummary.AppliedCount, "applied coin count");
-    var coins = coinState["run"]!.AsObject()["special"]!.AsObject()["is6_sui"]!.AsObject()["coins"]!.AsArray();
-    Equal(2, coins.Count, "coin slot count");
-    Equal(2, coins[0]!.AsObject()["count"]!.GetValue<int>(), "coin plain count");
-    Equal("front", coins[0]!.AsObject()["face"]!.GetValue<string>(), "coin plain face");
-    Equal("status_a", coins[1]!.AsObject()["statusId"]!.GetValue<string>(), "coin status");
-    Equal("back", coins[1]!.AsObject()["face"]!.GetValue<string>(), "coin face");
-    Equal(7, coins[1]!.AsObject()["count"]!.GetValue<int>(), "coin merged count");
+    var sui = coinState["run"]!.AsObject()["special"]!.AsObject()["is6_sui"]!.AsObject();
+    var coins = sui["coins"]!.AsArray();
+    Equal(1, coins.Count, "owned coin kind count");
+    Equal("coin_a", coins[0]!.AsObject()["coinId"]!.GetValue<string>(), "owned coin id");
+    Equal(5, coins[0]!.AsObject()["count"]!.GetValue<int>(), "owned duplicate count");
+    Equal(false, coins[0]!.AsObject().ContainsKey("face"), "owned coin has no face");
+    var activeCoins = sui["activeCoins"]!.AsArray();
+    Equal(1, activeCoins.Count, "active coin kind count");
+    Equal("coin_a", activeCoins[0]!.AsObject()["coinId"]!.GetValue<string>(), "active coin id");
+    Equal(2, activeCoins[0]!.AsObject()["count"]!.GetValue<int>(), "active coin count");
+    Equal("status_a", activeCoins[0]!.AsObject()["statusId"]!.GetValue<string>(), "active coin status");
+    Equal(false, activeCoins[0]!.AsObject().ContainsKey("face"), "active coin has no face");
 }
 
 static string NormalizeLineEndings(string value)

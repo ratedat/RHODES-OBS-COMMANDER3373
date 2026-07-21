@@ -235,10 +235,9 @@ public static class RhodesMaaCandidateMerger
             "\u001f",
             [
                 candidate.CampaignId.Trim(),
+                string.IsNullOrWhiteSpace(candidate.FieldId) ? "coins" : candidate.FieldId.Trim(),
                 coinId,
                 candidate.StatusId.Trim(),
-                candidate.Face.Equals("back", StringComparison.OrdinalIgnoreCase) ? "back" : "front",
-                Math.Max(1, candidate.Count).ToString(System.Globalization.CultureInfo.InvariantCulture),
             ]);
     }
 }

@@ -1,5 +1,5 @@
 import * as controlActions from "./control-actions.js";
-import { clampCoinCount, normalizeCoinFace } from "./domain/special-values.js";
+import { clampCoinCount } from "./domain/special-values.js";
 import { adbDetectUrl, adbSelectPathUrl, adbTestUrl, apiJson, glmOcrInstallUrl, glmOcrOllamaInstallUrl, glmOcrOllamaStartUrl, glmOcrOllamaStatusUrl, glmOcrOllamaUninstallUrl, glmOcrStatusUrl, glmOcrUninstallUrl, hypervisorStatusUrl, resetStateUrl } from "./lib/api.js";
 
 function parseImportDraft(ui) {
@@ -201,8 +201,7 @@ export function registerControlEvents(app, context) {
       if (fieldId && coinId) {
         const count = clampCoinCount(container?.querySelector('[data-coin-input="count"]')?.value);
         const statusId = container?.querySelector('[data-coin-input="status"]')?.value || null;
-        const face = normalizeCoinFace(container?.querySelector('[data-coin-input="face"]')?.value);
-        context.mutate((state) => controlActions.addCoinEntry(state, context.getCampaign().id, fieldId, { coinId, count, statusId, face }));
+        context.mutate((state) => controlActions.addCoinEntry(state, context.getCampaign().id, fieldId, { coinId, count, statusId }));
       }
       return;
     }

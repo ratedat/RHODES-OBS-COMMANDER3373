@@ -29,6 +29,8 @@ public static class RhodesMaaLocalCandidateConverter
             ["run.idea"] = ("idea", "構想", 0, 999, 0.70),
             ["run.idea.current"] = ("idea", "構想", 0, 999, 0.82),
             ["run.difficulty_grade"] = ("difficulty", "等級", 0, 99, 0.78),
+            ["is6.ingot_value"] = ("ingot", "源石錐", 0, 9999, 0.84),
+            ["is6.ticket_value"] = ("ticket", "遊覧券", 0, 999, 0.84),
         };
 
     public static IReadOnlyList<MaaCandidatePreview> FromTaskResults(
@@ -79,8 +81,14 @@ public static class RhodesMaaLocalCandidateConverter
         else if (string.Equals(profileId, "is4RevelationFull", StringComparison.Ordinal))
             candidates = RevelationCandidates(taskResults);
 
+        else if (string.Equals(profileId, "is6BaseFull", StringComparison.Ordinal))
+            candidates = BestRunStatusCandidates(RunStatusCandidates(taskResults, "is6_sui"));
+
+        else if (string.Equals(profileId, "is6ActiveCoinsFull", StringComparison.Ordinal))
+            candidates = CoinCandidates(taskResults, "activeCoins");
+
         else if (string.Equals(profileId, "is6CoinsFull", StringComparison.Ordinal))
-            candidates = CoinCandidates(taskResults);
+            candidates = CoinCandidates(taskResults, "coins");
 
         else
             candidates = [];
@@ -107,7 +115,8 @@ public static class RhodesMaaLocalCandidateConverter
                 ? MizukiRejectionCardCandidates(results)
                 : [])
             .Concat(RevelationCandidates(results))
-            .Concat(CoinCandidates(results));
+            .Concat(CoinCandidates(results, "activeCoins"))
+            .Concat(CoinCandidates(results, "coins"));
         return RhodesMaaCandidateMerger.Merge([], candidates);
     }
 
@@ -243,6 +252,7 @@ public static class RhodesMaaLocalCandidateConverter
         return field switch
         {
             "idea" => "is5_sarkaz",
+            "ticket" => "is6_sui",
             "difficulty" => campaignId,
             _ => "",
         };
@@ -250,6 +260,10 @@ public static class RhodesMaaLocalCandidateConverter
 
     private static string RunStatusRegionId(string entry)
     {
+        if (entry.Contains("is6.ingot_value", StringComparison.OrdinalIgnoreCase))
+            return "is6.ingot_value";
+        if (entry.Contains("is6.ticket_value", StringComparison.OrdinalIgnoreCase))
+            return "is6.ticket_value";
         if (entry.Contains("run.ingot", StringComparison.OrdinalIgnoreCase))
             return "run.ingot";
         if (entry.Contains("run.idea.current", StringComparison.OrdinalIgnoreCase))
@@ -262,6 +276,8 @@ public static class RhodesMaaLocalCandidateConverter
 
         return entry switch
         {
+            "RhodesOcrRegion_is6_ingot_value" => "is6.ingot_value",
+            "RhodesOcrRegion_is6_ticket_value" => "is6.ticket_value",
             "RhodesOcrRegion_run_ingot" or "RhodesTemplate_runStatusFull_run_ingot" => "run.ingot",
             "RhodesOcrRegion_run_idea" => "run.idea",
             "RhodesOcrRegion_run_idea_current" or "RhodesTemplate_runStatusFull_run_idea_current" => "run.idea.current",
@@ -1585,8 +1601,42 @@ public static class RhodesMaaLocalCandidateConverter
         }
     }
 
-    private static IEnumerable<MaaCandidatePreview> CoinCandidates(IEnumerable<MaaTaskRunResult> taskResults)
+    private static IEnumerable<MaaCandidatePreview> CoinCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults,
+        string fieldId)
     {
+        var results = taskResults as MaaTaskRunResult[] ?? taskResults.ToArray();
+        if (fieldId.Equals("activeCoins", StringComparison.Ordinal))
+        {
+            var latest = results.LastOrDefault(result =>
+                result.Entry.Equals(RhodesSuiCoinImageRecognizer.Entry, StringComparison.Ordinal));
+            if (latest is null
+                || !RhodesSuiCoinImageRecognizer.TryRead(latest, out var detectedFieldId, out var detections)
+                || !detectedFieldId.Equals(fieldId, StringComparison.Ordinal))
+            {
+                yield break;
+            }
+
+            foreach (var group in detections
+                .GroupBy(detection => $"{detection.CoinId}\u001f{detection.StatusId}", StringComparer.Ordinal))
+            {
+                var detection = group.OrderByDescending(item => item.Score).First();
+                yield return new MaaCandidatePreview(
+                    "coin",
+                    detection.Label,
+                    detection.CoinId,
+                    string.Join(",", group.Select(item => $"slot{item.SlotIndex + 1}")),
+                    detection.Score,
+                    CampaignId: "is6_sui",
+                    RecognitionKey: $"maa-local:coin-image:{fieldId}:{detection.CoinId}:{detection.StatusId}",
+                    FieldId: fieldId,
+                    CoinId: detection.CoinId,
+                    StatusId: detection.StatusId,
+                    Count: group.Count());
+            }
+            yield break;
+        }
+
         var coins = LoadSelectableEffects()
             .Where(effect => effect.Slot == "coin" && effect.CampaignId == "is6_sui")
             .ToArray();
@@ -1596,7 +1646,7 @@ public static class RhodesMaaLocalCandidateConverter
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
         var order = 0;
 
-        foreach (var taskResult in taskResults)
+        foreach (var taskResult in results)
         {
             if (!taskResult.Succeeded || !IsCoinNameEntry(taskResult.Entry))
                 continue;
@@ -1616,7 +1666,7 @@ public static class RhodesMaaLocalCandidateConverter
                         Math.Max(0.68, textResult.Confidence ?? 0),
                         CampaignId: coin.CampaignId,
                         RecognitionKey: $"maa-local:coin:{coin.Id}:{order}",
-                        FieldId: "coins",
+                        FieldId: fieldId,
                         CoinId: coin.Id,
                         Count: 1);
                     order++;
@@ -2081,7 +2131,7 @@ public static class RhodesMaaLocalCandidateConverter
         if (!int.TryParse(normalized, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
             return null;
 
-        // Sarkaz difficulty stops at 18. MAA-OCR can render the narrow leading 1 as 7,
+        // Difficulty-18 themes can render the narrow leading 1 as 7,
         // so repair only the otherwise impossible two-digit 70-78 range.
         if (maximum == 18 && normalized.Length == 2 && number is >= 70 and <= 78)
             return number - 60;

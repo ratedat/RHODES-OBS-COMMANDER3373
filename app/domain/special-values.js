@@ -26,31 +26,21 @@ export function clampCoinCount(value) {
   return Math.max(1, Math.min(99, Math.round(numeric)));
 }
 
-export const coinFaceLabels = {
-  front: "表",
-  back: "裏",
-};
-
-export function normalizeCoinFace(value) {
-  return value === "back" ? "back" : "front";
-}
-
 export function asCoinEntries(value) {
   if (!Array.isArray(value)) return [];
   return value.map((entry) => {
-    if (typeof entry === "string") return { coinId: entry, count: 1, statusId: null, face: "front" };
+    if (typeof entry === "string") return { coinId: entry, count: 1, statusId: null };
     if (!entry || typeof entry !== "object") return null;
     return {
       coinId: entry.coinId || entry.id || null,
       count: clampCoinCount(entry.count),
       statusId: entry.statusId || entry.status || null,
-      face: normalizeCoinFace(entry.face),
     };
   }).filter((entry) => entry?.coinId);
 }
 
 function coinEntryKey(entry) {
-  return `${entry.coinId}\u001f${entry.statusId || ""}\u001f${entry.face}`;
+  return `${entry.coinId}\u001f${entry.statusId || ""}`;
 }
 
 export function mergeCoinEntries(entries) {

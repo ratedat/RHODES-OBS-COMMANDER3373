@@ -1239,8 +1239,21 @@
     "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D",
     "specialFields": [
       {
+        "id": "ticket",
+        "label": "遊覧券",
+        "type": "number",
+        "unitLabel": "枚"
+      },
+      {
+        "id": "activeCoins",
+        "label": "有効銭",
+        "type": "coinLoadout",
+        "effectSlot": "coin",
+        "statusSlot": "coinStatus"
+      },
+      {
         "id": "coins",
-        "label": "通宝",
+        "label": "保有銭",
         "type": "coinLoadout",
         "effectSlot": "coin",
         "statusSlot": "coinStatus"

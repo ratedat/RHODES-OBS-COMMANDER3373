@@ -13,7 +13,7 @@ export function recognitionCandidateKey(candidate = {}) {
     return candidate.instanceId ? compactParts([...base, candidate.instanceId]) : compactParts(base);
   }
   if (kind === "age") return compactParts([kind, candidate.campaignId, candidate.ageId || candidate.name]);
-  if (kind === "coin") return compactParts([kind, candidate.campaignId, candidate.coinId || candidate.name, candidate.statusId, candidate.face, candidate.count]);
+  if (kind === "coin") return compactParts([kind, candidate.campaignId, candidate.fieldId, candidate.coinId || candidate.name, candidate.statusId, candidate.count]);
   return compactParts([kind, candidate.id || candidate.name || candidate.rawText || JSON.stringify(candidate)]);
 }
 
@@ -35,7 +35,7 @@ function suggestionValue(candidate) {
   if (candidate.kind === "operator") return candidate.name || candidate.operatorId || candidate.rawText || "";
   if (candidate.kind === "coin") {
     const count = candidate.count == null ? "?" : candidate.count;
-    return [candidate.name || candidate.coinId, candidate.statusName || candidate.statusId, candidate.face, `${count}枚`].filter(Boolean).join(" / ");
+    return [candidate.name || candidate.coinId, candidate.statusName || candidate.statusId, `${count}枚`].filter(Boolean).join(" / ");
   }
   if (candidate.kind === "age") return candidate.name || candidate.ageId || candidate.rawText || "";
   return candidate.name || candidate.rawText || candidate.id || "";

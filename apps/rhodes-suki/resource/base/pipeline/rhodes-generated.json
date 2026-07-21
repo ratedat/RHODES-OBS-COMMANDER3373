@@ -114,6 +114,8 @@
         "is3KeyFull",
         "is3LightHordeFull",
         "is3RejectionFull",
+        "is6BaseFull",
+        "is6ActiveCoinsFull",
         "is6CoinsFull"
       ]
     },
@@ -828,6 +830,48 @@
       "scale": 6
     }
   },
+  "RhodesOcrRegion_is6_ingot_value": {
+    "recognition": "OCR",
+    "roi": [
+      1065,
+      8,
+      55,
+      45
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is6.ingot_value",
+      "profileIds": [
+        "is6BaseFull"
+      ],
+      "scale": 6
+    }
+  },
+  "RhodesOcrRegion_is6_ticket_value": {
+    "recognition": "OCR",
+    "roi": [
+      1210,
+      8,
+      55,
+      45
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is6.ticket_value",
+      "profileIds": [
+        "is6BaseFull"
+      ],
+      "scale": 6
+    }
+  },
   "RhodesOcrRegion_is3_light_value": {
     "recognition": "OCR",
     "roi": [
@@ -1044,6 +1088,36 @@
       "source": "scan-profiles.templateOcrRegions",
       "profileId": "runStatusFull",
       "idPrefix": "run.difficulty.grade.anchor",
+      "ocrOffset": {
+        "x": 102,
+        "y": 0,
+        "width": 66,
+        "height": 51
+      },
+      "maxMatches": 1,
+      "scale": 6,
+      "numericFallback": true,
+      "templateIds": null
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_difficulty_grade_is6_sui_anchor": {
+    "recognition": "TemplateMatch",
+    "roi": [
+      22,
+      548,
+      122,
+      40
+    ],
+    "template": "run/DifficultyFlag_is6_sui.png",
+    "threshold": 0.85,
+    "method": 5,
+    "order_by": "Score",
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.difficulty.grade.is6_sui.anchor",
       "ocrOffset": {
         "x": 102,
         "y": 0,
@@ -1309,6 +1383,290 @@
         "is5_sarkaz_squad_15",
         "is5_sarkaz_squad_16",
         "is5_sarkaz_squad_17"
+      ]
+    }
+  },
+  "RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch": {
+    "recognition": "Or",
+    "any_of": [
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_01.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_02.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_03.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_04.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_05.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_06.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_07.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_08.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_09.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_10.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_11.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_12.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_13.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_14.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_15.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_16.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_17.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_18.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      },
+      {
+        "recognition": "TemplateMatch",
+        "roi": [
+          58,
+          632,
+          50,
+          88
+        ],
+        "template": "run/SquadIconRight_is6_sui_squad_19.png",
+        "threshold": 0.72,
+        "method": 5,
+        "order_by": "Score"
+      }
+    ],
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "scan-profiles.templateOcrRegions",
+      "profileId": "runStatusFull",
+      "idPrefix": "run.squad.icon.is6_sui.batch",
+      "ocrOffset": null,
+      "maxMatches": 1,
+      "scale": null,
+      "numericFallback": null,
+      "templateIds": [
+        "is6_sui_squad_01",
+        "is6_sui_squad_02",
+        "is6_sui_squad_03",
+        "is6_sui_squad_04",
+        "is6_sui_squad_05",
+        "is6_sui_squad_06",
+        "is6_sui_squad_07",
+        "is6_sui_squad_08",
+        "is6_sui_squad_09",
+        "is6_sui_squad_10",
+        "is6_sui_squad_11",
+        "is6_sui_squad_12",
+        "is6_sui_squad_13",
+        "is6_sui_squad_14",
+        "is6_sui_squad_15",
+        "is6_sui_squad_16",
+        "is6_sui_squad_17",
+        "is6_sui_squad_18",
+        "is6_sui_squad_19"
       ]
     }
   },

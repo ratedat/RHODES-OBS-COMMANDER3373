@@ -82,6 +82,27 @@
           "numericFallback": true
         },
         {
+          "idPrefix": "run.difficulty.grade.is6_sui.anchor",
+          "templatePath": "assets/recognition/templates/run/DifficultyFlag_is6_sui.png",
+          "searchRoi": {
+            "x": 22,
+            "y": 548,
+            "width": 122,
+            "height": 40
+          },
+          "ocrOffset": {
+            "x": 102,
+            "y": 0,
+            "width": 66,
+            "height": 51
+          },
+          "threshold": 0.85,
+          "method": 5,
+          "maxMatches": 1,
+          "scale": 6,
+          "numericFallback": true
+        },
+        {
           "idPrefix": "run.squad.icon.is5_sarkaz.batch",
           "templatePaths": [
             "assets/recognition/templates/run/SquadIconRight_is5_sarkaz_squad_01.png",
@@ -120,6 +141,60 @@
             "is5_sarkaz_squad_15",
             "is5_sarkaz_squad_16",
             "is5_sarkaz_squad_17"
+          ],
+          "searchRoi": {
+            "x": 58,
+            "y": 632,
+            "width": 50,
+            "height": 88
+          },
+          "threshold": 0.72,
+          "method": 5,
+          "maxMatches": 1
+        },
+        {
+          "idPrefix": "run.squad.icon.is6_sui.batch",
+          "templatePaths": [
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_01.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_02.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_03.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_04.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_05.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_06.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_07.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_08.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_09.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_10.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_11.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_12.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_13.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_14.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_15.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_16.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_17.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_18.png",
+            "assets/recognition/templates/run/SquadIconRight_is6_sui_squad_19.png"
+          ],
+          "templateIds": [
+            "is6_sui_squad_01",
+            "is6_sui_squad_02",
+            "is6_sui_squad_03",
+            "is6_sui_squad_04",
+            "is6_sui_squad_05",
+            "is6_sui_squad_06",
+            "is6_sui_squad_07",
+            "is6_sui_squad_08",
+            "is6_sui_squad_09",
+            "is6_sui_squad_10",
+            "is6_sui_squad_11",
+            "is6_sui_squad_12",
+            "is6_sui_squad_13",
+            "is6_sui_squad_14",
+            "is6_sui_squad_15",
+            "is6_sui_squad_16",
+            "is6_sui_squad_17",
+            "is6_sui_squad_18",
+            "is6_sui_squad_19"
           ],
           "searchRoi": {
             "x": 58,
@@ -1257,10 +1332,82 @@
       "navigationNote": "右下の拒絶反応表示をタップして反応名を取得する。影響対象は続くオペレータースキャンで紫色のカード背景から判定する。"
     },
     {
+      "id": "is6BaseFull",
+      "label": "源石錐・遊覧券スキャン",
+      "interfaceLabel": "源石錐・遊覧券",
+      "interfaceDescription": "IS#6の右上に表示される源石錐と遊覧券の所持数を取得します。",
+      "campaignId": "is6_sui",
+      "candidateKind": "runStatus",
+      "ocrEngine": "maa-ocr",
+      "ocrRegionIds": [
+        "is6.ingot_value",
+        "is6.ticket_value"
+      ],
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home"
+      ],
+      "openSteps": [],
+      "targetScreenIds": [
+        "run-home"
+      ],
+      "inferredScreenId": "run-home",
+      "scanRegion": {
+        "x": 1040,
+        "y": 0,
+        "width": 240,
+        "height": 56
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "歳のマップ右上にある源石錐と遊覧券の数値を、それぞれ独立したROIでOCRする。"
+    },
+    {
+      "id": "is6ActiveCoinsFull",
+      "label": "有効銭スキャン",
+      "interfaceLabel": "有効銭",
+      "interfaceDescription": "IS#6のマップ下部にセットされている有効銭を画像分類で取得します。",
+      "campaignId": "is6_sui",
+      "candidateKind": "coin",
+      "ocrEngine": "maa-ocr",
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home"
+      ],
+      "openSteps": [],
+      "targetScreenIds": [
+        "run-home"
+      ],
+      "inferredScreenId": "run-home",
+      "scanRegion": {
+        "x": 590,
+        "y": 630,
+        "width": 190,
+        "height": 80
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "マップ下部の銭匣にセットされた有効銭を固定スロットから画像分類する。"
+    },
+    {
       "id": "is6CoinsFull",
-      "label": "通宝フルスキャン",
-      "interfaceLabel": "通宝",
-      "interfaceDescription": "IS#6の通宝を取得します。",
+      "label": "保有銭フルスキャン",
+      "interfaceLabel": "保有銭",
+      "interfaceDescription": "IS#6の銭匣を開き、保有銭を取得します。",
       "campaignId": "is6_sui",
       "candidateKind": "coin",
       "ocrEngine": "maa-ocr",

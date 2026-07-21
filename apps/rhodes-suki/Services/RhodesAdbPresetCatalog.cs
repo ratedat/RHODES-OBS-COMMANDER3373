@@ -11,7 +11,7 @@ public static class RhodesAdbPresetCatalog
     private static readonly IReadOnlyDictionary<string, string[]> DefaultSerialsByPreset = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
     {
         ["bluestacks"] = ["127.0.0.1:5555", "127.0.0.1:5556", "127.0.0.1:5565", "127.0.0.1:5575", "127.0.0.1:5585", "127.0.0.1:5595", "127.0.0.1:5554"],
-        ["mumu"] = ["127.0.0.1:16384", "127.0.0.1:16416", "127.0.0.1:16448", "127.0.0.1:16480", "127.0.0.1:16512", "127.0.0.1:16544", "127.0.0.1:16576"],
+        ["mumu"] = ["127.0.0.1:16384", "127.0.0.1:16416", "127.0.0.1:7555", "127.0.0.1:16448", "127.0.0.1:16480", "127.0.0.1:16512", "127.0.0.1:16544", "127.0.0.1:16576"],
         ["ldplayer"] = ["emulator-5554", "emulator-5556", "emulator-5558", "emulator-5560", "127.0.0.1:5555", "127.0.0.1:5557", "127.0.0.1:5559", "127.0.0.1:5561"],
         ["nox"] = ["127.0.0.1:62001", "127.0.0.1:59865"],
         ["xyaz"] = ["127.0.0.1:21503"],
@@ -148,9 +148,38 @@ public static class RhodesAdbPresetCatalog
         [
             Path.Combine(root, "nx_main", "adb.exe"),
             Path.Combine(root, "shell", "adb.exe"),
+            .. MuMuNxDeviceShellAdbPaths(root),
             Path.Combine(root, "nx_device", "12.0", "vmonitor", "bin", "adb_server.exe"),
             Path.Combine(root, "nx_device", "MuMu", "emulator", "nemu", "vmonitor", "bin", "adb_server.exe"),
         ];
+    }
+
+    private static IEnumerable<string> MuMuNxDeviceShellAdbPaths(string installRoot)
+    {
+        var nxDeviceRoot = Path.Combine(installRoot, "nx_device");
+        if (!Directory.Exists(nxDeviceRoot))
+        {
+            yield return Path.Combine(nxDeviceRoot, "15.0", "shell", "adb.exe");
+            yield return Path.Combine(nxDeviceRoot, "12.0", "shell", "adb.exe");
+            yield break;
+        }
+
+        IEnumerable<string> versions;
+        try
+        {
+            versions = Directory.EnumerateDirectories(nxDeviceRoot)
+                .Select(Path.GetFileName)
+                .Where(name => !string.IsNullOrWhiteSpace(name) && name.EndsWith(".0", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToArray()!;
+        }
+        catch
+        {
+            versions = ["15.0", "12.0"];
+        }
+
+        foreach (var version in versions)
+            yield return Path.Combine(nxDeviceRoot, version, "shell", "adb.exe");
     }
 
     internal static string ResolveMuMuInstallRootFromProcessPath(string? processPath)
@@ -187,10 +216,13 @@ public static class RhodesAdbPresetCatalog
         var executableName = Path.GetFileName(processPath.Trim());
         if (executableName.Equals("MuMuNxDevice.exe", StringComparison.OrdinalIgnoreCase))
         {
+            var processDirectory = Path.GetDirectoryName(processPath.Trim()) ?? "";
             return
             [
+                Path.Combine(processDirectory, "adb.exe"),
                 Path.Combine(installRoot, "nx_main", "adb.exe"),
-                Path.Combine(installRoot, "nx_device", "12.0", "vmonitor", "bin", "adb_server.exe"),
+                Path.Combine(installRoot, "shell", "adb.exe"),
+                .. MuMuNxDeviceShellAdbPaths(installRoot),
                 Path.Combine(installRoot, "nx_device", "MuMu", "emulator", "nemu", "vmonitor", "bin", "adb_server.exe"),
             ];
         }

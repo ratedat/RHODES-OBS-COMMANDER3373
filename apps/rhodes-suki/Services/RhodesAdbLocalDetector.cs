@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Net;
+using System.Net.NetworkInformation;
 using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
@@ -112,10 +114,43 @@ public static class RhodesAdbLocalDetector
     {
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var serial in RuntimeTcpSerialCandidates(presetId))
+            PushSerial(result, seen, serial);
         PushSerial(result, seen, configuredSerial);
         foreach (var serial in RhodesAdbPresetCatalog.DefaultSerials(presetId))
             PushSerial(result, seen, serial);
         return result;
+    }
+
+    private static IEnumerable<string> RuntimeTcpSerialCandidates(string presetId)
+    {
+        if (!presetId.Equals("mumu", StringComparison.OrdinalIgnoreCase))
+            yield break;
+
+        foreach (var listener in ActiveLoopbackTcpPorts())
+        {
+            if (listener == 7555 || listener >= 16384 && listener <= 16640)
+                yield return $"127.0.0.1:{listener}";
+        }
+    }
+
+    private static IReadOnlyList<int> ActiveLoopbackTcpPorts()
+    {
+        try
+        {
+            return IPGlobalProperties.GetIPGlobalProperties()
+                .GetActiveTcpListeners()
+                .Where(endpoint => IPAddress.IsLoopback(endpoint.Address))
+                .Select(endpoint => endpoint.Port)
+                .Distinct()
+                .OrderBy(port => port == 7555 ? 1 : 0)
+                .ThenBy(port => port)
+                .ToArray();
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     internal static IReadOnlyList<MaaAdbPathCandidatePreview> SortCandidates(

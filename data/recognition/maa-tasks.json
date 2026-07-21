@@ -147,6 +147,8 @@
         "is3KeyFull",
         "is3LightHordeFull",
         "is3RejectionFull",
+        "is6BaseFull",
+        "is6ActiveCoinsFull",
         "is6CoinsFull"
       ],
       "recognition": {
@@ -641,6 +643,34 @@
       "id": "is3.key_value",
       "profileIds": [
         "is3KeyFull"
+      ],
+      "roi": [
+        1210,
+        8,
+        55,
+        45
+      ],
+      "scale": 6,
+      "onlyRec": true
+    },
+    {
+      "id": "is6.ingot_value",
+      "profileIds": [
+        "is6BaseFull"
+      ],
+      "roi": [
+        1065,
+        8,
+        55,
+        45
+      ],
+      "scale": 6,
+      "onlyRec": true
+    },
+    {
+      "id": "is6.ticket_value",
+      "profileIds": [
+        "is6BaseFull"
       ],
       "roi": [
         1210,

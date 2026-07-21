@@ -20,6 +20,7 @@
       "squadId",
       "squadRandomEffectOptionId",
       "idea",
+      "ticket",
       "performanceId",
       "hallucinations"
     ],
@@ -34,6 +35,8 @@
       "run.ingot",
       "run.idea",
       "run.idea.current",
+      "is6.ingot_value",
+      "is6.ticket_value",
       "run.squad.card",
       "run.squad.icon",
       "run.squad.name",

@@ -41,6 +41,7 @@ test("MAA recognition policy defines the retained run target boundary once", () 
     "squadId",
     "squadRandomEffectOptionId",
     "idea",
+    "ticket",
     "performanceId",
     "hallucinations",
   ]);

@@ -18,8 +18,8 @@ public static class RhodesWorkspaceRegistry
     private static readonly Dictionary<string, SukiWorkspaceNavItem> WorkspaceById = WorkspaceItems
         .ToDictionary(item => item.Id, StringComparer.Ordinal);
 
-    private static readonly IReadOnlyList<SukiWorkspaceNavItem> PublicDebugWorkspaceItems = WorkspaceItems
-        .Where(item => item.Id is not ("recognition" or "debug"))
+    private static readonly IReadOnlyList<SukiWorkspaceNavItem> OperationalWorkspaceItems = WorkspaceItems
+        .Where(item => item.Id is "run" or "special" or "choices" or "output")
         .ToArray();
 
     private static readonly IReadOnlyDictionary<string, string> TitlesById = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -37,7 +37,7 @@ public static class RhodesWorkspaceRegistry
 
     public static IReadOnlyList<SukiWorkspaceNavItem> ItemsFor(RhodesDistributionProfile profile)
     {
-        return profile.IsPublicDebug ? PublicDebugWorkspaceItems : WorkspaceItems;
+        return OperationalWorkspaceItems;
     }
 
     public static string Normalize(string? workspaceId)

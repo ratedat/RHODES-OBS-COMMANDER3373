@@ -8,10 +8,10 @@
     xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
     xmlns:workspaces="clr-namespace:RhodesSuki.Views.Workspaces"
     mc:Ignorable="d"
-    Width="1500"
-    Height="900"
-    MinWidth="1180"
-    MinHeight="720"
+    Width="1540"
+    Height="920"
+    MinWidth="1280"
+    MinHeight="760"
     Title="{Binding Title}">
   <!--
     シェル設計:
@@ -21,16 +21,16 @@
       Bottom : ステータスバー (+ 処理中表示)
     プレビュー・候補は認識ワークスペース内、報告取込・Frame再認識はデバッグ内で完結する。
   -->
-  <Grid RowDefinitions="Auto,*,Auto" Margin="16" RowSpacing="10">
-    <Border Classes="panel" Padding="12,10">
-      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="14">
-        <StackPanel Spacing="0" VerticalAlignment="Center">
-          <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" />
-          <TextBlock Text="検証ワークベンチ" Classes="caption" />
+  <Grid RowDefinitions="74,*,30">
+    <Border Classes="appleToolbar">
+      <Grid ColumnDefinitions="300,240,*,Auto,Auto,Auto" ColumnSpacing="10">
+        <StackPanel Spacing="1" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" />
+          <TextBlock Text="BROADCAST CONTROL" FontSize="10" FontWeight="Bold" Foreground="{StaticResource WorkbenchThemeAccent}" />
         </StackPanel>
 
         <ComboBox Grid.Column="1"
-                  Width="250"
+                  Width="240"
                   VerticalAlignment="Center"
                   ItemsSource="{Binding Campaigns}"
                   SelectedItem="{Binding SelectedCampaign, Mode=TwoWay}"
@@ -44,7 +44,7 @@
                 Background="{Binding ConnectionStatusBackground}"
                 BorderBrush="{Binding ConnectionStatusBorder}"
                 BorderThickness="1"
-                CornerRadius="14"
+                CornerRadius="17"
                 Padding="12,6"
                 VerticalAlignment="Center"
                 ToolTip.Tip="クリックで接続画面を開きます">
@@ -54,23 +54,27 @@
           </StackPanel>
         </Button>
 
-        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <Button Content="接続・撮影" Command="{Binding ConnectAndCaptureCommand}"
-                  IsVisible="{Binding IsGlobalConnectAndCaptureVisible}"
-                  ToolTip.Tip="保存済みADB設定で接続し、スクリーンショットを1枚取得します" />
-          <Button Classes="primary" Content="ADB取得・認識・反映" Command="{Binding RunSelectedProfileRecognitionAndApplyCommand}"
-                  ToolTip.Tip="保存済みADB設定で接続し、撮影・認識・状態反映まで自動実行します" />
-          <Button Content="報告ZIP" Command="{Binding CreateBugReportBundleCommand}" />
-          <ToggleButton Content="HUD" IsChecked="{Binding IsHudVisible, Mode=TwoWay}"
-                        ToolTip.Tip="本人用の透過メモ小窓をエミュレータの上に重ねます (MAAのログ小窓と同型)。クリック透過で詰まったらここをOFF→ONで復帰。" />
-        </StackPanel>
+        <Button Grid.Column="4"
+                Classes="primaryAction"
+                Content="取得して反映"
+                Command="{Binding RunAllOperationalRecognitionAndApplyCommand}"
+                ToolTip.Tip="現在テーマの共通値・固有値・オペレーター・秘宝を順に取得して反映します" />
+        <Button Grid.Column="5" Classes="tertiaryAction" Content="⋯" Width="48" ToolTip.Tip="接続設定・HUD・報告">
+          <Button.Flyout>
+            <MenuFlyout>
+              <MenuItem Header="ADB接続設定" Command="{Binding SetWorkspaceCommand}" CommandParameter="runtime" />
+              <MenuItem Header="HUDを表示／非表示" Command="{Binding ToggleHudVisibilityCommand}" />
+              <MenuItem Header="バグ報告ZIPを作成" Command="{Binding CreateBugReportBundleCommand}" />
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="176,*" ColumnSpacing="10">
-      <Border Classes="panel" Padding="8">
-        <Grid RowDefinitions="Auto,*" RowSpacing="8">
-          <TextBlock Text="WORKSPACE" FontSize="10" FontWeight="Bold" Opacity="0.45" Margin="12,4,0,0" />
+    <Grid Grid.Row="1" ColumnDefinitions="190,*">
+      <Border Classes="appleSidebar">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+          <TextBlock Text="ワークスペース" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource WorkbenchTextTertiary}" Margin="12,8,0,4" />
           <ListBox Grid.Row="1"
                  Classes="navList"
                  ItemsSource="{Binding WorkspaceNav}"
@@ -79,15 +83,21 @@
             <DataTemplate>
               <StackPanel Spacing="1">
                 <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding Subtitle}" FontSize="10" FontWeight="Bold" Opacity="0.45" />
+                <TextBlock Text="{Binding Subtitle}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource WorkbenchTextTertiary}" />
               </StackPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>
           </ListBox>
+          <StackPanel Grid.Row="2" Spacing="6" Margin="8">
+            <Button Classes="tertiaryAction" Content="ADB接続設定" HorizontalContentAlignment="Left"
+                    Command="{Binding SetWorkspaceCommand}" CommandParameter="runtime" />
+            <Button Classes="tertiaryAction" Content="報告ZIP" HorizontalContentAlignment="Left"
+                    Command="{Binding CreateBugReportBundleCommand}" />
+          </StackPanel>
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" ClipToBounds="True" MinWidth="0" Classes="panel" Background="#111718">
+      <Border Grid.Column="1" ClipToBounds="True" MinWidth="0" Classes="appleWorkspace">
         <Grid>
           <workspaces:RunWorkspaceView IsVisible="{Binding IsRunWorkspaceVisible}" />
           <workspaces:SpecialWorkspaceView IsVisible="{Binding IsSpecialWorkspaceVisible}" />
@@ -100,7 +110,7 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="2" Classes="panel" Padding="12,7" CornerRadius="7">
+    <Border Grid.Row="2" Classes="statusBar">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsBusy}">
           <ProgressBar IsIndeterminate="True" Width="70" Height="4" VerticalAlignment="Center" />

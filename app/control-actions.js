@@ -1,4 +1,4 @@
-import { asCoinEntries, asEffectStackEntries, asRevelationBoardValue, asSpecialArray, asSpecialObject, clampCoinCount, clampSpecialNumber, mergeCoinEntries, normalizeCoinFace } from "./domain/special-values.js";
+import { asCoinEntries, asEffectStackEntries, asRevelationBoardValue, asSpecialArray, asSpecialObject, clampCoinCount, clampSpecialNumber, mergeCoinEntries } from "./domain/special-values.js";
 import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults } from "./lib/overlay-config.js";
 import { clampGridColumns, normalizeOcrEngine } from "./lib/preferences.js";
 import { normalizeChoiceFilterIds } from "./domain/choice-filters.js";
@@ -243,14 +243,6 @@ export function updateCoinEntryStatus(state, campaignId, fieldId, index, value) 
   const entries = asCoinEntries(state.run.special[campaignId]?.[fieldId]);
   const entry = entries[index];
   if (entry) entry.statusId = value || null;
-  const special = ensureCampaignSpecial(state, campaignId);
-  special[fieldId] = mergeCoinEntries(entries);
-}
-
-export function updateCoinEntryFace(state, campaignId, fieldId, index, value) {
-  const entries = asCoinEntries(state.run.special[campaignId]?.[fieldId]);
-  const entry = entries[index];
-  if (entry) entry.face = normalizeCoinFace(value);
   const special = ensureCampaignSpecial(state, campaignId);
   special[fieldId] = mergeCoinEntries(entries);
 }

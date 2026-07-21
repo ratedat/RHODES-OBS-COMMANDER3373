@@ -31,7 +31,7 @@ test("IS#3 revelation effects can be added through the generic add action", () =
   ]);
 });
 
-test("coin loadouts keep the same coin as separate rows when status or face differs", () => {
+test("coin loadouts merge the same coin and keep different statuses separate", () => {
   const entries = mergeCoinEntries([
     { coinId: "coin-a", count: 1, statusId: null, face: "front" },
     { coinId: "coin-a", count: 2, statusId: "status-a", face: "front" },
@@ -39,9 +39,8 @@ test("coin loadouts keep the same coin as separate rows when status or face diff
   ]);
 
   assert.deepEqual(entries, [
-    { coinId: "coin-a", count: 1, statusId: null, face: "front" },
-    { coinId: "coin-a", count: 2, statusId: "status-a", face: "front" },
-    { coinId: "coin-a", count: 3, statusId: "status-a", face: "back" },
+    { coinId: "coin-a", count: 1, statusId: null },
+    { coinId: "coin-a", count: 5, statusId: "status-a" },
   ]);
 });
 
@@ -52,8 +51,8 @@ test("adding a coin with a selected status creates a visible second slot", () =>
   addCoinEntry(state, "is6_sui", "coins", { coinId: "coin-a", count: 1, statusId: "status-a", face: "front" });
 
   assert.deepEqual(state.run.special.is6_sui.coins, [
-    { coinId: "coin-a", count: 1, statusId: null, face: "front" },
-    { coinId: "coin-a", count: 1, statusId: "status-a", face: "front" },
+    { coinId: "coin-a", count: 1, statusId: null },
+    { coinId: "coin-a", count: 1, statusId: "status-a" },
   ]);
 
   assert.equal(formatCoinLoadoutValue({ id: "coins" }, state.run.special.is6_sui.coins, { selectableEffectMap: coinMap }), "2枚 / 2枠");
@@ -76,8 +75,8 @@ test("changing a coin status preserves a separate status row unless the exact sl
   updateCoinEntryStatus(state, "is6_sui", "coins", 0, "status-b");
 
   assert.deepEqual(state.run.special.is6_sui.coins, [
-    { coinId: "coin-a", count: 1, statusId: "status-b", face: "front" },
-    { coinId: "coin-a", count: 1, statusId: "status-a", face: "front" },
+    { coinId: "coin-a", count: 1, statusId: "status-b" },
+    { coinId: "coin-a", count: 1, statusId: "status-a" },
   ]);
 });
 

@@ -1,6 +1,6 @@
 # Integrated Strategies Data Summary
 
-Generated from arknights.wikiru.jp on 2026-07-18.
+Generated from arknights.wikiru.jp on 2026-07-21.
 
 This summary is for checking extracted overlay data. Full extracted data is in `data/relics.json` and `data/squads.json`.
 

@@ -49,7 +49,6 @@ function addCoin(summary, template, operation) {
     coinId: operation.coinId,
     count: operation.count || 1,
     statusId: operation.statusId || null,
-    face: operation.face || "front",
   });
 }
 

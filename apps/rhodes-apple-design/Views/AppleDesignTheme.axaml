@@ -1,0 +1,279 @@
+<Styles
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <SolidColorBrush x:Key="AppleMaterialBase">#090C0E</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleMaterialSidebar">#101518</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleMaterialToolbar">#F012171A</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleMaterialContent">#0C1114</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleMaterialFloating">#171E22</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleMaterialHover">#222C31</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleMaterialPressed">#2B383E</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleSeparator">#303A3F</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleTextPrimary">#F4F7F6</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleTextSecondary">#B3BEBA</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleTextTertiary">#85928D</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleAccent">#62C7B6</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleAccentStrong">#177E6D</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleTheme">#E7B94E</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleSuccess">#50D394</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleWarning">#F0B54A</SolidColorBrush>
+    <SolidColorBrush x:Key="AppleDanger">#FF7478</SolidColorBrush>
+  </Styles.Resources>
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialBase}" />
+    <Setter Property="Foreground" Value="{StaticResource AppleTextPrimary}" />
+    <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" />
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource AppleTextPrimary}" />
+    <Setter Property="LetterSpacing" Value="0" />
+  </Style>
+  <Style Selector="TextBlock.displayTitle">
+    <Setter Property="FontSize" Value="25" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="31" />
+  </Style>
+  <Style Selector="TextBlock.sectionTitle">
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="22" />
+  </Style>
+  <Style Selector="TextBlock.metricValue">
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="29" />
+  </Style>
+  <Style Selector="TextBlock.body">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="LineHeight" Value="19" />
+    <Setter Property="Foreground" Value="{StaticResource AppleTextSecondary}" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="15" />
+    <Setter Property="Foreground" Value="{StaticResource AppleTextTertiary}" />
+  </Style>
+  <Style Selector="TextBlock.eyebrow">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource AppleTextTertiary}" />
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Background" Value="{StaticResource AppleMaterialFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppleSeparator}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{StaticResource AppleTextPrimary}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.08" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button:pointerover">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialHover}" />
+    <Setter Property="BorderBrush" Value="#56636A" />
+  </Style>
+  <Style Selector="Button:pressed">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialPressed}" />
+    <Setter Property="Opacity" Value="0.76" />
+  </Style>
+  <Style Selector="Button:focus-visible">
+    <Setter Property="BorderBrush" Value="{StaticResource AppleAccent}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="Button.primaryAction">
+    <Setter Property="Background" Value="{StaticResource AppleAccentStrong}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppleAccent}" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+  <Style Selector="Button.primaryAction:pointerover">
+    <Setter Property="Background" Value="#21917D" />
+  </Style>
+  <Style Selector="Button.tertiaryAction">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource AppleTextSecondary}" />
+  </Style>
+  <Style Selector="Button.dangerAction">
+    <Setter Property="Background" Value="#351A1D" />
+    <Setter Property="BorderBrush" Value="#714048" />
+    <Setter Property="Foreground" Value="#FFB2B5" />
+  </Style>
+  <Style Selector="Button.catalogItem">
+    <Setter Property="Height" Value="76" />
+    <Setter Property="Padding" Value="10" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="#12181B" />
+  </Style>
+  <Style Selector="Button.catalogItem.selected">
+    <Setter Property="Background" Value="#16352F" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppleAccent}" />
+  </Style>
+
+  <Style Selector="RadioButton.navItem">
+    <Setter Property="Height" Value="54" />
+    <Setter Property="Margin" Value="0,2" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="NavSurface" Background="Transparent" CornerRadius="7" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RadioButton.navItem:pointerover /template/ Border#NavSurface">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialHover}" />
+  </Style>
+  <Style Selector="RadioButton.navItem:checked /template/ Border#NavSurface">
+    <Setter Property="Background" Value="#1B3833" />
+  </Style>
+
+  <Style Selector="RadioButton.segmented">
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="SegmentSurface" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RadioButton.segmented:pointerover /template/ Border#SegmentSurface">
+    <Setter Property="Background" Value="#273034" />
+  </Style>
+  <Style Selector="RadioButton.segmented:checked /template/ Border#SegmentSurface">
+    <Setter Property="Background" Value="#34433F" />
+  </Style>
+
+  <Style Selector="ComboBox, TextBox, NumericUpDown">
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Background" Value="{StaticResource AppleMaterialFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppleSeparator}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Foreground" Value="{StaticResource AppleTextPrimary}" />
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="Foreground" Value="{StaticResource AppleTextPrimary}" />
+    <Setter Property="Background" Value="{StaticResource AppleMaterialContent}" />
+  </Style>
+  <Style Selector="ComboBoxItem:pointerover">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialHover}" />
+  </Style>
+
+  <Style Selector="Border.appleToolbar">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialToolbar}" />
+    <Setter Property="BorderBrush" Value="#273136" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="16,9" />
+  </Style>
+  <Style Selector="Border.appleSidebar">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialSidebar}" />
+    <Setter Property="BorderBrush" Value="#273136" />
+    <Setter Property="BorderThickness" Value="0,0,1,0" />
+    <Setter Property="Padding" Value="10" />
+  </Style>
+  <Style Selector="Border.appleWorkspace">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialContent}" />
+    <Setter Property="Padding" Value="24" />
+  </Style>
+  <Style Selector="Border.appleCard">
+    <Setter Property="Background" Value="#13191C" />
+    <Setter Property="BorderBrush" Value="#2A353A" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="14" />
+  </Style>
+  <Style Selector="Border.metricBand">
+    <Setter Property="Background" Value="#101619" />
+    <Setter Property="BorderBrush" Value="#293439" />
+    <Setter Property="BorderThickness" Value="0,0,1,0" />
+    <Setter Property="Padding" Value="15,11" />
+  </Style>
+  <Style Selector="Border.statusChip">
+    <Setter Property="Background" Value="#163329" />
+    <Setter Property="BorderBrush" Value="#347C68" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="17" />
+    <Setter Property="Padding" Value="12,6" />
+  </Style>
+  <Style Selector="Border.filterBar">
+    <Setter Property="Background" Value="#11171A" />
+    <Setter Property="BorderBrush" Value="#2A353A" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="6" />
+  </Style>
+  <Style Selector="Border.resultBanner">
+    <Setter Property="Background" Value="#123027" />
+    <Setter Property="BorderBrush" Value="#2F745F" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="12,9" />
+  </Style>
+  <Style Selector="Border.settingsSheet">
+    <Setter Property="Background" Value="{StaticResource AppleMaterialContent}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppleSeparator}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+    <Setter Property="BoxShadow" Value="-18 0 40 0 #66000000" />
+  </Style>
+  <Style Selector="Border.overlayBlock">
+    <Setter Property="Background" Value="#E61A2328" />
+    <Setter Property="BorderBrush" Value="#668A8F" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="10" />
+    <Setter Property="Cursor" Value="SizeAll" />
+  </Style>
+  <Style Selector="Border.overlayBlock.selected">
+    <Setter Property="BorderBrush" Value="{StaticResource AppleAccent}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="Border.overlayBlock.dragging">
+    <Setter Property="BorderBrush" Value="#FFFFFF" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="Opacity" Value="0.88" />
+  </Style>
+  <Style Selector="Border.overlayBlock.resizing">
+    <Setter Property="BorderBrush" Value="#FFFFFF" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="Border.resizeHandle">
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+    <Setter Property="Background" Value="#D92A3438" />
+    <Setter Property="BorderBrush" Value="#93A3AA" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Cursor" Value="SizeAll" />
+  </Style>
+  <Style Selector="Border.resizeHandle > TextBlock">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+  <Style Selector="Border.resizeHandle:pointerover">
+    <Setter Property="Background" Value="{StaticResource AppleAccentStrong}" />
+    <Setter Property="BorderBrush" Value="#FFFFFF" />
+  </Style>
+</Styles>

@@ -59,7 +59,7 @@
       "id": "is6_sui",
       "difficultyName": "迎客入園",
       "minSelectableGrade": 1,
-      "maxSelectableGrade": 15,
+      "maxSelectableGrade": 18,
       "tableStyle": "grade-only",
       "fields": [
         { "key": "condition", "label": "追加条件", "index": 1 },

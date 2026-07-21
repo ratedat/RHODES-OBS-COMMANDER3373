@@ -1,6 +1,6 @@
 import * as selectableEffects from "./selectable-effects.js";
 import { normalizeEffectStackEntry, normalizeRevelationBoardValue } from "./special-loadouts.js";
-import { asCoinEntries, asEffectStackEntries, asSpecialArray, asSpecialObject, clampCoinCount, coinFaceLabels } from "./special-values.js";
+import { asCoinEntries, asEffectStackEntries, asSpecialArray, asSpecialObject, clampCoinCount } from "./special-values.js";
 
 function getSelectableEffect(context, id) {
   return context.selectableEffectMap?.get(id) || null;
@@ -19,7 +19,7 @@ export function formatCoinLoadoutValue(field, value, context) {
     const entry = entries[0];
     const coin = getSelectableEffect(context, entry.coinId);
     const status = entry.statusId ? getSelectableEffect(context, entry.statusId) : null;
-    return [coin?.name, `x${entry.count}`, status?.name, coinFaceLabels[entry.face]].filter(Boolean).join(" / ");
+    return [coin?.name, `x${entry.count}`, status?.name].filter(Boolean).join(" / ");
   }
   return `${total}枚 / ${entries.length}枠`;
 }
@@ -137,7 +137,7 @@ export function getSelectedSpecialEffectsForField(field, special, context) {
       const coin = getSelectableEffect(context, entry.coinId);
       if (!coin) continue;
       const status = entry.statusId ? getSelectableEffect(context, entry.statusId) : null;
-      const titleParts = [`x${entry.count}`, coinFaceLabels[entry.face], status?.name].filter(Boolean);
+      const titleParts = [`x${entry.count}`, status?.name].filter(Boolean);
       const effectParts = [coin.effect, status?.effect ? `${status.name}: ${status.effect}` : ""].filter(Boolean);
       effects.push({
         ...coin,

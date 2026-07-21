@@ -195,7 +195,7 @@ test("buildAdbCandidatePaths includes Google Play Games bundled adb locations", 
 });
 
 test("MAA-style default serials cover supported emulator presets", () => {
-  assert.deepEqual(adbDefaultSerialsByPreset.mumu.slice(0, 3), ["127.0.0.1:16384", "127.0.0.1:16416", "127.0.0.1:16448"]);
+  assert.deepEqual(adbDefaultSerialsByPreset.mumu.slice(0, 4), ["127.0.0.1:16384", "127.0.0.1:16416", "127.0.0.1:7555", "127.0.0.1:16448"]);
   assert.equal(adbDefaultSerialsByPreset.bluestacks.includes("127.0.0.1:5555"), true);
   assert.equal(adbDefaultSerialsByPreset.ldplayer.includes("emulator-5554"), true);
   assert.deepEqual(adbDefaultSerialsByPreset.nox, ["127.0.0.1:62001", "127.0.0.1:59865"]);

@@ -1,6 +1,5 @@
 import { html } from "../lib/format.js";
 import { specialEffectImageSrc } from "../lib/media.js";
-import { coinFaceLabels } from "../domain/special-values.js";
 
 export function renderSpecialOverlayToggle(field, special, getSpecialOverlayToggleKey) {
   if (!field.overlayToggle) return "";
@@ -65,8 +64,4 @@ export function renderSpecialSelectedChip(field, item) {
     <span>${html(groupPrefix + item.name)}</span>
     <b>×</b>
   </button>`;
-}
-
-export function renderCoinFaceOptions(current) {
-  return Object.entries(coinFaceLabels).map(([value, label]) => `<option value="${html(value)}" ${value === current ? "selected" : ""}>${html(label)}</option>`).join("");
 }

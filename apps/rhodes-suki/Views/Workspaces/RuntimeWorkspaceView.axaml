@@ -5,10 +5,14 @@
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ClipToBounds="True">
     <StackPanel Spacing="12" HorizontalAlignment="Stretch">
       <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
-        <StackPanel Spacing="2">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <StackPanel Spacing="2">
           <TextBlock Text="{Binding RuntimeLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
           <TextBlock Text="{Binding RuntimeLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
-        </StackPanel>
+          </StackPanel>
+          <Button Grid.Column="1" Classes="tertiaryAction" Content="← ランへ戻る"
+                  Command="{Binding SetWorkspaceCommand}" CommandParameter="run" />
+        </Grid>
         <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">
           <Button Content="自動検出" Command="{Binding RefreshAdbDevicesCommand}"
                   ToolTip.Tip="ADB実行ファイルと接続可能な端末を検出" />

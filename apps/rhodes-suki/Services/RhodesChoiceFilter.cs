@@ -31,10 +31,10 @@ public static class RhodesChoiceFilter
         });
 
         var ordered = filtered.OrderBy(RhodesRelicUsagePolicy.OwnedDisplayPriority);
-        return (options.ShowSelectedFirst
-                ? ordered.ThenByDescending(item => item.IsSelected).ThenBy(item => item.SortOrder).ThenBy(item => item.Name, StringComparer.Ordinal)
-                : ordered.ThenBy(item => item.SortOrder).ThenBy(item => item.Name, StringComparer.Ordinal))
-            .ToArray();
+        if (options.ShowSelectedFirst)
+            ordered = ordered.ThenByDescending(item => item.IsSelected);
+
+        return ApplySortMode(ordered, options.SortMode).ToArray();
     }
 
     // クリック直後の全再構築は「押した項目が並び替えで移動し、スクロール位置も失われる」ため、
@@ -53,6 +53,33 @@ public static class RhodesChoiceFilter
     private static bool IsAll(string value)
     {
         return string.IsNullOrWhiteSpace(value) || value == "すべて" || value.Equals("all", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IOrderedEnumerable<SukiChoiceItem> ApplySortMode(
+        IOrderedEnumerable<SukiChoiceItem> ordered,
+        string? sortMode)
+    {
+        return sortMode switch
+        {
+            "職業・職分順" => ordered
+                .ThenBy(item => item.OperatorClass, Comparer<string>.Create(RhodesOperatorTaxonomy.CompareClass))
+                .ThenBy(item => item.OperatorBranch, Comparer<string>.Create((left, right) =>
+                    RhodesOperatorTaxonomy.CompareBranch(left, right)))
+                .ThenByDescending(item => item.Rarity)
+                .ThenBy(item => item.Name, StringComparer.Ordinal),
+            "名前順" => ordered.ThenBy(item => item.Name, StringComparer.Ordinal),
+            "秘宝種別順" => ordered
+                .ThenBy(item => item.Category, StringComparer.Ordinal)
+                .ThenBy(item => item.SortOrder)
+                .ThenBy(item => item.Name, StringComparer.Ordinal),
+            "番号順" => ordered
+                .ThenBy(item => item.SortOrder)
+                .ThenBy(item => item.Name, StringComparer.Ordinal),
+            _ => ordered
+                .ThenByDescending(item => item.Rarity)
+                .ThenBy(item => item.SortOrder)
+                .ThenBy(item => item.Name, StringComparer.Ordinal),
+        };
     }
 
     private static string Normalize(string value)

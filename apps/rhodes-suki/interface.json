@@ -96,9 +96,21 @@
       "default_expand": false
     },
     {
+      "name": "is6BaseFull",
+      "label": "源石錐・遊覧券",
+      "description": "IS#6の右上に表示される源石錐と遊覧券の所持数を取得します。",
+      "default_expand": false
+    },
+    {
+      "name": "is6ActiveCoinsFull",
+      "label": "有効銭",
+      "description": "IS#6のマップ下部にセットされている有効銭を画像分類で取得します。",
+      "default_expand": false
+    },
+    {
       "name": "is6CoinsFull",
-      "label": "通宝",
-      "description": "IS#6の通宝を取得します。",
+      "label": "保有銭",
+      "description": "IS#6の銭匣を開き、保有銭を取得します。",
       "default_expand": false
     }
   ],
@@ -275,7 +287,7 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is5ThoughtFull, is5AgeFull, is2HallucinationsFull, is2PerformanceFull, is3KeyFull, is3LightHordeFull, is3RejectionFull, is6CoinsFull",
+      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is5ThoughtFull, is5AgeFull, is2HallucinationsFull, is2PerformanceFull, is3KeyFull, is3LightHordeFull, is3RejectionFull, is6BaseFull, is6ActiveCoinsFull, is6CoinsFull",
       "group": [
         "runStatusFull",
         "operatorsFull",
@@ -288,6 +300,8 @@
         "is3KeyFull",
         "is3LightHordeFull",
         "is3RejectionFull",
+        "is6BaseFull",
+        "is6ActiveCoinsFull",
         "is6CoinsFull"
       ]
     },
@@ -766,6 +780,36 @@
       ]
     },
     {
+      "name": "rhodes_ocr_region_is6_ingot_value",
+      "label": "生成: is6.ingot_value",
+      "entry": "RhodesOcrRegion_is6_ingot_value",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is6.ingot_value / profiles: is6BaseFull",
+      "group": [
+        "is6BaseFull"
+      ]
+    },
+    {
+      "name": "rhodes_ocr_region_is6_ticket_value",
+      "label": "生成: is6.ticket_value",
+      "entry": "RhodesOcrRegion_is6_ticket_value",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is6.ticket_value / profiles: is6BaseFull",
+      "group": [
+        "is6BaseFull"
+      ]
+    },
+    {
       "name": "rhodes_ocr_region_is3_light_value",
       "label": "生成: is3.light_value",
       "entry": "RhodesOcrRegion_is3_light_value",
@@ -901,9 +945,39 @@
       ]
     },
     {
+      "name": "rhodes_template_run_status_full_run_difficulty_grade_is6_sui_anchor",
+      "label": "生成: RhodesTemplate_runStatusFull_run_difficulty_grade_is6_sui_anchor",
+      "entry": "RhodesTemplate_runStatusFull_run_difficulty_grade_is6_sui_anchor",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
+    },
+    {
       "name": "rhodes_template_run_status_full_run_squad_icon_is5_sarkaz_batch",
       "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "Or / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
+    },
+    {
+      "name": "rhodes_template_run_status_full_run_squad_icon_is6_sui_batch",
+      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch",
+      "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch",
       "controller": [
         "android_adb"
       ],
@@ -1241,7 +1315,19 @@
           }
         },
         {
+          "name": "rhodes_template_run_status_full_run_difficulty_grade_is6_sui_anchor",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
           "name": "rhodes_template_run_status_full_run_squad_icon_is5_sarkaz_batch",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_template_run_status_full_run_squad_icon_is6_sui_batch",
           "option": {
             "enabled": true
           }
@@ -1691,9 +1777,47 @@
       ]
     },
     {
+      "name": "is6BaseFull",
+      "label": "源石錐・遊覧券",
+      "description": "源石錐・遊覧券プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is6_ingot_value",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is6_ticket_value",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "is6ActiveCoinsFull",
+      "label": "有効銭",
+      "description": "有効銭プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
       "name": "is6CoinsFull",
-      "label": "通宝",
-      "description": "通宝プロファイルのResource taskだけを選択します。",
+      "label": "保有銭",
+      "description": "保有銭プロファイルのResource taskだけを選択します。",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",

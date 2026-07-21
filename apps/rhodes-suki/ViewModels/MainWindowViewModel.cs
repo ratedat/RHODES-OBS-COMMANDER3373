@@ -34,8 +34,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _operatorRarityFilter = "すべて";
     private string _operatorClassFilter = "すべて";
     private string _operatorBranchFilter = "すべて";
+    private string _operatorSortMode = "レア度順";
     private string _relicSearch = "";
     private string _relicCategoryFilter = "すべて";
+    private string _relicSortMode = "秘宝種別順";
     private int _operatorPaneColumns = 2;
     private int _relicPaneColumns = 2;
     private string _sessionState;
@@ -243,7 +245,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OperatorRarityOptions = [];
         OperatorClassOptions = [];
         OperatorBranchOptions = [];
+        OperatorSortOptions = ["レア度順", "職業・職分順", "名前順"];
         RelicCategoryOptions = [];
+        RelicSortOptions = ["秘宝種別順", "番号順", "名前順"];
+        RunSelectionHighlights = [];
         PaneColumnOptions = [1, 2, 3, 4];
         _operatorShowSelectedFirst = runCatalog.Current.OperatorShowSelectedFirst;
         _operatorHideExcluded = runCatalog.Current.OperatorHideExcluded;
@@ -298,6 +303,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunSelectedProfileRecognitionAndApplyCommand = new AsyncRelayCommand(RunSelectedProfileRecognitionAndApplyAsync);
         RunProfileRecognitionAndApplyCommand = new AsyncRelayCommand(parameter => RunProfileRecognitionAndApplyAsync(parameter as string));
         RunCommonRecognitionAndApplyCommand = new AsyncRelayCommand(RunCommonRecognitionAndApplyAsync);
+        RunAllOperationalRecognitionAndApplyCommand = new AsyncRelayCommand(RunAllOperationalRecognitionAndApplyAsync);
+        RunCurrentSpecialRecognitionAndApplyCommand = new AsyncRelayCommand(RunCurrentSpecialRecognitionAndApplyAsync);
         RefreshFrameRecordHistoryCommand = new AsyncRelayCommand(RefreshFrameRecordHistoryAsync);
         LoadFrameRecordHistoryCommand = new AsyncRelayCommand(parameter => LoadFrameRecordHistoryAsync(parameter as RhodesFrameRecordHistoryItem));
         ReplayFrameRecordRecognitionCommand = new AsyncRelayCommand(parameter => ReplayFrameRecordRecognitionAsync(parameter as RhodesFrameRecordHistoryItem));
@@ -351,6 +358,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ShowClearRunConfirmationCommand = new AsyncRelayCommand(() => { IsClearRunConfirmationVisible = true; return Task.CompletedTask; });
         CancelClearRunCommand = new AsyncRelayCommand(() => { IsClearRunConfirmationVisible = false; return Task.CompletedTask; });
         ConfirmClearRunCommand = new AsyncRelayCommand(ConfirmClearRunAsync);
+        ToggleHudVisibilityCommand = new AsyncRelayCommand(() => { IsHudVisible = !IsHudVisible; return Task.CompletedTask; });
         StartSidecarServerCommand = new AsyncRelayCommand(StartSidecarServerAsync);
         StopSidecarServerCommand = new AsyncRelayCommand(StopSidecarServerAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
@@ -474,7 +482,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<string> OperatorBranchOptions { get; }
 
+    public ObservableCollection<string> OperatorSortOptions { get; }
+
     public ObservableCollection<string> RelicCategoryOptions { get; }
+
+    public ObservableCollection<string> RelicSortOptions { get; }
+
+    public ObservableCollection<SukiChoiceItem> RunSelectionHighlights { get; }
 
     public ObservableCollection<int> PaneColumnOptions { get; }
 
@@ -989,6 +1003,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         FilteredRelics,
         RelicChoiceFilterState());
 
+    public string RunSelectionSummary
+    {
+        get
+        {
+            var operatorCount = _allOperators.Count(item => item.IsSelected);
+            var relicCount = _allRelics.Count(item => item.CampaignId == SelectedCampaign?.Id && item.IsSelected);
+            return $"オペレーター{operatorCount}名 · 秘宝{relicCount}件";
+        }
+    }
+
     public string OperatorSearch
     {
         get => _operatorSearch;
@@ -1030,6 +1054,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set
         {
             if (!SetProperty(ref _operatorBranchFilter, string.IsNullOrWhiteSpace(value) ? "すべて" : value))
+                return;
+            RefreshOperatorChoices();
+        }
+    }
+
+    public string OperatorSortMode
+    {
+        get => _operatorSortMode;
+        set
+        {
+            if (!SetProperty(ref _operatorSortMode, string.IsNullOrWhiteSpace(value) ? "レア度順" : value))
                 return;
             RefreshOperatorChoices();
         }
@@ -1088,6 +1123,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set
         {
             if (!SetProperty(ref _relicCategoryFilter, string.IsNullOrWhiteSpace(value) ? "すべて" : value))
+                return;
+            RefreshRelicChoices();
+        }
+    }
+
+    public string RelicSortMode
+    {
+        get => _relicSortMode;
+        set
+        {
+            if (!SetProperty(ref _relicSortMode, string.IsNullOrWhiteSpace(value) ? "秘宝種別順" : value))
                 return;
             RefreshRelicChoices();
         }
@@ -1762,6 +1808,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RunProfileRecognitionAndApplyCommand { get; }
 
     public ICommand RunCommonRecognitionAndApplyCommand { get; }
+
+    public ICommand RunAllOperationalRecognitionAndApplyCommand { get; }
+
+    public ICommand RunCurrentSpecialRecognitionAndApplyCommand { get; }
+
+    public ICommand ToggleHudVisibilityCommand { get; }
 
     public ICommand RefreshFrameRecordHistoryCommand { get; }
 
@@ -4704,15 +4756,58 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RunCommonRecognitionAndApplyAsync()
     {
+        string[] profileIds = CurrentCampaignId switch
+        {
+            "is5_sarkaz" => new[] { "runStatusFull", "is5AgeFull" },
+            "is2_phantom" => ["runStatusFull", "is2HallucinationsFull", "is2PerformanceFull"],
+            "is3_mizuki" => ["runStatusFull", "is3KeyFull", "is3LightHordeFull", "is3RejectionFull", "operatorsFull"],
+            "is6_sui" => ["runStatusFull", "is6BaseFull"],
+            _ => ["runStatusFull"],
+        };
+        await RunProfilesAndApplyAsync(profileIds, "共通値の撮影・認識・反映が完了しました。");
+    }
+
+    private async Task RunAllOperationalRecognitionAndApplyAsync()
+    {
+        string[] profileIds = CurrentCampaignId switch
+        {
+            "is5_sarkaz" => new[] { "runStatusFull", "is5ThoughtFull", "is5AgeFull", "operatorsFull", "relicsFull" },
+            "is2_phantom" => ["runStatusFull", "is2HallucinationsFull", "is2PerformanceFull", "operatorsFull", "relicsFull"],
+            "is3_mizuki" => ["runStatusFull", "is3KeyFull", "is3LightHordeFull", "is3RejectionFull", "operatorsFull", "relicsFull"],
+            "is4_sami" => ["runStatusFull", "is4RevelationFull", "operatorsFull", "relicsFull"],
+            "is6_sui" => ["runStatusFull", "is6BaseFull", "is6ActiveCoinsFull", "is6CoinsFull", "operatorsFull", "relicsFull"],
+            _ => ["runStatusFull", "operatorsFull", "relicsFull"],
+        };
+        await RunProfilesAndApplyAsync(profileIds, "現在テーマの取得対象をすべて認識し、ラン状態へ反映しました。");
+    }
+
+    private async Task RunCurrentSpecialRecognitionAndApplyAsync()
+    {
+        string[] profileIds = CurrentCampaignId switch
+        {
+            "is5_sarkaz" => new[] { "is5ThoughtFull", "is5AgeFull" },
+            "is2_phantom" => ["is2HallucinationsFull", "is2PerformanceFull"],
+            "is3_mizuki" => ["is3KeyFull", "is3LightHordeFull", "is3RejectionFull"],
+            "is4_sami" => ["is4RevelationFull"],
+            "is6_sui" => ["is6ActiveCoinsFull", "is6CoinsFull"],
+            _ => Array.Empty<string>(),
+        };
+
+        if (profileIds.Length == 0)
+        {
+            StatusMessage = "現在のテーマには自動取得する固有値がありません。";
+            return;
+        }
+
+        await RunProfilesAndApplyAsync(profileIds, "現在テーマの固有値を認識し、ラン状態へ反映しました。");
+    }
+
+    private string CurrentCampaignId => SelectedCampaign?.Id ?? _runState.CampaignId;
+
+    private async Task RunProfilesAndApplyAsync(IReadOnlyList<string> profileIds, string completionMessage)
+    {
         await RunBusyAsync(async () =>
         {
-            var profileIds = IsSarkazCampaignSelected
-                ? new[] { "runStatusFull", "is5AgeFull" }
-                : IsPhantomCampaignSelected
-                    ? new[] { "runStatusFull", "is2HallucinationsFull", "is2PerformanceFull" }
-                    : IsMizukiCampaignSelected
-                        ? new[] { "runStatusFull", "is3KeyFull", "is3LightHordeFull", "is3RejectionFull", "operatorsFull" }
-                        : new[] { "runStatusFull" };
             foreach (var profileId in profileIds)
             {
                 if (!TrySelectRecognitionProfile(profileId))
@@ -4724,13 +4819,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             TrySelectRecognitionProfile("runStatusFull");
-            StatusMessage = IsSarkazCampaignSelected
-                ? "共通値と時代の撮影・認識・反映が完了しました。"
-                : IsPhantomCampaignSelected
-                    ? "共通値・幻覚・演目の撮影・認識・反映が完了しました。"
-                    : IsMizukiCampaignSelected
-                        ? "共通値・鍵・灯火・大群の呼び声・拒絶反応・オペレーターの撮影・認識・反映が完了しました。"
-                        : "共通値の撮影・認識・反映が完了しました。";
+            StatusMessage = completionMessage;
         });
     }
 
@@ -5401,6 +5490,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         CancellationToken cancellationToken = default,
         RhodesOperatorScanTracker? operatorScanTracker = null)
     {
+        if (string.Equals(CandidateApiProfileId(), "is6ActiveCoinsFull", StringComparison.Ordinal)
+            && encodedImage.Length > 0)
+        {
+            var coinResult = RhodesSuiCoinImageRecognizer.Recognize(encodedImage);
+            ResourceTaskResults.Add(coinResult);
+            RefreshResourceTaskDiagnostics();
+            StatusMessage = $"有効銭画像分類: {coinResult.Detail}";
+        }
+
         foreach (var templateResult in templateResults.Where(result =>
                      result.Succeeded
                      && result.Hit
@@ -6231,7 +6329,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ShowSelectedFirst: OperatorShowSelectedFirst,
             HideExcluded: OperatorHideExcluded,
             SelectedOnly: OperatorSelectedOnly,
-            PaneColumns: OperatorPaneColumns);
+            PaneColumns: OperatorPaneColumns,
+            SortMode: OperatorSortMode);
     }
 
     private SukiChoiceCatalogFilterState RelicChoiceFilterState()
@@ -6243,7 +6342,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ShowSelectedFirst: RelicShowSelectedFirst,
             HideExcluded: RelicHideExcluded,
             SelectedOnly: RelicSelectedOnly,
-            PaneColumns: RelicPaneColumns);
+            PaneColumns: RelicPaneColumns,
+            SortMode: RelicSortMode);
     }
 
     private void RefreshOperatorSummaries()
@@ -6251,6 +6351,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(OperatorListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
         OnPropertyChanged(nameof(CampaignHeaderDetail));
+        RefreshRunSelectionHighlights();
         RefreshInspectorRows();
     }
 
@@ -6261,6 +6362,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CampaignHeaderDetail));
         RefreshHudRelics();
         RefreshCampaignPreviews();
+        RefreshRunSelectionHighlights();
         RefreshInspectorRows();
     }
 
@@ -6272,6 +6374,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(OperatorListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
         OnPropertyChanged(nameof(CampaignHeaderDetail));
+        RefreshRunSelectionHighlights();
         RefreshInspectorRows();
     }
 
@@ -6285,7 +6388,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CampaignHeaderDetail));
         RefreshHudRelics();
         RefreshCampaignPreviews();
+        RefreshRunSelectionHighlights();
         RefreshInspectorRows();
+    }
+
+    private void RefreshRunSelectionHighlights()
+    {
+        var highlights = _allOperators
+            .Where(item => item.IsSelected && !item.IsExcluded)
+            .Take(4)
+            .Concat(_allRelics
+                .Where(item => item.CampaignId == CurrentCampaignId && item.IsSelected && !item.IsExcluded)
+                .Take(2));
+        ReplaceCollection(RunSelectionHighlights, highlights);
+        OnPropertyChanged(nameof(RunSelectionSummary));
     }
 
     private void RefreshOperatorRows()

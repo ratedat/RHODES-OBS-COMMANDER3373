@@ -4,13 +4,14 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Grid RowDefinitions="Auto,*" RowSpacing="12">
     <StackPanel Spacing="2">
-      <TextBlock Text="{Binding OutputLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
-      <TextBlock Text="{Binding OutputLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
+      <TextBlock Text="出力レイアウト" Classes="displayTitle" />
+      <TextBlock Text="OBSへ送る実際の画面を見ながら、部品の位置と大きさを編集します。" Classes="body" />
     </StackPanel>
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="12">
-    <Border Classes="card">
+    <Expander Header="OBS設定ガイド" IsExpanded="False">
+    <Border Classes="appleCard" Margin="0,8,0,0">
       <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
         <TextBlock Text="OBSへ表示するまで" Classes="h2" />
         <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="18">
@@ -32,9 +33,11 @@
         </Grid>
       </Grid>
     </Border>
+    </Expander>
 
     <!-- 配信サーバー: overlay/sidecar/state APIを提供する app/server.mjs をここから管理する -->
-    <Border Classes="card">
+    <Expander Header="配信サーバーとURL" IsExpanded="False">
+    <Border Classes="appleCard" Margin="0,8,0,0">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
         <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
           <TextBlock Text="配信サーバー" Classes="h2" VerticalAlignment="Center" />
@@ -87,9 +90,11 @@
                    Text="URLコピー後、OBSの「ソース」→「ブラウザ」→「URL」へ貼り付けます。「起動」はapp/server.mjsをNode.jsで起動します。「停止」はSukiが起動したサーバーだけを終了し、別途起動済みのサーバーは停止しません。" />
       </Grid>
     </Border>
+    </Expander>
 
     <!-- HUD (本人用透過小窓): 表示する内容をここで選ぶ -->
-    <Border Classes="card">
+    <Expander Header="本人用HUD" IsExpanded="False">
+    <Border Classes="appleCard" Margin="0,8,0,0">
       <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
         <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
           <TextBlock Text="HUD (本人用小窓)" Classes="h2" VerticalAlignment="Center" />
@@ -113,12 +118,13 @@
                    Text="「クリック透過」をONにするとHUDへマウス操作が通らなくなります。移動・調整時はOFFにしてください。OBSの画面キャプチャまたはディスプレイキャプチャでは映り込む場合があります。" />
       </Grid>
     </Border>
+    </Expander>
 
-    <Border Classes="card">
+    <Border Classes="appleCard">
       <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
         <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
           <StackPanel Spacing="2">
-            <TextBlock Text="Overlayレイアウト編集" Classes="h2" />
+            <TextBlock Text="ライブレイアウト" Classes="sectionTitle" />
             <TextBlock Text="「実出力で編集」ではOBSと同じ描画を見ながら部品をドラッグ・リサイズできます。簡易編集では座標を数値で微調整できます。"
                        Classes="caption" TextWrapping="Wrap" />
           </StackPanel>

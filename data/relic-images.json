@@ -1,7 +1,7 @@
 {
     "version":  1,
     "meta":  {
-                 "generatedAt":  "2026-07-18",
+                 "generatedAt":  "2026-07-21",
                  "source":  "arknights.wikiru.jp relic list image refs",
                  "assetRoot":  "assets/relics/wikiru"
              },
@@ -10371,9 +10371,9 @@
                        "relicId":  "is6_sui_relic_229",
                        "campaignId":  "is6_sui",
                        "sourceAnchor":  "No229",
-                       "sourcePath":  "img/sggo_229.png",
-                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232392E706E67.png",
-                       "localPath":  "assets/relics/wikiru/img/sggo_229.png"
+                       "sourcePath":  "img/sggo_225.png",
+                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7367676F5F3232352E706E67.png",
+                       "localPath":  "assets/relics/wikiru/img/sggo_225.png"
                    },
                    {
                        "relicId":  "is6_sui_relic_230",

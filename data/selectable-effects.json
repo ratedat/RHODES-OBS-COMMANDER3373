@@ -1,10 +1,10 @@
 {
   "version": 1,
   "meta": {
-    "generatedAt": "2026-06-24",
+    "generatedAt": "2026-07-21",
     "source": "arknights.wikiru.jp PukiWiki source",
     "purpose": "Selectable Integrated Strategies special effects such as IS#3 記号認識.",
-    "specialItemsGeneratedAt": "2026-07-18",
+    "specialItemsGeneratedAt": "2026-07-21",
     "specialItemSources": "data/special-item-sources.json"
   },
   "selectableEffects": [
@@ -4883,7 +4883,7 @@
       "variantRank": "mourou",
       "variantLabel": "朦朧",
       "name": "辰■（朦朧）",
-      "effect": "全てのオペレーターの姿が見えなくなる ※配置したオペレーターのSDが黒いシルエットになる",
+      "effect": "全てのオペレーターの姿が見えなくなる ※配置したオペレーターが黒いシルエットになる",
       "flavorText": "&size(20){辰■}; 敬刻■之■を授け■を解す 時に入る者■■を分けず",
       "sourcePage": "統合戦略「歳の界園志異」",
       "sourceAnchor": "hours",
@@ -4907,7 +4907,7 @@
       "variantRank": "meiryou",
       "variantLabel": "明瞭",
       "name": "辰■（明瞭）",
-      "effect": "全てのオペレーターの姿が見えなくなる ※配置したオペレーターのSDが黒いシルエットになる",
+      "effect": "全てのオペレーターの姿が見えなくなる ※配置したオペレーターが黒いシルエットになる",
       "flavorText": "&size(20){辰■}; 敬刻■之■を授け■を解す 時に入る者■■を分けず",
       "sourcePage": "統合戦略「歳の界園志異」",
       "sourceAnchor": "hours",
@@ -4931,7 +4931,7 @@
       "variantRank": "nyuukotsu",
       "variantLabel": "入骨",
       "name": "辰■（入骨）",
-      "effect": "全てのオペレーターの姿が見えなくなる ※配置したオペレーターのSDが黒いシルエットになる",
+      "effect": "全てのオペレーターの姿が見えなくなる ※配置したオペレーターが黒いシルエットになる",
       "flavorText": "&size(20){辰■}; 敬刻■之■を授け■を解す 時に入る者■■を分けず",
       "sourcePage": "統合戦略「歳の界園志異」",
       "sourceAnchor": "hours",

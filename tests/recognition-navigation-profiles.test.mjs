@@ -72,6 +72,8 @@ test("scan profiles own the server-side OCR engine routing", async () => {
     is3KeyFull: "maa-ocr",
     is3LightHordeFull: "maa-ocr",
     is3RejectionFull: "maa-ocr",
+    is6BaseFull: "maa-ocr",
+    is6ActiveCoinsFull: "maa-ocr",
     is6CoinsFull: "maa-ocr",
   });
   for (const profile of profileList) {
@@ -119,6 +121,7 @@ test("run status profile is scoped to retained base and IS-specific values only"
   ]);
   assert.deepEqual(templateIds.filter((id) => id.startsWith("run.squad.icon.")), [
     "run.squad.icon.is5_sarkaz.batch",
+    "run.squad.icon.is6_sui.batch",
     "run.squad.icon.is2_phantom.batch",
     ...Array.from({ length: 13 }, (_, index) => `run.squad.icon.is3_mizuki_squad_${String(index + 1).padStart(2, "0")}`),
   ]);
@@ -159,11 +162,16 @@ test("difficulty OCR is anchored by the opened squad panel DIFFICULTY label", as
   const profiles = await profilesById();
   const profile = profiles.get("runStatusFull");
   const difficultyRegion = profile.templateOcrRegions.find((region) => region.idPrefix === "run.difficulty.grade.anchor");
+  const suiDifficultyRegion = profile.templateOcrRegions.find((region) => region.idPrefix === "run.difficulty.grade.is6_sui.anchor");
 
   assert.equal(difficultyRegion.templatePath, "assets/recognition/templates/run/DifficultyFlag.png");
   assert.deepEqual(difficultyRegion.searchRoi, { x: 22, y: 548, width: 122, height: 40 });
   assert.deepEqual(difficultyRegion.ocrOffset, { x: 102, y: 0, width: 66, height: 51 });
   assert.equal(difficultyRegion.numericFallback, true);
+  assert.equal(suiDifficultyRegion.templatePath, "assets/recognition/templates/run/DifficultyFlag_is6_sui.png");
+  assert.deepEqual(suiDifficultyRegion.searchRoi, difficultyRegion.searchRoi);
+  assert.deepEqual(suiDifficultyRegion.ocrOffset, difficultyRegion.ocrOffset);
+  assert.equal(suiDifficultyRegion.numericFallback, true);
 });
 
 test("run status profile reads conception through the icon template, not thought burden OCR", async () => {
@@ -224,6 +232,11 @@ test("run status profile includes template anchors for map resources", async () 
   assert.equal(squadBatch.templatePaths.length, 17);
   assert.equal(squadBatch.templateIds.length, 17);
   assert.equal(squadBatch.templateIds[13], "is5_sarkaz_squad_14");
+  const suiSquadBatch = profile.templateOcrRegions.find((region) => region.idPrefix === "run.squad.icon.is6_sui.batch");
+  assert.equal(suiSquadBatch.templatePaths.length, 19);
+  assert.equal(suiSquadBatch.templateIds.length, 19);
+  assert.equal(suiSquadBatch.templateIds[18], "is6_sui_squad_19");
+  assert.deepEqual(suiSquadBatch.searchRoi, { x: 58, y: 632, width: 50, height: 88 });
   const phantomSquadBatch = profile.templateOcrRegions.find((region) => region.idPrefix === "run.squad.icon.is2_phantom.batch");
   assert.equal(phantomSquadBatch.templatePaths.length, 10);
   assert.equal(phantomSquadBatch.templateIds.length, 10);
@@ -234,7 +247,7 @@ test("run status profile includes template anchors for map resources", async () 
   assert.deepEqual(mizukiSquadTemplates[0].searchRoi, { x: 8, y: 638, width: 86, height: 82 });
   assert.equal(mizukiSquadTemplates[0].method, 3);
   assert.equal(mizukiSquadTemplates[0].threshold, 0.68);
-  assert.equal(profile.templateOcrRegions.filter((region) => String(region.idPrefix).startsWith("run.squad.icon.")).length, 15);
+  assert.equal(profile.templateOcrRegions.filter((region) => String(region.idPrefix).startsWith("run.squad.icon.")).length, 16);
 });
 
 
@@ -359,6 +372,8 @@ test("operators full scan sweeps the operator card frame horizontally both ways"
 });
 
 test("local run template assets keep the expected 1280x720 crop sizes", async () => {
+  assert.deepEqual(await pngSize("assets/recognition/templates/run/DifficultyFlag_is6_sui.png"), { width: 100, height: 23 });
+  assert.deepEqual(await pngSize("assets/recognition/templates/run/SquadIconRight_is6_sui_squad_02.png"), { width: 42, height: 84 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/OperatorCardCodeNameFlag.png"), { width: 29, height: 22 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/IdeaIcon.png"), { width: 39, height: 41 });
   assert.deepEqual(await pngSize("assets/recognition/templates/run/IngotIcon.png"), { width: 54, height: 27 });
