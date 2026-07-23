@@ -46,7 +46,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(portablePublisher, /copyWebOverlayRuntime/);
   assert.match(portablePublisher, /path\.join\(repoRoot, "app"\)/);
   assert.match(portablePublisher, /copyWebOverlayAssets/);
-  assert.match(portablePublisher, /path\.join\(repoRoot, "assets", "bosses"\)/);
+  assert.match(portablePublisher, /const assetDirectories = \["bosses", "performances", "selectable-effects"\]/);
   assert.match(portablePublisher, /preservedTopLevelEntries/);
   assert.match(portablePublisher, /"user-data"/);
   assert.match(portablePublisher, /"RHODES OBS COMMANDER3373 Debug Logs"/);
@@ -1028,6 +1028,10 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(runtimeWorkspace, /<Grid RowDefinitions="Auto,Auto" RowSpacing="8">\s*<StackPanel Spacing="2">\s*<TextBlock Text="\{Binding RuntimeLayout\.Connection\.Title\}"/s);
   assert.match(runtimeWorkspace, /<WrapPanel Grid\.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">[\s\S]*<Button Content="候補を使用"/);
   assert.match(runtimeWorkspace, /Text="MAA接続方式"/);
+  assert.match(specialWorkspace, /Text="啓示（複数選択）"/);
+  assert.match(specialWorkspace, /ItemsSource="\{Binding ManualMizukiRevelationOptions\}"[\s\S]*?<CheckBox IsChecked="\{Binding IsSelected, Mode=TwoWay\}"/);
+  assert.match(viewModel, /ManualMizukiRevelationOptions/);
+  assert.match(viewModel, /CreateNoMizukiRevelationCandidate/);
   assert.match(runtimeWorkspace, /Text="撮影方式"[\s\S]*AdbScreencapMethodOptions/);
   assert.match(runtimeWorkspace, /Text="入力方式"[\s\S]*AdbInputMethodOptions/);
   assert.match(runtimeWorkspace, /AdbMethodDetail[^>]+MaxLines="2"/);

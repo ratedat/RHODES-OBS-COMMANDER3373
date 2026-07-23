@@ -19,7 +19,14 @@ function groupSpecialOverlayItems(items) {
   const groups = new Map();
   for (const item of items) {
     const id = item.overlayGroupId || "default";
-    if (!groups.has(id)) groups.set(id, { id, label: item.overlayGroupLabel || "", items: [] });
+    if (!groups.has(id)) {
+      groups.set(id, {
+        id,
+        label: item.overlayGroupLabel || "",
+        unit: item.overlayGroupUnit || "枚",
+        items: [],
+      });
+    }
     groups.get(id).items.push(item);
   }
   return [...groups.values()];
@@ -33,7 +40,7 @@ function renderSpecialOverlayGroups(items) {
       const count = group.items.reduce((sum, item) => sum + Math.max(1, Number(item.quantity) || 1), 0);
       const classId = String(group.id).replace(/[^a-z0-9_-]/gi, "-");
       return `<section class="special-overlay-group special-overlay-group-${html(classId)}">
-        <header><strong>${html(group.label || "特殊値")}</strong><span>${count}枚</span></header>
+        <header><strong>${html(group.label || "特殊値")}</strong><span>${count}${html(group.unit)}</span></header>
         ${renderSpecialOverlayItems(group.items)}
       </section>`;
     }).join("")}

@@ -21,7 +21,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp1.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370312E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370312E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp1.png"
                                        }
                          },
                          {
@@ -39,7 +40,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp2.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370322E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370322E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp2.png"
                                        }
                          },
                          {
@@ -57,7 +59,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp3.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370332E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370332E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp3.png"
                                        }
                          },
                          {
@@ -75,7 +78,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp4.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370342E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370342E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp4.png"
                                        }
                          },
                          {
@@ -93,7 +97,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp5.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370352E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370352E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp5.png"
                                        }
                          },
                          {
@@ -111,7 +116,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp6.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370362E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370362E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp6.png"
                                        }
                          },
                          {
@@ -129,7 +135,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp7.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370372E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370372E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp7.png"
                                        }
                          },
                          {
@@ -147,7 +154,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp8.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370382E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370382E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp8.png"
                                        }
                          },
                          {
@@ -165,7 +173,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp9.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_70637370392E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_70637370392E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp9.png"
                                        }
                          },
                          {
@@ -183,7 +192,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp10.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031302E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031302E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp10.png"
                                        }
                          },
                          {
@@ -201,7 +211,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp11.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031312E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031312E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp11.png"
                                        }
                          },
                          {
@@ -219,7 +230,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp12.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031322E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031322E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp12.png"
                                        }
                          },
                          {
@@ -237,7 +249,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp13.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031332E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031332E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp13.png"
                                        }
                          },
                          {
@@ -255,7 +268,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp14.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031342E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031342E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp14.png"
                                        }
                          },
                          {
@@ -273,7 +287,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp15.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031352E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031352E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp15.png"
                                        }
                          },
                          {
@@ -291,7 +306,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp16.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031362E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031362E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp16.png"
                                        }
                          },
                          {
@@ -309,7 +325,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp17.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031372E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031372E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp17.png"
                                        }
                          },
                          {
@@ -327,7 +344,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp18.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031382E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031382E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp18.png"
                                        }
                          },
                          {
@@ -345,7 +363,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp19.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737031392E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737031392E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp19.png"
                                        }
                          },
                          {
@@ -363,7 +382,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp20.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032302E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737032302E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp20.png"
                                        }
                          },
                          {
@@ -381,7 +401,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp21.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032312E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737032312E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp21.png"
                                        }
                          },
                          {
@@ -399,7 +420,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp22.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032322E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737032322E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp22.png"
                                        }
                          },
                          {
@@ -417,7 +439,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp23.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032332E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737032332E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp23.png"
                                        }
                          },
                          {
@@ -435,7 +458,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp24.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032342E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737032342E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp24.png"
                                        }
                          },
                          {
@@ -453,7 +477,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp25.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032352E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737032352E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp25.png"
                                        }
                          },
                          {
@@ -471,7 +496,8 @@
                              "image":  {
                                            "source":  "arknights.wikiru.jp",
                                            "sourcePath":  "img/pcsp26.png",
-                                           "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7063737032362E706E67.png"
+                                           "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_7063737032362E706E67.png",
+                                           "localPath": "assets/performances/wikiru/img/pcsp26.png"
                                        }
                          }
                      ]

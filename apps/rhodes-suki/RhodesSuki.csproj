@@ -58,6 +58,9 @@
     <Content Include="..\..\assets\selectable-effects\**\*.png" Link="assets\selectable-effects\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\performances\**\*.png" Link="assets\performances\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\data\campaigns.json" Link="data\campaigns.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

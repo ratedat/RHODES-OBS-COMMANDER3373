@@ -53,6 +53,15 @@ function coinOverlayPresentation(field, effect) {
   };
 }
 
+function withFieldOverlayPresentation(field, item) {
+  return {
+    ...item,
+    ...(field.overlayGroupId ? { overlayGroupId: field.overlayGroupId } : {}),
+    ...(field.overlayGroupLabel ? { overlayGroupLabel: field.overlayGroupLabel } : {}),
+    ...(field.overlayGroupUnit ? { overlayGroupUnit: field.overlayGroupUnit } : {}),
+  };
+}
+
 export function getSpecialEffectName(id, selectableEffectMap) {
   const item = selectableEffectMap?.get(id);
   return item?.name || item?.title || id;
@@ -166,7 +175,11 @@ export function getSpecialOverlayToggleKey(field) {
 
 export function isSpecialFieldVisibleOnOverlay(field, special) {
   if (!field.overlayToggle) return true;
-  return Boolean(special[getSpecialOverlayToggleKey(field)]);
+  const toggleKey = getSpecialOverlayToggleKey(field);
+  if (!Object.prototype.hasOwnProperty.call(special ?? {}, toggleKey)) {
+    return field.overlayDefaultVisible !== false;
+  }
+  return Boolean(special[toggleKey]);
 }
 
 export function getSpecialTags(specialFields, special, context, options = {}) {
@@ -180,16 +193,27 @@ export function getSelectedSpecialEffectsForField(field, special, context) {
   const effects = [];
   if (field.type === "effectSelect") {
     const item = getSelectableEffect(context, special[field.id]);
-    if (item) effects.push(item);
+    if (item) effects.push(withFieldOverlayPresentation(field, item));
   } else if (field.type === "effectMultiSelect") {
     for (const id of asSpecialArray(special[field.id])) {
       const item = getSelectableEffect(context, id);
-      if (item) effects.push(item);
+      if (item) effects.push(withFieldOverlayPresentation(field, item));
     }
   } else if (field.type === "effectRankedMultiSelect") {
     for (const id of Object.values(asSpecialObject(special[field.id]))) {
       const item = getSelectableEffect(context, id);
-      if (item) effects.push(item);
+      if (item) effects.push(withFieldOverlayPresentation(field, item));
+    }
+  } else if (field.type === "operatorEffectAssignment") {
+    const value = asSpecialObject(special[field.id]);
+    const item = getSelectableEffect(context, value.effectId);
+    const targetCount = countOperatorAssignments(value);
+    if (item && targetCount > 0) {
+      effects.push(withFieldOverlayPresentation(field, {
+        ...item,
+        slotLabel: field.label || item.slotLabel,
+        name: `${item.name} / 対象${targetCount}名`,
+      }));
     }
   } else if (field.type === "textMultiSelect") {
     const values = [...new Set(asSpecialArray(special[field.id]).map((item) => String(item ?? "").trim()).filter(Boolean))];

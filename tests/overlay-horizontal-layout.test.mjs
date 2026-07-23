@@ -157,3 +157,43 @@ test("special overlay renders coin effect groups and visible effect text", () =>
   assert.match(output, /振出時: 異境の入口が出現/);
   assert.match(output, />2枚</);
 });
+
+test("Mizuki special overlay renders distinct horde, rejection, and revelation groups", () => {
+  const output = renderSpecialOverlayBlock([
+    {
+      id: "horde",
+      name: "呼び声：探索",
+      slotLabel: "大群の呼び声",
+      overlayGroupId: "mizuki-horde-calls",
+      overlayGroupLabel: "大群の呼び声",
+      overlayGroupUnit: "件",
+      effect: "灯火の減少が2倍になる",
+    },
+    {
+      id: "rejection",
+      name: "散漫と異変 / 対象2名",
+      slotLabel: "拒絶反応",
+      overlayGroupId: "mizuki-rejection",
+      overlayGroupLabel: "拒絶反応",
+      overlayGroupUnit: "件",
+      effect: "最大HP・攻撃力・防御力-50%",
+    },
+    {
+      id: "revelation",
+      name: "ウルサスの怒号",
+      slotLabel: "啓示",
+      overlayGroupId: "mizuki-revelations",
+      overlayGroupLabel: "啓示",
+      overlayGroupUnit: "件",
+      effect: "敵全体の攻撃力-30%",
+    },
+  ], "part", "verticalRelicScrollSpeed", () => 12);
+
+  assert.match(output, /special-overlay-group-mizuki-horde-calls/);
+  assert.match(output, /special-overlay-group-mizuki-rejection/);
+  assert.match(output, /special-overlay-group-mizuki-revelations/);
+  assert.match(output, /大群の呼び声/);
+  assert.match(output, /拒絶反応/);
+  assert.match(output, /啓示/);
+  assert.equal((output.match(/>1件</g) || []).length, 3);
+});

@@ -23,7 +23,7 @@ public static class RhodesMaaResourceCatalog
         ["is2PerformanceFull"] = "演目",
         ["is3KeyFull"] = "源石錐・鍵",
         ["is3LightHordeFull"] = "灯火・大群",
-        ["is3RejectionFull"] = "拒絶反応",
+        ["is3RejectionFull"] = "拒絶反応・啓示",
         ["is6CoinsFull"] = "通宝",
         ["is6SeasonalHours"] = "歳時",
     };

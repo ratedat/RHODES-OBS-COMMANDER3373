@@ -105,8 +105,11 @@ async function copyMaaNativeRuntimeToRuntimes() {
 
 async function copyRequiredMasterData() {
   const requiredFiles = [
+    "data/campaigns.json",
     "data/operators.json",
+    "data/performances.json",
     "data/relics.json",
+    "data/selectable-effects.json",
     "data/recognition/maa-operator-name-ocr.json",
   ];
 
@@ -130,29 +133,35 @@ async function copyWebOverlayRuntime() {
 }
 
 async function copyWebOverlayAssets() {
-  const source = path.join(repoRoot, "assets", "bosses");
-  const target = path.join(outputDir, "assets", "bosses");
-  await fs.access(source);
-  await fs.rm(target, { recursive: true, force: true });
-  await fs.mkdir(path.dirname(target), { recursive: true });
-  await fs.cp(source, target, { recursive: true });
+  const assetDirectories = ["bosses", "performances", "selectable-effects"];
+  for (const directory of assetDirectories) {
+    const source = path.join(repoRoot, "assets", directory);
+    const target = path.join(outputDir, "assets", directory);
+    await fs.access(source);
+    await fs.rm(target, { recursive: true, force: true });
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.cp(source, target, { recursive: true });
+  }
 
-  const campaigns = JSON.parse(await fs.readFile(path.join(repoRoot, "data", "campaigns.json"), "utf8"));
-  const referencedBossAssets = new Set();
+  const dataFiles = ["campaigns.json", "performances.json", "selectable-effects.json"];
+  const referencedAssets = new Set();
   const visit = (value) => {
     if (Array.isArray(value)) {
       value.forEach(visit);
       return;
     }
     if (!value || typeof value !== "object") return;
-    if (typeof value.localPath === "string" && value.localPath.startsWith("assets/bosses/")) {
-      referencedBossAssets.add(value.localPath);
+    if (typeof value.localPath === "string" && value.localPath.startsWith("assets/")) {
+      referencedAssets.add(value.localPath);
     }
     Object.values(value).forEach(visit);
   };
-  visit(campaigns);
+  for (const fileName of dataFiles) {
+    const data = JSON.parse(await fs.readFile(path.join(repoRoot, "data", fileName), "utf8"));
+    visit(data);
+  }
 
-  for (const relativePath of referencedBossAssets) {
+  for (const relativePath of referencedAssets) {
     await fs.access(path.join(outputDir, relativePath));
   }
 }

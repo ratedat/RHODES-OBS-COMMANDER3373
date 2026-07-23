@@ -184,7 +184,12 @@
         "id": "rejectionReaction",
         "label": "拒絶反応",
         "type": "operatorEffectAssignment",
-        "effectSlot": "rejectionReaction"
+        "effectSlot": "rejectionReaction",
+        "overlayToggle": true,
+        "overlayDefaultVisible": true,
+        "overlayGroupId": "mizuki-rejection",
+        "overlayGroupLabel": "拒絶反応",
+        "overlayGroupUnit": "件"
       },
       {
         "id": "operatorEvolution",
@@ -196,14 +201,24 @@
         "label": "啓示",
         "type": "effectMultiSelect",
         "effectSlot": "revelation",
-        "compact": true
+        "compact": true,
+        "overlayToggle": true,
+        "overlayDefaultVisible": true,
+        "overlayGroupId": "mizuki-revelations",
+        "overlayGroupLabel": "啓示",
+        "overlayGroupUnit": "件"
       },
       {
         "id": "hordeCalls",
         "label": "大群の呼び声",
         "type": "effectMultiSelect",
         "effectSlot": "hordeCall",
-        "compact": true
+        "compact": true,
+        "overlayToggle": true,
+        "overlayDefaultVisible": true,
+        "overlayGroupId": "mizuki-horde-calls",
+        "overlayGroupLabel": "大群の呼び声",
+        "overlayGroupUnit": "件"
       }
     ],
     "bossFlags": {
@@ -550,7 +565,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/DB.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_44422E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_44422E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/DB.jpg"
               }
             },
             {
@@ -564,7 +581,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/FSP.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4653502E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4653502E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/FSP.jpg"
               }
             },
             {
@@ -593,7 +612,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/DBV.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4442562E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4442562E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/DBV.jpg"
               }
             },
             {
@@ -607,7 +628,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/HSP.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4853502E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4853502E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/HSP.jpg"
               }
             },
             {
@@ -645,7 +668,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/SAM.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53414D2E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53414D2E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/SAM.jpg"
               },
               "primaryDisplay": "stage"
             },
@@ -660,7 +685,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/SAM.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53414D2E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53414D2E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/SAM.jpg"
               },
               "primaryDisplay": "stage"
             },
@@ -676,7 +703,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/EIK.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_45494B2E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_45494B2E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/EIK.jpg"
               },
               "primaryDisplay": "stage"
             },
@@ -692,7 +721,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/EIK.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_45494B2E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_45494B2E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/EIK.jpg"
               },
               "primaryDisplay": "stage"
             }
@@ -716,7 +747,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/CES.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4345532E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4345532E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/CES.jpg"
               },
               "primaryDisplay": "stage"
             },
@@ -731,7 +764,9 @@
               "image": {
                 "source": "arknights.wikiru.jp",
                 "sourcePath": "img/CES.jpg",
-                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4345532E6A7067.jpg"
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4345532E6A7067.jpg",
+
+                "localPath": "assets/bosses/wikiru/img/CES.jpg"
               },
               "primaryDisplay": "stage"
             },
@@ -747,12 +782,16 @@
                 {
                   "source": "arknights.wikiru.jp",
                   "sourcePath": "img/KSL.jpg",
-                  "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4B534C2E6A7067.jpg"
+                  "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4B534C2E6A7067.jpg",
+
+                  "localPath": "assets/bosses/wikiru/img/KSL.jpg"
                 },
                 {
                   "source": "arknights.wikiru.jp",
                   "sourcePath": "img/LOA.jpg",
-                  "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4C4F412E6A7067.jpg"
+                  "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4C4F412E6A7067.jpg",
+
+                  "localPath": "assets/bosses/wikiru/img/LOA.jpg"
                 }
               ],
               "primaryDisplay": "stage"
@@ -769,12 +808,16 @@
                 {
                   "source": "arknights.wikiru.jp",
                   "sourcePath": "img/KSL.jpg",
-                  "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4B534C2E6A7067.jpg"
+                  "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4B534C2E6A7067.jpg",
+
+                  "localPath": "assets/bosses/wikiru/img/KSL.jpg"
                 },
                 {
                   "source": "arknights.wikiru.jp",
                   "sourcePath": "img/LOA.jpg",
-                  "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4C4F412E6A7067.jpg"
+                  "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_4C4F412E6A7067.jpg",
+
+                  "localPath": "assets/bosses/wikiru/img/LOA.jpg"
                 }
               ],
               "primaryDisplay": "stage"

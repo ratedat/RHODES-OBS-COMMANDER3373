@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import {
   addCoinEntry,
@@ -11,6 +11,7 @@ import { mergeEffectStackEntries } from "../app/domain/special-loadouts.js";
 import {
   formatCoinLoadoutValue,
   formatSpecialValue,
+  getOverlaySpecialEffects,
   getSelectedSpecialEffectsForField,
 } from "../app/domain/special-display.js";
 import { mergeCoinEntries } from "../app/domain/special-values.js";
@@ -236,6 +237,69 @@ test("Mizuki operator assignments use human-readable OBS labels", () => {
   assert.equal(rejection, "造血障害 / 対象3名");
   assert.equal(evolution, "対象2名");
   assert.doesNotMatch(`${rejection} ${evolution}`, /\[object Object\]/);
+});
+
+test("Mizuki OBS output separates horde calls, rejection reactions, and revelations", () => {
+  const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
+  const effectData = JSON.parse(readFileSync(new URL("../data/selectable-effects.json", import.meta.url), "utf8"));
+  const campaign = campaigns.find((item) => item.id === "is3_mizuki");
+  const fields = campaign.specialFields.filter((field) =>
+    ["hordeCalls", "rejectionReaction", "revelations"].includes(field.id));
+  const selectableEffectMap = new Map(effectData.selectableEffects.map((item) => [item.id, item]));
+  const context = {
+    campaignId: campaign.id,
+    selectableEffectMap,
+    selectableEffectSource: effectData.selectableEffects,
+  };
+  const special = {
+    hordeCalls: ["is3_mizuki_selectable_hordeCall_mcasci12"],
+    rejectionReaction: {
+      effectId: "is3_mizuki_selectable_rejectionReaction_mcasci24",
+      operatorTargets: [
+        { operatorId: "kroos", instance: 1 },
+        { operatorId: "reserve_defender", instance: 1 },
+      ],
+    },
+    revelations: ["is3_mizuki_selectable_revelation_mcasci1"],
+    hordeCallsOverlayVisible: true,
+    rejectionReactionOverlayVisible: true,
+  };
+
+  assert.deepEqual(fields.map((field) => [field.id, field.overlayToggle, field.overlayDefaultVisible]), [
+    ["rejectionReaction", true, true],
+    ["revelations", true, true],
+    ["hordeCalls", true, true],
+  ]);
+
+  const effects = getOverlaySpecialEffects(fields, special, context);
+  assert.deepEqual(effects.map((item) => item.overlayGroupLabel), [
+    "拒絶反応",
+    "啓示",
+    "大群の呼び声",
+  ]);
+  assert.deepEqual(effects.map((item) => item.overlayGroupId), [
+    "mizuki-rejection",
+    "mizuki-revelations",
+    "mizuki-horde-calls",
+  ]);
+  assert.deepEqual(effects.map((item) => item.overlayGroupUnit), ["件", "件", "件"]);
+  assert.equal(effects[0].name, "散漫と異変 / 対象2名");
+
+  const hiddenRevelations = getOverlaySpecialEffects(fields, {
+    ...special,
+    revelationsOverlayVisible: false,
+  }, context);
+  assert.deepEqual(hiddenRevelations.map((item) => item.overlayGroupLabel), [
+    "拒絶反応",
+    "大群の呼び声",
+  ]);
+
+  const localImageEffects = effectData.selectableEffects.filter((item) =>
+    item.campaignId === campaign.id && ["rejectionReaction", "revelation"].includes(item.slot));
+  assert.equal(localImageEffects.filter((item) => item.slot === "revelation").length, 7);
+  assert.equal(localImageEffects.filter((item) => item.slot === "rejectionReaction").length, 10);
+  assert.equal(localImageEffects.every((item) => item.image?.localPath), true);
+  assert.equal(localImageEffects.every((item) => existsSync(new URL(`../${item.image.localPath}`, import.meta.url))), true);
 });
 
 test("IS#6 seasonal hours include all normal and awakened variants", () => {

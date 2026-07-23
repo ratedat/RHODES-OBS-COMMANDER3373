@@ -137,6 +137,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA template OCR expander restores weak operator anchors on the detected card grid", MaaTemplateOcrExpanderRestoresWeakGridAlignedOperatorAnchors),
     ("MAA thought load OCR expander targets displayed card values", MaaThoughtLoadOcrExpanderTargetsDisplayedValues),
     ("Operator scan tracker skips resolved cards and stops on repeated viewports", OperatorScanTrackerCachesResolvedCards),
+    ("Operator scan tracker keeps moving cards stable and duplicate reserves distinct", OperatorScanTrackerTracksMovingDuplicateReserves),
     ("Mizuki rejection card detector identifies the purple operator name", MizukiRejectionCardDetectorIdentifiesPurpleBand),
     ("Mizuki rejection targets expand reserve operator recruit instances", MizukiRejectionTargetsExpandReserveInstances),
     ("MAA recognition probe payloads target retained fields", RecognitionProbePayloadsTargetRetainedFields),
@@ -175,7 +176,7 @@ var tests = new (string Name, Action Run)[]
     ("Run catalog exposes Mizuki rejection reaction icons", RunCatalogMizukiRejectionIcons),
     ("Run catalog restores individual Mizuki rejection targets", RunCatalogMizukiRejectionTargetInstances),
     ("Mizuki operator presentation marks rejection and evolution targets in IS3", MizukiOperatorPresentationMarksTargets),
-    ("Run catalog exposes Mizuki horde call icons", RunCatalogMizukiHordeCallIcons),
+    ("Run catalog exposes Mizuki horde call and revelation icons", RunCatalogMizukiHordeCallIcons),
     ("Hallucination catalog exposes Wiki effects and normalizes overlapping OCR", HallucinationCatalogWikiOptions),
     ("Run catalog exposes Sarkaz boss selections from campaign data", RunCatalogSarkazBossSelections),
     ("Run catalog gates Sui floor 6 and END5 routes behind their relics", RunCatalogSuiEnd5BossSelections),
@@ -1974,6 +1975,80 @@ static void LocalCandidateConverterMizukiSpecials()
         "Mizuki rejection id");
     Equal(0, rejection.Count(candidate => !string.IsNullOrWhiteSpace(candidate.OperatorId)), "rejection prose does not infer affected operators");
     Equal(1, rejection.Count, "Mizuki rejection detail only creates the reaction candidate");
+
+    var sharedConditionPanel = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3RejectionFull",
+        [
+            M(
+                "RhodesOcrRegion_is3_rejection_name",
+                [
+                    ("発動済の啓示", 0.98),
+                    ("リターニアの典雅+", 0.96),
+                    ("ウルサスの怒号", 0.94),
+                    ("リターニアの典雅", 0.88),
+                ]),
+        ]);
+    Equal(2, sharedConditionPanel.Count, "shared Mizuki condition panel keeps unique revelations");
+    Equal(
+        "is3_mizuki_selectable_revelation_mcasci6|is3_mizuki_selectable_revelation_mcasci1",
+        string.Join('|', sharedConditionPanel.Select(candidate => candidate.EffectId)),
+        "Mizuki revelation ids");
+    Equal(
+        true,
+        sharedConditionPanel.All(candidate => candidate.FieldId == "revelations"),
+        "shared Mizuki condition panel classifies revelation rows");
+
+    var revelationDescriptionOnly = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3RejectionFull",
+        [
+            M(
+                "RhodesOcrRegion_is3_rejection_name",
+                [
+                    ("の啓示", 0.97),
+                    ("方遠距離ユニットの防御力+500、術耐性+50", 0.91),
+                ]),
+        ]);
+    Equal(1, revelationDescriptionOnly.Count, "Mizuki revelation description resolves one candidate");
+    Equal(
+        "is3_mizuki_selectable_revelation_mcasci6",
+        revelationDescriptionOnly.Single().EffectId,
+        "difficulty-scaled Mizuki revelation description resolves canonical id");
+
+    var fixedRejection = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3RejectionFull",
+        [
+            M(
+                "RhodesOcrRegion_is3_rejection_name",
+                [
+                    ("発動済の拒絶反応", 0.98),
+                    ("散漫と異変", 0.93),
+                    ("障害と異変", 0.89),
+                ]),
+        ]);
+    Equal(1, fixedRejection.Count, "Mizuki rejection panel emits one fixed reaction");
+    Equal(
+        "is3_mizuki_selectable_rejectionReaction_mcasci24",
+        fixedRejection.Single().EffectId,
+        "highest-confidence Mizuki rejection is retained");
+
+    var measuredSplitRejection = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3RejectionFull",
+        [
+            M(
+                "RhodesOcrRegion_is3_rejection_name",
+                [
+                    ("を起ーしたオへレー夕ーは全てのスキルを目事", 0.912),
+                    ("オへレー夕ー：予備隊員ー近正巨離", 0.885),
+                    ("面的ご変異し。自制力力失われ者", 0.842),
+                    ("退行と漫", 0.976),
+                    ("配置後15秒間東結状態になる", 0.935),
+                ]),
+        ]);
+    Equal(1, measuredSplitRejection.Count, "measured split Mizuki rejection resolves one reaction");
+    Equal(
+        "is3_mizuki_selectable_rejectionReaction_mcasci20",
+        measuredSplitRejection.Single().EffectId,
+        "one-character rejection name drift resolves from the measured frame");
 
     static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
     {
@@ -4630,6 +4705,11 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
     Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryRelicFrameWithoutScroll("relicsFull", 9, 9, "is5_sarkaz"), "complete visible relic list does not retry");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryRelicFrameWithoutScroll("relicsFull", 5, 6, "is2_phantom"), "Phantom does not use the stationary relic retry");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryRelicFrameWithoutScroll("relicsFull", 5, null, "is5_sarkaz"), "unknown relic total does not assume the list is complete");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 9, "is5_sarkaz"), "non-Phantom three-row relic list never probes with a swipe");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 0, "is6_sui"), "empty non-Phantom relic list never probes with a swipe");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 10, "is5_sarkaz"), "fourth relic row still enables scrolling");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 6, "is2_phantom"), "Phantom retains its dedicated relic scrolling behavior");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", null, "is5_sarkaz"), "unknown relic total does not disable scrolling");
     Equal(true, RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe("relicsFull", "is5_sarkaz", 1, 2), "first immobile relic probe ends the current direction");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe("relicsFull", "is5_sarkaz", 1, 3), "moving relic frame continues scanning");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe("relicsFull", "is2_phantom", 1, 0), "Phantom keeps its existing edge detection");
@@ -5034,23 +5114,66 @@ static void OperatorScanTrackerCachesResolvedCards()
 
     Equal(2, first.WorkItems.Count, "first viewport OCRs every visible card");
     Equal(0, first.StableViewportCount, "first viewport is not repeated");
-    tracker.RecordResult(first.WorkItems[0].Fingerprint, resolved: true);
-    tracker.RecordResult(first.WorkItems[1].Fingerprint, resolved: false);
+    tracker.RecordResult(first.WorkItems[0].TrackingId, resolved: true);
+    tracker.RecordResult(first.WorkItems[1].TrackingId, resolved: false);
 
     var repeated = tracker.Select(EncodePng(firstFrame), requests);
     Equal(1, repeated.WorkItems.Count, "repeated viewport retries only the unresolved card");
     Equal("operator.card.name.1", repeated.WorkItems[0].Request.Entry, "resolved card is skipped");
     Equal(1, repeated.StableViewportCount, "same card set confirms viewport stability");
-    tracker.RecordResult(repeated.WorkItems[0].Fingerprint, resolved: false);
+    tracker.RecordResult(repeated.WorkItems[0].TrackingId, resolved: false);
     Equal(true, tracker.CanStopCurrentViewport, "viewport can stop after unresolved card reaches retry limit");
     Equal(true, tracker.CanStopScan, "scan can stop when every observed card is resolved or exhausted");
 
     using var changedFrame = firstFrame.Copy();
     using (var canvas = new SKCanvas(changedFrame))
-        canvas.DrawRect(new SKRect(365, 105, 392, 134), new SKPaint { Color = SKColors.White });
+    {
+        canvas.DrawRect(new SKRect(300, 100, 400, 140), new SKPaint { Color = SKColors.Black });
+        using var changedPaint = new SKPaint { Color = SKColors.White };
+        for (var x = 304; x < 392; x += 16)
+            canvas.DrawRect(new SKRect(x, 104, x + 5, 136), changedPaint);
+    }
     var changed = tracker.Select(EncodePng(changedFrame), requests);
     Equal(1, changed.WorkItems.Count, "new card fingerprint remains eligible for OCR");
     Equal(0, changed.StableViewportCount, "changed card set resets viewport stability");
+}
+
+static void OperatorScanTrackerTracksMovingDuplicateReserves()
+{
+    static SKBitmap Frame(int firstOffset, int secondOffset)
+    {
+        var frame = new SKBitmap(1280, 720);
+        frame.Erase(new SKColor(31, 24, 38));
+        using var canvas = new SKCanvas(frame);
+        using var paint = new SKPaint { Color = new SKColor(171, 103, 191) };
+        foreach (var left in new[] { 100 + firstOffset, 300 + secondOffset })
+        {
+            canvas.DrawRect(new SKRect(left + 8, 108, left + 16, 129), paint);
+            canvas.DrawRect(new SKRect(left + 24, 105, left + 33, 131), paint);
+            canvas.DrawRect(new SKRect(left + 42, 109, left + 51, 128), paint);
+            canvas.DrawRect(new SKRect(left + 61, 106, left + 70, 131), paint);
+        }
+        return frame;
+    }
+
+    var requests = new[]
+    {
+        new MaaDynamicOcrRequest("operator.card.name.0", 100, 100, 100, 40, 4, 0.9),
+        new MaaDynamicOcrRequest("operator.card.name.1", 300, 100, 100, 40, 4, 0.9),
+    };
+    var tracker = new RhodesOperatorScanTracker(maxAttemptsPerCard: 2);
+    using var firstFrame = Frame(0, 0);
+    var first = tracker.Select(EncodePng(firstFrame), requests);
+
+    Equal(2, first.WorkItems.Count, "identical reserve cards remain separate OCR work items");
+    var firstInstance = tracker.RecordResult(first.WorkItems[0].TrackingId, resolved: true, "reserve_melee");
+    var secondInstance = tracker.RecordResult(first.WorkItems[1].TrackingId, resolved: true, "reserve_melee");
+    Equal(1, firstInstance, "first duplicate reserve keeps instance one");
+    Equal(2, secondInstance, "second duplicate reserve keeps instance two");
+
+    using var movedFrame = Frame(3, -2);
+    var moved = tracker.Select(EncodePng(movedFrame), requests);
+    Equal(0, moved.WorkItems.Count, "minor horizontal card drift does not create new reserve instances");
 }
 
 static void MizukiRejectionCardDetectorIdentifiesPurpleBand()
@@ -5715,9 +5838,11 @@ static void MaaGeneratedResourceBuilder()
     Equal(230, root["RhodesOcrRegion_is5_thought_load_current"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "thought total load roi excludes the heading text");
     Equal(1055, root["RhodesOcrRegion_is3_ingot_value"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "Mizuki ingot roi includes the complete two-digit value");
     Equal(75, root["RhodesOcrRegion_is3_ingot_value"]!.AsObject()["roi"]!.AsArray()[2]!.GetValue<int>(), "Mizuki ingot roi leaves OCR margin around the value");
-    Equal(315, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "Mizuki rejection roi includes both measured reaction name positions");
-    Equal(105, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["roi"]!.AsArray()[3]!.GetValue<int>(), "Mizuki rejection roi covers heading and reaction name without relying on one vertical layout");
-    Equal(false, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["only_rec"]!.GetValue<bool>(), "Mizuki rejection roi returns separate heading and name rows");
+    Equal(785, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "Mizuki shared condition roi starts before the measured heading");
+    Equal(420, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "Mizuki shared condition roi starts at the panel heading");
+    Equal(465, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["roi"]!.AsArray()[2]!.GetValue<int>(), "Mizuki shared condition roi covers long revelation names");
+    Equal(205, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["roi"]!.AsArray()[3]!.GetValue<int>(), "Mizuki shared condition roi covers multiple revelation rows");
+    Equal(false, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["only_rec"]!.GetValue<bool>(), "Mizuki shared condition roi returns separate heading and name rows");
     Equal("TemplateMatch", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated template recognition");
     Equal("run/IngotIcon.png", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["template"]!.GetValue<string>(), "generated template path");
     var squadBatch = root["RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch"]!.AsObject();
@@ -7246,9 +7371,9 @@ static void RunCatalogMizukiRejectionIcons()
     Equal(true, options.All(option => !string.IsNullOrWhiteSpace(option.ImagePath)), "Mizuki rejection icon path populated");
     Equal(true, options.All(option => File.Exists(option.ImagePath)), "Mizuki rejection icon files exist");
     Equal(
-        "MizukiRejection_mcasci8.png",
+        "mcasci8.png",
         Path.GetFileName(options.Single(option => option.Name == "造血障害").ImagePath),
-        "Mizuki rejection icon matches its effect id");
+        "Mizuki rejection icon matches its Wiki asset id");
 }
 
 static void RunCatalogMizukiRejectionTargetInstances()
@@ -7338,6 +7463,7 @@ static void MizukiOperatorPresentationMarksTargets()
 static void RunCatalogMizukiHordeCallIcons()
 {
     var options = RhodesRunCatalog.LoadSpecialEffectOptions("is3_mizuki", "hordeCall");
+    var revelations = RhodesRunCatalog.LoadSpecialEffectOptions("is3_mizuki", "revelation");
 
     Equal(8, options.Count, "Mizuki horde call count");
     Equal(true, options.All(option => !string.IsNullOrWhiteSpace(option.ImagePath)), "Mizuki horde call icon path populated");
@@ -7346,6 +7472,9 @@ static void RunCatalogMizukiHordeCallIcons()
         "mcasci12.png",
         Path.GetFileName(options.Single(option => option.Name == "呼び声：探索").ImagePath),
         "Mizuki horde call icon matches its effect id");
+    Equal(7, revelations.Count, "Mizuki revelation count");
+    Equal(true, revelations.All(option => !string.IsNullOrWhiteSpace(option.ImagePath)), "Mizuki revelation icon path populated");
+    Equal(true, revelations.All(option => File.Exists(option.ImagePath)), "Mizuki revelation icon files exist");
 }
 
 static void HallucinationCatalogWikiOptions()
@@ -8748,6 +8877,8 @@ static void CandidateMizukiSpecialApply()
         new MaaCandidatePreview("mizuki", "灯火", "0", "0", 0.95, CampaignId: "is3_mizuki", FieldId: "light"),
         new MaaCandidatePreview("mizuki", "呼び声：栄枯", "is3_mizuki_selectable_hordeCall_mcasci15", "呼び声：栄枯", 0.93, CampaignId: "is3_mizuki", FieldId: "hordeCalls", EffectId: "is3_mizuki_selectable_hordeCall_mcasci15"),
         new MaaCandidatePreview("mizuki", "呼び声：給養", "is3_mizuki_selectable_hordeCall_mcasci16", "呼び声：給養", 0.91, CampaignId: "is3_mizuki", FieldId: "hordeCalls", EffectId: "is3_mizuki_selectable_hordeCall_mcasci16"),
+        new MaaCandidatePreview("mizuki", "リターニアの典雅", "is3_mizuki_selectable_revelation_mcasci6", "リターニアの典雅+", 0.96, CampaignId: "is3_mizuki", FieldId: "revelations", EffectId: "is3_mizuki_selectable_revelation_mcasci6"),
+        new MaaCandidatePreview("mizuki", "ウルサスの怒号", "is3_mizuki_selectable_revelation_mcasci1", "ウルサスの怒号", 0.94, CampaignId: "is3_mizuki", FieldId: "revelations", EffectId: "is3_mizuki_selectable_revelation_mcasci1"),
         new MaaCandidatePreview("mizuki", "障害と異変", "is3_mizuki_selectable_rejectionReaction_mcasci25", "障害と異変", 0.94, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", EffectId: "is3_mizuki_selectable_rejectionReaction_mcasci25"),
         new MaaCandidatePreview("mizuki", "クルース", "kroos", "クルース", 0.92, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", OperatorId: "kroos"),
         new MaaCandidatePreview("mizuki", "フェン", "fang", "フェン", 0.92, CampaignId: "is3_mizuki", FieldId: "rejectionReaction", OperatorId: "fang"),
@@ -8759,7 +8890,7 @@ static void CandidateMizukiSpecialApply()
         candidates,
         DateTimeOffset.Parse("2026-07-19T06:30:00Z"));
 
-    Equal(7, summary.AppliedCount, "Mizuki special candidates applied");
+    Equal(9, summary.AppliedCount, "Mizuki special candidates applied");
     Equal(1, summary.IgnoredCount, "unrecruited rejection target ignored");
     Equal(
         "operator-not-recruited",
@@ -8772,12 +8903,23 @@ static void CandidateMizukiSpecialApply()
         "is3_mizuki_selectable_hordeCall_mcasci15|is3_mizuki_selectable_hordeCall_mcasci16",
         string.Join('|', special["hordeCalls"]!.AsArray().Select(item => item!.GetValue<string>())),
         "Mizuki Horde's Calls persisted");
+    Equal(
+        "is3_mizuki_selectable_revelation_mcasci6|is3_mizuki_selectable_revelation_mcasci1",
+        string.Join('|', special["revelations"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "Mizuki revelations persisted");
     var rejection = special["rejectionReaction"]!.AsObject();
     Equal("is3_mizuki_selectable_rejectionReaction_mcasci25", rejection["effectId"]!.GetValue<string>(), "Mizuki rejection persisted");
     Equal(
         "kroos|fang",
         string.Join('|', rejection["operatorIds"]!.AsArray().Select(item => item!.GetValue<string>())),
         "Mizuki rejection targets restricted to recruited operators");
+
+    var clearSummary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [RhodesRecognitionCandidateApplier.CreateNoMizukiRevelationCandidate()],
+        DateTimeOffset.Parse("2026-07-19T06:31:00Z"));
+    Equal(1, clearSummary.AppliedCount, "Mizuki revelation clear applied");
+    Equal(0, special["revelations"]!.AsArray().Count, "Mizuki revelations cleared by explicit empty selection");
 }
 
 static void CandidateMizukiRejectionEffectOnlyPreservesTargets()

@@ -79,6 +79,17 @@ public static class RhodesRecognitionCandidateApplier
         FieldId: "hordeCalls",
         EffectId: NoMizukiSelectionId);
 
+    public static MaaCandidatePreview CreateNoMizukiRevelationCandidate() => new(
+        "mizuki",
+        "啓示なし",
+        NoMizukiSelectionId,
+        "啓示を空にする",
+        1.0,
+        CampaignId: Is3CampaignId,
+        RecognitionKey: "manual:mizuki:revelations:none",
+        FieldId: "revelations",
+        EffectId: NoMizukiSelectionId);
+
     public static MaaCandidatePreview CreateNoMizukiRejectionCandidate() => new(
         "mizuki",
         "拒絶反応なし",
@@ -377,6 +388,7 @@ public static class RhodesRecognitionCandidateApplier
         {
             "key" or "light" => "invalid-mizuki-number",
             "hordeCalls" => "missing-horde-call-id",
+            "revelations" => "missing-revelation-id",
             "rejectionReaction" => "missing-or-conflicting-rejection-data",
             "operatorEvolution" or "operatorEvolutionTargets" => "missing-or-conflicting-evolution-data",
             _ => "unsupported-mizuki-field",
@@ -640,6 +652,31 @@ public static class RhodesRecognitionCandidateApplier
             {
                 handled.Add(item.Index);
                 applied.Add($"mizuki:hordeCalls:{item.EffectId}");
+            }
+        }
+
+        var revelations = candidates
+            .Select((candidate, index) => (Candidate: candidate, Index: index, EffectId: CandidateId(candidate.EffectId, candidate.Value)))
+            .Where(item => CandidateIsKind(item.Candidate, "mizuki")
+                && item.Candidate.FieldId.Equals("revelations", StringComparison.Ordinal)
+                && CandidateCampaignIs(item.Candidate, Is3CampaignId)
+                && !string.IsNullOrWhiteSpace(item.EffectId))
+            .ToArray();
+        if (revelations.Length > 0)
+        {
+            var selected = new JsonArray();
+            foreach (var effectId in revelations
+                .Select(item => item.EffectId)
+                .Where(effectId => !effectId.Equals(NoMizukiSelectionId, StringComparison.Ordinal))
+                .Distinct(StringComparer.Ordinal))
+            {
+                selected.Add(effectId);
+            }
+            campaign["revelations"] = selected;
+            foreach (var item in revelations)
+            {
+                handled.Add(item.Index);
+                applied.Add($"mizuki:revelations:{item.EffectId}");
             }
         }
 

@@ -1826,45 +1826,101 @@ public static class RhodesMaaLocalCandidateConverter
 
     private static IEnumerable<MaaCandidatePreview> MizukiRejectionCandidates(IEnumerable<MaaTaskRunResult> taskResults)
     {
-        var effects = LoadSelectableEffects()
-            .Where(effect => effect.CampaignId == "is3_mizuki" && effect.Slot == "rejectionReaction")
+        var textResults = taskResults
+            .Where(taskResult => taskResult.Succeeded
+                && IsMizukiRejectionNameEntry(taskResult.Entry))
+            .SelectMany(taskResult => PrimaryTextResults(taskResult.RecognitionDetailJson))
+            .Where(result => !string.IsNullOrWhiteSpace(result.Text))
             .ToArray();
-        var emittedEffects = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var taskResult in taskResults)
+        if (textResults.Length == 0)
+            yield break;
+
+        var normalizedPanelText = string.Concat(
+            textResults.Select(result => NormalizeMizukiRejectionName(result.Text)));
+        var hasRevelationHeading = normalizedPanelText.Contains("発動済の啓示", StringComparison.Ordinal)
+            || normalizedPanelText.Contains("啓示", StringComparison.Ordinal);
+        var hasRejectionHeading = normalizedPanelText.Contains("拒絶反応", StringComparison.Ordinal);
+        var allowRevelations = hasRevelationHeading || !hasRejectionHeading;
+        var allowRejection = hasRejectionHeading || !hasRevelationHeading;
+
+        var effects = LoadSelectableEffects()
+            .Where(effect => effect.CampaignId == "is3_mizuki"
+                && (effect.Slot == "rejectionReaction" || effect.Slot == "revelation"))
+            .ToArray();
+        var matches = new List<(SelectableEffectCandidate Effect, string Raw, double Confidence, int Order)>();
+        for (var order = 0; order < textResults.Length; order++)
         {
-            if (!taskResult.Succeeded
-                || !IsMizukiRejectionNameEntry(taskResult.Entry))
+            var textResult = textResults[order];
+            var normalized = NormalizeMizukiRejectionName(textResult.Text);
+            foreach (var effect in effects)
             {
-                continue;
-            }
-
-            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
-            {
-                var normalized = NormalizeMizukiRejectionName(textResult.Text);
-                foreach (var effect in effects)
+                if ((effect.Slot == "revelation" && !allowRevelations)
+                    || (effect.Slot == "rejectionReaction" && !allowRejection))
                 {
-                    var effectName = NormalizeChoiceName(effect.Name);
-                    if (string.IsNullOrWhiteSpace(effectName)
-                        || !normalized.Contains(effectName, StringComparison.Ordinal)
-                        || !emittedEffects.Add(effect.Id))
-                    {
-                        continue;
-                    }
-
-                    yield return new MaaCandidatePreview(
-                        "mizuki",
-                        effect.Name,
-                        effect.Id,
-                        textResult.Text,
-                        Math.Max(0.72, textResult.Confidence ?? 0),
-                        CampaignId: "is3_mizuki",
-                        RecognitionKey: $"maa-local:mizuki:rejection:{effect.Id}",
-                        FieldId: "rejectionReaction",
-                        EffectId: effect.Id);
+                    continue;
                 }
+
+                var nameMatched = MatchesMizukiEffectName(normalized, effect.Name);
+                var effectMatched = MizukiEffectTextSimilarity(textResult.Text, effect.Effect) >= 0.55;
+                if (!nameMatched && !effectMatched)
+                {
+                    continue;
+                }
+
+                matches.Add((
+                    effect,
+                    textResult.Text,
+                    Math.Max(0.72, textResult.Confidence ?? 0),
+                    order));
             }
         }
 
+        if (allowRejection)
+        {
+            var rejection = matches
+                .Where(match => match.Effect.Slot == "rejectionReaction")
+                .OrderByDescending(match => match.Confidence)
+                .ThenByDescending(match => NormalizeChoiceName(match.Effect.Name).Length)
+                .ThenBy(match => match.Order)
+                .FirstOrDefault();
+            if (rejection.Effect is not null)
+            {
+                yield return new MaaCandidatePreview(
+                    "mizuki",
+                    rejection.Effect.Name,
+                    rejection.Effect.Id,
+                    rejection.Raw,
+                    rejection.Confidence,
+                    CampaignId: "is3_mizuki",
+                    RecognitionKey: $"maa-local:mizuki:rejection:{rejection.Effect.Id}",
+                    FieldId: "rejectionReaction",
+                    EffectId: rejection.Effect.Id);
+            }
+        }
+
+        if (!allowRevelations)
+            yield break;
+
+        foreach (var revelation in matches
+            .Where(match => match.Effect.Slot == "revelation")
+            .GroupBy(match => match.Effect.Id, StringComparer.Ordinal)
+            .Select(group => group
+                .OrderByDescending(match => match.Confidence)
+                .ThenBy(match => match.Order)
+                .First())
+            .OrderBy(match => match.Order))
+        {
+            yield return new MaaCandidatePreview(
+                "mizuki",
+                revelation.Effect.Name,
+                revelation.Effect.Id,
+                revelation.Raw,
+                revelation.Confidence,
+                CampaignId: "is3_mizuki",
+                RecognitionKey: $"maa-local:mizuki:revelation:{revelation.Effect.Id}",
+                FieldId: "revelations",
+                EffectId: revelation.Effect.Id);
+        }
     }
 
     private static IEnumerable<MaaCandidatePreview> MizukiRejectionCardCandidates(
@@ -1960,6 +2016,39 @@ public static class RhodesMaaLocalCandidateConverter
     private static string NormalizeMizukiRejectionName(string value) =>
         NormalizeChoiceName(value)
             .Replace("障害と異空", "障害と異変", StringComparison.Ordinal);
+
+    private static bool MatchesMizukiEffectName(string observed, string expected)
+    {
+        var normalizedObserved = NormalizeMizukiRejectionName(observed);
+        var normalizedExpected = NormalizeMizukiRejectionName(expected);
+        if (string.IsNullOrWhiteSpace(normalizedExpected))
+            return false;
+        if (normalizedObserved.Contains(normalizedExpected, StringComparison.Ordinal))
+            return true;
+
+        // The panel uses a small font and MAA-OCR can drop one kanji (for example 退行と散漫 -> 退行と漫).
+        // Keep the fallback restricted to name-sized text so prose cannot select a reaction accidentally.
+        return normalizedExpected.Length >= 4
+            && normalizedObserved.Length >= normalizedExpected.Length - 1
+            && normalizedObserved.Length <= normalizedExpected.Length + 2
+            && BestSubstringEditDistance(normalizedObserved, normalizedExpected) <= 1;
+    }
+
+    private static double MizukiEffectTextSimilarity(string observed, string expected)
+    {
+        var normalizedObserved = NormalizeMizukiEffectText(observed);
+        var normalizedExpected = NormalizeMizukiEffectText(expected);
+        if (normalizedObserved.Length < 8 || normalizedExpected.Length < 8)
+            return 0;
+
+        return SquadEffectSimilarity(normalizedObserved, normalizedExpected);
+    }
+
+    private static string NormalizeMizukiEffectText(string value)
+    {
+        var normalized = NormalizeMizukiRejectionName(value);
+        return new string(normalized.Where(char.IsLetter).ToArray());
+    }
 
     private static (SelectableEffectCandidate? Effect, double Score) TryResolveMizukiRejectionTemplate(
         MaaTaskRunResult taskResult,

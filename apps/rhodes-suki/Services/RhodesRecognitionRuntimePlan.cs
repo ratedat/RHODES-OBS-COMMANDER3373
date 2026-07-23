@@ -69,6 +69,12 @@ public static class RhodesRecognitionRuntimePlan
         IsKnownNonScrollableRelicList(profileId, expectedCandidateCount, campaignId)
         && candidateCount < expectedCandidateCount;
 
+    public static bool ShouldStopBeforeRelicScroll(
+        string profileId,
+        int? expectedCandidateCount,
+        string campaignId) =>
+        IsKnownNonScrollableRelicList(profileId, expectedCandidateCount, campaignId);
+
     public static bool ShouldEndRelicPassAfterImmobileProbe(
         string profileId,
         string campaignId,

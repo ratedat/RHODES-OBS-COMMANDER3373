@@ -791,12 +791,12 @@
         "is3RejectionFull"
       ],
       "roi": [
-        790,
-        315,
-        300,
-        105
+        785,
+        420,
+        465,
+        205
       ],
-      "scale": 4,
+      "scale": 3,
       "onlyRec": false,
       "ocrReplace": [
         [

@@ -8,7 +8,8 @@ public readonly record struct RhodesOperatorCardFingerprint(
 
 public sealed record RhodesOperatorOcrWorkItem(
     MaaDynamicOcrRequest Request,
-    RhodesOperatorCardFingerprint Fingerprint);
+    RhodesOperatorCardFingerprint Fingerprint,
+    long TrackingId);
 
 public sealed record RhodesOperatorScanSelection(
     IReadOnlyList<RhodesOperatorOcrWorkItem> WorkItems,
@@ -17,14 +18,17 @@ public sealed record RhodesOperatorScanSelection(
 
 public sealed class RhodesOperatorScanTracker
 {
-    private const int CardMatchDistance = 1;
-    private const int ViewportMatchDistance = 2;
+    private const int CardMatchDistance = 3;
+    private const int CardDifferenceMatchDistance = 6;
+    private const int ViewportMatchDistance = 4;
+    private const int ViewportDifferenceMatchDistance = 8;
 
     private readonly int _maxAttemptsPerCard;
     private readonly List<CardState> _cards = [];
     private IReadOnlyList<RhodesOperatorCardFingerprint> _previousViewport = [];
     private IReadOnlyList<CardState> _currentViewport = [];
     private int _stableViewportCount;
+    private long _nextTrackingId = 1;
 
     public RhodesOperatorScanTracker(int maxAttemptsPerCard = 3)
     {
@@ -59,8 +63,14 @@ public sealed class RhodesOperatorScanTracker
             var card = FindCard(observation.Fingerprint, usedCards);
             if (card is null)
             {
-                card = new CardState(observation.Fingerprint);
+                card = new CardState(_nextTrackingId++, observation.Fingerprint);
                 _cards.Add(card);
+            }
+            else
+            {
+                // Compare the next frame against the most recent appearance. Horizontal card
+                // scrolling otherwise accumulates small hash drift until one card looks new.
+                card.Fingerprint = observation.Fingerprint;
             }
             usedCards.Add(card);
             currentCards.Add(card);
@@ -68,7 +78,10 @@ public sealed class RhodesOperatorScanTracker
             if (card.Resolved || card.Attempts >= _maxAttemptsPerCard)
                 continue;
             card.Attempts++;
-            workItems.Add(new RhodesOperatorOcrWorkItem(observation.Request, card.Fingerprint));
+            workItems.Add(new RhodesOperatorOcrWorkItem(
+                observation.Request,
+                card.Fingerprint,
+                card.TrackingId));
         }
         _currentViewport = currentCards;
 
@@ -79,11 +92,11 @@ public sealed class RhodesOperatorScanTracker
     }
 
     public int RecordResult(
-        RhodesOperatorCardFingerprint fingerprint,
+        long trackingId,
         bool resolved,
         string operatorId = "")
     {
-        var card = _cards.FirstOrDefault(item => item.Fingerprint == fingerprint);
+        var card = _cards.FirstOrDefault(item => item.TrackingId == trackingId);
         if (card is null)
             return 0;
         if (resolved)
@@ -119,7 +132,7 @@ public sealed class RhodesOperatorScanTracker
                     fingerprint.DifferenceHash),
             })
             .Where(item => item.AverageDistance <= CardMatchDistance
-                           && item.DifferenceDistance <= 3)
+                           && item.DifferenceDistance <= CardDifferenceMatchDistance)
             .OrderBy(item => item.AverageDistance)
             .ThenBy(item => item.DifferenceDistance)
             .Select(item => item.Card)
@@ -150,7 +163,7 @@ public sealed class RhodesOperatorScanTracker
                     fingerprint.DifferenceHash,
                     right[index].DifferenceHash);
                 if (averageDistance <= ViewportMatchDistance
-                    && differenceDistance <= 4
+                    && differenceDistance <= ViewportDifferenceMatchDistance
                     && (averageDistance < matchAverageDistance
                         || averageDistance == matchAverageDistance
                         && differenceDistance < matchDifferenceDistance))
@@ -190,11 +203,53 @@ public sealed class RhodesOperatorScanTracker
                     new SKRectI(left, top, left + width, top + height),
                     new SKRect(0, 0, width, height));
             }
+            using var normalized = NormalizeFingerprintSource(cropped);
 
             return new CardObservation(request, new RhodesOperatorCardFingerprint(
-                AverageHash(cropped),
-                DifferenceHash(cropped)));
+                AverageHash(normalized),
+                DifferenceHash(normalized)));
         }).ToArray();
+    }
+
+    private static SKBitmap NormalizeFingerprintSource(SKBitmap source)
+    {
+        var minX = source.Width;
+        var minY = source.Height;
+        var maxX = -1;
+        var maxY = -1;
+        var foregroundPixels = 0;
+        for (var y = 0; y < source.Height; y++)
+        {
+            for (var x = 0; x < source.Width; x++)
+            {
+                var color = source.GetPixel(x, y);
+                var luminance = Luminance(color);
+                var chroma = Math.Max(color.Red, Math.Max(color.Green, color.Blue))
+                             - Math.Min(color.Red, Math.Min(color.Green, color.Blue));
+                if (luminance < 92 || luminance < 135 && chroma < 18)
+                    continue;
+                foregroundPixels++;
+                minX = Math.Min(minX, x);
+                minY = Math.Min(minY, y);
+                maxX = Math.Max(maxX, x);
+                maxY = Math.Max(maxY, y);
+            }
+        }
+
+        if (foregroundPixels < 8 || maxX < minX || maxY < minY)
+            return source.Copy();
+
+        minX = Math.Max(0, minX - 2);
+        minY = Math.Max(0, minY - 2);
+        maxX = Math.Min(source.Width - 1, maxX + 2);
+        maxY = Math.Min(source.Height - 1, maxY + 2);
+        var normalized = new SKBitmap(maxX - minX + 1, maxY - minY + 1);
+        using var canvas = new SKCanvas(normalized);
+        canvas.DrawBitmap(
+            source,
+            new SKRectI(minX, minY, maxX + 1, maxY + 1),
+            new SKRect(0, 0, normalized.Width, normalized.Height));
+        return normalized;
     }
 
     private static ulong AverageHash(SKBitmap source)
@@ -242,9 +297,12 @@ public sealed class RhodesOperatorScanTracker
     private static int Luminance(SKColor color) =>
         (color.Red * 299 + color.Green * 587 + color.Blue * 114) / 1000;
 
-    private sealed class CardState(RhodesOperatorCardFingerprint fingerprint)
+    private sealed class CardState(
+        long trackingId,
+        RhodesOperatorCardFingerprint fingerprint)
     {
-        public RhodesOperatorCardFingerprint Fingerprint { get; } = fingerprint;
+        public long TrackingId { get; } = trackingId;
+        public RhodesOperatorCardFingerprint Fingerprint { get; set; } = fingerprint;
         public int Attempts { get; set; }
         public bool Resolved { get; set; }
         public string OperatorId { get; set; } = "";

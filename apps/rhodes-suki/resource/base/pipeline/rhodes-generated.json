@@ -960,10 +960,10 @@
   "RhodesOcrRegion_is3_rejection_name": {
     "recognition": "OCR",
     "roi": [
-      790,
-      315,
-      300,
-      105
+      785,
+      420,
+      465,
+      205
     ],
     "only_rec": false,
     "threshold": 0.3,
@@ -975,7 +975,7 @@
       "profileIds": [
         "is3RejectionFull"
       ],
-      "scale": 4
+      "scale": 3
     },
     "replace": [
       [

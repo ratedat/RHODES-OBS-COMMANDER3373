@@ -91,8 +91,8 @@
     },
     {
       "name": "is3RejectionFull",
-      "label": "拒絶反応",
-      "description": "IS#3の拒絶反応名を取得します。影響対象は続くオペレーター取得でカード背景から判定します。",
+      "label": "拒絶反応・啓示",
+      "description": "IS#3の共用詳細パネルを文字認識し、拒絶反応は1件、啓示は複数件を取得します。拒絶反応の影響対象は続くオペレーター取得でカード背景から判定します。",
       "default_expand": false
     },
     {
@@ -1790,8 +1790,8 @@
     },
     {
       "name": "is3RejectionFull",
-      "label": "拒絶反応",
-      "description": "拒絶反応プロファイルのResource taskだけを選択します。",
+      "label": "拒絶反応・啓示",
+      "description": "拒絶反応・啓示プロファイルのResource taskだけを選択します。",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",

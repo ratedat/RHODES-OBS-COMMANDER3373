@@ -415,6 +415,38 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
 
+          <TextBlock Text="啓示（複数選択）" FontWeight="SemiBold" />
+          <ItemsControl ItemsSource="{Binding ManualMizukiRevelationOptions}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Width="320"
+                        MinHeight="82"
+                        Margin="0,0,10,10"
+                        Padding="9"
+                        Background="#11191A"
+                        BorderBrush="#2B3638"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                  <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
+                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="この啓示を選択" />
+                    <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                      <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="2" Spacing="3">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
           <StackPanel Spacing="6">
             <TextBlock Text="拒絶反応（単一選択）" FontWeight="SemiBold" />
             <ComboBox Width="540"

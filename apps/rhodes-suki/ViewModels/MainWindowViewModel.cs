@@ -821,6 +821,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiToggleEffectOption> ManualMizukiHordeCallOptions { get; } = [];
 
+    public ObservableCollection<SukiToggleEffectOption> ManualMizukiRevelationOptions { get; } = [];
+
     public ObservableCollection<SukiOperatorTargetOption> ManualMizukiOperatorTargets { get; } = [];
 
     public ObservableCollection<SukiOperatorTargetOption> ManualMizukiEvolutionTargets { get; } = [];
@@ -4503,6 +4505,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     EffectId: option.Id)));
             }
 
+            var revelations = ManualMizukiRevelationOptions.Where(option => option.IsSelected).ToArray();
+            if (revelations.Length == 0)
+            {
+                candidates.Add(RhodesRecognitionCandidateApplier.CreateNoMizukiRevelationCandidate());
+            }
+            else
+            {
+                candidates.AddRange(revelations.Select(option => new MaaCandidatePreview(
+                    "mizuki",
+                    $"{option.Name} (手動入力)",
+                    option.Id,
+                    "手動入力",
+                    1.0,
+                    CampaignId: campaignId,
+                    FieldId: "revelations",
+                    EffectId: option.Id)));
+            }
+
             if (string.IsNullOrWhiteSpace(SelectedManualMizukiRejection?.Id))
             {
                 candidates.Add(RhodesRecognitionCandidateApplier.CreateNoMizukiRejectionCandidate());
@@ -4846,6 +4866,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ManualMizukiHordeCallOptions,
             RhodesRunCatalog.LoadSpecialEffectOptions(campaignId, "hordeCall")
                 .Select(option => new SukiToggleEffectOption(option, selectedHordeIds.Contains(option.Id))));
+
+        var selectedRevelationIds = fields.TryGetValue("revelations", out var revelations)
+            ? (revelations.SelectedIds ?? []).ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+        ReplaceCollection(
+            ManualMizukiRevelationOptions,
+            RhodesRunCatalog.LoadSpecialEffectOptions(campaignId, "revelation")
+                .Select(option => new SukiToggleEffectOption(option, selectedRevelationIds.Contains(option.Id))));
 
         var rejectionOptions = new[] { new SukiSpecialEffectOption("", "拒絶反応なし") }
             .Concat(RhodesRunCatalog.LoadSpecialEffectOptions(campaignId, "rejectionReaction"))
@@ -6170,7 +6198,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         .ToArray();
                     var resolved = resolvedOperators.Length > 0;
                     var operatorInstance = operatorScanTracker.RecordResult(
-                        workItem.Fingerprint,
+                        workItem.TrackingId,
                         resolved,
                         resolvedOperators.FirstOrDefault()?.OperatorId ?? "");
                     if (IsMizukiCampaignSelected && resolvedOperators.Length == 1)
@@ -6348,6 +6376,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (RhodesRecognitionRuntimePlan.ShouldSkipScroll(plan.ProfileId, initialCandidateCount, expectedCandidateCount))
         {
             StatusMessage = $"秘宝候補{initialCandidateCount}/{expectedCandidateCount}件: 所持数と一致したため終了しました。";
+            return;
+        }
+        if (RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll(
+                plan.ProfileId,
+                expectedCandidateCount,
+                campaignId))
+        {
+            StatusMessage =
+                $"秘宝候補{initialCandidateCount}/{expectedCandidateCount}件: 3行以内の固定表示のため、画面を閉じる可能性があるスクロールは実行せず終了しました。";
             return;
         }
         var scanRegion = RhodesRecognitionScrollPlan.LoadScanRegionDefault(plan.ProfileId);

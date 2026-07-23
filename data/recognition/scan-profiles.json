@@ -1255,9 +1255,9 @@
     },
     {
       "id": "is3RejectionFull",
-      "label": "拒絶反応スキャン",
-      "interfaceLabel": "拒絶反応",
-      "interfaceDescription": "IS#3の拒絶反応名を取得します。影響対象は続くオペレーター取得でカード背景から判定します。",
+      "label": "拒絶反応・啓示スキャン",
+      "interfaceLabel": "拒絶反応・啓示",
+      "interfaceDescription": "IS#3の共用詳細パネルを文字認識し、拒絶反応は1件、啓示は複数件を取得します。拒絶反応の影響対象は続くオペレーター取得でカード背景から判定します。",
       "campaignId": "is3_mizuki",
       "candidateKind": "mizuki",
       "ocrEngine": "maa-ocr",
@@ -1279,7 +1279,7 @@
             "x": 840,
             "y": 678
           },
-          "label": "拒絶反応を開く",
+          "label": "拒絶反応・啓示を開く",
           "area": {
             "x": 750,
             "y": 646,
@@ -1312,7 +1312,7 @@
             "x": 840,
             "y": 678
           },
-          "label": "拒絶反応を閉じる",
+          "label": "拒絶反応・啓示を閉じる",
           "area": {
             "x": 750,
             "y": 646,

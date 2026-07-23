@@ -1030,7 +1030,7 @@ public static class RhodesRunCatalog
             ("is3_mizuki", "light") => "is3LightHordeFull",
             ("is3_mizuki", "rejectionReaction") => "is3RejectionFull",
             ("is3_mizuki", "operatorEvolution") => "operatorsFull",
-            ("is3_mizuki", "revelations") => "is3RevelationFull",
+            ("is3_mizuki", "revelations") => "is3RejectionFull",
             ("is3_mizuki", "hordeCalls") => "is3LightHordeFull",
             ("is4_sami", "collapseValue") => "is4CollapseValue",
             ("is4_sami", "paradigmLost") => "is4ParadigmLost",
