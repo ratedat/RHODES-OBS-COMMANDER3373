@@ -34,7 +34,7 @@ test("MAA recognition policy defines the retained run target boundary once", () 
   assert.deepEqual(retainedRunStatusFields, manifest.runRecognition.retainedFields);
   assert.deepEqual(retainedRunRecognitionIds, manifest.runRecognition.retainedIds);
   assert.deepEqual(abandonedRunFieldIds, manifest.runRecognition.abandonedFields);
-  assert.deepEqual(retainedCandidateKinds, ["runStatus", "operator", "relic", "thought", "age", "mizuki", "revelation", "coin"]);
+  assert.deepEqual(retainedCandidateKinds, ["runStatus", "operator", "relic", "thought", "age", "mizuki", "revelation", "coin", "sui"]);
   assert.deepEqual(retainedRunStatusFields, [
     "ingot",
     "difficulty",

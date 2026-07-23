@@ -187,6 +187,11 @@
         "effectSlot": "rejectionReaction"
       },
       {
+        "id": "operatorEvolution",
+        "label": "進化",
+        "type": "operatorMultiSelect"
+      },
+      {
         "id": "revelations",
         "label": "啓示",
         "type": "effectMultiSelect",
@@ -1249,20 +1254,45 @@
         "label": "有効銭",
         "type": "coinLoadout",
         "effectSlot": "coin",
-        "statusSlot": "coinStatus"
+        "statusSlot": "coinStatus",
+        "overlayToggle": true,
+        "overlayDefaultVisible": true,
+        "overlayToggleLabel": "OBS表示",
+        "overlayEffectScope": "active",
+        "overlayGroupLabel": "有効銭（振出中）"
       },
       {
         "id": "coins",
         "label": "保有銭",
         "type": "coinLoadout",
         "effectSlot": "coin",
-        "statusSlot": "coinStatus"
+        "statusSlot": "coinStatus",
+        "overlayToggle": true,
+        "overlayDefaultVisible": true,
+        "overlayToggleLabel": "OBS表示",
+        "overlayEffectScope": "held",
+        "overlayGroupLabel": "保有銭（銭匣内）"
       },
       {
         "id": "seasonalHours",
         "label": "歳時",
         "type": "effectRankedMultiSelect",
         "effectSlot": "seasonalHours"
+      },
+      {
+        "id": "seasonalHourTargets",
+        "label": "戌絵 対象職分",
+        "type": "textMultiSelect",
+        "unitLabel": "職分"
+      },
+      {
+        "id": "supportMartial",
+        "label": "支武",
+        "type": "textMultiSelect",
+        "unitLabel": "件",
+        "overlayToggle": true,
+        "overlayDefaultVisible": true,
+        "overlayToggleLabel": "OBS表示"
       }
     ],
     "bossFlags": {
@@ -1448,6 +1478,171 @@
                 "sourcePath": "img/SUI_3.jpg",
                 "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_5355495F332E6A7067.jpg",
                 "localPath": "assets/bosses/wikiru/img/SUI_3.jpg"
+              }
+            }
+          ]
+        },
+        {
+          "id": "floor6",
+          "field": "floor6BossId",
+          "label": "6層ボス",
+          "helper": "「雲と漆」所持時のみ表示。第6層へ進んだ場合のボスを選択します。",
+          "mode": "manual",
+          "visibleWhenRelicId": "is6_sui_relic_215",
+          "options": [
+            {
+              "id": "is6_route_end3_black_white",
+              "floor": 6,
+              "floorLabel": "陸層",
+              "sortOrder": 6.1,
+              "optionLabel": "6層",
+              "label": "END3",
+              "bossName": "「望」",
+              "stageName": "歳を謀る者",
+              "requiredNote": "選択条件: 雲と漆",
+              "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D%2F%E6%AD%B3%E3%82%92%E8%AC%80%E3%82%8B%E8%80%85",
+              "primaryDisplay": "stage",
+              "image": {
+                "source": "arknights.wikiru.jp",
+                "sourcePath": "img/WAN.jpg",
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_57414E2E6A7067.jpg",
+                "localPath": "assets/bosses/wikiru/img/WAN.jpg"
+              }
+            }
+          ]
+        },
+        {
+          "id": "end5",
+          "field": "end5BossVariantId",
+          "label": "END5分岐",
+          "helper": "「イザヨウ」所持時のみ表示。実際に選んだ【謀定】の分岐を選択します。秘宝は選択条件の補足にだけ使い、自動確定しません。",
+          "mode": "manual",
+          "visibleWhenRelicId": "is6_sui_relic_220",
+          "options": [
+            {
+              "id": "is6_end5_ding_qiankun_normal",
+              "floor": 12,
+              "floorLabel": "壱壱零弐層",
+              "sortOrder": 12.201,
+              "optionLabel": "通常",
+              "label": "END5",
+              "bossName": "朔殻＋妄躯",
+              "stageName": "定乾坤（通常）",
+              "requiredNote": "謀定: シュオの姿が次第に鮮明になっていく",
+              "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D%2F%E5%AE%9A%E4%B9%BE%E5%9D%A4",
+              "image": {
+                "source": "arknights.wikiru.jp",
+                "sourcePath": "img/SQ.jpg",
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53512E6A7067.jpg",
+                "localPath": "assets/bosses/wikiru/img/SQ.jpg"
+              }
+            },
+            {
+              "id": "is6_end5_zhivian_appease",
+              "floor": 12,
+              "floorLabel": "壱壱零弐層",
+              "sortOrder": 12.202,
+              "optionLabel": "止変",
+              "label": "END5",
+              "bossName": "易＋梁",
+              "stageName": "止変（鎮撫と化す）",
+              "requiredNote": "謀定: 鎮撫と化す",
+              "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D%2F%E6%AD%A2%E5%A4%89",
+              "image": {
+                "source": "arknights.wikiru.jp",
+                "sourcePath": "img/SQ.jpg",
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53512E6A7067.jpg",
+                "localPath": "assets/bosses/wikiru/img/SQ.jpg"
+              }
+            },
+            {
+              "id": "is6_end5_zhivian_trace_form",
+              "floor": 12,
+              "floorLabel": "壱壱零弐層",
+              "sortOrder": 12.203,
+              "optionLabel": "止変",
+              "label": "END5",
+              "bossName": "「歳」",
+              "stageName": "止変（承形を遡る）",
+              "requiredNote": "選択条件: 墨化の残碑",
+              "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D%2F%E6%AD%A2%E5%A4%89",
+              "image": {
+                "source": "arknights.wikiru.jp",
+                "sourcePath": "img/SQ.jpg",
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53512E6A7067.jpg",
+                "localPath": "assets/bosses/wikiru/img/SQ.jpg"
+              }
+            },
+            {
+              "id": "is6_end5_zhivian_change_game",
+              "floor": 12,
+              "floorLabel": "壱壱零弐層",
+              "sortOrder": 12.204,
+              "optionLabel": "止変",
+              "label": "END5",
+              "bossName": "「望」",
+              "stageName": "止変（対局に改める）",
+              "requiredNote": "選択条件: 雲と漆",
+              "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D%2F%E6%AD%A2%E5%A4%89",
+              "image": {
+                "source": "arknights.wikiru.jp",
+                "sourcePath": "img/SQ.jpg",
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53512E6A7067.jpg",
+                "localPath": "assets/bosses/wikiru/img/SQ.jpg"
+              }
+            },
+            {
+              "id": "is6_end5_zhivian_old_calendar",
+              "floor": 12,
+              "floorLabel": "壱壱零弐層",
+              "sortOrder": 12.205,
+              "optionLabel": "止変",
+              "label": "END5",
+              "bossName": "彫鬼×6",
+              "stageName": "止変（旧暦を塑す）",
+              "requiredNote": "選択条件: 墨のない長巻",
+              "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D%2F%E6%AD%A2%E5%A4%89",
+              "image": {
+                "source": "arknights.wikiru.jp",
+                "sourcePath": "img/SQ.jpg",
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53512E6A7067.jpg",
+                "localPath": "assets/bosses/wikiru/img/SQ.jpg"
+              }
+            },
+            {
+              "id": "is6_end5_ding_qiankun_origin",
+              "floor": 12,
+              "floorLabel": "壱壱零弐層",
+              "sortOrder": 12.206,
+              "optionLabel": "強化",
+              "label": "END5",
+              "bossName": "朔殻＋妄躯",
+              "stageName": "定乾坤（根源を定める）",
+              "requiredNote": "選択条件: 不赦＋不息",
+              "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D%2F%E5%AE%9A%E4%B9%BE%E5%9D%A4",
+              "image": {
+                "source": "arknights.wikiru.jp",
+                "sourcePath": "img/SQ.jpg",
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53512E6A7067.jpg",
+                "localPath": "assets/bosses/wikiru/img/SQ.jpg"
+              }
+            },
+            {
+              "id": "is6_end5_zhivian_beasts",
+              "floor": 12,
+              "floorLabel": "壱壱零弐層",
+              "sortOrder": 12.207,
+              "optionLabel": "強化",
+              "label": "END5",
+              "bossName": "易＋「歳」＋「望」",
+              "stageName": "止変（群獣を役す）",
+              "requiredNote": "選択条件: 不赦＋不息",
+              "sourceUrl": "https://arknights.wikiru.jp/?%E7%B5%B1%E5%90%88%E6%88%A6%E7%95%A5%E3%80%8C%E6%AD%B3%E3%81%AE%E7%95%8C%E5%9C%92%E5%BF%97%E7%95%B0%E3%80%8D%2F%E6%AD%A2%E5%A4%89",
+              "image": {
+                "source": "arknights.wikiru.jp",
+                "sourcePath": "img/SQ.jpg",
+                "sourceUrl": "https://arknights.wikiru.jp/attach2/696D67_53512E6A7067.jpg",
+                "localPath": "assets/bosses/wikiru/img/SQ.jpg"
               }
             }
           ]

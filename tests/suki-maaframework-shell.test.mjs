@@ -534,6 +534,10 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesRecognitionWorkflow\.RunResourceTasksAsync/);
   assert.match(viewModel, /RhodesRecognitionWorkflow\.ConvertCandidates/);
   assert.match(viewModel, /RhodesRecognitionWorkflow\.ApplyCandidatesAsync/);
+  assert.match(
+    viewModel,
+    /private async Task<bool> RunAllResourceTasksCoreAsync\(\)[\s\S]*?EnsureMaaOcrReadyForRecognition\(\)[\s\S]*?EnsureMaaControllerReadyAsync\(\)[\s\S]*?RhodesRecognitionNavigation\.ExecuteAsync/,
+  );
   assert.match(recognitionWorkflow, /RhodesMaaLocalCandidateConverter\.FromTaskResults/);
   assert.match(recognitionWorkflow, /RhodesMaaCandidateMerger\.Merge/);
   assert.match(recognitionWorkflow, /RhodesStateApiClient\.ApplyCandidatesToStateJson/);
@@ -1065,8 +1069,28 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(workspaceLayoutRegistry, /ラン取得値/);
   assert.match(workspaceLayoutRegistry, /源石錐・等級・分隊、ボスと現在の統合戦略/);
   assert.match(workspaceLayoutRegistry, /思案・銭・啓示などの固有値/);
-  assert.match(runWorkspace, /Content="基本情報"[\s\S]+CommandParameter="runStatusFull"/);
+  assert.match(runWorkspace, /Content="基本情報"[\s\S]+RunCommonRecognitionAndApplyCommand/);
   assert.match(runWorkspace, /Content="特殊値"[\s\S]+RunCurrentSpecialRecognitionAndApplyCommand/);
+  assert.match(specialWorkspace, /Content="有効銭を取得（マップ）"[\s\S]+CommandParameter="is6ActiveCoinsFull"/);
+  assert.match(specialWorkspace, /Content="保有銭を取得（銭匣画面）"[\s\S]+CommandParameter="is6CoinsFull"/);
+  assert.match(specialWorkspace, /Text="遊覧券" Classes="h3"/);
+  assert.match(specialWorkspace, /Content="遊覧券を取得（マップ）"[\s\S]+CommandParameter="is6BaseFull"/);
+  assert.match(specialWorkspace, /Content="遊覧券を反映"[\s\S]+ApplyManualSuiTicketCommand/);
+  assert.match(viewModel, /ApplyManualSuiTicketCommand/);
+  assert.doesNotMatch(specialWorkspace, /Text="支武" Classes="h3"/);
+  assert.doesNotMatch(specialWorkspace, /ManualSuiSupportMartialEffects/);
+  assert.doesNotMatch(viewModel, /CreateNoSuiSupportMartialCandidate/);
+  assert.doesNotMatch(viewModel, /ManualSuiSupportMartialEffects/);
+  assert.match(specialWorkspace, /Text="歳時" Classes="h3"/);
+  assert.match(specialWorkspace, /ManualSuiSeasonalHourEditors/);
+  assert.match(specialWorkspace, /ManualSuiSeasonalHourDifficultyLabel/);
+  assert.match(specialWorkspace, /通常効果は現在の等級に連動/);
+  assert.match(specialWorkspace, /Text="対象職分"/);
+  assert.match(specialWorkspace, /ManualSuiSeasonalHourTargets/);
+  assert.match(specialWorkspace, /CommandParameter="is6SeasonalHours"/);
+  assert.match(specialWorkspace, /ApplyManualSuiSeasonalHoursCommand/);
+  assert.match(viewModel, /ApplyManualSuiSeasonalHoursCommand/);
+  assert.match(viewModel, /seasonalHourTargets/);
   assert.match(viewModel, /RunCommonRecognitionLabel => IsSarkazCampaignSelected/);
   assert.match(runWorkspace, /ManualDifficultyGuidance/);
   assert.doesNotMatch(xaml, /基本値を認識/);
@@ -1282,6 +1306,8 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /OutputSeparateWindow/);
   assert.match(xaml, /OutputTournamentMode/);
   assert.match(xaml, /OutputTransparentBackground/);
+  assert.match(xaml, /OutputBackgroundTransparency/);
+  assert.match(xaml, /OutputShowPartTitles/);
   assert.match(xaml, /OutputScrollSpeed/);
   assert.match(xaml, /ScrollEnabled/);
   assert.match(xaml, /HideExcluded/);
@@ -1299,6 +1325,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /PlainComboItemTemplate/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource PlainComboItemTemplate\}"/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource CampaignComboItemTemplate\}"/);
+  assert.match(xaml, /Classes\.rejectionTarget="\{Binding IsRejectionReactionTarget\}"/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbPresetSelectionTemplate\}"/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbMethodSelectionTemplate\}"/);
   assert.match(xaml, /Selector="ComboBoxItem"/);
@@ -1376,6 +1403,41 @@ test("Suki runtime view model exposes ADB empty-state bindings", async () => {
   assert.match(viewModel, /OnPropertyChanged\(nameof\(IsAdbPathCandidateListEmpty\)\)/);
   assert.match(viewModel, /OnPropertyChanged\(nameof\(HasAdbDevices\)\)/);
   assert.match(viewModel, /OnPropertyChanged\(nameof\(IsAdbDeviceListEmpty\)\)/);
+});
+
+test("Sui map recognition reads active coins without opening the held-coin workflow", async () => {
+  const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
+  const allOperational = viewModel.match(
+    /private async Task RunAllOperationalRecognitionAndApplyAsync\(\)([\s\S]*?)private async Task RunCurrentSpecialRecognitionAndApplyAsync\(\)/,
+  )?.[1] ?? "";
+  const currentSpecial = viewModel.match(
+    /private async Task RunCurrentSpecialRecognitionAndApplyAsync\(\)([\s\S]*?)private async Task RunProfilesAndApplyAsync\(/,
+  )?.[1] ?? "";
+
+  assert.match(allOperational, /"is6_sui"[^\n]+"is6ActiveCoinsFull"/);
+  assert.doesNotMatch(allOperational, /"is6_sui"[^\n]+"is6CoinsFull"/);
+  assert.match(currentSpecial, /"is6_sui" => \["is6ActiveCoinsFull"\]/);
+  assert.doesNotMatch(currentSpecial, /"is6_sui"[^\n]+"is6CoinsFull"/);
+  assert.match(
+    viewModel,
+    /CandidateApiProfileId\(\), "is6ActiveCoinsFull"[\s\S]*?RhodesSuiCoinImageRecognizer\.InspectActive\(encodedImage\)[\s\S]*?PlanActivePanelOcrRequests\(inspections\)[\s\S]*?_session\.RunResourceRecognitionAsync/,
+  );
+  assert.doesNotMatch(
+    viewModel,
+    /CandidateApiProfileId\(\), "is6ActiveCoinsFull"[\s\S]*?RhodesSuiCoinImageRecognizer\.Recognize\(encodedImage\)[\s\S]*?ResourceTaskResults\.Add/,
+  );
+});
+
+test("Sui held coin scrolling supplements full-list MAA OCR only for missing visible slots", async () => {
+  const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
+
+  assert.match(
+    viewModel,
+    /plan\.ProfileId == "is6CoinsFull"[\s\S]*?RhodesOcrRegion_is6_coin_list_text/,
+  );
+  assert.match(viewModel, /PlanMissingOwnedNameOcrRequests\(/);
+  assert.doesNotMatch(viewModel, /RecognizeOwnedWithOcrFallback\(/);
+  assert.doesNotMatch(viewModel, /useOwnedCoinImageClassifier/);
 });
 
 test("Suki design docs require operational operator and relic UI", async () => {

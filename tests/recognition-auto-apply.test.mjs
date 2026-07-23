@@ -123,6 +123,37 @@ test("relic full scan auto-apply replaces only the current campaign relic set", 
   assert.deepEqual(result.remainingSuggestions.map((item) => item.recognitionKey), ["relic:is5_sarkaz_relic_001"]);
 });
 
+test("operator full scan auto-apply keeps reserve counts and clears stale counts", () => {
+  const state = {
+    run: { campaignId: "is5_sarkaz" },
+    operators: ["old_operator"],
+    operatorCounts: { reserve_caster: 5, reserve_sniper: 3 },
+  };
+  const suggestions = [
+    {
+      profileId: "operatorsFull",
+      recognitionKey: "operator:reserve_caster",
+      candidate: { kind: "operator", operatorId: "reserve_caster", count: 2 },
+    },
+    {
+      profileId: "operatorsFull",
+      recognitionKey: "operator:gummy",
+      candidate: { kind: "operator", operatorId: "gummy", count: 7 },
+    },
+    {
+      profileId: "operatorsFull",
+      recognitionKey: "operator:reserve_sniper",
+      candidate: { kind: "operator", operatorId: "reserve_sniper", count: 1 },
+    },
+  ];
+
+  const result = applyRecognitionScanCompletionToState(state, { profileId: "operatorsFull", suggestions });
+
+  assert.deepEqual(result.state.operators, ["reserve_caster", "gummy", "reserve_sniper"]);
+  assert.deepEqual(result.state.operatorCounts, { reserve_caster: 2 });
+  assert.equal(result.autoApplied.length, 3);
+});
+
 test("IS4 revelation full scan auto-apply replaces the current revelation board", () => {
   const state = {
     run: {

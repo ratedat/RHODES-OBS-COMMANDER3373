@@ -1,4 +1,8 @@
-import { clampOverlayScrollSpeed, overlayScrollSpeedDefaults } from "./overlay-config.js";
+import {
+  clampOverlayBackgroundTransparency,
+  clampOverlayScrollSpeed,
+  overlayScrollSpeedDefaults,
+} from "./overlay-config.js";
 import { normalizeChoiceFilterIds } from "../domain/choice-filters.js";
 import { normalizeCustomOverlayLayout } from "./overlay-layout-state.js";
 
@@ -65,6 +69,14 @@ export function normalizePreferences(value) {
   preferences.operatorExcludedIds = normalizeChoiceFilterIds(preferences.operatorExcludedIds);
   preferences.relicExcludedIds = normalizeChoiceFilterIds(preferences.relicExcludedIds);
   preferences.sukiOverlayLayout = normalizeCustomOverlayLayout(preferences.sukiOverlayLayout);
+  preferences.sukiOutputTransparentBackground = normalizeBoolean(preferences.sukiOutputTransparentBackground);
+  preferences.sukiOutputBackgroundTransparency = clampOverlayBackgroundTransparency(
+    preferences.sukiOutputBackgroundTransparency,
+    100,
+  );
+  preferences.sukiOutputShowPartTitles = preferences.sukiOutputShowPartTitles == null
+    ? true
+    : normalizeBoolean(preferences.sukiOutputShowPartTitles);
   for (const [key, fallback] of Object.entries(overlayScrollSpeedDefaults)) {
     preferences[key] = clampOverlayScrollSpeed(preferences[key], fallback);
   }

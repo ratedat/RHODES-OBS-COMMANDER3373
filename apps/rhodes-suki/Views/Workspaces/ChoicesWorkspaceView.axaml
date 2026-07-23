@@ -2,6 +2,17 @@
     x:Class="RhodesSuki.Views.Workspaces.ChoicesWorkspaceView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.rejectionTarget">
+      <Setter Property="Foreground" Value="#C084FC" />
+    </Style>
+    <Style Selector="TextBlock.evolutionTarget">
+      <Setter Property="Foreground" Value="#FFD447" />
+    </Style>
+    <Style Selector="TextBlock.rejectionTarget.evolutionTarget">
+      <Setter Property="Foreground" Value="#C084FC" />
+    </Style>
+  </UserControl.Styles>
   <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
       <StackPanel Spacing="2">
@@ -80,18 +91,26 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Button Classes="catalogItem" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="70">
-                      <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
-                        <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
-                          <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="2">
-                          <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                          <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="70">
+                      <Button Grid.Column="0" Classes="catalogItem" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="70">
+                        <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+                          <Border Width="42" Height="42" CornerRadius="6" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" VerticalAlignment="Top">
+                            <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                          </Border>
+                          <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="{Binding Name}" Classes.rejectionTarget="{Binding IsRejectionReactionTarget}" Classes.evolutionTarget="{Binding IsEvolutionTarget}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </Grid>
+                      </Button>
+                      <Border Grid.Column="1" Width="88" Padding="8,6" CornerRadius="6" BorderBrush="#356E67" BorderThickness="1" Background="#102925" IsVisible="{Binding IsSelectionCountVisible}" VerticalAlignment="Stretch">
+                        <StackPanel Spacing="3" VerticalAlignment="Center">
+                          <TextBlock Text="人数" FontSize="10" Opacity="0.72" HorizontalAlignment="Center" />
+                          <NumericUpDown Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding SelectionCount, Mode=TwoWay}" HorizontalAlignment="Stretch" />
                         </StackPanel>
-                      </Grid>
-                    </Button>
+                      </Border>
+                    </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -117,7 +136,7 @@
                               <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
                             </Border>
                             <StackPanel Grid.Column="1" Spacing="2">
-                              <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding Name}" Classes.rejectionTarget="{Binding IsRejectionReactionTarget}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                               <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
                               <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
                             </StackPanel>

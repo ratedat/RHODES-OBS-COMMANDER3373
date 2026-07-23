@@ -294,7 +294,9 @@ public sealed record SukiOutputPreferences(
     bool TransparentBackground,
     int ScrollSpeed,
     IReadOnlyList<SukiOutputPartState> Parts,
-    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null);
+    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null,
+    int BackgroundTransparency = 100,
+    bool ShowPartTitles = true);
 
 public sealed record SukiOutputPartState(
     string Id,
@@ -1011,7 +1013,8 @@ public sealed record MaaCandidatePreview(
     string CoinId = "",
     string StatusId = "",
     string Face = "",
-    int Count = 0)
+    int Count = 0,
+    int OperatorInstance = 0)
 {
     public string Identity => FirstNonEmpty(Field, OperatorId, RelicId, ThoughtId, AgeId, EffectId, CoinId, RecognitionKey, CampaignId);
 
@@ -1023,6 +1026,7 @@ public sealed record MaaCandidatePreview(
             {
                 Part("field", Field),
                 Part("operator", OperatorId),
+                OperatorInstance > 0 ? $"operatorInstance:{OperatorInstance}" : "",
                 Part("relic", RelicId),
                 Part("thought", ThoughtId),
                 Part("age", AgeId),

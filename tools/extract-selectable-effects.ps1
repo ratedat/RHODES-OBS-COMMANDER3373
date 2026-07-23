@@ -14,11 +14,21 @@ $ErrorActionPreference = 'Stop'
 $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 $GeneratedAt = (Get-Date -Format 'yyyy-MM-dd')
 $BaseImageUrl = 'https://arknights.wikiru.jp/'
+$ExistingLocalPathByImageKey = @{}
 
 function As-Array($Value) {
   $items = @()
   foreach ($item in $Value) { $items += $item }
   $items
+}
+
+if (Test-Path -LiteralPath $OutputPath) {
+  $existingDocument = Get-Content -LiteralPath $OutputPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  foreach ($effect in (As-Array $existingDocument.selectableEffects)) {
+    if ([string]::IsNullOrWhiteSpace([string]$effect.image.localPath)) { continue }
+    $key = '{0}|{1}|{2}' -f $effect.campaignId, $effect.slot, $effect.image.sourcePath
+    $ExistingLocalPathByImageKey[$key] = [string]$effect.image.localPath
+  }
 }
 
 function Convert-SourcePathToImageUrl([string]$SourcePath) {
@@ -31,6 +41,30 @@ function Convert-SourcePathToImageUrl([string]$SourcePath) {
   $extension = [System.IO.Path]::GetExtension($SourcePath)
   if ([string]::IsNullOrWhiteSpace($extension)) { $extension = '.png' }
   $BaseImageUrl + 'attach2/' + ($encodedParts -join '_') + $extension
+}
+
+function New-SelectableEffectImage([string]$CampaignId, [string]$Slot, [string]$SourcePath) {
+  $image = [ordered]@{
+    source = 'arknights.wikiru.jp'
+    sourcePath = $SourcePath
+    sourceUrl = Convert-SourcePathToImageUrl $SourcePath
+  }
+
+  $key = '{0}|{1}|{2}' -f $CampaignId, $Slot, $SourcePath
+  $localPath = $ExistingLocalPathByImageKey[$key]
+  if ([string]::IsNullOrWhiteSpace($localPath) -and -not [string]::IsNullOrWhiteSpace($SourcePath)) {
+    $fileName = [System.IO.Path]::GetFileName($SourcePath)
+    $candidatePath = ('assets/selectable-effects/{0}/{1}/{2}' -f $CampaignId, $Slot, $fileName).Replace('\', '/')
+    $candidateFullPath = Join-Path $ProjectRoot ($candidatePath.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+    if (Test-Path -LiteralPath $candidateFullPath) {
+      $localPath = $candidatePath
+    }
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($localPath)) {
+    $image.localPath = $localPath
+  }
+  [pscustomobject]$image
 }
 
 function Get-WikiSource([string]$Page) {
@@ -192,11 +226,7 @@ function Get-SelectableEffectsFromPairedVariantSection([string[]]$Lines, $Source
       flavorText = $null
       sourcePage = [string]$SourceConfig.page
       sourceAnchor = [string]$SectionConfig.sectionAnchor
-      image = [pscustomobject][ordered]@{
-        source = 'arknights.wikiru.jp'
-        sourcePath = $sourcePath
-        sourceUrl = Convert-SourcePathToImageUrl $sourcePath
-      }
+      image = New-SelectableEffectImage ([string]$SourceConfig.campaignId) ([string]$SectionConfig.slot) $sourcePath
     }
   }
   $effects
@@ -294,11 +324,7 @@ function Get-SelectableEffectsFromAgeVariantSection([string[]]$Lines, $SourceCon
       flavorText = $parentFlavorText
       sourcePage = [string]$SourceConfig.page
       sourceAnchor = [string]$SectionConfig.sectionAnchor
-      image = [pscustomobject][ordered]@{
-        source = 'arknights.wikiru.jp'
-        sourcePath = $parentSourcePath
-        sourceUrl = Convert-SourcePathToImageUrl $parentSourcePath
-      }
+      image = New-SelectableEffectImage ([string]$SourceConfig.campaignId) ([string]$SectionConfig.slot) $parentSourcePath
     }
   }
   $effects
@@ -405,11 +431,7 @@ function Get-SelectableEffectsFromSeasonalHourVariantSection([string[]]$Lines, $
       flavorText = $parentFlavorText
       sourcePage = [string]$SourceConfig.page
       sourceAnchor = [string]$SectionConfig.sectionAnchor
-      image = [pscustomobject][ordered]@{
-        source = 'arknights.wikiru.jp'
-        sourcePath = $parentSourcePath
-        sourceUrl = Convert-SourcePathToImageUrl $parentSourcePath
-      }
+      image = New-SelectableEffectImage ([string]$SourceConfig.campaignId) ([string]$SectionConfig.slot) $parentSourcePath
     }
   }
   $effects
@@ -473,11 +495,7 @@ function Get-SelectableEffectsFromSection([string[]]$Lines, $SourceConfig, $Sect
       flavorText = $flavorText
       sourcePage = [string]$SourceConfig.page
       sourceAnchor = [string]$SectionConfig.sectionAnchor
-      image = [pscustomobject][ordered]@{
-        source = 'arknights.wikiru.jp'
-        sourcePath = $sourcePath
-        sourceUrl = Convert-SourcePathToImageUrl $sourcePath
-      }
+      image = New-SelectableEffectImage ([string]$SourceConfig.campaignId) ([string]$SectionConfig.slot) $sourcePath
     }
   }
   $effects

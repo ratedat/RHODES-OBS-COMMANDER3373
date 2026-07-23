@@ -141,6 +141,7 @@ public static class RhodesRunStateStore
             ClearBossSelectionsForCampaign(state, campaignId);
             state["bossFlags"] = new JsonArray();
             state["operators"] = new JsonArray();
+            state["operatorCounts"] = new JsonObject();
             state["relics"] = new JsonArray();
             state["usedRelicIds"] = new JsonArray();
             state["updatedAt"] = (now ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("O");
@@ -186,6 +187,7 @@ public static class RhodesRunStateStore
             ["campaignId"] = StartupCampaignId,
         };
         state["operators"] = new JsonArray();
+        state["operatorCounts"] = new JsonObject();
         state["relics"] = new JsonArray();
         state["usedRelicIds"] = new JsonArray();
         state["bossFlags"] = new JsonArray();
@@ -215,16 +217,22 @@ public static class RhodesRunStateStore
         state["version"] ??= 1;
         PruneAbandonedRunValues(state);
         NormalizeOcrEnginePreference(state);
-        state["operators"] = ToJsonArray(operators.Where(item => item.IsSelected).Select(item => item.Id));
-        state["relics"] = ToJsonArray(relics.Where(item => item.IsSelected).Select(item => item.Id));
-        state["usedRelicIds"] = ToJsonArray(relics
+        var operatorItems = operators as IReadOnlyList<SukiChoiceItem> ?? operators.ToArray();
+        var relicItems = relics as IReadOnlyList<SukiChoiceItem> ?? relics.ToArray();
+        state["operators"] = ToJsonArray(operatorItems.Where(item => item.IsSelected).Select(item => item.Id));
+        var operatorCounts = new JsonObject();
+        foreach (var item in operatorItems.Where(item => item.IsSelected && item.SupportsMultipleCount && item.SelectionCount > 1))
+            operatorCounts[item.Id] = item.SelectionCount;
+        state["operatorCounts"] = operatorCounts;
+        state["relics"] = ToJsonArray(relicItems.Where(item => item.IsSelected).Select(item => item.Id));
+        state["usedRelicIds"] = ToJsonArray(relicItems
             .Where(item => item.IsSelected && item.SupportsUsedFlag && item.IsUsed)
             .Select(item => item.Id));
         state["updatedAt"] = now.UtcDateTime.ToString("O");
 
         var preferences = EnsureObject(state, "preferences");
-        preferences["operatorExcludedIds"] = ToJsonArray(operators.Where(item => item.IsExcluded).Select(item => item.Id));
-        preferences["relicExcludedIds"] = ToJsonArray(relics.Where(item => item.IsExcluded).Select(item => item.Id));
+        preferences["operatorExcludedIds"] = ToJsonArray(operatorItems.Where(item => item.IsExcluded).Select(item => item.Id));
+        preferences["relicExcludedIds"] = ToJsonArray(relicItems.Where(item => item.IsExcluded).Select(item => item.Id));
         preferences["operatorShowSelectedFirst"] = options.OperatorShowSelectedFirst;
         preferences["operatorHideExcluded"] = options.OperatorHideExcluded;
         preferences["operatorSelectedOnly"] = options.OperatorSelectedOnly;

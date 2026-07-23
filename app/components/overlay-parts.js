@@ -1,5 +1,6 @@
 import { assetUrl, html, stars } from "../lib/format.js";
 import { renderRelicUsedBadge } from "./relic-used-badge.js";
+import { operatorRosterCount } from "../domain/operator-counts.js";
 
 export const overlayPartOptions = [
   { id: "status", title: "Status", label: "ラン状態", hint: "上部バー / 1200x120" },
@@ -35,7 +36,7 @@ function renderStatusPart(args, context) {
       <div class="overlay-part-status-cell"><span>等級</span><strong>${html(args.difficultyGrade?.label || args.runDifficulty || "-")}</strong></div>
       <div class="overlay-part-status-cell"><span>分隊</span><strong>${html(args.squad?.name || "未選択")}</strong></div>
       <div class="overlay-part-status-cell"><span>秘宝</span><strong>${args.relics.length}</strong></div>
-      <div class="overlay-part-status-cell"><span>招集</span><strong>${args.operators.length}</strong></div>
+      <div class="overlay-part-status-cell"><span>招集</span><strong>${operatorRosterCount(args.operators)}</strong></div>
       ${runStats.map((item) => `<div class="overlay-part-status-cell"><span>${html(item.label)}</span><strong>${html(item.value)}</strong></div>`).join("")}
     </div>
     <div class="overlay-part-chip-row">
@@ -62,10 +63,10 @@ function renderOperatorsPart(args, context) {
     .filter((group) => group.items.length);
   const body = grouped.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("horizontalOperatorScrollSpeed")}">
     <div class="overlay-part-operator-groups">
-      ${grouped.map((group) => `<section class="overlay-part-operator-group"><h3>${stars(group.rarity)} <span>${group.items.length}</span></h3><div class="overlay-part-operator-grid">${group.items.map((item) => `<div class="overlay-part-operator"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><strong>${html(item.name)}</strong><span>${html(item.class || "-")} / ${html(item.branch || "-")}</span></div></div>`).join("")}</div></section>`).join("")}
+      ${grouped.map((group) => `<section class="overlay-part-operator-group"><h3>${stars(group.rarity)} <span>${operatorRosterCount(group.items)}</span></h3><div class="overlay-part-operator-grid">${group.items.map((item) => `<div class="overlay-part-operator"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><strong class="${item.isRejectionReactionTarget ? "rejection-reaction-operator-name" : ""}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${html(item.class || "-")} / ${html(item.branch || "-")}</span></div></div>`).join("")}</div></section>`).join("")}
     </div>
   </div>` : empty("未招集");
-  return section("operators", "Operators", args.operators.length, body);
+  return section("operators", "Operators", operatorRosterCount(args.operators), body);
 }
 
 function renderEffectsPart(args, context) {

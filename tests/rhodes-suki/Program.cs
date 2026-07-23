@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -20,6 +21,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA candidate merger supplements missing local candidates safely", CandidateMergerSupplementsLocalCandidates),
     ("MAA candidate merger rejects conflicting API relics for one local OCR row", CandidateMergerPrefersLocalRelicForSameEvidence),
     ("MAA candidate merger preserves local relic usage evidence", CandidateMergerPreservesRelicUsageEvidence),
+    ("MAA candidate merger preserves local reserve operator counts", CandidateMergerPreservesReserveOperatorCounts),
     ("MAA candidate merger keeps only the profession-resolved Amiya form", CandidateMergerPrefersResolvedAmiyaForm),
     ("MAA candidate merger prefers local thought counts over legacy API slot tracking", CandidateMergerPrefersLocalThoughtCounts),
     ("MAA candidate merger keeps campaign-specific run status fields", CandidateMergerKeepsCampaignRunStatusFields),
@@ -27,9 +29,11 @@ var tests = new (string Name, Action Run)[]
     ("Recognition workflow converts API and local candidates behind one seam", RecognitionWorkflowConvertsCandidates),
     ("Recognition workflow falls back to local candidates when API is unavailable", RecognitionWorkflowLocalFallback),
     ("Recognition workflow applies candidates through API state first", RecognitionWorkflowApplyCandidatesViaApi),
+    ("Run catalog projects authoritative API state without a disk round-trip", RunCatalogProjectsAuthoritativeStateJson),
     ("Recognition workflow falls back to local candidate apply when API fails", RecognitionWorkflowApplyCandidatesLocalFallback),
     ("Recognition workflow handles empty candidate apply without API calls", RecognitionWorkflowApplyCandidatesEmpty),
     ("Local MAA candidate converter extracts run status candidates", LocalCandidateConverterRunStatus),
+    ("Local MAA candidate converter ignores the generic ingot ROI for Sui", LocalCandidateConverterIgnoresGenericSuiIngot),
     ("Local MAA candidate converter keeps the best duplicate run status field", LocalCandidateConverterRunStatusBestDuplicate),
     ("Local MAA candidate converter normalizes numeric OCR drift", LocalCandidateConverterNormalizesNumericDrift),
     ("Local MAA candidate converter normalizes measured squad OCR drift", LocalCandidateConverterNormalizesSquadDrift),
@@ -41,6 +45,7 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter bounds anchored Sui difficulty", LocalCandidateConverterBoundsSuiDifficulty),
     ("Local MAA candidate converter extracts random squad effect candidates", LocalCandidateConverterRunStatusSquadRandomEffect),
     ("Local MAA candidate converter extracts exact operator name candidates", LocalCandidateConverterOperators),
+    ("Local MAA candidate converter counts duplicate reserve operators per frame", LocalCandidateConverterCountsReserveOperators),
     ("MAA Amiya role resolver targets the profession icon beside a detected card", MaaAmiyaRoleResolverTargetsProfessionIcon),
     ("Local MAA candidate converter disambiguates Amiya forms by profession", LocalCandidateConverterDisambiguatesAmiyaForms),
     ("Local MAA candidate converter extracts current campaign relic candidates", LocalCandidateConverterRelics),
@@ -53,8 +58,20 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter ignores IS3 rejection operator prose", LocalCandidateConverterPrefersMizukiRejectionTemplate),
     ("Local MAA candidate converter extracts IS4 revelation candidates", LocalCandidateConverterRevelation),
     ("Local MAA candidate converter extracts Sui ingot and ticket values", LocalCandidateConverterSuiBaseValues),
+    ("Local MAA candidate converter resolves normal and awakened Sui seasonal hours", LocalCandidateConverterSuiSeasonalHours),
+    ("Local MAA candidate converter repairs the stylized Sui ticket six", LocalCandidateConverterRepairsSuiTicketSix),
     ("Local MAA candidate converter extracts IS6 coin candidates", LocalCandidateConverterCoins),
     ("Sui active coin image recognizer classifies slots and counts duplicates", SuiActiveCoinImageRecognizer),
+    ("Sui active coin panel OCR counts duplicate names", SuiActiveCoinOcrCandidateCounts),
+    ("Sui Catch Wind detail resolver locates the visible owned coin card", SuiCatchWindDetailResolverLocatesCard),
+    ("Sui Catch Wind detail resolver maps description direction without guessing", SuiCatchWindDetailResolverMapsDirection),
+    ("Sui Catch Wind detail resolver randomizes its targeted tap area", SuiCatchWindDetailResolverRandomizesTap),
+    ("Sui owned coin image recognizer ignores dim unowned slots", SuiOwnedCoinImageRecognizer),
+    ("Sui owned coin image recognizer finishes a representative frame promptly", SuiOwnedCoinImageRecognizerPerformance),
+    ("Sui owned coin recognizer OCRs only unresolved colored slots", SuiOwnedCoinOcrFallbackPlanner),
+    ("Sui owned coin candidate merger preserves duplicate counts across scroll frames", SuiOwnedCoinCandidateCounts),
+    ("Sui owned coin OCR merger preserves duplicate counts without summing overlapping frames", SuiOwnedCoinOcrCandidateCounts),
+    ("Sui owned coin status recognizer anchors status icons to OCR names", SuiOwnedCoinStatusRecognizer),
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB presets include current MuMu nx_main layouts", AdbPresetCurrentMumuLayouts),
@@ -108,16 +125,20 @@ var tests = new (string Name, Action Run)[]
     ("Recognition runtime plan removes legacy operator OCR and completes relic scans by owned count", RecognitionRuntimePlanUsesFocusedTasks),
     ("Relic owned count reader extracts the footer count from MAA OCR evidence", RelicOwnedCountReaderExtractsFooterCount),
     ("Recognition retry policy retries only missing or low-confidence live frames", RecognitionRetryPolicyTargetsLowConfidenceFrames),
+    ("Mizuki undetected policy preserves prior horde and rejection values", MizukiUndetectedPolicyPreservesPriorValues),
     ("Phantom, Mizuki, and Sami require manual difficulty instead of OCR", ManualDifficultyCampaignPolicy),
     ("Recognition frame fingerprint ignores tiny noise and detects layout changes", RecognitionFrameFingerprintIsPerceptual),
     ("MAA OCR preprocessing crops and scales configured ROI", MaaOcrPreprocessingCropsAndScalesRoi),
+    ("MAA Catch Wind detail preprocessing inverts dark prose for OCR", MaaCatchWindDetailPreprocessingInvertsDarkProse),
     ("MAA operator OCR preprocessing masks and trims the name ROI", MaaOperatorOcrPreprocessingMasksAndTrimsNameRoi),
     ("MAA Japanese operator replaceFull rules resolve local operator ids", MaaJapaneseOperatorRulesResolveLocalIds),
     ("MAA template OCR config exposes operator card offsets", MaaTemplateOcrConfigExposesOperatorOffsets),
     ("MAA template OCR expander builds dynamic name regions", MaaTemplateOcrExpanderBuildsDynamicRegions),
+    ("MAA template OCR expander restores weak operator anchors on the detected card grid", MaaTemplateOcrExpanderRestoresWeakGridAlignedOperatorAnchors),
     ("MAA thought load OCR expander targets displayed card values", MaaThoughtLoadOcrExpanderTargetsDisplayedValues),
     ("Operator scan tracker skips resolved cards and stops on repeated viewports", OperatorScanTrackerCachesResolvedCards),
     ("Mizuki rejection card detector identifies the purple operator name", MizukiRejectionCardDetectorIdentifiesPurpleBand),
+    ("Mizuki rejection targets expand reserve operator recruit instances", MizukiRejectionTargetsExpandReserveInstances),
     ("MAA recognition probe payloads target retained fields", RecognitionProbePayloadsTargetRetainedFields),
     ("MAA recognition invocation separates algorithm from parameters", MaaRecognitionInvocationSeparatesAlgorithm),
     ("MAA task diagnostics summarize counts and OCR previews", TaskDiagnostics),
@@ -147,12 +168,17 @@ var tests = new (string Name, Action Run)[]
     ("Distribution policy keeps campaign themes selectable in every build", PublicDebugPolicyRestrictsSarkazScope),
     ("Run field registry exposes retained base and campaign-specific fields", RunFieldRegistryRetainedFields),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
+    ("Run catalog preserves Sui coin status and count entries", RunCatalogPreservesSuiCoinEntries),
     ("Run catalog exposes Sarkaz difficulty and random squad options", RunCatalogSarkazManualOptions),
+    ("Run catalog derives normal Sui seasonal-hour ranks from difficulty", RunCatalogSuiSeasonalHourDifficultyVariants),
     ("Run catalog exposes Phantom performances and hallucinations", RunCatalogPhantomManualOptions),
     ("Run catalog exposes Mizuki rejection reaction icons", RunCatalogMizukiRejectionIcons),
+    ("Run catalog restores individual Mizuki rejection targets", RunCatalogMizukiRejectionTargetInstances),
+    ("Mizuki operator presentation marks rejection and evolution targets in IS3", MizukiOperatorPresentationMarksTargets),
     ("Run catalog exposes Mizuki horde call icons", RunCatalogMizukiHordeCallIcons),
     ("Hallucination catalog exposes Wiki effects and normalizes overlapping OCR", HallucinationCatalogWikiOptions),
     ("Run catalog exposes Sarkaz boss selections from campaign data", RunCatalogSarkazBossSelections),
+    ("Run catalog gates Sui floor 6 and END5 routes behind their relics", RunCatalogSuiEnd5BossSelections),
     ("Run state store persists and clears campaign boss selections", RunStateStoreBossSelections),
     ("Startup reset keeps ADB settings and starts a clean Phantom run", StartupResetKeepsAdbAndStartsPhantom),
     ("Choice pane drag scrolling clamps the target offset", ChoicePaneDragScrollMath),
@@ -161,6 +187,7 @@ var tests = new (string Name, Action Run)[]
     ("Run-saving relics stay first and persist their used flag", RelicUsagePriorityAndPersistence),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
+    ("Reserve operators alone persist multiple recruited counts", ReserveOperatorCounts),
     ("Run state store can replace state from API JSON", StateApiReplacement),
     ("State API client can apply Suki ADB settings into current state JSON", StateApiAdbSettingsApply),
     ("Suki state sync workflow saves choices, ADB, and output preferences through API state", SukiStateSyncWorkflowSettingsSuccess),
@@ -182,13 +209,21 @@ var tests = new (string Name, Action Run)[]
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
     ("Recognition candidate applier keeps the best duplicate run status candidate", CandidateRunStatusApplyBestDuplicate),
     ("Recognition candidate applier can select operator and relic candidates", CandidateChoiceApply),
+    ("Recognition candidate applier persists reserve operator counts", CandidateReserveOperatorCountApply),
     ("Recognition candidate applier updates run-saving relic usage", CandidateRelicUsageApply),
     ("Recognition candidate applier replaces stale Amiya forms", CandidateAmiyaRoleReplacementApply),
     ("Recognition candidate applier can apply IS5 thought and age candidates", CandidateIs5SpecialApply),
     ("Recognition candidate applier clears IS5 age when detection returns none", CandidateIs5AgeClearApply),
     ("Recognition candidate applier persists IS3 Mizuki special values", CandidateMizukiSpecialApply),
+    ("Recognition candidate applier preserves IS3 rejection targets on effect-only refresh", CandidateMizukiRejectionEffectOnlyPreservesTargets),
+    ("Recognition candidate applier replaces the IS6 seasonal hour selection", CandidateSuiSeasonalHoursApply),
+    ("Recognition candidate applier keeps normal Sui seasonal hours tied to difficulty", CandidateSuiSeasonalHoursFollowDifficulty),
+    ("Recognition candidate applier replaces the IS6 manual support martial effects", CandidateSuiSupportMartialApply),
     ("Recognition candidate applier updates IS3 rejection targets after operator scan", CandidateMizukiRejectionTargetOnlyApply),
+    ("Recognition candidate applier persists individual reserve rejection targets", CandidateMizukiReserveRejectionTargetApply),
+    ("Recognition candidate applier persists individual Mizuki evolution targets", CandidateMizukiEvolutionTargetApply),
     ("Recognition candidate applier can apply IS4 revelation and IS6 coin candidates", CandidateOtherSpecialApply),
+    ("Recognition candidate applier replaces manual Sui coins with statuses", CandidateManualSuiValuesApply),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
 
@@ -496,6 +531,33 @@ static void CandidateMergerPreservesRelicUsageEvidence()
     Equal("used", merged.Single().StateId, "local used marker is retained on the merged relic");
 }
 
+static void CandidateMergerPreservesReserveOperatorCounts()
+{
+    var merged = RhodesMaaCandidateMerger.Merge(
+        [
+            new MaaCandidatePreview(
+                "operator",
+                "予備隊員-術師",
+                "reserve_caster",
+                "予備隊員-術師",
+                0.94,
+                OperatorId: "reserve_caster"),
+        ],
+        [
+            new MaaCandidatePreview(
+                "operator",
+                "予備隊員-術師",
+                "reserve_caster",
+                "予備隊員-術師",
+                0.92,
+                OperatorId: "reserve_caster",
+                Count: 2),
+        ]);
+
+    Equal(1, merged.Count, "reserve operator remains a single candidate");
+    Equal(2, merged.Single().Count, "local per-frame reserve count survives API candidate merge");
+}
+
 static void CandidateMergerPrefersResolvedAmiyaForm()
 {
     var merged = RhodesMaaCandidateMerger.Merge(
@@ -676,7 +738,44 @@ static void RecognitionWorkflowApplyCandidatesViaApi()
     Equal(0, localFallbackCount, "workflow api local fallback calls");
     Equal(true, savedState.Contains("\"ingot\":20", StringComparison.Ordinal), "workflow api saved ingot");
     Equal(savedState, replacedState, "workflow api replaced local state");
+    Equal(savedState, result.StateJson, "workflow exposes authoritative saved state");
     Equal("接続済み", result.ApiStatus?.State, "workflow api status");
+}
+
+static void RunCatalogProjectsAuthoritativeStateJson()
+{
+    const string hordeCallId = "is3_mizuki_selectable_hordeCall_mcasci14";
+    const string rejectionId = "is3_mizuki_selectable_rejectionReaction_mcasci22";
+    var catalog = RhodesRunCatalog.LoadFromStateJson(
+        $$"""
+        {
+          "version": 1,
+          "run": {
+            "campaignId": "is3_mizuki",
+            "special": {
+              "is3_mizuki": {
+                "hordeCalls": ["{{hordeCallId}}"],
+                "rejectionReaction": {
+                  "effectId": "{{rejectionId}}",
+                  "operatorIds": ["exusiai2", "hoshiguma2"]
+                }
+              }
+            }
+          },
+          "operators": ["exusiai2", "hoshiguma2"],
+          "relics": []
+        }
+        """);
+
+    var specialFields = catalog.Current.SpecialFields ?? [];
+    var hordeCalls = specialFields.Single(field => field.FieldId == "hordeCalls");
+    var rejection = specialFields.Single(field => field.FieldId == "rejectionReaction");
+    Equal(hordeCallId, (hordeCalls.SelectedIds ?? []).Single(), "authoritative horde call projected");
+    Equal(rejectionId, (rejection.SelectedIds ?? []).Single(), "authoritative rejection effect projected");
+    Equal(
+        "exusiai2|hoshiguma2",
+        string.Join('|', rejection.OperatorIds ?? []),
+        "authoritative rejection operators projected");
 }
 
 static void RecognitionWorkflowApplyCandidatesLocalFallback()
@@ -783,6 +882,28 @@ static void LocalCandidateConverterRunStatus()
             true,
             "detail",
             $"TaskId=1; detail={{\"best\":{{\"text\":\"{text}\",\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterIgnoresGenericSuiIngot()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [M("RhodesTemplate_runStatusFull_run_ingot", "3", 0.96)],
+        "is6_sui");
+
+    Equal(false, candidates.Any(item => item.Field == "ingot"), "Sui ignores the shared ingot ROI");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"best\":{{\"text\":\"{text}\",\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}}}",
             "OCR",
             true);
     }
@@ -1180,6 +1301,43 @@ static void LocalCandidateConverterOperators()
     }
 }
 
+static void LocalCandidateConverterCountsReserveOperators()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [
+            M("RhodesTemplate_operatorsFull_operator_card_name", "", 0.99),
+            M("operator.card.name.3", "予備隊員-術師", 0.92),
+            M("operator.card.name.6", "予備隊員-術師", 0.91),
+            M("operator.card.name.1", "グム", 0.96),
+            M("RhodesTemplate_operatorsFull_operator_card_name", "", 0.99),
+            M("operator.card.name.5", "予備隊員-術師", 0.93),
+            M("operator.card.name.6", "予備隊員-術師", 0.94),
+            M("operator.card.name.1", "グム", 0.95),
+            M("RhodesTemplate_operatorsFull_operator_card_name", "", 0.99),
+            M("operator.card.name.3", "予備隊員-術師", 0.90),
+            M("operator.card.name.1", "グム", 0.95),
+        ]);
+
+    var reserve = candidates.Single(item => item.OperatorId == "reserve_caster");
+    var gummy = candidates.Single(item => item.OperatorId == "gummy");
+    Equal(2, reserve.Count, "maximum simultaneous reserve caster cards");
+    Equal(0, gummy.Count, "ordinary operator duplicates do not become recruited counts");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        var encodedText = System.Text.Json.JsonSerializer.Serialize(text);
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{{\"text\":{encodedText},\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
+            "OCR",
+            true);
+    }
+}
+
 static void MaaAmiyaRoleResolverTargetsProfessionIcon()
 {
     var nameRequest = new MaaDynamicOcrRequest(
@@ -1332,6 +1490,33 @@ static void LocalCandidateConverterRelics()
         "relicsFull",
         [M("RhodesOcrRegion_relic_list_text", "リーダーモーガン…ラム", 0.95)]);
     Equal("リーダーモーガン・ラム", middleDotDrift.Single().Label, "relic middle dot ellipsis drift");
+
+    var latinCaseDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "BIaZeのチェーンソ\nBaZeのチェーンソ", 0.90)],
+        "is6_sui");
+    Equal(
+        "Blazeのチェーンソー",
+        latinCaseDrift.Single().Label,
+        "relic latin case and trailing long-vowel drift");
+
+    var liveLatinHomoglyphDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "Mwс2", 0.91)],
+        "is3_mizuki");
+    Equal(
+        "Mvc2",
+        liveLatinHomoglyphDrift.Single().Label,
+        "relic Latin name tolerates Cyrillic homoglyph OCR drift");
+
+    var measuredMizukiRelicDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "“輝カしきカジミエーシュi\nプレインスーヒ―圭ャンディ", 0.90)],
+        "is3_mizuki");
+    Equal(
+        "is3_mizuki_relic_120|is3_mizuki_relic_004",
+        string.Join("|", measuredMizukiRelicDrift.Select(item => item.RelicId)),
+        "measured Mizuki relic OCR drift keeps both visible relics");
 
     var singleRelicDetail = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",
@@ -1736,6 +1921,11 @@ static void LocalCandidateConverterMizukiSpecials()
     Equal("key", key[1].FieldId, "Mizuki key field");
     Equal("2", key[1].Value, "Mizuki key value");
 
+    var measuredIngotDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is3KeyFull",
+        [M("RhodesOcrRegion_is3_ingot_value", [("2z", 0.781726)])]);
+    Equal("27", measuredIngotDrift.Single().Value, "measured Mizuki ingot trailing z is repaired to seven");
+
     var panel = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "is3LightHordeFull",
         [
@@ -1764,7 +1954,13 @@ static void LocalCandidateConverterMizukiSpecials()
     var rejection = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "is3RejectionFull",
         [
-            M("RhodesOcrRegion_is3_rejection_name", [("散漫と異変", 0.94)]),
+            M(
+                "RhodesOcrRegion_is3_rejection_name",
+                [
+                    ("発動済の拒絶反応", 0.96),
+                    ("散漫と異変", 0.94),
+                    ("拒絶反応を起こしたオペレーターは全て", 0.91),
+                ]),
             MSpatial(
                 "RhodesOcrRegion_is3_rejection_operators",
                 [
@@ -1910,17 +2106,23 @@ static void LocalCandidateConverterCoins()
                 [
                     ("大炎通宝", 0.91),
                     ("苦寒", 0.88),
+                    (",衡-早熱", 0.93),
+                    ("町=弱氷", 0.98),
                 ]),
         ]);
 
     Equal(
-        "is6_sui_selectable_coin_is6_copper_b01|is6_sui_selectable_coin_is6_copper_f01",
+        "is6_sui_selectable_coin_is6_copper_b01|is6_sui_selectable_coin_is6_copper_f01|is6_sui_selectable_coin_is6_copper_f05|is6_sui_selectable_coin_is6_copper_f07",
         string.Join("|", candidates.Select(item => item.CoinId)),
         "coin ids");
-    Equal("coin|coin", string.Join("|", candidates.Select(item => item.Kind)), "coin kinds");
+    Equal("coin|coin|coin|coin", string.Join("|", candidates.Select(item => item.Kind)), "coin kinds");
     Equal("is6_sui", candidates[0].CampaignId, "coin campaign id");
     Equal("coins", candidates[0].FieldId, "coin field id");
     Equal(1, candidates[0].Count, "coin count");
+    Equal(
+        1,
+        candidates.Single(item => item.CoinId.EndsWith("is6_copper_f05", StringComparison.Ordinal)).Count,
+        "one OCR row cannot duplicate a short coin alias");
     Equal("", candidates[0].Face, "coin face is unused");
     Equal("maa-local:coin:is6_sui_selectable_coin_is6_copper_b01:0", candidates[0].RecognitionKey, "coin recognition key");
 
@@ -1975,6 +2177,135 @@ static void LocalCandidateConverterSuiBaseValues()
     }
 }
 
+static void LocalCandidateConverterSuiSeasonalHours()
+{
+    var normal = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6SeasonalHours",
+        [
+            M(
+                "RhodesOcrRegion_is6_seasonal_hour_detail_text",
+                [
+                    ("巳農", 0.97, 20),
+                    ("LV.3 入骨", 0.95, 54),
+                    ("オペレーターの配置コスト+4", 0.94, 86),
+                ]),
+        ],
+        "is6_sui");
+
+    Equal(1, normal.Count, "normal seasonal hour candidate count");
+    Equal("sui", normal[0].Kind, "seasonal hour candidate kind");
+    Equal("seasonalHours", normal[0].FieldId, "seasonal hour field");
+    Equal(
+        "is6_sui_selectable_seasonalHours_is6sst6_nyuukotsu",
+        normal[0].EffectId,
+        "displayed rank resolves the normal seasonal hour variant");
+
+    var dogPainting = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6SeasonalHours",
+        [
+            M(
+                "RhodesOcrRegion_is6_seasonal_hour_detail_text",
+                [
+                    ("戌絵", 0.98, 20),
+                    ("LV.2 明瞭", 0.96, 54),
+                    ("先鋒と医療の初回配置時、即座に便符が貼り付く", 0.93, 86),
+                ]),
+        ],
+        "is6_sui");
+
+    Equal(3, dogPainting.Count, "Dog Painting seasonal hour and target professions are retained");
+    Equal(
+        "is6_sui_selectable_seasonalHours_is6sst11_meiryou",
+        dogPainting.Single(candidate => candidate.FieldId == "seasonalHours").EffectId,
+        "Dog Painting displayed rank resolves the seasonal hour variant");
+    Equal(
+        "先鋒|医療",
+        string.Join("|", dogPainting
+            .Where(candidate => candidate.FieldId == "seasonalHourTargets")
+            .Select(candidate => candidate.EffectId)),
+        "Dog Painting OCR extracts the affected professions");
+
+    var awakened = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6SeasonalHours",
+        [
+            M(
+                "RhodesOcrRegion_is6_seasonal_hour_detail_text",
+                [
+                    ("巳農", 0.97, 20),
+                    ("醒覚", 0.96, 54),
+                    ("最初に配置するオペレーターの配置コスト-6", 0.94, 86),
+                    ("午商", 0.96, 150),
+                    ("醒覚", 0.95, 184),
+                    ("ランダムな商品1つの販売価格が100%低下", 0.92, 216),
+                ]),
+        ],
+        "is6_sui");
+
+    Equal(2, awakened.Count, "multiple awakened seasonal hours are retained");
+    Equal(
+        "is6_sui_selectable_seasonalHours_is6sst6_awakening|is6_sui_selectable_seasonalHours_is6sst7_awakening",
+        string.Join("|", awakened.Select(candidate => candidate.EffectId)),
+        "displayed awakening overrides normal rank inference");
+
+    var effectOnly = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6SeasonalHours",
+        [
+            M(
+                "RhodesOcrRegion_is6_seasonal_hour_detail_text",
+                [
+                    ("醒覚", 0.96, 54),
+                    ("最初に配置するオペレーターの配置コスト-6", 0.94, 86),
+                ]),
+        ],
+        "is6_sui");
+
+    Equal(1, effectOnly.Count, "effect-only seasonal hour candidate count");
+    Equal(
+        "is6_sui_selectable_seasonalHours_is6sst6_awakening",
+        effectOnly[0].EffectId,
+        "unique effect text identifies the seasonal hour before the shared awakening label");
+
+    static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score, int Y)> rows)
+    {
+        var resultRows = rows.Select(row =>
+            $"{{\"text\":{JsonSerializer.Serialize(row.Text)},\"score\":{row.Score.ToString(System.Globalization.CultureInfo.InvariantCulture)},\"box\":[0,{row.Y},420,28]}}");
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{string.Join(",", resultRows)}]}}",
+            "OCR",
+            true);
+    }
+}
+
+static void LocalCandidateConverterRepairsSuiTicketSix()
+{
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6BaseFull",
+        [M("RhodesOcrRegion_is6_ticket_value", "E", 0.91)],
+        "is6_sui");
+
+    var candidate = candidates.Single();
+    Equal("ticket", candidate.Field, "Sui ticket field");
+    Equal("6", candidate.Value, "stylized ticket six repaired");
+    Equal("E", candidate.RawText, "raw OCR retained for diagnostics");
+
+    static MaaTaskRunResult M(string entry, string text, double score)
+    {
+        var encodedText = JsonSerializer.Serialize(text);
+        return new MaaTaskRunResult(
+            entry,
+            "Succeeded",
+            true,
+            "detail",
+            $"{{\"filtered_results\":[{{\"text\":{encodedText},\"score\":{score.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}]}}",
+            "OCR",
+            true);
+    }
+}
+
 static void SuiActiveCoinImageRecognizer()
 {
     var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
@@ -1984,9 +2315,9 @@ static void SuiActiveCoinImageRecognizer()
     frame.Erase(new SKColor(31, 42, 41));
     using (var canvas = new SKCanvas(frame))
     {
-        Draw(canvas, first.ImagePath, new SKRect(594, 653, 648, 707));
-        Draw(canvas, first.ImagePath, new SKRect(649, 653, 703, 707));
-        Draw(canvas, second.ImagePath, new SKRect(704, 653, 758, 707));
+        Draw(canvas, first.ImagePath, new SKRect(532, 207, 632, 307));
+        Draw(canvas, first.ImagePath, new SKRect(532, 327, 632, 427));
+        Draw(canvas, second.ImagePath, new SKRect(532, 467, 632, 567));
     }
 
     var result = RhodesSuiCoinImageRecognizer.Recognize(EncodePng(frame), options);
@@ -2009,11 +2340,655 @@ static void SuiActiveCoinImageRecognizer()
     Equal(true, candidates.All(candidate => candidate.FieldId == "activeCoins"), "active coin candidate field");
     Equal(true, candidates.All(candidate => string.IsNullOrWhiteSpace(candidate.Face)), "active coin face is unused");
 
+    var rowRequests = RhodesSuiCoinImageRecognizer.PlanActivePanelOcrRequests(
+        RhodesSuiCoinImageRecognizer.InspectActive(EncodePng(frame), options));
+    Equal(3, rowRequests.Count, "visible active coin rows schedule OCR fallback");
+    Equal("RhodesDynamic_is6.active_coin_list_text.slot0", rowRequests[0].Entry, "active coin row OCR entry");
+    Equal(620, rowRequests[0].X, "active coin row OCR starts before variable-length heading");
+    Equal(470, rowRequests[0].Width, "active coin row OCR includes direction prose");
+    Equal(false, rowRequests[0].OnlyRecognition, "active coin row OCR detects text inside the row");
+
     static void Draw(SKCanvas canvas, string path, SKRect destination)
     {
         using var bitmap = SKBitmap.Decode(path);
         canvas.DrawBitmap(bitmap, destination);
     }
+}
+
+static void SuiActiveCoinOcrCandidateCounts()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var statuses = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coinStatus");
+    var duplicate = options.Single(option => option.Id.EndsWith("is6_copper_b08", StringComparison.Ordinal));
+    var single = options.Single(option => option.Id.EndsWith("is6_copper_b09", StringComparison.Ordinal));
+    var catchWindLeft = options.Single(option => option.Id.EndsWith("is6_copper_e19", StringComparison.Ordinal));
+    var catchWindUp = options.Single(option => option.Id.EndsWith("is6_copper_e21", StringComparison.Ordinal));
+    var greatYanCoin = options.Single(option => option.Name == "大炎通宝");
+    var moveMountain = options.Single(option => option.Name == "山を移すこと難し");
+    var guarded = statuses.Single(option => option.Name == "存護");
+    var rusted = statuses.Single(option => option.Name == "錆色");
+    var ocrResult = new MaaTaskRunResult(
+        "RhodesOcrRegion_is6_active_coin_list_text",
+        "Succeeded",
+        true,
+        "activeCoins=3",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new { text = duplicate.Name, score = 0.96, box = new[] { 650, 230, 230, 32 } },
+                new { text = duplicate.Name, score = 0.95, box = new[] { 650, 350, 230, 32 } },
+                new { text = single.Name, score = 0.97, box = new[] { 650, 470, 230, 32 } },
+                new { text = "存護：銭匣に収まる際、シールド値+2", score = 0.95, box = new[] { 650, 520, 300, 32 } },
+                new { text = "炎通宝に変化する", score = 0.92, box = new[] { 650, 280, 300, 32 } },
+                new { text = "にこ「大炎通宝」に変化する", score = 0.89, box = new[] { 650, 640, 300, 32 } },
+            },
+        }),
+        "OCR",
+        true);
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6ActiveCoinsFull",
+        [ocrResult],
+        "is6_sui");
+
+    Equal(2, candidates.Count, "active coin OCR candidate kinds");
+    Equal(2, candidates.Single(candidate => candidate.CoinId == duplicate.Id).Count, "duplicate active coin OCR count");
+    Equal(1, candidates.Single(candidate => candidate.CoinId == single.Id).Count, "single active coin OCR count");
+    Equal(guarded.Id, candidates.Single(candidate => candidate.CoinId == single.Id).StatusId, "active coin OCR status");
+    Equal(false, candidates.Any(candidate => candidate.Label == "大炎通宝"), "coin names mentioned only in descriptions are ignored");
+    Equal(true, candidates.All(candidate => candidate.FieldId == "activeCoins"), "active coin OCR field");
+
+    var directionalResult = new MaaTaskRunResult(
+        "RhodesOcrRegion_is6_active_coin_list_text",
+        "Succeeded",
+        true,
+        "activeCoins=2",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new { text = "衡-捕風", score = 0.94, box = new[] { 650, 230, 230, 32 } },
+                new { text = "振り出されると、オペレーターの配置方向が左向きの場合", score = 0.91, box = new[] { 650, 280, 620, 32 } },
+                new { text = "攻撃速度+40", score = 0.93, box = new[] { 650, 320, 240, 32 } },
+                new { text = single.Name, score = 0.97, box = new[] { 650, 470, 230, 32 } },
+            },
+        }),
+        "OCR",
+        true);
+    var directionalCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6ActiveCoinsFull",
+        [directionalResult],
+        "is6_sui");
+
+    Equal(2, directionalCandidates.Count, "directional active coin OCR candidate count");
+    Equal(
+        catchWindLeft.Id,
+        directionalCandidates.Single(candidate => candidate.Label.StartsWith("捕風", StringComparison.Ordinal)).CoinId,
+        "direction omitted from Catch Wind heading is recovered from its description");
+
+    var degradedDirectionalResult = new MaaTaskRunResult(
+        "RhodesOcrRegion_is6_active_coin_list_text",
+        "Succeeded",
+        true,
+        "activeCoins=3",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new { text = "大炎通宝", score = 0.993, box = new[] { 650, 14, 230, 32 } },
+                new { text = "衡-捕風", score = 0.91, box = new[] { 650, 370, 230, 32 } },
+                new { text = "辰り出きれる上オへレー夕ーの配置", score = 0.88, box = new[] { 650, 472, 330, 32 } },
+                new { text = "コきの場合攻撃速度+40", score = 0.90, box = new[] { 650, 536, 300, 32 } },
+                new { text = "錆色\"振り出され包こッスボツを通1", score = 0.86, box = new[] { 650, 603, 330, 32 } },
+                new { text = "F”原石錐+T", score = 0.82, box = new[] { 650, 669, 250, 32 } },
+                new { text = "菓-山を移すこと難し", score = 0.904, box = new[] { 650, 798, 300, 32 } },
+            },
+        }),
+        "OCR",
+        true);
+    var degradedCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6ActiveCoinsFull",
+        [degradedDirectionalResult],
+        "is6_sui");
+
+    Equal(3, degradedCandidates.Count, "degraded active coin OCR preserves every card boundary");
+    Equal("", degradedCandidates.Single(candidate => candidate.CoinId == greatYanCoin.Id).StatusId, "Catch Wind status does not bleed into the previous coin");
+    Equal(rusted.Id, degradedCandidates.Single(candidate => candidate.CoinId == catchWindUp.Id).StatusId, "degraded Catch Wind direction and status are recovered together");
+    Equal("", degradedCandidates.Single(candidate => candidate.CoinId == moveMountain.Id).StatusId, "following coin remains unmodified");
+
+    var rowFallbackResults = new[]
+    {
+        ActiveRow(0, new[]
+        {
+            new { text = "大炎通宝", score = 0.99, box = new[] { 25, 20, 180, 30 } },
+        }),
+        ActiveRow(1, new[]
+        {
+            new { text = "衡-捕風", score = 0.98, box = new[] { 25, 18, 180, 30 } },
+            new { text = "振り出されると、オペレーターの配置方向カ“上", score = 0.95, box = new[] { 25, 58, 420, 30 } },
+            new { text = "回きの場合攻撃速匿+40", score = 0.93, box = new[] { 25, 82, 280, 28 } },
+            new { text = "錆色", score = 0.97, box = new[] { 25, 100, 90, 28 } },
+        }),
+        ActiveRow(2, new[]
+        {
+            new { text = "厲-山を移すこと難し", score = 0.98, box = new[] { 25, 20, 300, 30 } },
+        }),
+    };
+    var rowFallbackCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6ActiveCoinsFull",
+        [degradedDirectionalResult, .. rowFallbackResults],
+        "is6_sui");
+
+    Equal(3, rowFallbackCandidates.Sum(candidate => candidate.Count), "row OCR fallback restores all visible active coins");
+    Equal(3, rowFallbackCandidates.Count, "row OCR fallback ignores stale whole-panel candidates");
+    Equal(catchWindUp.Id, rowFallbackCandidates.Single(candidate => candidate.Label.StartsWith("捕風", StringComparison.Ordinal)).CoinId, "row OCR fallback resolves Catch Wind direction from its own prose");
+    Equal(rusted.Id, rowFallbackCandidates.Single(candidate => candidate.CoinId == catchWindUp.Id).StatusId, "row OCR fallback keeps status in the same row");
+
+    static MaaTaskRunResult ActiveRow<T>(int slot, T[] rows) => new(
+        $"RhodesDynamic_is6.active_coin_list_text.slot{slot}",
+        "Succeeded",
+        true,
+        $"slot={slot}",
+        JsonSerializer.Serialize(new { filtered_results = rows }),
+        "OCR",
+        true);
+}
+
+static void SuiCatchWindDetailResolverLocatesCard()
+{
+    var detailRequest = RhodesSuiCatchWindDetailResolver.BuildDetailRequest();
+    Equal(1, detailRequest.Scale, "Catch Wind description keeps native scale for fast multi-line OCR");
+    using var detailPayload = JsonDocument.Parse(detailRequest.PayloadJson);
+    Equal(
+        false,
+        detailPayload.RootElement.GetProperty("only_rec").GetBoolean(),
+        "Catch Wind description enables OCR text detection because the prose spans multiple lines");
+    Equal(
+        120,
+        detailPayload.RootElement.GetProperty("roi")[3].GetInt32(),
+        "Catch Wind detail ROI includes the lower status line");
+
+    var wholeListResult = new MaaTaskRunResult(
+        "RhodesOcrRegion_is6_coin_list_text",
+        "Succeeded",
+        true,
+        "捕風",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new { text = "衡-捕風", score = 0.91, box = new[] { 598, 607, 175, 44 } },
+            },
+        }),
+        "OCR",
+        true);
+    var latestEvidenceResult = new MaaTaskRunResult(
+        "RhodesOcrRegion_is6_coin_list_text",
+        "Succeeded",
+        true,
+        "捕風",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new { text = "衡-捕風", score = 0.977, box = new[] { 634, 611, 139, 38 } },
+            },
+        }),
+        "OCR",
+        true);
+    var slotResult = new MaaTaskRunResult(
+        "RhodesDynamic_is6.coin_list_text.slot5",
+        "Succeeded",
+        true,
+        "捕風",
+        JsonSerializer.Serialize(new { best_result = new { text = "衡-捕風", score = 0.95 } }),
+        "OCR",
+        true);
+
+    Equal(3, RhodesSuiCatchWindDetailResolver.FindVisibleSlot([wholeListResult]), "whole-list OCR box maps Catch Wind to owned slot 3");
+    Equal(3, RhodesSuiCatchWindDetailResolver.FindVisibleSlot([latestEvidenceResult]), "latest real Catch Wind OCR box maps to owned slot 3");
+    Equal(5, RhodesSuiCatchWindDetailResolver.FindVisibleSlot([slotResult]), "slot OCR entry preserves the owned slot index");
+    Equal(null, RhodesSuiCatchWindDetailResolver.FindVisibleSlot([]), "missing Catch Wind is not targeted");
+}
+
+static void SuiCatchWindDetailResolverMapsDirection()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var statuses = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coinStatus");
+    var rusted = statuses.Single(status => status.Name == "錆色");
+    var detailResult = new MaaTaskRunResult(
+        RhodesSuiCatchWindDetailResolver.DetailEntry,
+        "Succeeded",
+        true,
+        "上向き",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new { text = "振り出されると、オペレーターの配置方向が上向きの場合、攻撃速度+40", score = 0.94 },
+                new { text = "錆色：振り出されると、スポットを通過するたび、源石錐+1", score = 0.96 },
+            },
+        }),
+        "OCR",
+        true);
+
+    var detection = RhodesSuiCatchWindDetailResolver.ResolveDetection(detailResult, 3, options, statuses);
+    Equal(true, detection is not null, "Catch Wind direction description resolves a detection");
+    Equal(true, detection!.CoinId.EndsWith("is6_copper_e21", StringComparison.Ordinal), "upward Catch Wind maps to e21");
+    Equal("捕風（上）", detection.Label, "resolved Catch Wind keeps directional label");
+    Equal(3, detection.SlotIndex, "resolved Catch Wind keeps its physical slot");
+    Equal(rusted.Id, detection.StatusId, "resolved Catch Wind keeps the status named in its detail prose");
+    var preservedStatus = statuses.Single(status => status.Name == "存護");
+    var statusImageResult = RhodesSuiCoinImageRecognizer.CreateOwnedResult(
+    [
+        new RhodesSuiCoinImageDetection(
+            options[0].Id,
+            options[0].Name,
+            0.98,
+            3,
+            new MaaRoi(421, 306, 84, 84),
+            StatusId: preservedStatus.Id),
+    ]);
+    Equal(
+        preservedStatus.Id,
+        RhodesSuiCatchWindDetailResolver.FindVisibleStatusId([statusImageResult], 3),
+        "Catch Wind reads the status already identified from the visible card image");
+    var imagePreferredDetection = RhodesSuiCatchWindDetailResolver.ResolveDetection(
+        detailResult,
+        3,
+        options,
+        statuses,
+        preservedStatus.Id);
+    Equal(
+        preservedStatus.Id,
+        imagePreferredDetection!.StatusId,
+        "the visible-card image status takes priority over detail OCR fallback");
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [RhodesSuiCoinImageRecognizer.CreateOwnedResult([detection])],
+        "is6_sui");
+    Equal(1, candidates.Count, "directional Catch Wind detail becomes one owned coin candidate");
+    Equal(detection.CoinId, candidates.Single().CoinId, "directional Catch Wind detail preserves the resolved coin id");
+
+    var ambiguousResult = detailResult with
+    {
+        RecognitionDetailJson = JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new { text = "振り出されると、オペレーターの攻撃速度+40", score = 0.94 },
+            },
+        }),
+    };
+    Equal(null, RhodesSuiCatchWindDetailResolver.ResolveDetection(ambiguousResult, 3, options, statuses), "directionless prose is never guessed");
+}
+
+static void SuiCatchWindDetailResolverRandomizesTap()
+{
+    var step = RhodesSuiCatchWindDetailResolver.BuildTapStep(3);
+    Equal("tap", step.Type, "Catch Wind target is a tap step");
+    Equal(true, step.Width > 1 && step.Height > 1, "Catch Wind target uses an area instead of a fixed point");
+
+    var first = RhodesRecognitionNavigation.RandomTapPoint(step, new Random(1));
+    var second = RhodesRecognitionNavigation.RandomTapPoint(step, new Random(2));
+    Equal(true, first != second, "Catch Wind target point varies inside the card area");
+    Equal(true, first.X >= step.X && first.X < step.X + step.Width, "random Catch Wind x remains inside the card");
+    Equal(true, first.Y >= step.Y && first.Y < step.Y + step.Height, "random Catch Wind y remains inside the card");
+}
+
+static void SuiOwnedCoinImageRecognizer()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var first = options.Single(option => option.Id.EndsWith("is6_copper_b03", StringComparison.Ordinal));
+    var second = options.Single(option => option.Id.EndsWith("is6_copper_b08", StringComparison.Ordinal));
+    var unowned = options.Single(option => option.Id.EndsWith("is6_copper_b09", StringComparison.Ordinal));
+    using var frame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul);
+    frame.Erase(new SKColor(230, 220, 217));
+    using (var canvas = new SKCanvas(frame))
+    {
+        Draw(canvas, first.ImagePath, new SKRect(548, 158, 654, 264));
+        Draw(canvas, second.ImagePath, new SKRect(828, 158, 934, 264));
+        Draw(canvas, unowned.ImagePath, new SKRect(548, 433, 654, 539), 0.28f);
+    }
+
+    var result = RhodesSuiCoinImageRecognizer.RecognizeOwned(EncodePng(frame), options);
+    Equal(true, result.Hit, "owned coin image result hit");
+    Equal(true, RhodesSuiCoinImageRecognizer.TryRead(result, out var fieldId, out var detections), "owned coin image result readable");
+    Equal("coins", fieldId, "owned coin field id");
+    Equal(
+        $"{first.Id}|{second.Id}",
+        string.Join("|", detections.OrderBy(item => item.SlotIndex).Select(item => item.CoinId)),
+        $"owned coin ids ({result.RecognitionDetailJson})");
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [result],
+        "is6_sui");
+    Equal(2, candidates.Count, "owned coin candidate count");
+    Equal(true, candidates.All(candidate => candidate.FieldId == "coins"), "owned coin candidate field");
+
+    static void Draw(SKCanvas canvas, string path, SKRect destination, float opacity = 1f)
+    {
+        using var bitmap = SKBitmap.Decode(path);
+        using var paint = new SKPaint { Color = SKColors.White.WithAlpha((byte)Math.Round(255 * opacity)) };
+        canvas.DrawBitmap(bitmap, destination, paint);
+    }
+}
+
+static void SuiOwnedCoinImageRecognizerPerformance()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var ids = new[] { "is6_copper_b03", "is6_copper_b08", "is6_copper_b09", "is6_copper_f13" };
+    var coins = ids.Select(id => options.Single(option => option.Id.EndsWith(id, StringComparison.Ordinal))).ToArray();
+    using var frame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul);
+    frame.Erase(new SKColor(230, 220, 217));
+    using (var canvas = new SKCanvas(frame))
+    {
+        Draw(canvas, coins[0].ImagePath, new SKRect(548, 158, 654, 264));
+        Draw(canvas, coins[1].ImagePath, new SKRect(828, 158, 934, 264));
+        Draw(canvas, coins[2].ImagePath, new SKRect(1090, 158, 1196, 264));
+        Draw(canvas, coins[3].ImagePath, new SKRect(410, 295, 516, 401));
+    }
+
+    var encoded = EncodePng(frame);
+    _ = RhodesSuiCoinImageRecognizer.RecognizeOwned(encoded);
+    var stopwatch = Stopwatch.StartNew();
+    var result = RhodesSuiCoinImageRecognizer.RecognizeOwned(encoded);
+    stopwatch.Stop();
+
+    Equal(true, result.Hit, "representative owned coin frame is recognized");
+    Equal(true, stopwatch.Elapsed < TimeSpan.FromSeconds(2), $"owned coin frame elapsed {stopwatch.Elapsed.TotalMilliseconds:0}ms");
+
+    static void Draw(SKCanvas canvas, string path, SKRect destination)
+    {
+        using var bitmap = SKBitmap.Decode(path);
+        canvas.DrawBitmap(bitmap, destination);
+    }
+}
+
+static void SuiOwnedCoinCandidateCounts()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var statuses = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coinStatus");
+    var duplicate = options.Single(option => option.Id.EndsWith("is6_copper_b03", StringComparison.Ordinal));
+    var single = options.Single(option => option.Id.EndsWith("is6_copper_b08", StringComparison.Ordinal));
+    var status = statuses.Single(option => option.Id.EndsWith("is6_gild2", StringComparison.Ordinal));
+    var firstFrame = ImageResult(
+        Detection(duplicate, 0, 0.91),
+        Detection(duplicate, 1, 0.90));
+    var secondFrame = ImageResult(
+        Detection(duplicate, 0, 0.92),
+        Detection(single, 1, 0.89));
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [firstFrame, secondFrame],
+        "is6_sui");
+
+    Equal(2, candidates.Single(candidate => candidate.CoinId == duplicate.Id).Count, "duplicate owned coin count uses the maximum visible count");
+    Equal(1, candidates.Single(candidate => candidate.CoinId == single.Id).Count, "single owned coin count remains one");
+
+    var statusAcrossFrames = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [
+            ImageResult(Detection(duplicate, 0, 0.91, status.Id)),
+            ImageResult(Detection(duplicate, 0, 0.93)),
+        ],
+        "is6_sui");
+
+    Equal(1, statusAcrossFrames.Count, "the same coin is not duplicated when status detection varies across overlapping frames");
+    Equal(status.Id, statusAcrossFrames.Single().StatusId, "the detected coin status wins over a plain overlapping observation");
+    Equal(1, statusAcrossFrames.Single().Count, "one physical status coin remains one entry");
+
+    static object Detection(SukiSpecialEffectOption option, int slotIndex, double score, string statusId = "") => new
+    {
+        coinId = option.Id,
+        label = option.Name,
+        score,
+        slotIndex,
+        roi = new[] { 0, 0, 106, 106 },
+        statusId,
+    };
+
+    static MaaTaskRunResult ImageResult(params object[] detections) => new(
+        RhodesSuiCoinImageRecognizer.OwnedEntry,
+        "Succeeded",
+        true,
+        $"ownedCoins={detections.Length}",
+        JsonSerializer.Serialize(new { fieldId = "coins", detections }),
+        "ImageClassification",
+        detections.Length > 0);
+}
+
+static void SuiOwnedCoinOcrCandidateCounts()
+{
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var duplicate = options.Single(option => option.Id.EndsWith("is6_copper_b03", StringComparison.Ordinal));
+    var single = options.Single(option => option.Id.EndsWith("is6_copper_b08", StringComparison.Ordinal));
+    var firstFrame = OcrResult(duplicate.Name, duplicate.Name, single.Name);
+    var secondFrame = OcrResult(duplicate.Name, single.Name);
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [firstFrame, secondFrame],
+        "is6_sui");
+
+    Equal(2, candidates.Single(candidate => candidate.CoinId == duplicate.Id).Count, "duplicate OCR coin count uses the maximum visible count");
+    Equal(1, candidates.Single(candidate => candidate.CoinId == single.Id).Count, "overlapping OCR frames do not inflate coin count");
+
+    var liveFirstFrame = OcrResult(
+        "衝-志違げんと叡",
+        "園嵐−西の寵真",
+        "東の欠角",
+        "奇土金を生ず",
+        "水生じ木護る",
+        "金寒く水衍く",
+        "金寒く水衍く",
+        "火灼き土沃す",
+        "南に山を見る");
+    var liveShiftedFrame = OcrResult(
+        "火灼き土沃す",
+        "南に山を見る",
+        "投木炎延");
+    var liveCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [liveFirstFrame, liveShiftedFrame],
+        "is6_sui");
+
+    Equal(9, liveCandidates.Count, "live two-frame OCR keeps nine unique held coin names");
+    Equal(10, liveCandidates.Sum(candidate => candidate.Count), "live two-frame OCR keeps all ten held coins");
+    Equal(2, liveCandidates.Single(candidate => candidate.Label == "金寒く水衍く").Count, "live duplicate coin count is preserved");
+
+    static MaaTaskRunResult OcrResult(params string[] names) => new(
+        "RhodesOcrRegion_is6_coin_list_text",
+        "Succeeded",
+        true,
+        $"coins={names.Length}",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = names.Select((name, index) => new
+            {
+                text = name,
+                score = 0.91,
+                box = new[] { 100 + (index * 200), 100, 180, 30 },
+            }),
+        }),
+        "OCR",
+        true);
+}
+
+static void SuiOwnedCoinStatusRecognizer()
+{
+    var coins = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var statuses = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coinStatus");
+    var coin = coins.Single(option => option.Id.EndsWith("is6_copper_f13", StringComparison.Ordinal));
+    var status = statuses.Single(option => option.Id.EndsWith("is6_gild2", StringComparison.Ordinal));
+    var ocr = OcrResult(
+        ("衛-志遂げんと配", 564, 612, 244, 32),
+        ("志遂げんと欲す", 1124, 612, 244, 32));
+
+    using var frame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul);
+    frame.Erase(new SKColor(230, 220, 217));
+    using (var canvas = new SKCanvas(frame))
+    {
+        Draw(canvas, coin.ImagePath, new SKRect(410, 295, 516, 401));
+        Draw(canvas, status.ImagePath, new SKRect(475, 302, 519, 348));
+        Draw(canvas, coin.ImagePath, new SKRect(690, 295, 796, 401));
+    }
+
+    var result = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+        EncodePng(frame),
+        [ocr],
+        coins,
+        statuses);
+    Equal(true, RhodesSuiCoinImageRecognizer.TryRead(result, out var fieldId, out var detections), "status result readable");
+    Equal("coins", fieldId, "status result field");
+    Equal(2, detections.Count, "both OCR anchored coins retained");
+    Equal(status.Id, detections[0].StatusId, $"first coin receives the detected status ({result.RecognitionDetailJson})");
+    Equal("", detections[1].StatusId, "second coin does not hallucinate a status");
+
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [ocr, result],
+        "is6_sui");
+    Equal(2, candidates.Count, "same coin with different statuses remains two entries");
+    Equal(true, candidates.Any(candidate => candidate.CoinId == coin.Id && candidate.StatusId == status.Id), "status coin candidate retained");
+    Equal(true, candidates.Any(candidate => candidate.CoinId == coin.Id && string.IsNullOrWhiteSpace(candidate.StatusId)), "plain coin candidate retained");
+
+    var ambiguousStatus = statuses.Single(option => option.Id.EndsWith("is6_gild5", StringComparison.Ordinal));
+    using (var ambiguousFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        ambiguousFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(ambiguousFrame))
+        {
+            Draw(canvas, coin.ImagePath, new SKRect(410, 295, 516, 401));
+            Draw(canvas, ambiguousStatus.ImagePath, new SKRect(475, 302, 519, 348));
+        }
+        var ambiguousResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(ambiguousFrame),
+            [OcrResult(("志遂げんと欲す", 564, 612, 244, 32))],
+            coins,
+            statuses);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(ambiguousResult, out _, out var ambiguousDetections), "ambiguous status result readable");
+        Equal(ambiguousStatus.Id, ambiguousDetections.Single().StatusId, "an actual ambiguous status survives the stricter threshold");
+    }
+
+    static MaaTaskRunResult OcrResult(params (string Text, int X, int Y, int Width, int Height)[] rows) => new(
+        "RhodesOcrRegion_is6_coin_list_text",
+        "Succeeded",
+        true,
+        $"coins={rows.Length}",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = rows.Select(row => new
+            {
+                text = row.Text,
+                score = 0.91,
+                box = new[] { row.X, row.Y, row.Width, row.Height },
+            }),
+        }),
+        "OCR",
+        true);
+
+    static void Draw(SKCanvas canvas, string path, SKRect destination)
+    {
+        using var bitmap = SKBitmap.Decode(path);
+        canvas.DrawBitmap(bitmap, destination);
+    }
+}
+
+static void SuiOwnedCoinOcrFallbackPlanner()
+{
+    var requests = RhodesSuiCoinImageRecognizer.PlanOwnedNameOcrRequests(
+    [
+        new RhodesSuiCoinImageDetection("resolved", "resolved", 0.81, 0, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.70, VisualStrength: 0.95),
+        new RhodesSuiCoinImageDetection("uncertain", "uncertain", 0.64, 3, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.63, VisualStrength: 0.72),
+        new RhodesSuiCoinImageDetection("dim", "dim", 0.78, 4, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.74, VisualStrength: 0.50),
+    ]);
+
+    Equal(1, requests.Count, "only unresolved colored slot receives OCR");
+    Equal("RhodesDynamic_is6.coin_list_text.slot3", requests[0].Entry, "owned coin OCR entry identifies slot");
+    Equal("363,395,200,30", $"{requests[0].X},{requests[0].Y},{requests[0].Width},{requests[0].Height}", "owned coin name ROI");
+
+    var options = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var imageCoin = options.Single(option => option.Id.EndsWith("is6_copper_b03", StringComparison.Ordinal));
+    var ocrCoin = options.Single(option => option.Id.EndsWith("is6_copper_f13", StringComparison.Ordinal));
+    var imageResult = new MaaTaskRunResult(
+        RhodesSuiCoinImageRecognizer.OwnedEntry,
+        "Succeeded",
+        true,
+        "ownedCoins=1",
+        JsonSerializer.Serialize(new
+        {
+            fieldId = "coins",
+            detections = new[]
+            {
+                new
+                {
+                    coinId = imageCoin.Id,
+                    label = imageCoin.Name,
+                    score = 0.91,
+                    slotIndex = 0,
+                    roi = new[] { 0, 0, 1, 1 },
+                    statusId = "",
+                },
+            },
+        }),
+        "ImageClassification",
+        true);
+    var ocrResult = new MaaTaskRunResult(
+        requests[0].Entry,
+        "Succeeded",
+        true,
+        "detail",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[] { new { text = "回衡-志遂げんとび", score = 0.88 } },
+        }),
+        "OCR",
+        true);
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [imageResult, ocrResult],
+        "is6_sui");
+
+    Equal(2, candidates.Count, "image and fallback OCR coin candidates merge");
+    Equal(true, candidates.Any(candidate => candidate.CoinId == imageCoin.Id), "image coin retained");
+    Equal(true, candidates.Any(candidate => candidate.CoinId == ocrCoin.Id), "status-prefixed OCR coin added");
+
+    var broadOcr = new MaaTaskRunResult(
+        "RhodesOcrRegion_is6_coin_list_text",
+        "Succeeded",
+        true,
+        "detail",
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new
+                {
+                    text = "衡-大炎通宝",
+                    score = 0.92,
+                    box = new[] { 762, 324, 400, 64 },
+                },
+            },
+        }),
+        "OCR",
+        true);
+    var missingRequests = RhodesSuiCoinImageRecognizer.PlanMissingOwnedNameOcrRequests(
+    [
+        new RhodesSuiCoinImageDetection("resolved", "resolved", 0.81, 0, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.70, VisualStrength: 0.95),
+        new RhodesSuiCoinImageDetection("unresolved", "unresolved", 0.64, 3, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.63, VisualStrength: 0.72),
+        new RhodesSuiCoinImageDetection("dim", "dim", 0.64, 4, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.63, VisualStrength: 0.50),
+        new RhodesSuiCoinImageDetection("empty", "empty", 0.64, 5, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.63, VisualStrength: 0.30),
+    ],
+    [broadOcr]);
+    Equal(2, missingRequests.Count, "broad OCR leaves only unresolved occupied slots for focused OCR");
+    Equal(
+        "RhodesDynamic_is6.coin_list_text.slot3|RhodesDynamic_is6.coin_list_text.slot4",
+        string.Join("|", missingRequests.Select(request => request.Entry)),
+        "dim held slots remain eligible while empty slots are excluded");
 }
 
 static void LocalCandidateConverterAllProfiles()
@@ -3427,6 +4402,27 @@ static void RecognitionNavigationLoadsProfileSteps()
     Equal(54, plan.OpenSteps[0].Width, "open tap area width");
     Equal(62, plan.OpenSteps[0].Height, "open tap area height");
     Equal(false, plan.OpenSteps.Concat(plan.RestoreSteps).Any(step => step.Type == "back"), "back action prohibited");
+
+    var activeCoins = RhodesRecognitionNavigation.LoadFromJson(File.ReadAllText(path), "is6ActiveCoinsFull");
+    Equal(2, activeCoins.OpenSteps.Count, "active coin panel open steps");
+    Equal(2, activeCoins.RestoreSteps.Count, "active coin panel restore steps");
+    Equal("tap", activeCoins.OpenSteps[0].Type, "active coin panel opens by tap");
+    Equal(515, activeCoins.OpenSteps[0].X, "active coin tap area x");
+    Equal(650, activeCoins.OpenSteps[0].Y, "active coin tap area y");
+    Equal(54, activeCoins.OpenSteps[0].Width, "active coin tap area targets only the first active slot");
+    Equal(false, activeCoins.OpenSteps.Concat(activeCoins.RestoreSteps).Any(step => step.Type == "back"), "active coin panel never uses Android back");
+
+    var lightAndHorde = RhodesRecognitionNavigation.LoadFromJson(File.ReadAllText(path), "is3LightHordeFull");
+    Equal(610, lightAndHorde.OpenSteps[0].X, "Mizuki light panel tap starts inside the title button");
+    Equal(26, lightAndHorde.OpenSteps[0].Y, "Mizuki light panel tap excludes the top window edge");
+    Equal(100, lightAndHorde.OpenSteps[0].Width, "Mizuki light panel tap stays inside the title button width");
+    Equal(30, lightAndHorde.OpenSteps[0].Height, "Mizuki light panel tap stays inside the title button height");
+    Equal(
+        true,
+        Enumerable.Range(0, 64)
+            .Select(index => RhodesRecognitionNavigation.RandomTapPoint(lightAndHorde.OpenSteps[0], new Random(index + 3373)))
+            .All(point => point.X is >= 610 and < 710 && point.Y is >= 26 and < 56),
+        "Mizuki light panel randomized taps remain on the title button");
 }
 
 static void RecognitionNavigationRandomizesTapAreas()
@@ -3479,6 +4475,13 @@ static void RecognitionScrollPlanLoadsOperatorPasses()
     var relicPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "relicsFull");
     Equal(2, relicPasses[0].CandidateStableEndCount, "relic pass also stops when candidates stabilize");
     Equal(true, relicPasses.All(pass => pass.StartArea.X >= 520), "relic swipes avoid Android edge gesture area");
+
+    var coinPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "is6CoinsFull");
+    Equal(2, coinPasses.Count, "held coin scan covers both horizontal directions");
+    Equal("right", coinPasses[0].Direction, "held coin first direction");
+    Equal("left", coinPasses[1].Direction, "held coin reverse direction");
+    Equal(true, coinPasses.All(pass => pass.CollectCandidates), "both held coin passes collect visible names");
+    Equal(false, coinPasses[1].MirrorPreviousPassScrolls, "held coin reverse reaches the opposite edge independently");
 }
 
 static void RecognitionRuntimePlanUsesFocusedTasks()
@@ -3517,6 +4520,33 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
         "squad panel confirms run status screen");
     Equal(false, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("is5AgeFull", []), "age scan requires opened age detail");
     Equal(false, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("relicsFull", []), "relic scan requires opened relic list");
+    Equal(false, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("is6CoinsFull", []), "held coin scan requires opened coin list");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "is6CoinsFull",
+            [new MaaTaskRunResult(
+                "RhodesOcrRegion_is6_coin_list_text",
+                "Succeeded",
+                true,
+                "",
+                "{\"filtered_results\":[{\"text\":\"北の刺面\",\"score\":0.94}]}",
+                "OCR",
+                true)]),
+        "coin name OCR confirms the opened held coin list");
+    Equal(
+        false,
+        RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+            "is6CoinsFull",
+            [new MaaTaskRunResult(
+                RhodesSuiCoinImageRecognizer.OwnedEntry,
+                "Succeeded",
+                true,
+                "ownedCoins=1",
+                "{\"fieldId\":\"coins\",\"detections\":[{\"coinId\":\"is6_sui_selectable_coin_is6_copper_b01\",\"label\":\"大炎通宝\",\"score\":0.91,\"slotIndex\":0,\"roi\":[0,0,106,106],\"statusId\":\"\"}]}",
+                "ImageClassification",
+                true)]),
+        "coin image classification does not confirm the held coin list");
     Equal(
         true,
         RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
@@ -3585,15 +4615,29 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
     };
     var relicPlan = new MaaResourceExecutionPlan(
         "relicsFull", "relics", "test", relicTasks.Select(task => task.Entry).ToArray(), relicTasks, "");
+    var relicPreNavigation = RhodesRecognitionRuntimePlan.PreparePreNavigation(relicPlan);
+    Equal("RhodesScreen_run_map_footer_relic", string.Join("|", relicPreNavigation.TaskEntries), "relic count runs before opening the list");
     var focusedRelic = RhodesRecognitionRuntimePlan.PrepareInitial(relicPlan);
-    Equal("RhodesScreen_run_map_footer_relic|RhodesScreen_relic_list|RhodesOcrRegion_relic_list_text|RhodesOcrRegion_relic_detail_name", string.Join("|", focusedRelic.TaskEntries), "relic runtime tasks");
+    Equal("RhodesScreen_relic_list|RhodesOcrRegion_relic_list_text|RhodesOcrRegion_relic_detail_name", string.Join("|", focusedRelic.TaskEntries), "relic list tasks exclude the map footer count");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 9), "candidate count alone never skips relic scroll");
     Equal(true, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 9, 9), "matching owned count skips relic scroll");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 8, 9), "missing relic continues scroll");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 10, 9), "excess false positive does not finish early");
+    Equal(true, RhodesRecognitionRuntimePlan.IsKnownNonScrollableRelicList("relicsFull", 9, "is5_sarkaz"), "non-Phantom relics fit without scrolling through three rows");
+    Equal(false, RhodesRecognitionRuntimePlan.IsKnownNonScrollableRelicList("relicsFull", 10, "is5_sarkaz"), "fourth relic row remains scrollable");
+    Equal(false, RhodesRecognitionRuntimePlan.IsKnownNonScrollableRelicList("relicsFull", 6, "is2_phantom"), "Phantom keeps its existing relic scroll behavior");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldRetryRelicFrameWithoutScroll("relicsFull", 8, 9, "is5_sarkaz"), "incomplete visible relic list retries without a swipe");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryRelicFrameWithoutScroll("relicsFull", 9, 9, "is5_sarkaz"), "complete visible relic list does not retry");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryRelicFrameWithoutScroll("relicsFull", 5, 6, "is2_phantom"), "Phantom does not use the stationary relic retry");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryRelicFrameWithoutScroll("relicsFull", 5, null, "is5_sarkaz"), "unknown relic total does not assume the list is complete");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe("relicsFull", "is5_sarkaz", 1, 2), "first immobile relic probe ends the current direction");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe("relicsFull", "is5_sarkaz", 1, 3), "moving relic frame continues scanning");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe("relicsFull", "is2_phantom", 1, 0), "Phantom keeps its existing edge detection");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe("operatorsFull", "is5_sarkaz", 1, 0), "operator scans are unchanged");
     Equal(true, RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount("relicsFull", 9, 9), "matching owned count completes scan");
     Equal(false, RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount("relicsFull", 8, 9), "incomplete count remains active");
     Equal(true, RhodesRecognitionRuntimePlan.IsScrollProfile("is5ThoughtFull"), "thought list uses scroll recognition");
+    Equal(true, RhodesRecognitionRuntimePlan.IsScrollProfile("is6CoinsFull"), "owned coin board uses horizontal scroll recognition");
 }
 
 static void RelicOwnedCountReaderExtractsFooterCount()
@@ -3637,6 +4681,16 @@ static void RecognitionRetryPolicyTargetsLowConfidenceFrames()
     Equal(true, RhodesRecognitionRetryPolicy.Evaluate("runStatusFull", [], completeRun.Where(item => item.Field != "squadId")).ShouldRetry, "missing required run field retries");
     Equal(true, RhodesRecognitionRetryPolicy.Evaluate("runStatusFull", [], completeRun.Select(item => item.Field == "idea" ? item with { Confidence = 0.55 } : item)).ShouldRetry, "low-confidence run field retries");
     Equal(true, RhodesRecognitionRetryPolicy.Evaluate("relicsFull", [], []).ShouldRetry, "empty relic frame retries once");
+    Equal(true, RhodesRecognitionRetryPolicy.Evaluate("is3LightHordeFull", [], [], "is3_mizuki").ShouldRetry, "missing Mizuki horde call retries once");
+    Equal(true, RhodesRecognitionRetryPolicy.Evaluate("is3RejectionFull", [], [], "is3_mizuki").ShouldRetry, "missing Mizuki rejection retries once");
+    Equal(
+        false,
+        RhodesRecognitionRetryPolicy.Evaluate(
+            "is3LightHordeFull",
+            [],
+            [new MaaCandidatePreview("mizuki", "呼び声：改造", "horde", "呼び声：改造", 0.91, CampaignId: "is3_mizuki", FieldId: "hordeCalls", EffectId: "horde")],
+            "is3_mizuki").ShouldRetry,
+        "recognized Mizuki horde call does not retry");
     Equal(false, RhodesRecognitionRetryPolicy.Evaluate("is5ThoughtFull", [], []).ShouldRetry, "empty thought list may be valid");
 
     static MaaCandidatePreview C(string field, double confidence) => new(
@@ -3646,6 +4700,24 @@ static void RecognitionRetryPolicyTargetsLowConfidenceFrames()
         "1",
         confidence,
         Field: field);
+}
+
+static void MizukiUndetectedPolicyPreservesPriorValues()
+{
+    Equal(
+        true,
+        RhodesMizukiUndetectedPolicy.GetPreservationWarning("is3LightHordeFull", [])?.Contains("保持", StringComparison.Ordinal) == true,
+        "missing horde call preserves the previous value");
+    Equal(
+        true,
+        RhodesMizukiUndetectedPolicy.GetPreservationWarning("is3RejectionFull", [])?.Contains("保持", StringComparison.Ordinal) == true,
+        "missing rejection reaction preserves the previous value");
+    Equal(
+        null,
+        RhodesMizukiUndetectedPolicy.GetPreservationWarning(
+            "is3LightHordeFull",
+            [new MaaCandidatePreview("mizuki", "呼び声：改造", "horde", "呼び声：改造", 0.91, CampaignId: "is3_mizuki", FieldId: "hordeCalls", EffectId: "horde")]),
+        "recognized horde call needs no preservation warning");
 }
 
 static void ManualDifficultyCampaignPolicy()
@@ -3737,6 +4809,28 @@ static void MaaOcrPreprocessingCropsAndScalesRoi()
     Equal(6, parameters["roi"]![3]!.GetValue<int>(), "prepared roi height");
 }
 
+static void MaaCatchWindDetailPreprocessingInvertsDarkProse()
+{
+    using var source = new SKBitmap(6, 4);
+    source.Erase(new SKColor(245, 245, 245));
+    source.SetPixel(2, 1, new SKColor(45, 45, 45));
+    source.SetPixel(3, 1, new SKColor(130, 130, 130));
+
+    var prepared = RhodesMaaRecognitionImagePreprocessor.Prepare(
+        EncodePng(source),
+        "OCR",
+        """{"roi":[1,0,4,3],"only_rec":true}""",
+        2,
+        RhodesSuiCatchWindDetailResolver.DetailEntry);
+
+    using var binary = SKBitmap.Decode(prepared.EncodedImage);
+    Equal(8, binary.Width, "Catch Wind detail crop width is scaled");
+    Equal(6, binary.Height, "Catch Wind detail crop height is scaled");
+    Equal(SKColors.Black, binary.GetPixel(0, 0), "light detail background becomes black");
+    Equal(SKColors.White, binary.GetPixel(2, 2), "dark detail prose becomes white");
+    Equal(SKColors.White, binary.GetPixel(4, 2), "antialiased dark prose remains foreground");
+}
+
 static void MaaOperatorOcrPreprocessingMasksAndTrimsNameRoi()
 {
     using var source = new SKBitmap(16, 10);
@@ -3821,7 +4915,7 @@ static void MaaTemplateOcrExpanderBuildsDynamicRegions()
         }
         """);
 
-    Equal(2, requests.Count, "dynamic OCR request count");
+    Equal(3, requests.Count, "dynamic OCR request count");
     Equal("operator.card.name.0", requests[0].Entry, "dynamic entry name");
     Equal(661, requests[0].X, "dynamic ROI x");
     Equal(172, requests[0].Y, "dynamic ROI y");
@@ -3829,7 +4923,47 @@ static void MaaTemplateOcrExpanderBuildsDynamicRegions()
     Equal(23, requests[0].Height, "dynamic ROI height");
     Equal(1, requests[0].Scale, "dynamic ROI scale");
     Equal(309, requests[1].Y, "second dynamic ROI y");
-    Equal(2, requests.Count, "right-edge clipped card is ignored");
+    Equal(1150, requests[2].X, "right-edge card ROI x");
+    Equal(130, requests[2].Width, "right-edge card ROI is clipped to the visible name");
+}
+
+static void MaaTemplateOcrExpanderRestoresWeakGridAlignedOperatorAnchors()
+{
+    var config = new MaaTemplateOcrConfig("operator.card.name", 26, -3, 180, 23, 1, 16);
+    var requests = RhodesMaaTemplateOcrExpander.BuildRequests(
+        config,
+        """
+        {
+          "all": [
+            {"box":[696,175,29,22],"score":0.88},
+            {"box":[1111,175,29,22],"score":0.639185},
+            {"box":[696,312,29,22],"score":0.97},
+            {"box":[1111,312,29,22],"score":0.97},
+            {"box":[696,449,29,22],"score":0.97},
+            {"box":[1111,449,29,22],"score":0.97},
+            {"box":[696,586,29,22],"score":0.97},
+            {"box":[1111,586,29,22],"score":0.97},
+            {"box":[975,95,29,22],"score":0.633},
+            {"box":[560,369,29,22],"score":0.633}
+          ],
+          "filtered": [
+            {"box":[696,175,29,22],"score":0.88},
+            {"box":[696,312,29,22],"score":0.97},
+            {"box":[1111,312,29,22],"score":0.97},
+            {"box":[696,449,29,22],"score":0.97},
+            {"box":[1111,449,29,22],"score":0.97},
+            {"box":[696,586,29,22],"score":0.97},
+            {"box":[1111,586,29,22],"score":0.97}
+          ]
+        }
+        """);
+
+    Equal(8, requests.Count, "weak grid-aligned anchor is restored");
+    var restored = requests.Single(request => request.X == 1137 && request.Y == 172);
+    Equal(0.639185, restored.TemplateScore, "restored anchor score");
+    Equal(143, restored.Width, "restored right-edge ROI keeps its visible width");
+    Equal(false, requests.Any(request => request.X == 1001 && request.Y == 92), "off-grid horizontal false match is rejected");
+    Equal(false, requests.Any(request => request.X == 586 && request.Y == 366), "off-grid vertical false match is rejected");
 }
 
 static void MaaThoughtLoadOcrExpanderTargetsDisplayedValues()
@@ -3942,15 +5076,123 @@ static void MizukiRejectionCardDetectorIdentifiesPurpleBand()
     var normal = RhodesMizukiRejectionCardDetector.Detect(EncodePng(normalFrame), request);
     Equal(false, normal.IsAffected, "normal white name is not a rejection target even on a purple rarity band");
 
+    using var weakPurpleNoiseFrame = new SKBitmap(1280, 720);
+    weakPurpleNoiseFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(weakPurpleNoiseFrame))
+        canvas.DrawRect(new SKRect(1076, 309, 1087, 332), new SKPaint { Color = new SKColor(158, 92, 190) });
+
+    var weakPurpleNoise = RhodesMizukiRejectionCardDetector.Detect(EncodePng(weakPurpleNoiseFrame), request);
+    Equal(false, weakPurpleNoise.IsAffected, "small purple background contamination is not a rejection target");
+
+    using var shortPurpleNameFrame = new SKBitmap(1280, 720);
+    shortPurpleNameFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(shortPurpleNameFrame))
+    {
+        var paint = new SKPaint { Color = new SKColor(158, 92, 190) };
+        canvas.DrawRect(new SKRect(1080, 314, 1086, 326), paint);
+        canvas.DrawRect(new SKRect(1092, 314, 1098, 326), paint);
+        canvas.DrawRect(new SKRect(1104, 314, 1110, 326), paint);
+        canvas.DrawRect(new SKRect(1116, 314, 1122, 326), paint);
+    }
+
+    var shortPurpleName = RhodesMizukiRejectionCardDetector.Detect(EncodePng(shortPurpleNameFrame), request);
+    Equal(true, shortPurpleName.IsAffected, "short purple name such as Durin is retained below the full ROI ratio threshold");
+
+    using var yellowNameFrame = new SKBitmap(1280, 720);
+    yellowNameFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(yellowNameFrame))
+    {
+        var paint = new SKPaint { Color = new SKColor(255, 210, 40) };
+        canvas.DrawRect(new SKRect(1080, 314, 1088, 326), paint);
+        canvas.DrawRect(new SKRect(1094, 314, 1102, 326), paint);
+        canvas.DrawRect(new SKRect(1108, 314, 1116, 326), paint);
+        canvas.DrawRect(new SKRect(1122, 314, 1130, 326), paint);
+    }
+
+    var yellowName = RhodesMizukiRejectionCardDetector.Detect(EncodePng(yellowNameFrame), request);
+    Equal(true, yellowName.IsEvolution, "yellow operator name is detected as an evolution target");
+
     var marker = RhodesMizukiRejectionCardDetector.CreateTaskResult(
         request,
-        new MaaCandidatePreview("operator", "スポット", "spot", "スポット", 0.99, OperatorId: "spot"),
-        affected);
+        new MaaCandidatePreview(
+            "operator",
+            "予備隊員-狙撃",
+            "reserve_sniper",
+            "予備隊員-狙撃",
+            0.99,
+            OperatorId: "reserve_sniper"),
+        affected,
+        operatorInstance: 2);
     var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "operatorsFull",
         [marker],
         "is3_mizuki");
-    Equal("spot", candidates.Single().OperatorId, "purple card marker becomes a rejection target candidate");
+    Equal("reserve_sniper", candidates.Single().OperatorId, "purple card marker becomes a rejection target candidate");
+    Equal(2, candidates.Single().OperatorInstance, "purple card marker keeps its recruit instance");
+
+    var evolutionMarker = RhodesMizukiRejectionCardDetector.CreateEvolutionTaskResult(
+        request,
+        new MaaCandidatePreview(
+            "operator",
+            "予備隊員-重装",
+            "reserve_defender",
+            "予備隊員-重装",
+            0.99,
+            OperatorId: "reserve_defender"),
+        yellowName,
+        operatorInstance: 2);
+    var evolutionCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [evolutionMarker],
+        "is3_mizuki");
+    Equal("operatorEvolution", evolutionCandidates.Single().FieldId, "yellow card marker becomes an evolution target candidate");
+    Equal("reserve_defender", evolutionCandidates.Single().OperatorId, "evolution candidate keeps its operator id");
+    Equal(2, evolutionCandidates.Single().OperatorInstance, "evolution candidate keeps its recruit instance");
+}
+
+static void MizukiRejectionTargetsExpandReserveInstances()
+{
+    var reserve = new SukiChoiceItem(
+        "operator", "reserve_sniper", "予備隊員-狙撃", "★3 狙撃 / 速射手", "狙撃", "速射手", "", "", 3, 1, false)
+    {
+        IsSelected = true,
+        SelectionCount = 3,
+    };
+    var gummy = new SukiChoiceItem(
+        "operator", "gummy", "グム", "★4 重装 / 庇護衛士", "重装", "庇護衛士", "", "", 4, 2, false)
+    {
+        IsSelected = true,
+    };
+
+    var targets = RhodesRecruitedOperatorTargetCatalog.Build(
+        [reserve, gummy],
+        [
+            new SukiOperatorTargetRef("reserve_sniper", 2),
+            new SukiOperatorTargetRef("gummy", 1),
+        ]);
+
+    Equal(4, targets.Count, "three reserve recruits and one regular operator become four target cards");
+    Equal(
+        "reserve_sniper#1|reserve_sniper#2|reserve_sniper#3|gummy#1",
+        string.Join('|', targets.Select(target => target.TargetKey)),
+        "target card keys retain recruit instances");
+    Equal(
+        "予備隊員-狙撃 1人目|予備隊員-狙撃 2人目|予備隊員-狙撃 3人目|グム",
+        string.Join('|', targets.Select(target => target.Name)),
+        "reserve target labels identify each recruit");
+    Equal(
+        "reserve_sniper#2|gummy#1",
+        string.Join('|', targets.Where(target => target.IsSelected).Select(target => target.TargetKey)),
+        "only explicitly stored recruit instances are selected");
+
+    var legacyTargets = RhodesRecruitedOperatorTargetCatalog.Build(
+        [reserve],
+        operatorTargets: null,
+        legacyOperatorIds: ["reserve_sniper"]);
+    Equal(
+        "reserve_sniper#1",
+        legacyTargets.Single(target => target.IsSelected).TargetKey,
+        "legacy aggregate target migrates to the first recruit instance");
 }
 
 static void RecognitionProbePayloadsTargetRetainedFields()
@@ -4464,8 +5706,18 @@ static void MaaGeneratedResourceBuilder()
     Equal(600, root["RhodesOcrRegion_relic_list_text"]!.AsObject()["roi"]!.AsArray()[3]!.GetValue<int>(), "relic list covers full visible height");
     Equal("OCR", root["RhodesOcrRegion_relic_detail_name"]!.AsObject()["recognition"]!.GetValue<string>(), "single relic detail name recognition");
     Equal(false, root["RhodesOcrRegion_is5_thought_list_text"]!.AsObject()["only_rec"]!.GetValue<bool>(), "thought list enables text detection");
+    Equal(false, root["RhodesOcrRegion_is6_coin_list_text"]!.AsObject()["only_rec"]!.GetValue<bool>(), "held coin list enables multi-line text detection");
+    Equal("OCR", root["RhodesOcrRegion_is6_active_coin_list_text"]!.AsObject()["recognition"]!.GetValue<string>(), "active coin panel name recognition");
+    Equal(620, root["RhodesOcrRegion_is6_active_coin_list_text"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "active coin panel name roi x");
+    Equal(175, root["RhodesOcrRegion_is6_active_coin_list_text"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "active coin panel name roi includes the first row");
+    Equal(470, root["RhodesOcrRegion_is6_active_coin_list_text"]!.AsObject()["roi"]!.AsArray()[2]!.GetValue<int>(), "active coin panel name roi includes direction prose");
     Equal(170, root["RhodesOcrRegion_is5_thought_load_current"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "thought total load roi targets the large numeric value");
     Equal(230, root["RhodesOcrRegion_is5_thought_load_current"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "thought total load roi excludes the heading text");
+    Equal(1055, root["RhodesOcrRegion_is3_ingot_value"]!.AsObject()["roi"]!.AsArray()[0]!.GetValue<int>(), "Mizuki ingot roi includes the complete two-digit value");
+    Equal(75, root["RhodesOcrRegion_is3_ingot_value"]!.AsObject()["roi"]!.AsArray()[2]!.GetValue<int>(), "Mizuki ingot roi leaves OCR margin around the value");
+    Equal(315, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["roi"]!.AsArray()[1]!.GetValue<int>(), "Mizuki rejection roi includes both measured reaction name positions");
+    Equal(105, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["roi"]!.AsArray()[3]!.GetValue<int>(), "Mizuki rejection roi covers heading and reaction name without relying on one vertical layout");
+    Equal(false, root["RhodesOcrRegion_is3_rejection_name"]!.AsObject()["only_rec"]!.GetValue<bool>(), "Mizuki rejection roi returns separate heading and name rows");
     Equal("TemplateMatch", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["recognition"]!.GetValue<string>(), "generated template recognition");
     Equal("run/IngotIcon.png", root["RhodesTemplate_runStatusFull_run_ingot"]!.AsObject()["template"]!.GetValue<string>(), "generated template path");
     var squadBatch = root["RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch"]!.AsObject();
@@ -4584,7 +5836,7 @@ static void MaaGeneratedResourceBuilder()
         .Select(item => item.GetString() ?? "")
         .Where(item => !string.IsNullOrWhiteSpace(item));
     Equal(
-        "age|coin|mizuki|operator|relic|revelation|runStatus|thought",
+        "age|coin|mizuki|operator|relic|revelation|runStatus|sui|thought",
         string.Join("|", manifestCandidateKinds.OrderBy(item => item, StringComparer.Ordinal)),
         "manifest candidate kinds encode retained recognition targets");
     Equal(
@@ -5713,6 +6965,50 @@ static void RunFieldRegistryRetainedFields()
     Equal(true, previews.Single(item => item.Label == "IS特殊値").Value.Contains("時代=溶魂の端緒", StringComparison.Ordinal), "only current campaign special fields are summarized");
     Equal(false, previews.Single(item => item.Label == "IS特殊値").Value.Contains("崩壊値", StringComparison.Ordinal), "other campaign special fields are not summarized");
     Equal(false, previews.Any(item => item.Label is "希望" or "耐久値" or "シールド" or "指揮Lv"), "abandoned run fields are not surfaced");
+
+    var mizukiState = state with
+    {
+        CampaignId = "is3_mizuki",
+        SpecialFields =
+        [
+            new SukiSpecialFieldState("is3_mizuki", "key", "鍵", "number", "2", "数値", "run.key.current", ""),
+            new SukiSpecialFieldState("is3_mizuki", "light", "灯火", "number", "30", "数値", "run.light.current", ""),
+            new SukiSpecialFieldState(
+                "is3_mizuki",
+                "rejectionReaction",
+                "拒絶反応",
+                "operatorEffectAssignment",
+                "造血障害",
+                "対象指定",
+                "is3RejectionFull",
+                "造血障害 / 対象3名",
+                EffectId: "is3_mizuki_selectable_rejectionReaction_mcasci24",
+                OperatorIds: ["kroos", "reserve_defender"],
+                OperatorTargets:
+                [
+                    new SukiOperatorTargetRef("kroos", 1),
+                    new SukiOperatorTargetRef("reserve_defender", 1),
+                    new SukiOperatorTargetRef("reserve_defender", 2)
+                ]),
+            new SukiSpecialFieldState(
+                "is3_mizuki",
+                "operatorEvolution",
+                "進化",
+                "operatorMultiSelect",
+                "2名",
+                "対象指定",
+                "operatorsFull",
+                "対象2名",
+                OperatorIds: ["durin", "reserve_defender"])
+        ]
+    };
+
+    var mizukiHeader = RhodesRunFieldRegistry.BuildHeaderStatusChips(mizukiState).ToArray();
+    Equal("源石錐|鍵|灯火|拒絶反応|等級|分隊", string.Join("|", mizukiHeader.Select(item => item.Label)), "Mizuki header fields are split");
+    Equal("2", mizukiHeader.Single(item => item.Label == "鍵").Value, "Mizuki key header value");
+    Equal("30", mizukiHeader.Single(item => item.Label == "灯火").Value, "Mizuki light header value");
+    Equal("造血障害 / 対象3名", mizukiHeader.Single(item => item.Label == "拒絶反応").Value, "Mizuki rejection header value");
+    Equal(false, mizukiHeader.Any(item => item.Label == "IS特殊値"), "Mizuki special values are not cramped into one header");
 }
 
 static void RunCatalogLoadsChoices()
@@ -5803,10 +7099,65 @@ static void RunCatalogLoadsChoices()
         Equal("is4RevelationFull", is4SpecialFields.Single(field => field.FieldId == "revelation").ProfileId, "is4 revelation profile");
         var is6SpecialFields = (catalog.Current.SpecialFields ?? []).Where(field => field.CampaignId == "is6_sui").ToArray();
         Equal("is6CoinsFull", is6SpecialFields.Single(field => field.FieldId == "coins").ProfileId, "is6 coins profile");
+        var seasonalHours = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "seasonalHours");
+        var dogPainting = seasonalHours.Single(option => option.Id == "is6_sui_selectable_seasonalHours_is6sst11_meiryou");
+        Equal("is6sst11", dogPainting.ParentKey, "seasonal hour parent key");
+        Equal("戌絵", dogPainting.ParentName, "seasonal hour parent name");
+        Equal("meiryou", dogPainting.VariantRank, "seasonal hour variant rank");
+        Equal("明瞭", dogPainting.VariantLabel, "seasonal hour variant label");
     }
     finally
     {
         Directory.Delete(stableDirectory, true);
+    }
+}
+
+static void RunCatalogPreservesSuiCoinEntries()
+{
+    var directory = Path.Combine(Path.GetTempPath(), "rhodes-suki-tests", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var statePath = Path.Combine(directory, "current-state.json");
+        File.WriteAllText(
+            statePath,
+            """
+            {
+              "run": {
+                "campaignId": "is6_sui",
+                "special": {
+                  "is6_sui": {
+                    "ticket": 4,
+                    "activeCoins": [
+                      { "coinId": "coin_active", "statusId": "status_active", "count": 1 }
+                    ],
+                    "coins": [
+                      { "coinId": "coin_owned", "statusId": "status_a", "count": 2 },
+                      { "coinId": "coin_owned", "statusId": "status_b", "count": 1 }
+                    ]
+                  }
+                }
+              },
+              "operators": [],
+              "relics": []
+            }
+            """);
+
+        var catalog = RhodesRunCatalog.LoadDefault(RhodesRunCatalog.ResolveDataRoot(), statePath);
+        var fields = catalog.Current.SpecialFields!
+            .Where(field => field.CampaignId == "is6_sui")
+            .ToDictionary(field => field.FieldId, StringComparer.Ordinal);
+
+        Equal("4", fields["ticket"].Value, "Sui ticket value");
+        Equal(1, fields["activeCoins"].CoinEntries!.Count, "active coin entry count");
+        Equal("status_active", fields["activeCoins"].CoinEntries![0].StatusId, "active coin status");
+        Equal(2, fields["coins"].CoinEntries!.Count, "owned coin entry count");
+        Equal("coin_owned|status_a|2", $"{fields["coins"].CoinEntries![0].CoinId}|{fields["coins"].CoinEntries![0].StatusId}|{fields["coins"].CoinEntries![0].Count}", "owned coin first entry");
+        Equal("coin_owned|status_b|1", $"{fields["coins"].CoinEntries![1].CoinId}|{fields["coins"].CoinEntries![1].StatusId}|{fields["coins"].CoinEntries![1].Count}", "owned coin second entry");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
     }
 }
 
@@ -5832,6 +7183,19 @@ static void RunCatalogSarkazManualOptions()
     Equal("▲3", thought.ThoughtLoad, "thought detail load");
     Equal(6, thought.Price, "thought detail price");
     Equal(true, File.Exists(thought.ImagePath), "thought detail image path");
+}
+
+static void RunCatalogSuiSeasonalHourDifficultyVariants()
+{
+    Equal("mourou", RhodesRunCatalog.ResolveSuiSeasonalHourVariantRank(1), "grade 1 seasonal hour rank");
+    Equal("mourou", RhodesRunCatalog.ResolveSuiSeasonalHourVariantRank(5), "grade 5 seasonal hour rank");
+    Equal("meiryou", RhodesRunCatalog.ResolveSuiSeasonalHourVariantRank(6), "grade 6 seasonal hour rank");
+    Equal("meiryou", RhodesRunCatalog.ResolveSuiSeasonalHourVariantRank(11), "grade 11 seasonal hour rank");
+    Equal("nyuukotsu", RhodesRunCatalog.ResolveSuiSeasonalHourVariantRank(12), "grade 12 seasonal hour rank");
+    Equal("nyuukotsu", RhodesRunCatalog.ResolveSuiSeasonalHourVariantRank(18), "grade 18 seasonal hour rank");
+    Equal("朦朧", RhodesRunCatalog.ResolveSuiSeasonalHourVariantLabel(1), "grade 1 seasonal hour label");
+    Equal("明瞭", RhodesRunCatalog.ResolveSuiSeasonalHourVariantLabel(6), "grade 6 seasonal hour label");
+    Equal("入骨", RhodesRunCatalog.ResolveSuiSeasonalHourVariantLabel(18), "grade 18 seasonal hour label");
 }
 
 static void RunCatalogPhantomManualOptions()
@@ -5885,6 +7249,90 @@ static void RunCatalogMizukiRejectionIcons()
         "MizukiRejection_mcasci8.png",
         Path.GetFileName(options.Single(option => option.Name == "造血障害").ImagePath),
         "Mizuki rejection icon matches its effect id");
+}
+
+static void RunCatalogMizukiRejectionTargetInstances()
+{
+    var tempRoot = Directory.CreateTempSubdirectory("rhodes-mizuki-targets-").FullName;
+    try
+    {
+        var statePath = Path.Combine(tempRoot, "current-state.json");
+        File.WriteAllText(
+            statePath,
+            """
+            {
+              "run": {
+                "campaignId": "is3_mizuki",
+                "special": {
+                  "is3_mizuki": {
+                    "rejectionReaction": {
+                      "effectId": "is3_mizuki_selectable_rejectionReaction_mcasci24",
+                      "operatorIds": ["reserve_sniper"],
+                      "operatorTargets": [
+                        { "operatorId": "reserve_sniper", "instance": 2 }
+                      ]
+                    }
+                  }
+                }
+              },
+              "operators": ["reserve_sniper"],
+              "operatorCounts": { "reserve_sniper": 3 }
+            }
+            """);
+
+        var field = RhodesRunCatalog.LoadDefault(statePathOverride: statePath)
+            .Current.SpecialFields!
+            .Single(item => item.CampaignId == "is3_mizuki" && item.FieldId == "rejectionReaction");
+        Equal("reserve_sniper#2", field.OperatorTargets!.Single().TargetKey, "stored recruit instance restored");
+        Equal("is3_mizuki_selectable_rejectionReaction_mcasci24", field.EffectId, "stored rejection effect restored");
+    }
+    finally
+    {
+        Directory.Delete(tempRoot, true);
+    }
+}
+
+static void MizukiOperatorPresentationMarksTargets()
+{
+    var operators = new[]
+    {
+        new SukiChoiceItem("operator", "kroos", "クルース", "★3 狙撃 / 速射手", "狙撃", "速射手", "", "", 3, 1, false),
+        new SukiChoiceItem("operator", "fang", "フェン", "★3 先鋒 / 先駆兵", "先鋒", "先駆兵", "", "", 3, 2, false),
+    };
+    var fields = new[]
+    {
+        new SukiSpecialFieldState(
+            "is3_mizuki",
+            "rejectionReaction",
+            "拒絶反応",
+            "selectableEffect",
+            "造血障害",
+            "rejectionReaction",
+            "is3RejectionFull",
+            "",
+            "is3_mizuki_selectable_rejectionReaction_mcasci25",
+            OperatorIds: ["kroos"]),
+        new SukiSpecialFieldState(
+            "is3_mizuki",
+            "operatorEvolution",
+            "進化",
+            "operatorMultiSelect",
+            "1名",
+            "対象者",
+            "operatorsFull",
+            "対象1名",
+            OperatorIds: ["fang"]),
+    };
+
+    RhodesMizukiOperatorPresentation.Apply("is3_mizuki", fields, operators);
+    Equal(true, operators[0].IsRejectionReactionTarget, "Mizuki rejection target is marked");
+    Equal(false, operators[1].IsRejectionReactionTarget, "unaffected Mizuki operator is not marked");
+    Equal(false, operators[0].IsEvolutionTarget, "non-evolution Mizuki operator is not marked");
+    Equal(true, operators[1].IsEvolutionTarget, "Mizuki evolution target is marked");
+
+    RhodesMizukiOperatorPresentation.Apply("is5_sarkaz", fields, operators);
+    Equal(false, operators[0].IsRejectionReactionTarget, "same stored field is ignored outside Mizuki");
+    Equal(false, operators[1].IsEvolutionTarget, "same evolution field is ignored outside Mizuki");
 }
 
 static void RunCatalogMizukiHordeCallIcons()
@@ -5941,6 +7389,56 @@ static void RunCatalogSarkazBossSelections()
     Equal(2, floor5.Options.Count(option => !string.IsNullOrWhiteSpace(option.Id)), "floor 5 boss option count");
     Equal("is5_f5_audience", floor5.SelectedOption?.Id, "floor 5 saved selection");
     Equal("「黒き王冠の主」テレシス", floor5.SelectedOption?.BossName, "floor 5 boss name");
+}
+
+static void RunCatalogSuiEnd5BossSelections()
+{
+    var withoutIzayoi = RhodesBossSelectionCatalog.LoadSections(
+        "is6_sui",
+        null,
+        new HashSet<string>(StringComparer.Ordinal));
+    Equal(
+        "floor3BossId|floor5BossId",
+        string.Join('|', withoutIzayoi.Select(section => section.Field)),
+        "Sui gated boss sections hidden without route relics");
+
+    var withCloudAndLacquer = RhodesBossSelectionCatalog.LoadSections(
+        "is6_sui",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+        {
+            ["floor6BossId"] = ["is6_route_end3_black_white"],
+        },
+        new HashSet<string>(new[] { "is6_sui_relic_215" }, StringComparer.Ordinal));
+    var floor6 = withCloudAndLacquer.Single(section => section.Field == "floor6BossId");
+
+    Equal(1, floor6.Options.Count(option => !string.IsNullOrWhiteSpace(option.Id)), "Sui floor 6 boss option count");
+    Equal(true, floor6.Helper.Contains("雲と漆", StringComparison.Ordinal), "Sui floor 6 gate guidance");
+    Equal("is6_route_end3_black_white", floor6.SelectedOption?.Id, "Sui floor 6 saved selection");
+    Equal("歳を謀る者", floor6.SelectedOption?.StageName, "Sui floor 6 route stage");
+    Equal("「望」", floor6.SelectedOption?.BossName, "Sui floor 6 route boss");
+    Equal(true, File.Exists(floor6.SelectedOption?.ImagePath), "Sui floor 6 boss image path");
+
+    var withIzayoi = RhodesBossSelectionCatalog.LoadSections(
+        "is6_sui",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+        {
+            ["end5BossVariantId"] = ["is6_end5_zhivian_beasts"],
+        },
+        new HashSet<string>(new[] { "is6_sui_relic_220" }, StringComparer.Ordinal));
+    var end5 = withIzayoi.Single(section => section.Field == "end5BossVariantId");
+
+    Equal(7, end5.Options.Count(option => !string.IsNullOrWhiteSpace(option.Id)), "Sui END5 route pattern count");
+    Equal(
+        7,
+        end5.Options.Count(option => !string.IsNullOrWhiteSpace(option.Id)
+            && option.ImagePath.EndsWith(Path.Combine("assets", "bosses", "wikiru", "img", "SQ.jpg"), StringComparison.OrdinalIgnoreCase)),
+        "Sui END5 routes share Shuo shell image");
+    Equal(true, end5.Helper.Contains("イザヨウ", StringComparison.Ordinal), "Sui END5 gate guidance");
+    Equal("is6_end5_zhivian_beasts", end5.SelectedOption?.Id, "Sui END5 saved selection");
+    Equal("止変（群獣を役す）", end5.SelectedOption?.StageName, "Sui END5 branch stage");
+    Equal("易＋「歳」＋「望」", end5.SelectedOption?.BossName, "Sui END5 branch bosses");
+    Equal("選択条件: 不赦＋不息", end5.SelectedOption?.RequiredNote, "Sui END5 branch condition note");
+    Equal(true, end5.SelectedOption?.DisplayName.Contains("不赦＋不息", StringComparison.Ordinal) == true, "Sui END5 picker exposes condition note");
 }
 
 static void RunStateStoreBossSelections()
@@ -6274,6 +7772,51 @@ static void ChoicePersistence()
     Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "abandoned run value pruned");
 }
 
+static void ReserveOperatorCounts()
+{
+    var reserve = new SukiChoiceItem(
+        "operator", "reserve_sniper", "予備隊員-狙撃", "★3 狙撃 / 速射手", "狙撃", "速射手", "", "", 3, 1, false)
+    {
+        IsSelected = true,
+        SelectionCount = 3,
+    };
+    var gummy = new SukiChoiceItem(
+        "operator", "gummy", "グム", "★4 重装 / 庇護衛士", "重装", "庇護衛士", "", "", 4, 2, false)
+    {
+        IsSelected = true,
+        SelectionCount = 4,
+    };
+
+    Equal(true, reserve.SupportsMultipleCount, "reserve supports multiple count");
+    Equal(false, gummy.SupportsMultipleCount, "regular operator remains single count");
+    Equal(3, reserve.EffectiveSelectionCount, "reserve effective count");
+    Equal(1, gummy.SelectionCount, "regular operator count remains one");
+
+    var state = JsonNode.Parse(
+        """
+        {
+          "version": 1,
+          "run": { "campaignId": "is5_sarkaz" },
+          "operators": [],
+          "relics": []
+        }
+        """)!.AsObject();
+    var updated = RhodesRunStateStore.ApplyChoices(
+        state,
+        [reserve, gummy],
+        [],
+        new SukiChoicePersistenceOptions(false, false, false, false, false, false, 2, 2),
+        DateTimeOffset.Parse("2026-07-23T00:00:00Z"));
+
+    Equal(2, updated["operators"]!.AsArray().Count, "operator ids stay unique");
+    var counts = updated["operatorCounts"]!.AsObject();
+    Equal(3, counts["reserve_sniper"]!.GetValue<int>(), "reserve count persisted separately");
+    Equal(false, counts.ContainsKey("gummy"), "regular operator count is not persisted");
+
+    reserve.IsSelected = false;
+    Equal(1, reserve.SelectionCount, "deselection resets reserve count");
+}
+
 static void StateApiReplacement()
 {
     var tempDirectory = Directory.CreateTempSubdirectory("rhodes-suki-state-api-").FullName;
@@ -6289,7 +7832,8 @@ static void StateApiReplacement()
                 "maxHope": 12,
                 "special": { "is5_sarkaz": { "idea": 4 } }
               },
-              "operators": ["gummy"],
+              "operators": ["gummy", "reserve_sniper"],
+              "operatorCounts": { "reserve_sniper": 3, "reserve_caster": 5, "gummy": 8 },
               "relics": []
             }
             """,
@@ -6304,6 +7848,10 @@ static void StateApiReplacement()
         Equal(null, typeof(SukiRunStateSnapshot).GetProperty("CommandLevel"), "command level snapshot property removed");
         Equal(4, catalog.Current.Idea, "api idea");
         Equal(true, catalog.Current.SelectedOperatorIds.Contains("gummy"), "api selected operator");
+        Equal(3, catalog.Current.OperatorCounts["reserve_sniper"], "api reserve count");
+        Equal(3, catalog.Operators.Single(item => item.Id == "reserve_sniper").SelectionCount, "reserve count restored into choice");
+        Equal(false, catalog.Current.OperatorCounts.ContainsKey("reserve_caster"), "unselected reserve count is discarded");
+        Equal(false, catalog.Current.OperatorCounts.ContainsKey("gummy"), "regular operator count ignored by choice model");
         var saved = JsonNode.Parse(File.ReadAllText(statePath))!.AsObject()["run"]!.AsObject();
         Equal(false, saved.ContainsKey("hope"), "replacement prunes stale hope");
         Equal(false, saved.ContainsKey("maxHope"), "replacement prunes stale max hope");
@@ -6550,7 +8098,9 @@ static void StateApiSukiPreferencesApply()
             [
                 new SukiOverlayLayoutState("status", true, 40, 30, 1200, 120, 2),
                 new SukiOverlayLayoutState("operators", true, 1460, 300, 420, 620, 5),
-            ]),
+            ],
+            BackgroundTransparency: 35,
+            ShowPartTitles: false),
         "maa-ocr"))!.AsObject();
 
     Equal("tournament", updated["mode"]!.GetValue<string>(), "mode tournament");
@@ -6564,6 +8114,8 @@ static void StateApiSukiPreferencesApply()
     Equal(30, preferences["horizontalOperatorScrollSpeed"]!.GetValue<int>(), "operator scroll speed");
     Equal(true, preferences["sukiOutputSeparateWindow"]!.GetValue<bool>(), "separate window");
     Equal(false, preferences["sukiOutputTransparentBackground"]!.GetValue<bool>(), "transparent background");
+    Equal(35, preferences["sukiOutputBackgroundTransparency"]!.GetValue<int>(), "background transparency");
+    Equal(false, preferences["sukiOutputShowPartTitles"]!.GetValue<bool>(), "part title visibility");
     Equal(3, preferences["sukiOutputParts"]!.AsArray().Count, "output parts count");
     Equal("operators", preferences["sukiOutputParts"]!.AsArray()[0]!.AsObject()["id"]!.GetValue<string>(), "first output part");
     Equal(6, preferences["sukiOverlayLayout"]!.AsArray().Count, "overlay layout count");
@@ -7009,6 +8561,46 @@ static void CandidateChoiceApply()
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "choice updatedAt");
 }
 
+static void CandidateReserveOperatorCountApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": { "campaignId": "is5_sarkaz" },
+          "operators": [],
+          "operatorCounts": { "reserve_caster": 5 }
+        }
+        """)!.AsObject();
+
+    var counted = new MaaCandidatePreview(
+        "operator",
+        "予備隊員-術師",
+        "reserve_caster",
+        "予備隊員-術師",
+        0.92,
+        OperatorId: "reserve_caster",
+        Count: 2);
+    RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [counted],
+        DateTimeOffset.Parse("2026-07-23T00:00:00Z"));
+
+    Equal("reserve_caster", state["operators"]!.AsArray().Single()!.GetValue<string>(), "reserve operator selected");
+    Equal(2, state["operatorCounts"]!.AsObject()["reserve_caster"]!.GetValue<int>(), "recognized reserve count persisted");
+
+    RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [counted with { Count = 1 }],
+        DateTimeOffset.Parse("2026-07-23T00:01:00Z"));
+    Equal(false, state["operatorCounts"]!.AsObject().ContainsKey("reserve_caster"), "canonical one-person count is omitted");
+
+    RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [new MaaCandidatePreview("operator", "グム", "gummy", "グム", 0.92, OperatorId: "gummy", Count: 3)],
+        DateTimeOffset.Parse("2026-07-23T00:02:00Z"));
+    Equal(false, state["operatorCounts"]!.AsObject().ContainsKey("gummy"), "ordinary operators ignore candidate count");
+}
+
 static void CandidateRelicUsageApply()
 {
     var state = JsonNode.Parse(
@@ -7188,6 +8780,201 @@ static void CandidateMizukiSpecialApply()
         "Mizuki rejection targets restricted to recruited operators");
 }
 
+static void CandidateMizukiRejectionEffectOnlyPreservesTargets()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is3_mizuki",
+            "special": {
+              "is3_mizuki": {
+                "rejectionReaction": {
+                  "effectId": "is3_mizuki_selectable_rejectionReaction_mcasci22",
+                  "operatorIds": ["exusiai2", "hoshiguma2"]
+                }
+              }
+            }
+          },
+          "operators": ["exusiai2", "hoshiguma2"]
+        }
+        """)!.AsObject();
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [new MaaCandidatePreview(
+            "mizuki",
+            "退行と異変",
+            "is3_mizuki_selectable_rejectionReaction_mcasci22",
+            "退行と異変",
+            0.94,
+            CampaignId: "is3_mizuki",
+            FieldId: "rejectionReaction",
+            EffectId: "is3_mizuki_selectable_rejectionReaction_mcasci22")],
+        DateTimeOffset.Parse("2026-07-23T03:00:00Z"));
+
+    Equal(1, summary.AppliedCount, "Mizuki rejection effect-only candidate applied");
+    var rejection = state["run"]!["special"]!["is3_mizuki"]!["rejectionReaction"]!.AsObject();
+    Equal(
+        "exusiai2|hoshiguma2",
+        string.Join('|', rejection["operatorIds"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "effect-only refresh preserves previously detected rejection targets");
+}
+
+static void CandidateSuiSeasonalHoursApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is6_sui",
+            "special": {
+              "is6_sui": {
+                "seasonalHours": ["stale-seasonal-hour"],
+                "seasonalHourTargets": ["重装"]
+              }
+            }
+          }
+        }
+        """)!.AsObject();
+    var candidates = new[]
+    {
+        new MaaCandidatePreview(
+            "sui",
+            "巳農（醒覚）",
+            "is6_sui_selectable_seasonalHours_is6sst6_awakening",
+            "巳農 醒覚 配置コスト-6",
+            0.96,
+            CampaignId: "is6_sui",
+            FieldId: "seasonalHours",
+            EffectId: "is6_sui_selectable_seasonalHours_is6sst6_awakening"),
+        new MaaCandidatePreview(
+            "sui",
+            "戌絵（明瞭）",
+            "is6_sui_selectable_seasonalHours_is6sst11_meiryou",
+            "戌絵 明瞭 先鋒 医療",
+            0.94,
+            CampaignId: "is6_sui",
+            FieldId: "seasonalHours",
+            EffectId: "is6_sui_selectable_seasonalHours_is6sst11_meiryou"),
+        new MaaCandidatePreview(
+            "sui",
+            "先鋒 (戌絵対象職分)",
+            "先鋒",
+            "戌絵 明瞭 先鋒 医療",
+            0.93,
+            CampaignId: "is6_sui",
+            FieldId: "seasonalHourTargets",
+            EffectId: "先鋒"),
+        new MaaCandidatePreview(
+            "sui",
+            "医療 (戌絵対象職分)",
+            "医療",
+            "戌絵 明瞭 先鋒 医療",
+            0.93,
+            CampaignId: "is6_sui",
+            FieldId: "seasonalHourTargets",
+            EffectId: "医療"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-23T00:00:00Z"));
+
+    Equal(4, summary.AppliedCount, "Sui seasonal hour and target profession candidates applied");
+    Equal(
+        "is6_sui_selectable_seasonalHours_is6sst6_awakening|is6_sui_selectable_seasonalHours_is6sst11_meiryou",
+        string.Join('|', state["run"]!["special"]!["is6_sui"]!["seasonalHours"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "Sui seasonal hour selection replaced");
+    Equal(
+        "先鋒|医療",
+        string.Join('|', state["run"]!["special"]!["is6_sui"]!["seasonalHourTargets"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "Dog Painting target professions replaced");
+}
+
+static void CandidateSuiSeasonalHoursFollowDifficulty()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is6_sui",
+            "difficulty": 5,
+            "special": {
+              "is6_sui": {
+                "seasonalHours": [
+                  "is6_sui_selectable_seasonalHours_is6sst11_mourou",
+                  "is6_sui_selectable_seasonalHours_is6sst6_awakening"
+                ]
+              }
+            }
+          }
+        }
+        """)!.AsObject();
+
+    var summary = RhodesRecognitionCandidateApplier.ApplyRunStatus(
+        state,
+        [new MaaCandidatePreview("runStatus", "等級", "12", "12", 1.0, Field: "difficulty", CampaignId: "is6_sui")],
+        DateTimeOffset.Parse("2026-07-23T00:05:00Z"));
+
+    Equal(1, summary.AppliedCount, "Sui difficulty candidate applied");
+    Equal(
+        "is6_sui_selectable_seasonalHours_is6sst11_nyuukotsu|is6_sui_selectable_seasonalHours_is6sst6_awakening",
+        string.Join('|', state["run"]!["special"]!["is6_sui"]!["seasonalHours"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "normal seasonal hours follow difficulty while awakening remains explicit");
+}
+
+static void CandidateSuiSupportMartialApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is6_sui",
+            "special": {
+              "is6_sui": {
+                "supportMartial": ["古い効果"]
+              }
+            }
+          }
+        }
+        """)!.AsObject();
+    var candidates = new[]
+    {
+        RhodesRecognitionCandidateApplier.CreateNoSuiSupportMartialCandidate(),
+        new MaaCandidatePreview(
+            "sui",
+            "配置時に攻撃速度+20 (支武・手動入力)",
+            "配置時に攻撃速度+20",
+            "手動入力",
+            1.0,
+            CampaignId: "is6_sui",
+            FieldId: "supportMartial",
+            EffectId: "配置時に攻撃速度+20"),
+        new MaaCandidatePreview(
+            "sui",
+            "初回配置コスト-3 (支武・手動入力)",
+            "初回配置コスト-3",
+            "手動入力",
+            1.0,
+            CampaignId: "is6_sui",
+            FieldId: "supportMartial",
+            EffectId: "初回配置コスト-3"),
+    };
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        candidates,
+        DateTimeOffset.Parse("2026-07-23T00:10:00Z"));
+
+    Equal(3, summary.AppliedCount, "Sui support martial candidates applied");
+    Equal(
+        "配置時に攻撃速度+20|初回配置コスト-3",
+        string.Join('|', state["run"]!["special"]!["is6_sui"]!["supportMartial"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "Sui support martial effects replaced");
+}
+
 static void CandidateMizukiRejectionTargetOnlyApply()
 {
     var state = JsonNode.Parse(
@@ -7223,6 +9010,127 @@ static void CandidateMizukiRejectionTargetOnlyApply()
         string.Join('|', rejection["operatorIds"]!.AsArray().Select(item => item!.GetValue<string>())),
         "target-only scan updates the existing rejection reaction");
     Equal(true, state["operators"]!.AsArray().Any(item => item!.GetValue<string>() == "spot"), "newly recognized target is recruited in the same apply batch");
+}
+
+static void CandidateMizukiReserveRejectionTargetApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is3_mizuki",
+            "special": {
+              "is3_mizuki": {
+                "rejectionReaction": {
+                  "effectId": "is3_mizuki_selectable_rejectionReaction_mcasci24",
+                  "operatorIds": []
+                }
+              }
+            }
+          },
+          "operators": ["reserve_sniper"],
+          "operatorCounts": { "reserve_sniper": 3 }
+        }
+        """)!.AsObject();
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [
+            new MaaCandidatePreview(
+                "mizuki",
+                "予備隊員-狙撃 2人目",
+                "reserve_sniper",
+                "purple-band",
+                0.96,
+                OperatorId: "reserve_sniper",
+                CampaignId: "is3_mizuki",
+                RecognitionKey: "maa-local:mizuki:rejection-card:reserve_sniper:2",
+                FieldId: "rejectionReaction",
+                OperatorInstance: 2),
+        ],
+        DateTimeOffset.Parse("2026-07-23T08:00:00Z"));
+
+    Equal(1, summary.AppliedCount, "individual reserve target candidate applied");
+    var rejection = state["run"]!["special"]!["is3_mizuki"]!["rejectionReaction"]!.AsObject();
+    Equal(
+        "reserve_sniper",
+        string.Join('|', rejection["operatorIds"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "legacy aggregate operator ids stay compatible");
+    var target = rejection["operatorTargets"]!.AsArray().Single()!.AsObject();
+    Equal("reserve_sniper", target["operatorId"]!.GetValue<string>(), "target operator id");
+    Equal(2, target["instance"]!.GetValue<int>(), "target recruit instance");
+
+    var clearSummary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [RhodesRecognitionCandidateApplier.CreateNoMizukiRejectionTargetCandidate()],
+        DateTimeOffset.Parse("2026-07-23T08:01:00Z"));
+    Equal(1, clearSummary.AppliedCount, "explicit empty target selection applied");
+    Equal(0, rejection["operatorIds"]!.AsArray().Count, "aggregate targets cleared");
+    Equal(0, rejection["operatorTargets"]!.AsArray().Count, "individual targets cleared");
+}
+
+static void CandidateMizukiEvolutionTargetApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is3_mizuki"
+          },
+          "operators": ["durin", "reserve_defender"],
+          "operatorCounts": { "reserve_defender": 2 }
+        }
+        """)!.AsObject();
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [
+            new MaaCandidatePreview(
+                "mizuki",
+                "ドゥリン",
+                "durin",
+                "yellow-name",
+                0.96,
+                OperatorId: "durin",
+                CampaignId: "is3_mizuki",
+                RecognitionKey: "maa-local:mizuki:evolution-card:durin:1",
+                FieldId: "operatorEvolution",
+                OperatorInstance: 1),
+            new MaaCandidatePreview(
+                "mizuki",
+                "予備隊員-重装 2人目",
+                "reserve_defender",
+                "yellow-name",
+                0.95,
+                OperatorId: "reserve_defender",
+                CampaignId: "is3_mizuki",
+                RecognitionKey: "maa-local:mizuki:evolution-card:reserve_defender:2",
+                FieldId: "operatorEvolution",
+                OperatorInstance: 2),
+        ],
+        DateTimeOffset.Parse("2026-07-23T09:00:00Z"));
+
+    Equal(2, summary.AppliedCount, "individual evolution target candidates applied");
+    var evolution = state["run"]!["special"]!["is3_mizuki"]!["operatorEvolution"]!.AsObject();
+    Equal(
+        "durin|reserve_defender",
+        string.Join('|', evolution["operatorIds"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "evolution aggregate operator ids persisted");
+    Equal(
+        "durin#1|reserve_defender#2",
+        string.Join('|', evolution["operatorTargets"]!.AsArray().Select(item =>
+        {
+            var target = item!.AsObject();
+            return $"{target["operatorId"]!.GetValue<string>()}#{target["instance"]!.GetValue<int>()}";
+        })),
+        "evolution recruit instances persisted");
+
+    var clearSummary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [RhodesRecognitionCandidateApplier.CreateNoMizukiEvolutionTargetCandidate()],
+        DateTimeOffset.Parse("2026-07-23T09:01:00Z"));
+    Equal(1, clearSummary.AppliedCount, "explicit empty evolution target selection applied");
+    Equal(false, state["run"]!["special"]!["is3_mizuki"]!.AsObject().ContainsKey("operatorEvolution"), "evolution targets cleared");
 }
 
 static void CandidateOtherSpecialApply()
@@ -7282,6 +9190,47 @@ static void CandidateOtherSpecialApply()
     Equal(2, activeCoins[0]!.AsObject()["count"]!.GetValue<int>(), "active coin count");
     Equal("status_a", activeCoins[0]!.AsObject()["statusId"]!.GetValue<string>(), "active coin status");
     Equal(false, activeCoins[0]!.AsObject().ContainsKey("face"), "active coin has no face");
+}
+
+static void CandidateManualSuiValuesApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is6_sui",
+            "special": {
+              "is6_sui": {
+                "ticket": 1,
+                "coins": [{ "coinId": "stale_coin", "count": 9 }],
+                "activeCoins": [{ "coinId": "stale_active", "count": 1 }]
+              }
+            }
+          }
+        }
+        """)!.AsObject();
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [
+            new MaaCandidatePreview("runStatus", "遊覧券 (手動入力)", "7", "手動入力", 1.0, Field: "ticket", CampaignId: "is6_sui"),
+            RhodesRecognitionCandidateApplier.CreateNoSuiCoinCandidate("activeCoins"),
+            RhodesRecognitionCandidateApplier.CreateNoSuiCoinCandidate("coins"),
+            new MaaCandidatePreview("coin", "保有銭A", "fallback", "通宝A", 1.0, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", StatusId: "status_a", Count: 2),
+            new MaaCandidatePreview("coin", "保有銭A", "fallback", "通宝A", 1.0, CampaignId: "is6_sui", FieldId: "coins", CoinId: "coin_a", StatusId: "status_b", Count: 1),
+        ],
+        DateTimeOffset.Parse("2026-07-22T00:00:00Z"));
+
+    Equal(5, summary.AppliedCount, "manual Sui values apply count");
+    var sui = state["run"]!["special"]!["is6_sui"]!.AsObject();
+    Equal(7, sui["ticket"]!.GetValue<int>(), "manual ticket");
+    Equal(0, sui["activeCoins"]!.AsArray().Count, "manual active coins can be cleared");
+    var coins = sui["coins"]!.AsArray();
+    Equal(2, coins.Count, "same coin can keep separate statuses");
+    Equal(
+        "status_a:2|status_b:1",
+        string.Join('|', coins.Select(item => $"{item!["statusId"]!.GetValue<string>()}:{item["count"]!.GetValue<int>()}")),
+        "coin status and count");
 }
 
 static string NormalizeLineEndings(string value)

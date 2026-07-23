@@ -106,6 +106,52 @@
       }
     },
     {
+      "id": "run.sui_seasonal_hour_detail",
+      "screenId": "sui-seasonal-hour-detail",
+      "label": "歳時詳細",
+      "profileIds": [
+        "is6SeasonalHours"
+      ],
+      "recognition": {
+        "type": "OCR",
+        "roi": [
+          383,
+          80,
+          563,
+          500
+        ],
+        "scale": 3,
+        "expected": [
+          "子武",
+          "丑謀",
+          "寅詩",
+          "卯律",
+          "辰龍",
+          "巳農",
+          "午商",
+          "未建",
+          "申鋳",
+          "酉療",
+          "戌絵",
+          "亥食",
+          "醒覚",
+          "先鋒",
+          "前衛",
+          "重装",
+          "狙撃",
+          "術師",
+          "医療",
+          "補助",
+          "特殊"
+        ],
+        "onlyRec": false,
+        "match": "any",
+        "normalize": [
+          "remove_spaces"
+        ]
+      }
+    },
+    {
       "id": "run.mizuki_rejection_detail",
       "screenId": "mizuki-rejection-detail",
       "label": "ミヅキ 拒絶反応詳細",
@@ -149,7 +195,8 @@
         "is3RejectionFull",
         "is6BaseFull",
         "is6ActiveCoinsFull",
-        "is6CoinsFull"
+        "is6CoinsFull",
+        "is6SeasonalHours"
       ],
       "recognition": {
         "type": "OCR",
@@ -430,6 +477,34 @@
       "scale": 1
     },
     {
+      "id": "is6.active_coin_list_text",
+      "profileIds": [
+        "is6ActiveCoinsFull"
+      ],
+      "roi": [
+        620,
+        175,
+        470,
+        440
+      ],
+      "onlyRec": false,
+      "scale": 2
+    },
+    {
+      "id": "is6.seasonal_hour_detail_text",
+      "profileIds": [
+        "is6SeasonalHours"
+      ],
+      "roi": [
+        383,
+        80,
+        563,
+        500
+      ],
+      "onlyRec": false,
+      "scale": 3
+    },
+    {
       "id": "is6.coin_list_text",
       "profileIds": [
         "is6CoinsFull"
@@ -440,6 +515,7 @@
         1040,
         500
       ],
+      "onlyRec": false,
       "scale": 2
     },
     {
@@ -631,9 +707,9 @@
         "is3KeyFull"
       ],
       "roi": [
-        1065,
+        1055,
         8,
-        55,
+        75,
         45
       ],
       "scale": 6,
@@ -673,9 +749,9 @@
         "is6BaseFull"
       ],
       "roi": [
-        1210,
+        1223,
         8,
-        55,
+        40,
         45
       ],
       "scale": 6,
@@ -716,12 +792,12 @@
       ],
       "roi": [
         790,
-        345,
-        260,
-        50
+        315,
+        300,
+        105
       ],
       "scale": 4,
-      "onlyRec": true,
+      "onlyRec": false,
       "ocrReplace": [
         [
           "異空",

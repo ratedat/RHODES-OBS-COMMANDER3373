@@ -8,7 +8,11 @@ import {
   updateCoinEntryStatus,
 } from "../app/control-actions.js";
 import { mergeEffectStackEntries } from "../app/domain/special-loadouts.js";
-import { formatCoinLoadoutValue } from "../app/domain/special-display.js";
+import {
+  formatCoinLoadoutValue,
+  formatSpecialValue,
+  getSelectedSpecialEffectsForField,
+} from "../app/domain/special-display.js";
 import { mergeCoinEntries } from "../app/domain/special-values.js";
 import { renderSpecialEffectSelectOptions } from "../app/components/special-controls.js";
 
@@ -90,6 +94,61 @@ test("select labels include group context for same named future effects", () => 
   assert.match(rendered, />特殊 \/ 同名<\/option>/);
 });
 
+test("coin overlay separates rolled and held effects while marking waiting coins", () => {
+  const mixedCoin = {
+    id: "coin-mixed",
+    name: "複合通宝",
+    effect: "銭匣内にある場合、指揮経験値+30%。振り出されると、敵の攻撃力+30%",
+  };
+  const waitingCoin = {
+    id: "coin-waiting",
+    name: "待機通宝",
+    effect: "振り出されると、味方の攻撃速度+20",
+  };
+  const selectableEffectMap = new Map([
+    [mixedCoin.id, mixedCoin],
+    [waitingCoin.id, waitingCoin],
+  ]);
+  const context = {
+    campaignId: "is6_sui",
+    selectableEffectMap,
+    selectableEffectSource: [...selectableEffectMap.values()],
+  };
+
+  const active = getSelectedSpecialEffectsForField({
+    id: "activeCoins",
+    label: "有効銭",
+    type: "coinLoadout",
+    overlayEffectScope: "active",
+  }, { activeCoins: [{ coinId: mixedCoin.id, count: 1 }] }, context);
+  assert.equal(active[0].overlayGroupId, "activeCoins-active");
+  assert.equal(active[0].overlayGroupLabel, "有効銭（振出中）");
+  assert.equal(active[0].activationLabel, "発動中");
+  assert.doesNotMatch(active[0].effect, /銭匣内にある場合/);
+  assert.match(active[0].effect, /敵の攻撃力\+30%/);
+
+  const held = getSelectedSpecialEffectsForField({
+    id: "coins",
+    label: "保有銭",
+    type: "coinLoadout",
+    overlayEffectScope: "held",
+  }, {
+    coins: [
+      { coinId: mixedCoin.id, count: 1 },
+      { coinId: waitingCoin.id, count: 2 },
+    ],
+  }, context);
+  assert.equal(held[0].overlayGroupId, "coins-held");
+  assert.equal(held[0].overlayGroupLabel, "保有銭（銭匣内）");
+  assert.equal(held[0].activationLabel, "在匣");
+  assert.match(held[0].effect, /指揮経験値\+30%/);
+  assert.doesNotMatch(held[0].effect, /振り出されると/);
+  assert.equal(held[1].overlayGroupId, "coins-held");
+  assert.equal(held[1].overlayGroupLabel, "保有銭（銭匣内）");
+  assert.equal(held[1].activationLabel, "待機");
+  assert.match(held[1].effect, /^次回条件:/);
+});
+
 test("IS#5 thought field uses countable effect stack entries without state slots", () => {
   const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
   const campaign = campaigns.find((item) => item.id === "is5_sarkaz");
@@ -105,4 +164,87 @@ test("IS#5 thought field uses countable effect stack entries without state slots
     { effectId: "thought-a", count: 2, stateId: null },
     { effectId: "thought-b", count: 3, stateId: null },
   ]);
+});
+
+test("IS#6 coin fields are visible in the special OBS output by default", () => {
+  const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
+  const campaign = campaigns.find((item) => item.id === "is6_sui");
+  const activeCoins = campaign.specialFields.find((item) => item.id === "activeCoins");
+  const heldCoins = campaign.specialFields.find((item) => item.id === "coins");
+
+  assert.equal(activeCoins.overlayToggle, true);
+  assert.equal(activeCoins.overlayDefaultVisible, true);
+  assert.equal(activeCoins.overlayEffectScope, "active");
+  assert.equal(heldCoins.overlayToggle, true);
+  assert.equal(heldCoins.overlayDefaultVisible, true);
+  assert.equal(heldCoins.overlayEffectScope, "held");
+});
+
+test("IS#6 support martial keeps multiple manual effects in state and OBS output", () => {
+  const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
+  const campaign = campaigns.find((item) => item.id === "is6_sui");
+  const field = campaign.specialFields.find((item) => item.id === "supportMartial");
+  const special = {
+    supportMartial: ["配置時に攻撃速度+20", "初回配置コスト-3", "配置時に攻撃速度+20"],
+  };
+
+  assert.equal(field.type, "textMultiSelect");
+  assert.equal(field.overlayToggle, true);
+  assert.equal(field.overlayDefaultVisible, true);
+
+  const effects = getSelectedSpecialEffectsForField(field, special, {
+    campaignId: campaign.id,
+    selectableEffectMap: new Map(),
+    selectableEffectSource: [],
+  });
+  assert.deepEqual(effects.map((item) => item.name), ["配置時に攻撃速度+20", "初回配置コスト-3"]);
+  assert.deepEqual(effects.map((item) => item.slotLabel), ["支武", "支武"]);
+});
+
+test("Mizuki operator assignments use human-readable OBS labels", () => {
+  const reactionId = "is3_mizuki_selectable_rejectionReaction_mcasci24";
+  const selectableEffectMap = new Map([
+    [reactionId, { id: reactionId, name: "造血障害" }],
+  ]);
+  const context = { selectableEffectMap };
+
+  const rejection = formatSpecialValue(
+    { id: "rejectionReaction", type: "operatorEffectAssignment" },
+    {
+      effectId: reactionId,
+      operatorIds: ["kroos", "reserve_defender"],
+      operatorTargets: [
+        { operatorId: "kroos", instance: 1 },
+        { operatorId: "reserve_defender", instance: 1 },
+        { operatorId: "reserve_defender", instance: 2 },
+      ],
+    },
+    context,
+  );
+  const evolution = formatSpecialValue(
+    { id: "operatorEvolution", type: "operatorMultiSelect" },
+    {
+      operatorIds: ["durin", "reserve_defender"],
+      operatorTargets: [
+        { operatorId: "durin", instance: 1 },
+        { operatorId: "reserve_defender", instance: 2 },
+      ],
+    },
+    context,
+  );
+
+  assert.equal(rejection, "造血障害 / 対象3名");
+  assert.equal(evolution, "対象2名");
+  assert.doesNotMatch(`${rejection} ${evolution}`, /\[object Object\]/);
+});
+
+test("IS#6 seasonal hours include all normal and awakened variants", () => {
+  const data = JSON.parse(readFileSync(new URL("../data/selectable-effects.json", import.meta.url), "utf8"));
+  const seasonalHours = data.selectableEffects.filter((item) =>
+    item.campaignId === "is6_sui" && item.slot === "seasonalHours");
+  const awakened = seasonalHours.filter((item) => item.variantRank === "awakening");
+
+  assert.equal(seasonalHours.length, 48);
+  assert.equal(awakened.length, 12);
+  assert.equal(awakened.find((item) => item.parentName === "巳農").effect, "最初に配置するオペレーターの配置コスト-6");
 });

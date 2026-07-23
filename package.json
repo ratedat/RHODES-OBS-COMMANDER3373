@@ -30,7 +30,8 @@
     "verify:desktop": "npm run suki:check && npm run suki:build",
     "ocr:sync-maa": "node tools/sync-maa-ocr-assets.mjs",
     "ocr:sync-maa:models": "node tools/sync-maa-ocr-assets.mjs --models",
-    "ocr:sync-maa-operator": "node tools/sync-maa-operator-ocr-map.mjs"
+    "ocr:sync-maa-operator": "node tools/sync-maa-operator-ocr-map.mjs",
+    "ocr:corpus:sui-coins": "python tools/generate-sui-coin-ocr-corpus.py"
   },
   "devDependencies": {},
   "license": "AGPL-3.0-only"

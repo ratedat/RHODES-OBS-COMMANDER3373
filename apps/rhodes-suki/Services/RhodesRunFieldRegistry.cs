@@ -4,8 +4,7 @@ namespace RhodesSuki.Services;
 
 public static class RhodesRunFieldRegistry
 {
-    private static readonly RunFieldDescriptor[] Descriptors =
-    [
+    private static readonly RunFieldDescriptor IngotDescriptor =
         new(
             "ingot",
             "源石錐",
@@ -15,7 +14,9 @@ public static class RhodesRunFieldRegistry
             0,
             0,
             state => state.Ingot.ToString(),
-            _ => "右上の源石錐アイコンを基準に取得"),
+            _ => "右上の源石錐アイコンを基準に取得");
+
+    private static readonly RunFieldDescriptor SpecialDescriptor =
         new(
             "special",
             "IS特殊値",
@@ -25,7 +26,9 @@ public static class RhodesRunFieldRegistry
             1,
             3,
             BuildSpecialStatusValue,
-            BuildSpecialStatusDetail),
+            BuildSpecialStatusDetail);
+
+    private static readonly RunFieldDescriptor DifficultyDescriptor =
         new(
             "difficulty",
             "等級",
@@ -35,7 +38,9 @@ public static class RhodesRunFieldRegistry
             2,
             1,
             state => ValueOrDash(state.Difficulty),
-            _ => "分隊情報パネルから確定"),
+            _ => "分隊情報パネルから確定");
+
+    private static readonly RunFieldDescriptor SquadDescriptor =
         new(
             "squad",
             "分隊",
@@ -45,12 +50,19 @@ public static class RhodesRunFieldRegistry
             3,
             2,
             state => ValueOrDash(state.Squad),
-            _ => "分隊カードまたは情報パネル")
+            _ => "分隊カードまたは情報パネル");
+
+    private static readonly RunFieldDescriptor[] Descriptors =
+    [
+        IngotDescriptor,
+        SpecialDescriptor,
+        DifficultyDescriptor,
+        SquadDescriptor
     ];
 
     public static IReadOnlyList<SukiStatusChip> BuildHeaderStatusChips(SukiRunStateSnapshot state)
     {
-        return Descriptors
+        return DescriptorsFor(state)
             .OrderBy(item => item.HeaderOrder)
             .Select(item => new SukiStatusChip(item.Label, item.Value(state), item.HeaderDetailId))
             .ToArray();
@@ -58,7 +70,7 @@ public static class RhodesRunFieldRegistry
 
     public static IReadOnlyList<SukiRunFieldPreview> BuildRunFieldPreviews(SukiRunStateSnapshot state)
     {
-        return Descriptors
+        return DescriptorsFor(state)
             .OrderBy(item => item.PreviewOrder)
             .Select(item => new SukiRunFieldPreview(
                 item.Label,
@@ -67,6 +79,59 @@ public static class RhodesRunFieldRegistry
                 item.RecognitionTaskId,
                 item.Detail(state)))
             .ToArray();
+    }
+
+    private static IReadOnlyList<RunFieldDescriptor> DescriptorsFor(SukiRunStateSnapshot state)
+    {
+        if (!string.Equals(state.CampaignId, "is3_mizuki", StringComparison.Ordinal))
+            return Descriptors;
+
+        return
+        [
+            IngotDescriptor,
+            BuildMizukiSpecialDescriptor("key", "鍵", 1, 3),
+            BuildMizukiSpecialDescriptor("light", "灯火", 2, 4),
+            BuildMizukiSpecialDescriptor("rejectionReaction", "拒絶反応", 3, 5),
+            DifficultyDescriptor with { HeaderOrder = 4 },
+            SquadDescriptor with { HeaderOrder = 5 }
+        ];
+    }
+
+    private static RunFieldDescriptor BuildMizukiSpecialDescriptor(
+        string fieldId,
+        string label,
+        int headerOrder,
+        int previewOrder)
+    {
+        return new RunFieldDescriptor(
+            fieldId,
+            label,
+            "run.special",
+            $"run.special.{fieldId}",
+            "MAA-OCR / campaign-specific",
+            headerOrder,
+            previewOrder,
+            state => BuildMizukiSpecialValue(state, fieldId),
+            state => CurrentCampaignSpecialFields(state)
+                .FirstOrDefault(field => string.Equals(field.FieldId, fieldId, StringComparison.Ordinal))
+                ?.Detail ?? "取得値なし");
+    }
+
+    private static string BuildMizukiSpecialValue(SukiRunStateSnapshot state, string fieldId)
+    {
+        var field = CurrentCampaignSpecialFields(state)
+            .FirstOrDefault(item => string.Equals(item.FieldId, fieldId, StringComparison.Ordinal));
+        if (field is null)
+            return "-";
+
+        if (string.Equals(fieldId, "rejectionReaction", StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(field.Detail)
+            && !field.Detail.Equals("取得値なし", StringComparison.Ordinal))
+        {
+            return field.Detail.Trim();
+        }
+
+        return ValueOrDash(field.Value.Equals("未入力", StringComparison.Ordinal) ? "" : field.Value);
     }
 
     public static string BuildSpecialStatusValue(SukiRunStateSnapshot state)

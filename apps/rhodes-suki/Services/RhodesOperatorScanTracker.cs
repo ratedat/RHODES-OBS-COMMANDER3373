@@ -78,11 +78,28 @@ public sealed class RhodesOperatorScanTracker
             _stableViewportCount);
     }
 
-    public void RecordResult(RhodesOperatorCardFingerprint fingerprint, bool resolved)
+    public int RecordResult(
+        RhodesOperatorCardFingerprint fingerprint,
+        bool resolved,
+        string operatorId = "")
     {
         var card = _cards.FirstOrDefault(item => item.Fingerprint == fingerprint);
-        if (card is not null && resolved)
+        if (card is null)
+            return 0;
+        if (resolved)
+        {
             card.Resolved = true;
+            if (!string.IsNullOrWhiteSpace(operatorId) && card.OperatorInstance <= 0)
+            {
+                card.OperatorId = operatorId.Trim();
+                var cardIndex = _cards.IndexOf(card);
+                card.OperatorInstance = _cards
+                    .Take(cardIndex)
+                    .Count(item => item.OperatorId.Equals(card.OperatorId, StringComparison.Ordinal))
+                    + 1;
+            }
+        }
+        return Math.Max(1, card.OperatorInstance);
     }
 
     private CardState? FindCard(
@@ -230,6 +247,8 @@ public sealed class RhodesOperatorScanTracker
         public RhodesOperatorCardFingerprint Fingerprint { get; } = fingerprint;
         public int Attempts { get; set; }
         public bool Resolved { get; set; }
+        public string OperatorId { get; set; } = "";
+        public int OperatorInstance { get; set; }
     }
 
     private sealed record CardObservation(

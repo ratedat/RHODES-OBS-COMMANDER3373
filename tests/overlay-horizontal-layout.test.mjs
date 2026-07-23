@@ -64,6 +64,22 @@ test("vertical overlay keeps bosses and effects inside the run panel", () => {
   assert.match(output, /data-boss-id="floor3"/);
 });
 
+test("operator names expose the Mizuki rejection target class", () => {
+  const output = renderOverlayDense({
+    ...args,
+    operators: [{
+      id: "kroos",
+      name: "クルース",
+      rarity: 3,
+      class: "狙撃",
+      isRejectionReactionTarget: true,
+    }],
+    orientation: "horizontal",
+  }, context);
+
+  assert.match(output, /class="rejection-reaction-operator-name">クルース/);
+});
+
 test("horizontal overlay renders selected Sarkaz thoughts with image and count", () => {
   const thought = {
     id: "thought-a",
@@ -108,4 +124,36 @@ test("horizontal overlay renders selected Sarkaz thoughts with image and count",
   assert.match(output, /src="\/assets\/thought\/thought-a\.png"/);
   assert.match(output, /築壁 x2/);
   assert.match(output, /思案 \/ 妙想/);
+});
+
+test("special overlay renders coin effect groups and visible effect text", () => {
+  const output = renderSpecialOverlayBlock([
+    {
+      id: "coin-active",
+      name: "志遂げんと欲す x1 / 存護",
+      slotLabel: "有効銭",
+      activationLabel: "発動中",
+      overlayGroupId: "activeCoins-active",
+      overlayGroupLabel: "有効銭（振出中）",
+      effect: "味方の攻撃速度+80",
+      quantity: 1,
+    },
+    {
+      id: "coin-held",
+      name: "門と救難 x2",
+      slotLabel: "保有銭",
+      activationLabel: "待機",
+      overlayGroupId: "coins-held",
+      overlayGroupLabel: "保有銭（銭匣内）",
+      effect: "振出時: 異境の入口が出現",
+      quantity: 2,
+    },
+  ], "part", "verticalRelicScrollSpeed", () => 12);
+
+  assert.match(output, /special-overlay-group-activeCoins-active/);
+  assert.match(output, /有効銭（振出中）/);
+  assert.match(output, /保有銭（銭匣内）/);
+  assert.match(output, /味方の攻撃速度\+80/);
+  assert.match(output, /振出時: 異境の入口が出現/);
+  assert.match(output, />2枚</);
 });

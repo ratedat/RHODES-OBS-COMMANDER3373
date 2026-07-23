@@ -103,6 +103,16 @@ export function sortOperators(operators, mode = "rarity_desc") {
   });
 }
 
+export function decorateMizukiRejectionTargets(operators, state) {
+  const rejectionOperatorIds = state?.run?.campaignId === "is3_mizuki"
+    ? new Set(state?.run?.special?.is3_mizuki?.rejectionReaction?.operatorIds || [])
+    : new Set();
+  return (operators || []).map((item) => ({
+    ...item,
+    isRejectionReactionTarget: rejectionOperatorIds.has(item.id),
+  }));
+}
+
 export function operatorReleaseMatches(item, releaseFilter = "released") {
   if (releaseFilter === "all") return true;
   if (releaseFilter === "unreleased") return Boolean(item.hiddenByDefault);

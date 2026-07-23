@@ -1203,10 +1203,10 @@
           },
           "label": "灯火と大群の呼び声を開く",
           "area": {
-            "x": 550,
-            "y": 8,
-            "width": 180,
-            "height": 44
+            "x": 610,
+            "y": 26,
+            "width": 100,
+            "height": 30
           }
         },
         {
@@ -1236,10 +1236,10 @@
           },
           "label": "灯火と大群の呼び声を閉じる",
           "area": {
-            "x": 550,
-            "y": 8,
-            "width": 180,
-            "height": 44
+            "x": 610,
+            "y": 26,
+            "width": 100,
+            "height": 30
           }
         },
         {
@@ -1373,7 +1373,7 @@
       "id": "is6ActiveCoinsFull",
       "label": "有効銭スキャン",
       "interfaceLabel": "有効銭",
-      "interfaceDescription": "IS#6のマップ下部にセットされている有効銭を画像分類で取得します。",
+      "interfaceDescription": "IS#6の有効銭パネルを開き、正式名称をMAA-OCRで取得します。",
       "campaignId": "is6_sui",
       "candidateKind": "coin",
       "ocrEngine": "maa-ocr",
@@ -1384,24 +1384,142 @@
       "knownScreenIds": [
         "run-home"
       ],
-      "openSteps": [],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 542,
+            "y": 678
+          },
+          "label": "有効銭一覧を開く",
+          "area": {
+            "x": 515,
+            "y": 650,
+            "width": 54,
+            "height": 58
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 350,
+          "label": "表示待ち"
+        }
+      ],
       "targetScreenIds": [
         "run-home"
       ],
       "inferredScreenId": "run-home",
       "scanRegion": {
-        "x": 590,
-        "y": 630,
-        "width": 190,
-        "height": 80
+        "x": 515,
+        "y": 648,
+        "width": 175,
+        "height": 65
       },
       "scrollAxis": "none",
       "scrollDirection": "none",
-      "restoreSteps": [],
+      "restoreSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 542,
+            "y": 678
+          },
+          "label": "有効銭一覧を閉じる",
+          "area": {
+            "x": 515,
+            "y": 650,
+            "width": 54,
+            "height": 58
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 180,
+          "label": "閉じる待ち"
+        }
+      ],
       "maxScrolls": 0,
       "endFingerprintStableCount": 1,
       "captureDelayMs": 120,
-      "navigationNote": "マップ下部の銭匣にセットされた有効銭を固定スロットから画像分類する。"
+      "navigationNote": "マップ下部の有効銭1枠目をタップして詳細パネルを開く。表示された正式名称をMAA-OCRで一括取得し、完了後は同じ枠を再タップして閉じる。"
+    },
+    {
+      "id": "is6SeasonalHours",
+      "label": "歳時スキャン",
+      "interfaceLabel": "歳時",
+      "interfaceDescription": "IS#6の現在の歳時を名称・状態・効果文から取得します。画面に醒覚が表示されている場合は通常段階より優先します。",
+      "campaignId": "is6_sui",
+      "candidateKind": "sui",
+      "ocrEngine": "maa-ocr",
+      "ocrRegionIds": [
+        "is6.seasonal_hour_detail_text"
+      ],
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home",
+        "sui-seasonal-hour-detail"
+      ],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 635,
+            "y": 60
+          },
+          "label": "歳時を開く",
+          "area": {
+            "x": 600,
+            "y": 46,
+            "width": 70,
+            "height": 32
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 650,
+          "label": "表示待ち"
+        }
+      ],
+      "targetScreenIds": [
+        "sui-seasonal-hour-detail"
+      ],
+      "inferredScreenId": "sui-seasonal-hour-detail",
+      "scanRegion": {
+        "x": 383,
+        "y": 80,
+        "width": 563,
+        "height": 500
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 635,
+            "y": 60
+          },
+          "label": "歳時を閉じる",
+          "area": {
+            "x": 600,
+            "y": 46,
+            "width": 70,
+            "height": 32
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 300,
+          "label": "閉じる待ち"
+        }
+      ],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "マップ上部中央の歳時を開き、名称・状態・表示効果をまとめてOCRする。醒覚は等級から推定せず、画面表示を最優先する。完了後は同じ範囲を再タップして閉じる。"
     },
     {
       "id": "is6CoinsFull",
@@ -1419,7 +1537,31 @@
         "run-home",
         "sui-coin-list"
       ],
-      "openSteps": [],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 744,
+            "y": 678
+          },
+          "label": "銭匣を開く",
+          "area": {
+            "x": 704,
+            "y": 650,
+            "width": 82,
+            "height": 58
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 650,
+          "label": "表示待ち"
+        }
+      ],
+      "targetScreenIds": [
+        "sui-coin-list"
+      ],
+      "inferredScreenId": "sui-coin-list",
       "scanRegion": {
         "x": 120,
         "y": 96,
@@ -1439,10 +1581,87 @@
         },
         "durationMs": 450
       },
-      "restoreSteps": [],
-      "maxScrolls": 14,
-      "endFingerprintStableCount": 2,
-      "captureDelayMs": 160
+      "scrollPasses": [
+        {
+          "axis": "horizontal",
+          "direction": "right",
+          "label": "保有銭を右へ確認",
+          "scroll": {
+            "startArea": {
+              "x": 1088,
+              "y": 522,
+              "width": 24,
+              "height": 30
+            },
+            "endArea": {
+              "x": 252,
+              "y": 522,
+              "width": 24,
+              "height": 30
+            },
+            "durationMs": 450
+          },
+          "maxScrolls": 10,
+          "minScrolls": 1,
+          "endFingerprintStableCount": 1,
+          "candidateStableEndCount": 0,
+          "captureDelayMs": 120,
+          "collectCandidates": true,
+          "mirrorPreviousPassScrolls": false
+        },
+        {
+          "axis": "horizontal",
+          "direction": "left",
+          "label": "保有銭を左へ確認",
+          "scroll": {
+            "startArea": {
+              "x": 252,
+              "y": 522,
+              "width": 24,
+              "height": 30
+            },
+            "endArea": {
+              "x": 1088,
+              "y": 522,
+              "width": 24,
+              "height": 30
+            },
+            "durationMs": 450
+          },
+          "maxScrolls": 10,
+          "minScrolls": 1,
+          "endFingerprintStableCount": 1,
+          "candidateStableEndCount": 0,
+          "captureDelayMs": 120,
+          "collectCandidates": true,
+          "mirrorPreviousPassScrolls": false
+        }
+      ],
+      "restoreSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 744,
+            "y": 678
+          },
+          "label": "銭匣を閉じる",
+          "area": {
+            "x": 704,
+            "y": 650,
+            "width": 82,
+            "height": 58
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 200,
+          "label": "閉じる待ち"
+        }
+      ],
+      "maxScrolls": 10,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "マップ下部の銭匣ボタンをタップして一覧を開く。開始位置から右端、続いて左端まで双方向に水平走査し、各画面の一覧名をMAA-OCRで取得して重複枚数を維持したまま統合する。完了後は現在位置のまま同じボタンを再タップして閉じる。"
     }
   ]
 }

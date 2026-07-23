@@ -90,6 +90,7 @@ test("MAA interface generator groups tasks and presets by RHODES recognition pro
     "is3RejectionFull",
     "is6BaseFull",
     "is6ActiveCoinsFull",
+    "is6SeasonalHours",
     "is6CoinsFull",
   ]);
   assert.equal(groups.get("runStatusFull").label, "基礎情報");
@@ -118,6 +119,7 @@ test("MAA interface generator groups tasks and presets by RHODES recognition pro
     "is3RejectionFull",
     "is6BaseFull",
     "is6ActiveCoinsFull",
+    "is6SeasonalHours",
     "is6CoinsFull",
   ]);
   assert.equal(Object.hasOwn(tasks.get("RhodesProbe"), "group"), false);

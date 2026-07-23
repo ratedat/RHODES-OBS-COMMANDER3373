@@ -38,6 +38,7 @@
   },
   "relics": [],
   "operators": [],
+  "operatorCounts": {},
   "bossFlags": [],
   "pendingSuggestions": [],
   "effectCalculation": {

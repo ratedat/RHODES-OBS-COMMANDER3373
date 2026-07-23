@@ -41,5 +41,8 @@ export function renderBossChip(entry) {
   const title = bossDisplayTitle(entry);
   const subline = bossDisplaySubline(entry, title);
   const img = bossImages(entry)[0];
-  return `<span class="boss-chip" title="${html(subline || entry.stageName || title)}">${img ? `<img src="${html(mediaUrl(img))}" alt="" />` : ""}<span>${html(bossFloorLabel(entry))}</span><strong>${html(title)}</strong></span>`;
+  const note = entry.note || entry.requiredNote || "";
+  const className = `boss-chip${img ? "" : " no-image"}${note ? " has-note" : ""}`;
+  const tooltip = [subline || entry.stageName || title, note].filter(Boolean).join(" / ");
+  return `<span class="${className}" title="${html(tooltip)}">${img ? `<img src="${html(mediaUrl(img))}" alt="" />` : ""}<span>${html(bossFloorLabel(entry))}</span><strong>${html(title)}</strong>${note ? `<em class="boss-chip-note">${html(note)}</em>` : ""}</span>`;
 }

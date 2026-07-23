@@ -119,7 +119,7 @@ public static class RhodesChoiceCatalogRegistry
     {
         if (!descriptor.IsCampaignScoped)
         {
-            var selected = allItems.Count(item => item.IsSelected);
+            var selected = allItems.Sum(item => item.EffectiveSelectionCount);
             return $"{filteredItems.Count}件 / {descriptor.SelectedSummaryLabel}{selected}名";
         }
 

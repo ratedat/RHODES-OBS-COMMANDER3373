@@ -15,8 +15,11 @@ public static class RhodesMaaRecognitionImagePreprocessor
         string entry = "")
     {
         var operatorNameEntry = entry.StartsWith("operator.card.name.", StringComparison.Ordinal);
+        var catchWindDetailEntry = entry.Equals(
+            RhodesSuiCatchWindDetailResolver.DetailEntry,
+            StringComparison.Ordinal);
         if (!string.Equals(recognitionType, "OCR", StringComparison.Ordinal)
-            || scale <= 1 && !operatorNameEntry
+            || scale <= 1 && !operatorNameEntry && !catchWindDetailEntry
             || encodedImage.Length == 0)
         {
             return new MaaPreparedRecognitionInput(encodedImage, parametersJson);
@@ -69,6 +72,18 @@ public static class RhodesMaaRecognitionImagePreprocessor
                 parameters);
         }
 
+        if (catchWindDetailEntry)
+        {
+            return PrepareDarkTextOnLight(
+                source,
+                left,
+                top,
+                cropWidth,
+                cropHeight,
+                Math.Clamp(scale, 1, 12),
+                parameters);
+        }
+
         var targetWidth = checked(cropWidth * Math.Clamp(scale, 1, 12));
         var targetHeight = checked(cropHeight * Math.Clamp(scale, 1, 12));
         using var scaled = new SKBitmap(targetWidth, targetHeight, source.ColorType, source.AlphaType);
@@ -83,6 +98,40 @@ public static class RhodesMaaRecognitionImagePreprocessor
         }
 
         using var image = SKImage.FromBitmap(scaled);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        parameters["roi"] = new JsonArray(0, 0, targetWidth, targetHeight);
+        return new MaaPreparedRecognitionInput(data.ToArray(), parameters.ToJsonString());
+    }
+
+    private static MaaPreparedRecognitionInput PrepareDarkTextOnLight(
+        SKBitmap source,
+        int left,
+        int top,
+        int width,
+        int height,
+        int scale,
+        JsonObject parameters)
+    {
+        const int foregroundThreshold = 180;
+        var targetWidth = checked(width * scale);
+        var targetHeight = checked(height * scale);
+        using var binary = new SKBitmap(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
+        binary.Erase(SKColors.Black);
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                if (Luminance(source.GetPixel(left + x, top + y)) > foregroundThreshold)
+                    continue;
+                for (var offsetY = 0; offsetY < scale; offsetY++)
+                {
+                    for (var offsetX = 0; offsetX < scale; offsetX++)
+                        binary.SetPixel(x * scale + offsetX, y * scale + offsetY, SKColors.White);
+                }
+            }
+        }
+
+        using var image = SKImage.FromBitmap(binary);
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
         parameters["roi"] = new JsonArray(0, 0, targetWidth, targetHeight);
         return new MaaPreparedRecognitionInput(data.ToArray(), parameters.ToJsonString());

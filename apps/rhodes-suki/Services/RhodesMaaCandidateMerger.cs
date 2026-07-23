@@ -50,6 +50,9 @@ public static class RhodesMaaCandidateMerger
             if (localThoughts.Length > 0 && IsKind(candidate, "thought"))
                 continue;
 
+            if (MergeOperatorCountEvidence(merged, candidate))
+                continue;
+
             if (MergeRelicUsageEvidence(merged, candidate))
                 continue;
 
@@ -58,6 +61,33 @@ public static class RhodesMaaCandidateMerger
         }
 
         return merged;
+    }
+
+    private static bool MergeOperatorCountEvidence(
+        IList<MaaCandidatePreview> existing,
+        MaaCandidatePreview candidate)
+    {
+        if (!IsKind(candidate, "operator") || candidate.Count <= 0)
+            return false;
+
+        var id = CandidateId(candidate.OperatorId, candidate.Value);
+        if (string.IsNullOrWhiteSpace(id))
+            return false;
+
+        for (var index = 0; index < existing.Count; index++)
+        {
+            var current = existing[index];
+            if (!IsKind(current, "operator")
+                || !CandidateId(current.OperatorId, current.Value).Equals(id, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            existing[index] = current with { Count = Math.Max(current.Count, candidate.Count) };
+            return true;
+        }
+
+        return false;
     }
 
     private static bool MergeRelicUsageEvidence(

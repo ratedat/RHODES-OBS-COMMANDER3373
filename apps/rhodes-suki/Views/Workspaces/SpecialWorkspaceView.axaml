@@ -49,6 +49,254 @@
         </StackPanel>
       </Border>
 
+      <Border Classes="appleCard" IsVisible="{Binding IsSuiCampaignSelected}">
+        <StackPanel Spacing="14">
+          <StackPanel Spacing="2">
+            <TextBlock Text="歳特殊値の手動入力" Classes="h2" />
+            <TextBlock Text="遊覧券、歳時、銭匣を編集します。" Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+
+          <StackPanel Spacing="8">
+            <TextBlock Text="遊覧券" Classes="h3" />
+            <TextBlock Text="マップ右上から取得するか、現在値を直接入力して反映します。" Classes="caption" />
+            <WrapPanel Orientation="Horizontal">
+              <NumericUpDown Width="140"
+                             Margin="0,0,8,8"
+                             Minimum="0"
+                             Maximum="999"
+                             Increment="1"
+                             FormatString="0"
+                             Value="{Binding ManualSuiTicket, Mode=TwoWay}" />
+              <Button Content="遊覧券を取得（マップ）"
+                      Margin="0,0,8,8"
+                      Command="{Binding RunProfileRecognitionAndApplyCommand}"
+                      CommandParameter="is6BaseFull" />
+              <Button Classes="primary"
+                      Content="遊覧券を反映"
+                      Margin="0,0,0,8"
+                      Command="{Binding ApplyManualSuiTicketCommand}" />
+            </WrapPanel>
+          </StackPanel>
+
+          <Separator />
+
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="歳時" Classes="h3" />
+                <TextBlock Text="通常効果は現在の等級に連動します。未所持・通常・醒覚だけを選択します。" Classes="caption" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding ManualSuiSeasonalHourDifficultyLabel}" Classes="caption" TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Content="歳時を取得"
+                      Command="{Binding RunProfileRecognitionAndApplyCommand}"
+                      CommandParameter="is6SeasonalHours" />
+              <Button Grid.Column="2"
+                      Classes="primary"
+                      Content="歳時を反映"
+                      Command="{Binding ApplyManualSuiSeasonalHoursCommand}" />
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding ManualSuiSeasonalHourEditors}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="5" Padding="9" Margin="0,0,8,8">
+                    <StackPanel Spacing="6">
+                      <TextBlock Text="{Binding ParentName}" FontWeight="SemiBold" />
+                      <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption, Mode=TwoWay}" />
+                      <TextBlock Text="{Binding SelectedEffect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border IsVisible="{Binding IsManualSuiDogPaintingTargetSelectionVisible}"
+                    Background="#0C1011"
+                    BorderBrush="#2B3638"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="10">
+              <StackPanel Spacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="対象職分" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding ManualSuiDogPaintingTargetGuidance}" Classes="caption" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding ManualSuiSeasonalHourTargets}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button Classes="catalogItem"
+                              Classes.selected="{Binding IsSelected}"
+                              Content="{Binding Name}"
+                              MinWidth="110"
+                              Margin="0,0,8,8"
+                              Command="{Binding DataContext.ToggleManualSuiSeasonalHourTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                              CommandParameter="{Binding}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <Separator />
+
+          <StackPanel Spacing="8">
+            <TextBlock Text="銭匣" Classes="h3" />
+            <TextBlock Text="有効銭はマップ、保有銭は銭匣画面から取得します。" Classes="caption" />
+            <WrapPanel Orientation="Horizontal">
+            <Button Content="有効銭を取得（マップ）"
+                    Margin="0,0,8,8"
+                    Command="{Binding RunProfileRecognitionAndApplyCommand}"
+                    CommandParameter="is6ActiveCoinsFull" />
+            <Button Content="保有銭を取得（銭匣画面）"
+                    Margin="0,0,8,8"
+                    Command="{Binding RunProfileRecognitionAndApplyCommand}"
+                    CommandParameter="is6CoinsFull" />
+            <Button Classes="primary"
+                    Content="遊覧券・歳時・銭を反映"
+                    Margin="0,0,0,8"
+                    Command="{Binding ApplyManualSuiValuesCommand}" />
+            </WrapPanel>
+          </StackPanel>
+
+          <Grid ColumnDefinitions="360,*" ColumnSpacing="12">
+            <Border Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="10">
+              <StackPanel Spacing="8">
+                <TextBlock Text="有効銭" FontWeight="SemiBold" />
+                <TextBlock Text="現在有効な銭。状態は各行で変更できます。" Classes="caption" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding ManualSuiActiveCoinEditors}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Background="#121A1B" CornerRadius="5" Padding="8" Margin="0,0,0,7">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="72,*,34" ColumnSpacing="8" RowSpacing="7">
+                          <Border Width="40" Height="40" Background="#090D0E" CornerRadius="4" ClipToBounds="True">
+                            <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                          </Border>
+                          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Category}" Classes="caption" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <Button Grid.Column="2"
+                                  Width="32"
+                                  Height="32"
+                                  Padding="0"
+                                  Content="✕"
+                                  Command="{Binding DataContext.RemoveManualSuiCoinCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  CommandParameter="{Binding}"
+                                  AutomationProperties.Name="有効銭から削除"
+                                  ToolTip.Tip="有効銭から削除" />
+                          <NumericUpDown Grid.Row="1" Grid.Column="0" Width="68" Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
+                          <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus, Mode=TwoWay}" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="10">
+              <StackPanel Spacing="8">
+                <TextBlock Text="保有銭" FontWeight="SemiBold" />
+                <TextBlock Text="同種を複数所持できます。個数と状態を別々に保存します。" Classes="caption" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding ManualSuiOwnedCoinEditors}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Width="410" Background="#121A1B" CornerRadius="5" Padding="8" Margin="0,0,8,8">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="72,*,34" ColumnSpacing="8" RowSpacing="7">
+                          <Border Width="40" Height="40" Background="#090D0E" CornerRadius="4" ClipToBounds="True">
+                            <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                          </Border>
+                          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Category}" Classes="caption" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <Button Grid.Column="2"
+                                  Width="32"
+                                  Height="32"
+                                  Padding="0"
+                                  Content="✕"
+                                  Command="{Binding DataContext.RemoveManualSuiCoinCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  CommandParameter="{Binding}"
+                                  AutomationProperties.Name="保有銭から削除"
+                                  ToolTip.Tip="保有銭から削除" />
+                          <NumericUpDown Grid.Row="1" Grid.Column="0" Width="68" Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
+                          <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus, Mode=TwoWay}" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <Grid ColumnDefinitions="*,210,210" ColumnSpacing="8">
+            <TextBox PlaceholderText="銭名・効果で検索" Text="{Binding ManualSuiCoinSearchText, Mode=TwoWay}" />
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding ManualSuiCoinCategories}"
+                      SelectedItem="{Binding SelectedManualSuiCoinCategory, Mode=TwoWay}" />
+            <ComboBox Grid.Column="2"
+                      ItemsSource="{Binding ManualSuiCoinTargets}"
+                      SelectedItem="{Binding SelectedManualSuiCoinTarget, Mode=TwoWay}" />
+          </Grid>
+          <TextBlock Text="追加先を選び、銭をクリックしてください。状態違いを作る場合は同じ銭をもう一度追加します。" Classes="caption" />
+
+          <Border Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="8" MaxHeight="470">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding ManualSuiCoinCatalog}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Classes="choiceCard"
+                            MinHeight="98"
+                            Margin="0,0,8,8"
+                            Padding="10"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            Command="{Binding DataContext.AddManualSuiCoinCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}">
+                      <Grid ColumnDefinitions="52,*" ColumnSpacing="12">
+                        <Border Width="48" Height="48" Background="#090D0E" CornerRadius="4" ClipToBounds="True">
+                          <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Name}"
+                                     FontSize="15"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Category}"
+                                     Classes="caption"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Effect}"
+                                     Classes="caption"
+                                     LineHeight="17"
+                                     MaxLines="2"
+                                     TextWrapping="Wrap"
+                                     TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+        </StackPanel>
+      </Border>
+
       <Border Classes="appleCard" IsVisible="{Binding IsPhantomCampaignSelected}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
@@ -135,32 +383,34 @@
             <NumericUpDown Width="120" Minimum="0" Maximum="100" Increment="1" FormatString="0" Value="{Binding ManualMizukiLight, Mode=TwoWay}" Margin="0,0,10,6" />
           </WrapPanel>
 
-          <TextBlock Text="大群の呼び声（複数選択可）" FontWeight="SemiBold" />
+          <TextBlock Text="大群の呼び声（複数選択）" FontWeight="SemiBold" />
           <ItemsControl ItemsSource="{Binding ManualMizukiHordeCallOptions}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Button Classes="choiceCard"
-                        Classes.selected="{Binding IsSelected}"
-                        Width="320"
+                <Border Width="320"
                         MinHeight="82"
                         Margin="0,0,10,10"
                         Padding="9"
-                        HorizontalContentAlignment="Stretch"
-                        Command="{Binding DataContext.ToggleManualMizukiHordeCallCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        CommandParameter="{Binding}">
-                  <Grid ColumnDefinitions="42,*" ColumnSpacing="9">
-                    <Border Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                        Background="#11191A"
+                        BorderBrush="#2B3638"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                  <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
+                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="この呼び声を選択" />
+                    <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
                       <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                     </Border>
-                    <StackPanel Grid.Column="1" Spacing="3">
+                    <StackPanel Grid.Column="2" Spacing="3">
                       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
                     </StackPanel>
                   </Grid>
-                </Button>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -195,8 +445,8 @@
           </StackPanel>
 
           <StackPanel Spacing="3">
-            <TextBlock Text="影響するオペレーター" FontWeight="SemiBold" />
-            <TextBlock Text="現在招集済みのオペレーターだけを表示します。複数選択できます。" Classes="caption" />
+            <TextBlock Text="影響する招集枠" FontWeight="SemiBold" />
+            <TextBlock Text="招集済みオペレーターを1人ずつ表示します。予備隊員が複数いる場合も個別に選択できます。" Classes="caption" />
           </StackPanel>
           <ItemsControl ItemsSource="{Binding ManualMizukiOperatorTargets}">
             <ItemsControl.ItemsPanel>
@@ -204,22 +454,56 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Button Classes="choiceCard"
-                        Classes.selected="{Binding IsSelected}"
-                        Width="230"
-                        Height="62"
+                <Border Width="250"
+                        Height="64"
                         Margin="0,0,8,8"
                         Padding="8"
-                        HorizontalContentAlignment="Stretch"
-                        Command="{Binding DataContext.ToggleManualMizukiOperatorTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        CommandParameter="{Binding}">
-                  <Grid ColumnDefinitions="42,*" ColumnSpacing="9">
-                    <Border Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                        Background="#11191A"
+                        BorderBrush="#2B3638"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                  <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
+                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="この招集枠を拒絶反応の対象にする" />
+                    <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
                       <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                     </Border>
-                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                   </Grid>
-                </Button>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <StackPanel Spacing="3">
+            <TextBlock Text="進化枠（複数選択）" FontWeight="SemiBold" />
+            <TextBlock Text="招集カードの黄色枠・黄色名を検出します。予備隊員が複数いる場合も招集枠ごとに指定できます。" Classes="caption" />
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding ManualMizukiEvolutionTargets}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Width="250"
+                        Height="64"
+                        Margin="0,0,8,8"
+                        Padding="8"
+                        Background="#11191A"
+                        BorderBrush="#6E5D23"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                  <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
+                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="この招集枠を進化対象にする" />
+                    <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                      <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                    </Border>
+                    <TextBlock Grid.Column="2" Text="{Binding Name}" Foreground="#FFD447" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                  </Grid>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

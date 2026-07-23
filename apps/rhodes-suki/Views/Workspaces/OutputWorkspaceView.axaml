@@ -247,7 +247,7 @@
           </StackPanel>
           <Button Grid.Column="1" Classes="primary" Content="保存して反映" Command="{Binding SaveSettingsCommand}" VerticalAlignment="Center" />
         </Grid>
-        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,150" ColumnSpacing="16">
+        <Grid Grid.Row="1" RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="16" RowSpacing="12">
           <StackPanel Spacing="2">
             <CheckBox Content="別ウィンドウ" IsChecked="{Binding OutputSeparateWindow, Mode=TwoWay}" />
             <TextBlock Text="別ウィンドウ表示の設定値を保存します。" Classes="caption" TextWrapping="Wrap" />
@@ -258,9 +258,24 @@
           </StackPanel>
           <StackPanel Grid.Column="2" Spacing="2">
             <CheckBox Content="透過背景" IsChecked="{Binding OutputTransparentBackground, Mode=TwoWay}" />
-            <TextBlock Text="ゲーム映像へ重ねる透過表示の設定値です。" Classes="caption" TextWrapping="Wrap" />
+            <TextBlock Text="OFFでは必ず不透明、ONでは下の透過率を使います。" Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
-          <StackPanel Grid.Column="3" Spacing="2">
+          <StackPanel Grid.Row="1" Spacing="2">
+            <TextBlock Text="背景透過率" FontSize="12" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0"
+                             Value="{Binding OutputBackgroundTransparency, Mode=TwoWay}"
+                             IsEnabled="{Binding OutputTransparentBackground}" />
+              <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="0%で不透明、100%で完全透過です。" Classes="caption" />
+          </StackPanel>
+          <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+            <CheckBox Content="個別ウィンドウのタイトルを表示"
+                      IsChecked="{Binding OutputShowPartTitles, Mode=TwoWay}" />
+            <TextBlock Text="部品別URLの見出しと件数を表示します。" Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Grid.Row="1" Grid.Column="2" Spacing="2">
             <TextBlock Text="スクロール速度" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
               <TextBox Text="{Binding OutputScrollSpeed, Mode=TwoWay}" HorizontalContentAlignment="Right" />

@@ -104,7 +104,13 @@
     {
       "name": "is6ActiveCoinsFull",
       "label": "有効銭",
-      "description": "IS#6のマップ下部にセットされている有効銭を画像分類で取得します。",
+      "description": "IS#6の有効銭パネルを開き、正式名称をMAA-OCRで取得します。",
+      "default_expand": false
+    },
+    {
+      "name": "is6SeasonalHours",
+      "label": "歳時",
+      "description": "IS#6の現在の歳時を名称・状態・効果文から取得します。画面に醒覚が表示されている場合は通常段階より優先します。",
       "default_expand": false
     },
     {
@@ -287,7 +293,7 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is5ThoughtFull, is5AgeFull, is2HallucinationsFull, is2PerformanceFull, is3KeyFull, is3LightHordeFull, is3RejectionFull, is6BaseFull, is6ActiveCoinsFull, is6CoinsFull",
+      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is5ThoughtFull, is5AgeFull, is2HallucinationsFull, is2PerformanceFull, is3KeyFull, is3LightHordeFull, is3RejectionFull, is6BaseFull, is6ActiveCoinsFull, is6CoinsFull, is6SeasonalHours",
       "group": [
         "runStatusFull",
         "operatorsFull",
@@ -302,6 +308,7 @@
         "is3RejectionFull",
         "is6BaseFull",
         "is6ActiveCoinsFull",
+        "is6SeasonalHours",
         "is6CoinsFull"
       ]
     },
@@ -522,6 +529,36 @@
       "description": "OCR / maa-tasks.ocrRegions / is5.thought_list_text / profiles: is5ThoughtFull",
       "group": [
         "is5ThoughtFull"
+      ]
+    },
+    {
+      "name": "rhodes_ocr_region_is6_active_coin_list_text",
+      "label": "生成: is6.active_coin_list_text",
+      "entry": "RhodesOcrRegion_is6_active_coin_list_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is6.active_coin_list_text / profiles: is6ActiveCoinsFull",
+      "group": [
+        "is6ActiveCoinsFull"
+      ]
+    },
+    {
+      "name": "rhodes_ocr_region_is6_seasonal_hour_detail_text",
+      "label": "生成: is6.seasonal_hour_detail_text",
+      "entry": "RhodesOcrRegion_is6_seasonal_hour_detail_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is6.seasonal_hour_detail_text / profiles: is6SeasonalHours",
+      "group": [
+        "is6SeasonalHours"
       ]
     },
     {
@@ -1808,6 +1845,31 @@
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is6_active_coin_list_text",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "is6SeasonalHours",
+      "label": "歳時",
+      "description": "歳時プロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is6_seasonal_hour_detail_text",
           "option": {
             "enabled": true
           }

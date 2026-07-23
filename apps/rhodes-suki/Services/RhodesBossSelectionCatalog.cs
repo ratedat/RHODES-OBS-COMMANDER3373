@@ -7,7 +7,8 @@ public static class RhodesBossSelectionCatalog
 {
     public static IReadOnlyList<SukiBossSectionEditor> LoadSections(
         string campaignId,
-        IReadOnlyDictionary<string, IReadOnlyList<string>>? selections = null)
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? selections = null,
+        IReadOnlySet<string>? relicIds = null)
     {
         if (string.IsNullOrWhiteSpace(campaignId))
             return [];
@@ -47,6 +48,7 @@ public static class RhodesBossSelectionCatalog
 
             return sections
                 .Where(section => section.ValueKind == JsonValueKind.Object)
+                .Where(section => IsSectionVisible(section, relicIds))
                 .Select(section => BuildSection(dataRoot, campaignId, section, selections))
                 .Where(section => section is not null)
                 .Cast<SukiBossSectionEditor>()
@@ -85,7 +87,7 @@ public static class RhodesBossSelectionCatalog
             .ThenBy(option => option.DisplayName, StringComparer.Ordinal)
             .ToList();
         if (!allowsMultiple)
-            options.Insert(0, new SukiBossOption(field, "", "未選択", "", "", "", double.MinValue));
+            options.Insert(0, new SukiBossOption(field, "", "未選択", "", "", "", "", double.MinValue));
 
         return new SukiBossSectionEditor(
             campaignId,
@@ -113,9 +115,32 @@ public static class RhodesBossSelectionCatalog
             JsonString(option, "stageName", JsonString(option, "bossName", id)),
             JsonString(option, "bossName"),
             JsonString(option, "optionLabel"),
+            JsonString(option, "requiredNote"),
             RhodesRunCatalog.ResolveLocalPath(dataRoot, FirstImagePath(option)),
             JsonDouble(option, "sortOrder", 99),
             selectedIds.Contains(id));
+    }
+
+    private static bool IsSectionVisible(JsonElement section, IReadOnlySet<string>? relicIds)
+    {
+        if (relicIds is null)
+            return true;
+
+        var requiredRelicId = JsonString(section, "visibleWhenRelicId");
+        if (!string.IsNullOrWhiteSpace(requiredRelicId) && !relicIds.Contains(requiredRelicId))
+            return false;
+
+        if (!section.TryGetProperty("visibleWhenAllRelicIds", out var requiredRelics)
+            || requiredRelics.ValueKind != JsonValueKind.Array)
+        {
+            return true;
+        }
+
+        return requiredRelics.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString())
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .All(id => relicIds.Contains(id!));
     }
 
     private static string FirstImagePath(JsonElement option)

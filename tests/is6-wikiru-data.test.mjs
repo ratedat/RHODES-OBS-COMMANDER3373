@@ -37,7 +37,7 @@ test("IS#6 July update includes the Content Addition II coins and statuses", () 
   const is6Effects = selectableEffects.filter((effect) => effect.campaignId === "is6_sui");
   const names = new Set(is6Effects.map((effect) => effect.name));
 
-  assert.equal(is6Effects.length, 152);
+  assert.equal(is6Effects.length, 164);
   assert.equal(names.has("烽火台"), true);
   assert.equal(names.has("相合"), true);
   assert.equal(names.has("聖詔神を封ず"), true);

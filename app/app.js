@@ -13,7 +13,8 @@ import { bossSectionAllowsMultiple, bossSelectionValues as readBossSelectionValu
 import { createLookupMaps } from "./domain/master-maps.js";
 import { applyDifficultyTier, difficultyEffectTexts, difficultySummary as summarizeDifficultyGrade, getDifficultyGradeConfig as readDifficultyGradeConfig, getDifficultyTierLabel as readDifficultyTierLabel, getSelectedDifficultyGrade as readSelectedDifficultyGrade } from "./domain/difficulty.js";
 import { isActiveManualRule, summarizeRelicEffects as summarizeRelicEffectMetrics, summarizeTextEffects } from "./domain/effect-metrics.js";
-import { sortOperators as sortOperatorsByPreference } from "./domain/operators.js";
+import { decorateMizukiRejectionTargets, sortOperators as sortOperatorsByPreference } from "./domain/operators.js";
+import { normalizeOperatorCounts, operatorCountFor, operatorRosterCount } from "./domain/operator-counts.js";
 import { prioritizeOwnedRelics, supportsRelicUsedFlag } from "./domain/relic-usage.js";
 import { buildStartTemplateSummary, getEffectiveRelicIds, mergeEffectiveSpecial, phaseLabel } from "./domain/start-templates.js";
 import { controlModeOptions, getControlMode, normalizeControlMode } from "./domain/ui-modes.js";
@@ -24,7 +25,7 @@ import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
 import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
-import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize } from "./lib/overlay-config.js";
+import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayBackgroundAlpha, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
 import { normalizePreferences } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
@@ -512,7 +513,7 @@ function getBossConfig(campaignId = getCampaign()?.id) {
 }
 
 function getBossManualSections(campaignId = getCampaign()?.id) {
-  return readBossManualSections(getBossConfig(campaignId));
+  return readBossManualSections(getBossConfig(campaignId), getEffectiveRelicIdList());
 }
 
 function getBossSelection(campaignId = getCampaign()?.id) {
@@ -549,8 +550,11 @@ function getBossFlagEntries(campaignId = getCampaign()?.id) {
   });
 }
 function getRecruitedOperators() {
-  const ops = (state.operators || []).map((id) => maps.operator.get(id)).filter(Boolean);
-  return sortOperators(ops);
+  const ops = (state.operators || []).map((id) => {
+    const operator = maps.operator.get(id);
+    return operator ? { ...operator, count: operatorCountFor(id, state.operatorCounts) } : null;
+  }).filter(Boolean);
+  return sortOperators(decorateMizukiRejectionTargets(ops, state));
 }
 
 function sortOperators(operators) {
@@ -670,6 +674,7 @@ function ensureStateShape() {
     ? state.usedRelicIds.filter((id) => state.relics.includes(id))
     : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
+  state.operatorCounts = normalizeOperatorCounts(state.operatorCounts, state.operators);
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
   normalizeBossSelections();
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
@@ -831,7 +836,10 @@ function renderRelicControlRow(item, active, excludedOrOptions = false) {
 
 function renderOperatorControlRow(item, active, excludedOrOptions = false) {
   const options = typeof excludedOrOptions === "object" ? excludedOrOptions : { excluded: Boolean(excludedOrOptions), showExclude: true };
-  return renderOperatorControlRowComponent(item, active, options);
+  return renderOperatorControlRowComponent(item, active, {
+    count: operatorCountFor(item.id, state.operatorCounts),
+    ...options,
+  });
 }
 
 function renderBossToggleSection(section, campaignId) {
@@ -880,7 +888,7 @@ function renderSidecarOperators(operators) {
     .map((rarity) => ({ rarity, items: operators.filter((item) => Number(item.rarity) === rarity) }))
     .filter((group) => group.items.length);
   return `<div class="sidecar-operator-groups">
-    ${groups.map((group) => `<section class="sidecar-operator-group"><h3>${stars(group.rarity)} <span>${group.items.length}</span></h3><div class="sidecar-mini-list">${group.items.map((item) => renderOperatorControlRow(item, true, { showExclude: false })).join("")}</div></section>`).join("")}
+    ${groups.map((group) => `<section class="sidecar-operator-group"><h3>${stars(group.rarity)} <span>${operatorRosterCount(group.items)}</span></h3><div class="sidecar-mini-list">${group.items.map((item) => renderOperatorControlRow(item, true, { showExclude: false })).join("")}</div></section>`).join("")}
   </div>`;
 }
 
@@ -935,7 +943,7 @@ function renderSidecar() {
           <div class="sidecar-panel-head"><h2>ラン状態</h2><span>${html(difficultyGrade?.label || state.run.difficulty || "等級未選択")}</span></div>
           <div class="sidecar-kpis">
             <div><span>秘宝</span><strong>${relics.length}</strong></div>
-            <div><span>招集</span><strong>${operators.length}</strong></div>
+            <div><span>招集</span><strong>${operatorRosterCount(operators)}</strong></div>
             <div><span>Boss</span><strong>${bossEntries.length}</strong></div>
             ${runStatDisplayItems(state.run).map((item) => `<div><span>${html(item.label)}</span><strong>${html(item.value)}</strong></div>`).join("")}
           </div>
@@ -971,7 +979,7 @@ function renderSidecar() {
           ${renderSidecarRelics(relics)}
         </section>
         <section class="sidecar-panel">
-          <div class="sidecar-panel-head"><h2>招集オペレーター</h2><span>${operators.length}</span></div>
+          <div class="sidecar-panel-head"><h2>招集オペレーター</h2><span>${operatorRosterCount(operators)}</span></div>
           ${renderSidecarOperators(operators)}
         </section>
         <section class="sidecar-panel">
@@ -1017,6 +1025,14 @@ function renderOverlay() {
   disposeOverlayLayoutEditor?.();
   disposeOverlayLayoutEditor = null;
   app.dataset.loading = "false";
+  document.documentElement.style.setProperty(
+    "--overlay-background-alpha",
+    String(resolveOverlayBackgroundAlpha(state.preferences)),
+  );
+  document.documentElement.classList.toggle(
+    "overlay-part-titles-hidden",
+    Boolean(overlayPart) && !shouldShowOverlayPartTitles(state.preferences),
+  );
   app.className = overlayPart
     ? `overlay-app overlay-part overlay-part-${overlayPart} overlay-size-${overlaySize}`
     : `overlay-app overlay-${overlayLayout} overlay-size-${overlaySize}${overlayEditorMode ? " overlay-custom-editor" : ""}`;

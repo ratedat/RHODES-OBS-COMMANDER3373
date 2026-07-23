@@ -2,6 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { normalizeOcrEngine, normalizePreferences, ocrEngineOptions } from "../app/lib/preferences.js";
+import {
+  resolveOverlayBackgroundAlpha,
+  shouldShowOverlayPartTitles,
+} from "../app/lib/overlay-config.js";
 
 test("OCR engine preference defaults to MAA-OCR", () => {
   assert.equal(normalizeOcrEngine(""), "maa-ocr");
@@ -44,4 +48,31 @@ test("choice list filter preferences are normalized", () => {
   assert.equal(preferences.relicHideExcluded, false);
   assert.equal(preferences.relicSelectedOnly, false);
   assert.deepEqual(preferences.relicExcludedIds, ["is5_sarkaz_relic_001"]);
+});
+
+test("overlay background remains opaque when transparent background is disabled", () => {
+  const preferences = normalizePreferences({
+    sukiOutputTransparentBackground: false,
+    sukiOutputBackgroundTransparency: 100,
+  });
+
+  assert.equal(resolveOverlayBackgroundAlpha(preferences), 1);
+});
+
+test("overlay background transparency is clamped and applied only when enabled", () => {
+  assert.equal(resolveOverlayBackgroundAlpha(normalizePreferences({
+    sukiOutputTransparentBackground: true,
+    sukiOutputBackgroundTransparency: 35,
+  })), 0.65);
+  assert.equal(resolveOverlayBackgroundAlpha(normalizePreferences({
+    sukiOutputTransparentBackground: true,
+    sukiOutputBackgroundTransparency: 140,
+  })), 0);
+});
+
+test("individual overlay titles default to visible and can be hidden", () => {
+  assert.equal(shouldShowOverlayPartTitles(normalizePreferences({})), true);
+  assert.equal(shouldShowOverlayPartTitles(normalizePreferences({
+    sukiOutputShowPartTitles: false,
+  })), false);
 });

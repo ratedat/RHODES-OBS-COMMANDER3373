@@ -297,6 +297,11 @@
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="LineHeight" Value="22" />
   </Style>
+  <Style Selector="TextBlock.h3">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="20" />
+  </Style>
   <Style Selector="TextBlock.caption">
     <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextTertiary}" />

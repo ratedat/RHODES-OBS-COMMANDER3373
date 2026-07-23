@@ -75,6 +75,7 @@ test("scan profiles own the server-side OCR engine routing", async () => {
     is6BaseFull: "maa-ocr",
     is6ActiveCoinsFull: "maa-ocr",
     is6CoinsFull: "maa-ocr",
+    is6SeasonalHours: "maa-ocr",
   });
   for (const profile of profileList) {
     assert.ok(profile.ocrEngine, `${profile.id} should declare ocrEngine for server routing`);
@@ -93,6 +94,21 @@ test("scan profiles own MAA interface group labels and descriptions", async () =
   assert.equal(profiles.get("relicsFull").interfaceLabel, "秘宝");
   assert.equal(profiles.get("is2HallucinationsFull").interfaceLabel, "幻覚");
   assert.equal(profiles.get("is2PerformanceFull").interfaceLabel, "演目");
+  assert.equal(profiles.get("is6SeasonalHours").interfaceLabel, "歳時");
+});
+
+test("Sui seasonal hour profile opens and closes the detail panel with randomized tap areas", async () => {
+  const profiles = await profilesById();
+  const profile = profiles.get("is6SeasonalHours");
+
+  assert.equal(profile.campaignId, "is6_sui");
+  assert.deepEqual(profile.ocrRegionIds, ["is6.seasonal_hour_detail_text"]);
+  assert.equal(profile.openSteps[0].type, "tap");
+  assert.ok(profile.openSteps[0].area.width > 1);
+  assert.ok(profile.openSteps[0].area.height > 1);
+  assert.equal(profile.restoreSteps[0].type, "tap");
+  assert.ok(profile.restoreSteps[0].area.width > 1);
+  assert.ok(profile.restoreSteps[0].area.height > 1);
 });
 
 test("scan profiles do not carry retired external trigger URLs", async () => {
@@ -435,6 +451,33 @@ test("ADB scan profiles restore overlays with tap actions instead of Android Bac
 });
 
 
+test("Sui held coin scan opens and closes the coin box with a randomized tap area", async () => {
+  const profiles = await profilesById();
+  const profile = profiles.get("is6CoinsFull");
+  const opener = (profile.openSteps || []).find((step) => step.type === "tap");
+  const closer = (profile.restoreSteps || []).find((step) => step.type === "tap");
+
+  assert.deepEqual(profile.targetScreenIds, ["sui-coin-list"]);
+  assert.deepEqual(opener?.point, { x: 744, y: 678 });
+  assert.deepEqual(opener?.area, { x: 704, y: 650, width: 82, height: 58 });
+  assert.deepEqual(closer?.point, opener?.point);
+  assert.deepEqual(closer?.area, opener?.area);
+  assert.equal(profile.scrollPasses.length, 2);
+  assert.deepEqual(profile.scrollPasses.map((pass) => pass.axis), ["horizontal", "horizontal"]);
+  assert.deepEqual(profile.scrollPasses.map((pass) => pass.direction), ["right", "left"]);
+  const [right, left] = profile.scrollPasses;
+  assert.ok(right.scroll.startArea.x > right.scroll.endArea.x, "right pass should drag left");
+  assert.ok(left.scroll.startArea.x < left.scroll.endArea.x, "left pass should drag right");
+  assert.equal(right.collectCandidates, true);
+  assert.equal(left.collectCandidates, true, "reverse pass must collect coins hidden before the initial viewport");
+  for (const pass of profile.scrollPasses) {
+    assert.equal(pass.maxScrolls, 10, "held coin scan should cover the catalog without an excessive fixed sweep");
+    assert.equal(pass.endFingerprintStableCount, 1, "held coin scan should stop after the first unchanged endpoint frame");
+    assert.ok(pass.captureDelayMs <= 120, "held coin scan should not add a long delay after every horizontal swipe");
+  }
+});
+
+
 test("run status profile knows when the squad info panel is already open", async () => {
   const profiles = await profilesById();
   const profile = profiles.get("runStatusFull");
@@ -452,6 +495,13 @@ test("squad random effect description uses multiline OCR", async () => {
   const tasks = await recognitionTasks();
   const region = tasks.ocrRegions.find((item) => item.id === "run.squad_card");
   assert.deepEqual(region.roi, [28, 396, 460, 136]);
+  assert.equal(region.onlyRec, false);
+});
+
+test("held coin list uses MAA text detection for multiple visible names", async () => {
+  const tasks = await recognitionTasks();
+  const region = tasks.ocrRegions.find((item) => item.id === "is6.coin_list_text");
+  assert.deepEqual(region.roi, [120, 96, 1040, 500]);
   assert.equal(region.onlyRec, false);
 });
 

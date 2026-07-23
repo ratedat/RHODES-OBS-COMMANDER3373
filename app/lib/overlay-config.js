@@ -44,6 +44,25 @@ export function clampOverlayScrollSpeed(value, fallback = 12) {
   return Math.min(30, Math.max(0, Math.round(numeric)));
 }
 
+export function clampOverlayBackgroundTransparency(value, fallback = 100) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(100, Math.max(0, Math.round(numeric)));
+}
+
+export function resolveOverlayBackgroundAlpha(preferences = {}) {
+  if (preferences.sukiOutputTransparentBackground !== true) return 1;
+  const transparency = clampOverlayBackgroundTransparency(
+    preferences.sukiOutputBackgroundTransparency,
+    100,
+  );
+  return Math.round((1 - (transparency / 100)) * 100) / 100;
+}
+
+export function shouldShowOverlayPartTitles(preferences = {}) {
+  return preferences.sukiOutputShowPartTitles !== false;
+}
+
 export function isOverlayScrollSpeedField(field) {
   return Object.prototype.hasOwnProperty.call(overlayScrollSpeedDefaults, field);
 }

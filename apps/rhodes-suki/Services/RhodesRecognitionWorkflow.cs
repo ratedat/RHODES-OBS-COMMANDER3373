@@ -33,7 +33,8 @@ public sealed record RhodesCandidateApplyWorkflowResult(
     bool LocalFallbackUsed,
     SukiOptionalRuntimeStatus? ApiStatus,
     string LastCandidateApplySummary,
-    string StatusMessage)
+    string StatusMessage,
+    string StateJson = "")
 {
     public bool ShouldReloadRunState => Summary.AppliedCount > 0;
 }
@@ -175,7 +176,12 @@ public static class RhodesRecognitionWorkflow
             return await ApplyLocalFallbackAsync(candidates, saved.Error, saveLocalCandidatesAsync, cancellationToken);
 
         await replaceLocalStateJsonAsync(saved.StateJson, cancellationToken);
-        return AppliedResult(applied.Summary, "", false, RhodesApiStatusProbe.ParseStateJson(saved.StateJson));
+        return AppliedResult(
+            applied.Summary,
+            "",
+            false,
+            RhodesApiStatusProbe.ParseStateJson(saved.StateJson),
+            saved.StateJson);
     }
 
     private static async Task<RhodesCandidateApplyWorkflowResult> ApplyLocalFallbackAsync(
@@ -195,9 +201,10 @@ public static class RhodesRecognitionWorkflow
         SukiCandidateApplySummary summary,
         string apiError,
         bool localFallbackUsed,
-        SukiOptionalRuntimeStatus? apiStatus)
+        SukiOptionalRuntimeStatus? apiStatus,
+        string stateJson = "")
     {
-        var fields = string.Join(", ", summary.AppliedFields);
+        var fields = BuildAppliedFieldsSummary(summary.AppliedFields);
         return new RhodesCandidateApplyWorkflowResult(
             summary,
             apiError,
@@ -206,7 +213,39 @@ public static class RhodesRecognitionWorkflow
             $"{summary.AppliedCount}件: {fields}",
             string.IsNullOrWhiteSpace(apiError)
                 ? $"状態へ反映し、APIへ同期しました: {summary.AppliedCount}件 ({fields})"
-                : $"状態へ反映しました: {summary.AppliedCount}件 ({fields}) / API同期失敗: {apiError}");
+                : $"状態へ反映しました: {summary.AppliedCount}件 ({fields}) / API同期失敗: {apiError}",
+            stateJson);
+    }
+
+    private static string BuildAppliedFieldsSummary(IReadOnlyList<string> appliedFields)
+    {
+        if (appliedFields.Count <= 3 && appliedFields.All(field => !field.Contains(':')))
+            return string.Join(", ", appliedFields);
+
+        return string.Join(
+            " / ",
+            appliedFields
+                .GroupBy(AppliedFieldLabel, StringComparer.Ordinal)
+                .Select(group => $"{group.Key}{group.Count()}件"));
+    }
+
+    private static string AppliedFieldLabel(string field)
+    {
+        if (field.Contains(":rejectionReaction:", StringComparison.Ordinal))
+            return "拒絶反応";
+        if (field.Contains(":operatorEvolution:", StringComparison.Ordinal))
+            return "進化";
+        if (field.StartsWith("operator:", StringComparison.Ordinal))
+            return "オペレーター";
+        if (field.StartsWith("relic:", StringComparison.Ordinal))
+            return "秘宝";
+        if (field.Equals("ingot", StringComparison.Ordinal))
+            return "源石錐";
+        if (field.Equals("difficulty", StringComparison.Ordinal))
+            return "等級";
+        if (field.StartsWith("squad", StringComparison.Ordinal))
+            return "分隊";
+        return "その他";
     }
 
     private static RhodesCandidateApplyWorkflowResult NotAppliedResult(

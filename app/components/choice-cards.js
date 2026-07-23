@@ -32,13 +32,16 @@ export function renderRelicControlRow(item, active, effectText, meta = {}) {
 
 export function renderOperatorControlRow(item, active, meta = {}) {
   const excluded = Boolean(meta.excluded);
+  const countBadge = active && Number(meta.count) > 1
+    ? `<span class="operator-count-badge">×${html(Math.trunc(Number(meta.count)))}</span>`
+    : "";
   const excludeButton = meta.showExclude === false ? "" : `<button type="button" class="choice-exclude-button ${excluded ? "active" : ""}" data-action="toggle-operator-excluded" data-id="${html(item.id)}" aria-pressed="${excluded ? "true" : "false"}">${excluded ? "除外中" : "表示除外"}</button>`;
   return `
     <div class="item-row operator-choice ${active ? "active" : ""} ${excluded ? "choice-excluded" : ""}">
       <button type="button" class="item-choice-button" data-action="toggle-operator" data-id="${html(item.id)}" aria-pressed="${active ? "true" : "false"}">
         <img class="item-thumb" src="${html(assetUrl(item.image?.localPath))}" alt="" loading="lazy" />
         <span class="item-choice-main">
-          <span class="item-title">${html(item.name)} <span class="stars">${stars(item.rarity)}</span></span>
+          <span class="item-title">${html(item.name)} ${countBadge} <span class="stars">${stars(item.rarity)}</span></span>
           <span class="item-meta">${html(item.class)} / ${html(item.branch)}${item.hiddenByDefault ? " / 日本未実装" : ""}</span>
         </span>
       </button>

@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getOperatorFilterView, sortOperators } from "../app/domain/operators.js";
+import {
+  decorateMizukiRejectionTargets,
+  getOperatorFilterView,
+  sortOperators,
+} from "../app/domain/operators.js";
 
 const operators = [
   { id: "old-six", name: "旧★6", rarity: 6, displayOrder: 9, implementationOrder: 1 },
@@ -152,4 +156,35 @@ test("sortOperators uses branch order within operator class order", () => {
     "hookmaster",
     "merchant",
   ]);
+});
+
+test("Mizuki rejection targets are decorated only during the Mizuki campaign", () => {
+  const source = [
+    { id: "kroos", name: "クルース" },
+    { id: "fang", name: "フェン" },
+  ];
+  const state = {
+    run: {
+      campaignId: "is3_mizuki",
+      special: {
+        is3_mizuki: {
+          rejectionReaction: {
+            effectId: "is3_mizuki_selectable_rejectionReaction_mcasci25",
+            operatorIds: ["kroos"],
+          },
+        },
+      },
+    },
+  };
+
+  assert.deepEqual(
+    decorateMizukiRejectionTargets(source, state).map((item) => [item.id, item.isRejectionReactionTarget]),
+    [["kroos", true], ["fang", false]],
+  );
+  assert.equal(
+    decorateMizukiRejectionTargets(source, {
+      run: { ...state.run, campaignId: "is5_sarkaz" },
+    })[0].isRejectionReactionTarget,
+    false,
+  );
 });

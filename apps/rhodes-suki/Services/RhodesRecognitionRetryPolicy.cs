@@ -74,6 +74,28 @@ public static class RhodesRecognitionRetryPolicy
         if (profileId == "is5ThoughtFull")
             return LowConfidence(recognized.Where(item => item.Kind == "thought"), 0.68, "思案");
 
+        if (profileId == "is3LightHordeFull")
+        {
+            var hordeCalls = recognized.Where(item =>
+                item.Kind.Equals("mizuki", StringComparison.OrdinalIgnoreCase)
+                && item.FieldId.Equals("hordeCalls", StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(item.EffectId)).ToArray();
+            if (hordeCalls.Length == 0)
+                return new RhodesRecognitionRetryDecision(true, "大群の呼び声候補がありません。");
+            return LowConfidence(hordeCalls, 0.72, "大群の呼び声");
+        }
+
+        if (profileId == "is3RejectionFull")
+        {
+            var reactions = recognized.Where(item =>
+                item.Kind.Equals("mizuki", StringComparison.OrdinalIgnoreCase)
+                && item.FieldId.Equals("rejectionReaction", StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(item.EffectId)).ToArray();
+            if (reactions.Length == 0)
+                return new RhodesRecognitionRetryDecision(true, "拒絶反応候補がありません。");
+            return LowConfidence(reactions, 0.72, "拒絶反応");
+        }
+
         return RhodesRecognitionRetryDecision.NoRetry;
     }
 

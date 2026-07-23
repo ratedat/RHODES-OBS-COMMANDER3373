@@ -1,11 +1,13 @@
 import { assetUrl, html, stars } from "../lib/format.js";
 import { renderRelicUsedBadge } from "./relic-used-badge.js";
+import { operatorRosterCount } from "../domain/operator-counts.js";
 
 export function renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run }, context) {
   const specialTags = context.getSpecialTags(specialFields, special, { overlay: true });
   const runStats = context.runStatDisplayItems(run);
   const specialItems = context.getOverlaySpecialEffects(campaign.id, specialFields, special);
   const flags = context.getBossFlagEntries(campaign.id);
+  const operatorCount = operatorRosterCount(operators);
   return `
     <section class="compact-overlay-shell">
       <header class="compact-head">
@@ -14,7 +16,7 @@ export function renderOverlayCompact({ campaign, squad, option, performance, act
           <div class="compact-title">${html(campaign.title)}</div>
         </div>
         <div class="compact-counts">
-          <span>秘宝 ${relics.length}</span><span>招集 ${operators.length}</span><span>Boss ${flags.length}</span>
+          <span>秘宝 ${relics.length}</span><span>招集 ${operatorCount}</span><span>Boss ${flags.length}</span>
         </div>
       </header>
       <div class="compact-row"><span>分隊</span><strong>${html(squad?.name || "未選択")}</strong></div>
@@ -42,9 +44,9 @@ export function renderOverlayCompact({ campaign, squad, option, performance, act
         </div>
       </section>
       <section class="compact-section">
-        <div class="compact-section-head"><span>Operators</span><span>${operators.length}</span></div>
+        <div class="compact-section-head"><span>Operators</span><span>${operatorCount}</span></div>
         <div class="compact-operator-strip">
-          ${operators.length ? operators.slice(0, 8).map((item) => `<div class="compact-operator"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span>${html(item.name)}</span><strong>${stars(item.rarity)}</strong></div>`).join("") : `<span class="compact-empty">なし</span>`}
+          ${operators.length ? operators.slice(0, 8).map((item) => `<div class="compact-operator"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span class="${item.isRejectionReactionTarget ? "rejection-reaction-operator-name" : ""}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</span><strong>${stars(item.rarity)}</strong></div>`).join("") : `<span class="compact-empty">なし</span>`}
           ${operators.length > 8 ? `<span class="compact-more">+${operators.length - 8}</span>` : ""}
         </div>
       </section>
@@ -58,6 +60,7 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
   const runStats = context.runStatDisplayItems(run);
   const specialItems = context.getOverlaySpecialEffects(campaign.id, specialFields, special);
   const flags = context.getBossFlagEntries(campaign.id);
+  const operatorCount = operatorRosterCount(operators);
   const isHorizontal = orientation === "horizontal";
   const inlineBosses = isHorizontal ? "" : flags.map((flag) => context.renderBossChip(flag)).join("");
   const inlineEffects = !isHorizontal && activeEffects.length ? `<div class="stream-scroll stream-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
@@ -79,7 +82,7 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
           <div class="stream-title">${html(campaign.title)}</div>
         </div>
         <div class="stream-counts">
-          <span>秘宝 ${relics.length}</span><span>招集 ${operators.length}</span><span>Boss ${flags.length}</span>
+          <span>秘宝 ${relics.length}</span><span>招集 ${operatorCount}</span><span>Boss ${flags.length}</span>
         </div>
       </header>`;
   const runPanel = `<section class="stream-run">
@@ -105,10 +108,10 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
         </div>
       </section>`;
   const operatorPanel = `<section class="stream-panel stream-operator-panel">
-        <div class="stream-section-head"><span>Operators</span><strong>${operators.length}</strong></div>
+        <div class="stream-section-head"><span>Operators</span><strong>${operatorCount}</strong></div>
         <div class="stream-scroll stream-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}OperatorScrollSpeed`)}">
           <div class="stream-operator-grid">
-            ${operators.length ? operators.map((item) => `<div class="stream-operator-tile"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><strong>${html(item.name)}</strong><span>${stars(item.rarity)} / ${html(item.class || "-")}</span></div></div>`).join("") : `<div class="stream-empty">未招集</div>`}
+            ${operators.length ? operators.map((item) => `<div class="stream-operator-tile"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><strong class="${item.isRejectionReactionTarget ? "rejection-reaction-operator-name" : ""}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${stars(item.rarity)} / ${html(item.class || "-")}</span></div></div>`).join("") : `<div class="stream-empty">未招集</div>`}
           </div>
         </div>
       </section>`;
@@ -140,6 +143,7 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
 export function renderOverlayDefault({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run, mode, runDifficulty, updatedAt, bossFlagCount }, context) {
   const bossEntries = context.getBossFlagEntries();
   const runStats = context.runStatDisplayItems(run);
+  const operatorCount = operatorRosterCount(operators);
   return `
     <header class="overlay-top">
       <section class="overlay-card">
@@ -163,7 +167,7 @@ export function renderOverlayDefault({ campaign, squad, option, performance, act
         <div class="overlay-card-header"><span>Count</span><span>${html(new Date(updatedAt || Date.now()).toLocaleTimeString("ja-JP"))}</span></div>
         <div class="overlay-card-body overlay-kpis">
           <div class="kpi"><div class="kpi-label">秘宝</div><div class="kpi-value">${relics.length}</div></div>
-          <div class="kpi"><div class="kpi-label">招集</div><div class="kpi-value">${operators.length}</div></div>
+          <div class="kpi"><div class="kpi-label">招集</div><div class="kpi-value">${operatorCount}</div></div>
           <div class="kpi"><div class="kpi-label">Flag</div><div class="kpi-value">${bossFlagCount}</div></div>
         </div>
       </section>
@@ -200,9 +204,9 @@ export function renderOverlayDefault({ campaign, squad, option, performance, act
           </div>
         </section>
         <section class="overlay-card">
-          <div class="overlay-card-header"><span>Operators</span><span>${operators.length}</span></div>
+          <div class="overlay-card-header"><span>Operators</span><span>${operatorCount}</span></div>
           <div class="overlay-card-body operator-list">
-            ${operators.length ? operators.slice(0, 14).map((item) => `<div class="operator-row"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><div class="operator-name">${html(item.name)}</div><div class="operator-meta">${html(item.class)} / ${html(item.branch)}</div></div><div class="stars">${stars(item.rarity)}</div></div>`).join("") : `<div class="empty-state">未招集</div>`}
+            ${operators.length ? operators.slice(0, 14).map((item) => `<div class="operator-row"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><div class="operator-name ${item.isRejectionReactionTarget ? "rejection-reaction-operator-name" : ""}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</div><div class="operator-meta">${html(item.class)} / ${html(item.branch)}</div></div><div class="stars">${stars(item.rarity)}</div></div>`).join("") : `<div class="empty-state">未招集</div>`}
           </div>
         </section>
         <div class="footer-note">Manual state / OCR suggestions require confirmation</div>

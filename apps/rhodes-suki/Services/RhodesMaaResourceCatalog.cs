@@ -25,6 +25,7 @@ public static class RhodesMaaResourceCatalog
         ["is3LightHordeFull"] = "灯火・大群",
         ["is3RejectionFull"] = "拒絶反応",
         ["is6CoinsFull"] = "通宝",
+        ["is6SeasonalHours"] = "歳時",
     };
 
     private static readonly IReadOnlyDictionary<string, int> ProfileOrder = new Dictionary<string, int>(StringComparer.Ordinal)
@@ -41,6 +42,7 @@ public static class RhodesMaaResourceCatalog
         ["is3LightHordeFull"] = 68,
         ["is3RejectionFull"] = 69,
         ["is6CoinsFull"] = 70,
+        ["is6SeasonalHours"] = 71,
     };
 
     public static IReadOnlyList<MaaResourceTaskPreview> DefaultTasks()

@@ -11,6 +11,7 @@ import { normalizePreferences } from "./lib/preferences.js";
 import { normalizeRunStats } from "./domain/run-stats.js";
 import { normalizeAdbSettings } from "./domain/adb-settings.js";
 import { preserveLocalConfigOnReset } from "./domain/local-config.js";
+import { normalizeOperatorCounts, operatorCountFor } from "./domain/operator-counts.js";
 import { extractRunStatusCandidates } from "./domain/recognition/run-status-extractor.js";
 import { createRelicCandidateExtractor } from "./domain/recognition/relic-candidate-extractor.js";
 import { createOperatorCandidateExtractor } from "./domain/recognition/operator-candidate-extractor.js";
@@ -96,6 +97,7 @@ function initialStateFromExample(example) {
     ? state.usedRelicIds.filter((id) => state.relics.includes(id))
     : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
+  state.operatorCounts = normalizeOperatorCounts(state.operatorCounts, state.operators);
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
   state.bossSelections = state.bossSelections && typeof state.bossSelections === "object" && !Array.isArray(state.bossSelections) ? state.bossSelections : {};
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
@@ -125,6 +127,7 @@ function normalizeState(state) {
     ? [...new Set(next.usedRelicIds.filter((id) => next.relics.includes(id)))]
     : [];
   next.operators = Array.isArray(next.operators) ? [...new Set(next.operators.filter(Boolean))] : [];
+  next.operatorCounts = normalizeOperatorCounts(next.operatorCounts, next.operators);
   next.bossFlags = Array.isArray(next.bossFlags) ? next.bossFlags.filter(Boolean) : [];
   next.bossSelections = next.bossSelections && typeof next.bossSelections === "object" && !Array.isArray(next.bossSelections) ? next.bossSelections : {};
   next.pendingSuggestions = Array.isArray(next.pendingSuggestions) ? next.pendingSuggestions : [];
@@ -158,7 +161,9 @@ async function buildHealthPayload() {
     state: {
       campaignId: run.campaignId || null,
       updatedAt: state.updatedAt || null,
-      operators: Array.isArray(state.operators) ? state.operators.length : 0,
+      operators: Array.isArray(state.operators)
+        ? state.operators.reduce((total, id) => total + operatorCountFor(id, state.operatorCounts), 0)
+        : 0,
       relics: Array.isArray(state.relics) ? state.relics.length : 0,
       pendingSuggestions: Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions.length : 0,
     },

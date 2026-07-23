@@ -56,7 +56,11 @@ public sealed record SukiSpecialEffectOption(
     int Price = 0,
     string ThoughtRank = "",
     string ThoughtLoad = "",
-    string ImagePath = "")
+    string ImagePath = "",
+    string ParentKey = "",
+    string ParentName = "",
+    string VariantRank = "",
+    string VariantLabel = "")
 {
     public string DetailMeta => string.Join(
         " / ",
@@ -69,6 +73,58 @@ public sealed record SukiSpecialEffectOption(
         }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     public override string ToString() => Name;
+}
+
+public sealed class SukiSeasonalHourEditor : INotifyPropertyChanged
+{
+    private SukiSpecialEffectOption _selectedOption;
+
+    public SukiSeasonalHourEditor(
+        string parentKey,
+        string parentName,
+        IReadOnlyList<SukiSpecialEffectOption> options,
+        string selectedId = "")
+    {
+        ParentKey = parentKey;
+        ParentName = parentName;
+        Options = options;
+        _selectedOption = options.FirstOrDefault(option => option.Id.Equals(selectedId, StringComparison.Ordinal))
+            ?? options.First();
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string ParentKey { get; }
+    public string ParentName { get; }
+    public IReadOnlyList<SukiSpecialEffectOption> Options { get; }
+
+    public SukiSpecialEffectOption SelectedOption
+    {
+        get => _selectedOption;
+        set
+        {
+            if (value is null || ReferenceEquals(_selectedOption, value))
+                return;
+            _selectedOption = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOption)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedId)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedEffect)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsDogPaintingTargetSelectionVisible)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DogPaintingTargetLimit)));
+        }
+    }
+
+    public string SelectedId => SelectedOption.Id;
+    public string SelectedEffect => SelectedOption.Effect;
+    public bool IsDogPaintingTargetSelectionVisible => ParentKey.Equals("is6sst11", StringComparison.Ordinal)
+        && DogPaintingTargetLimit > 0;
+    public int DogPaintingTargetLimit => SelectedOption.VariantRank switch
+    {
+        "mourou" => 1,
+        "meiryou" => 2,
+        "nyuukotsu" => 3,
+        _ => 0,
+    };
 }
 
 public sealed class SukiHallucinationOption : INotifyPropertyChanged
@@ -153,9 +209,15 @@ public sealed class SukiOperatorTargetOption : INotifyPropertyChanged
 {
     private bool _isSelected;
 
-    public SukiOperatorTargetOption(string id, string name, string imagePath, bool isSelected = false)
+    public SukiOperatorTargetOption(
+        string operatorId,
+        int instanceIndex,
+        string name,
+        string imagePath,
+        bool isSelected = false)
     {
-        Id = id;
+        OperatorId = operatorId;
+        InstanceIndex = Math.Max(1, instanceIndex);
         Name = name;
         ImagePath = imagePath;
         _isSelected = isSelected;
@@ -163,7 +225,10 @@ public sealed class SukiOperatorTargetOption : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string Id { get; }
+    public string Id => OperatorId;
+    public string OperatorId { get; }
+    public int InstanceIndex { get; }
+    public string TargetKey => $"{OperatorId}#{InstanceIndex}";
     public string Name { get; }
     public string ImagePath { get; }
 
@@ -178,6 +243,14 @@ public sealed class SukiOperatorTargetOption : INotifyPropertyChanged
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
         }
     }
+}
+
+public sealed record SukiOperatorTargetRef(
+    string OperatorId,
+    int InstanceIndex = 1)
+{
+    public int NormalizedInstanceIndex => Math.Max(1, InstanceIndex);
+    public string TargetKey => $"{OperatorId}#{NormalizedInstanceIndex}";
 }
 
 public sealed record SukiHallucinationFusion(
@@ -203,6 +276,7 @@ public sealed class SukiBossOption : INotifyPropertyChanged
         string stageName,
         string bossName,
         string optionLabel,
+        string requiredNote,
         string imagePath,
         double sortOrder,
         bool isSelected = false)
@@ -212,6 +286,7 @@ public sealed class SukiBossOption : INotifyPropertyChanged
         StageName = stageName;
         BossName = bossName;
         OptionLabel = optionLabel;
+        RequiredNote = requiredNote;
         ImagePath = imagePath;
         SortOrder = sortOrder;
         _isSelected = isSelected;
@@ -229,15 +304,22 @@ public sealed class SukiBossOption : INotifyPropertyChanged
 
     public string OptionLabel { get; }
 
+    public string RequiredNote { get; }
+
     public string ImagePath { get; }
 
     public double SortOrder { get; }
 
-    public string DisplayName => string.IsNullOrWhiteSpace(Id)
-        ? "未選択"
-        : string.IsNullOrWhiteSpace(BossName)
-            ? StageName
-            : $"{StageName} / {BossName}";
+    public string DisplayName
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Id))
+                return "未選択";
+            var name = string.IsNullOrWhiteSpace(BossName) ? StageName : $"{StageName} / {BossName}";
+            return string.IsNullOrWhiteSpace(RequiredNote) ? name : $"{name} — {RequiredNote}";
+        }
+    }
 
     public bool IsSelected
     {
@@ -365,6 +447,68 @@ public sealed class SukiThoughtCountEditor : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
+public sealed record SukiCoinLoadoutEntry(
+    string CoinId,
+    string StatusId,
+    int Count);
+
+public sealed class SukiCoinLoadoutEditor : INotifyPropertyChanged
+{
+    private int _count;
+    private SukiSpecialEffectOption _selectedStatus;
+
+    public SukiCoinLoadoutEditor(
+        SukiSpecialEffectOption coin,
+        IReadOnlyList<SukiSpecialEffectOption> statusOptions,
+        string statusId = "",
+        int count = 1)
+    {
+        Coin = coin;
+        StatusOptions = statusOptions;
+        _selectedStatus = statusOptions.FirstOrDefault(option => option.Id.Equals(statusId, StringComparison.Ordinal))
+            ?? statusOptions.First();
+        _count = Math.Clamp(count, 1, 99);
+    }
+
+    public SukiSpecialEffectOption Coin { get; }
+    public string CoinId => Coin.Id;
+    public string Name => Coin.Name;
+    public string Effect => Coin.Effect;
+    public string Category => Coin.Category;
+    public string ImagePath => Coin.ImagePath;
+    public IReadOnlyList<SukiSpecialEffectOption> StatusOptions { get; }
+
+    public SukiSpecialEffectOption SelectedStatus
+    {
+        get => _selectedStatus;
+        set
+        {
+            if (ReferenceEquals(_selectedStatus, value) || value is null)
+                return;
+            _selectedStatus = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedStatus)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StatusId)));
+        }
+    }
+
+    public string StatusId => SelectedStatus.Id;
+
+    public int Count
+    {
+        get => _count;
+        set
+        {
+            var normalized = Math.Clamp(value, 1, 99);
+            if (_count == normalized)
+                return;
+            _count = normalized;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Count)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+
 public sealed record SukiSpecialFieldState(
     string CampaignId,
     string FieldId,
@@ -376,7 +520,9 @@ public sealed record SukiSpecialFieldState(
     string Detail,
     string EffectId = "",
     IReadOnlyList<string>? SelectedIds = null,
-    IReadOnlyList<string>? OperatorIds = null);
+    IReadOnlyList<string>? OperatorIds = null,
+    IReadOnlyList<SukiCoinLoadoutEntry>? CoinEntries = null,
+    IReadOnlyList<SukiOperatorTargetRef>? OperatorTargets = null);
 
 public sealed record SukiCampaignWorkspacePreview(
     string Id,
@@ -689,6 +835,9 @@ public sealed record SukiRunStateSnapshot(
     string Performance = "")
 {
     public IReadOnlySet<string> UsedRelicIds { get; init; } = new HashSet<string>(StringComparer.Ordinal);
+
+    public IReadOnlyDictionary<string, int> OperatorCounts { get; init; } =
+        new Dictionary<string, int>(StringComparer.Ordinal);
 }
 
 public sealed record RhodesRunCatalogSnapshot(
@@ -744,9 +893,14 @@ public sealed record SukiChoiceCatalogView(
 
 public sealed class SukiChoiceItem : INotifyPropertyChanged
 {
+    public const int MaximumSelectionCount = 99;
+
     private bool _isSelected;
     private bool _isExcluded;
     private bool _isUsed;
+    private bool _isRejectionReactionTarget;
+    private bool _isEvolutionTarget;
+    private int _selectionCount = 1;
 
     public SukiChoiceItem(
         string kind,
@@ -816,6 +970,56 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
 
     public string SearchText { get; }
 
+    public bool IsRejectionReactionTarget
+    {
+        get => _isRejectionReactionTarget;
+        set
+        {
+            if (_isRejectionReactionTarget == value)
+                return;
+            _isRejectionReactionTarget = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsEvolutionTarget
+    {
+        get => _isEvolutionTarget;
+        set
+        {
+            if (_isEvolutionTarget == value)
+                return;
+            _isEvolutionTarget = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool SupportsMultipleCount =>
+        string.Equals(Kind, "operator", StringComparison.Ordinal)
+        && (Id.StartsWith("reserve_", StringComparison.OrdinalIgnoreCase)
+            || Name.StartsWith("予備隊員", StringComparison.Ordinal));
+
+    public int SelectionCount
+    {
+        get => SupportsMultipleCount ? _selectionCount : 1;
+        set
+        {
+            var normalized = SupportsMultipleCount
+                ? Math.Clamp(value, 1, MaximumSelectionCount)
+                : 1;
+            if (_selectionCount == normalized)
+                return;
+            _selectionCount = normalized;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(EffectiveSelectionCount));
+            OnPropertyChanged(nameof(StateLabel));
+        }
+    }
+
+    public int EffectiveSelectionCount => IsSelected ? SelectionCount : 0;
+
+    public bool IsSelectionCountVisible => SupportsMultipleCount && IsSelected;
+
     public bool IsSelected
     {
         get => _isSelected;
@@ -823,11 +1027,18 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
         {
             if (_isSelected == value)
                 return;
+            var resetSelectionCount = !value && _selectionCount != 1;
             _isSelected = value;
+            if (!value)
+                _selectionCount = 1;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectionButtonLabel));
             OnPropertyChanged(nameof(StateLabel));
             OnPropertyChanged(nameof(IsUsageToggleVisible));
+            if (resetSelectionCount)
+                OnPropertyChanged(nameof(SelectionCount));
+            OnPropertyChanged(nameof(EffectiveSelectionCount));
+            OnPropertyChanged(nameof(IsSelectionCountVisible));
         }
     }
 
@@ -875,7 +1086,11 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
             if (IsSelected && IsExcluded)
                 return "選択 / 除外";
             if (IsSelected)
+            {
+                if (SupportsMultipleCount && SelectionCount > 1)
+                    return $"選択中 / {SelectionCount}名";
                 return IsUsed ? "選択中 / 使用済" : "選択中";
+            }
             if (IsExcluded)
                 return "除外";
             if (HiddenByDefault)

@@ -128,6 +128,11 @@
               "match": "#region(隠し歳時)",
               "group": "hidden",
               "groupLabel": "隠し歳時"
+            },
+            {
+              "match": "#region(「醒覚」状態)",
+              "group": "awakening",
+              "groupLabel": "醒覚"
             }
           ],
           "phaseVariants": [
@@ -148,6 +153,12 @@
               "rank": "nyuukotsu",
               "label": "入骨",
               "order": 3
+            },
+            {
+              "match": "醒覚",
+              "rank": "awakening",
+              "label": "醒覚",
+              "order": 4
             }
           ]
         }

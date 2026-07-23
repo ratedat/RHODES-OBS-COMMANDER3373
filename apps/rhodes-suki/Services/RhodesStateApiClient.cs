@@ -178,6 +178,8 @@ public static class RhodesStateApiClient
 
         preferences["sukiOutputSeparateWindow"] = outputPreferences.SeparateWindow;
         preferences["sukiOutputTransparentBackground"] = outputPreferences.TransparentBackground;
+        preferences["sukiOutputBackgroundTransparency"] = Math.Clamp(outputPreferences.BackgroundTransparency, 0, 100);
+        preferences["sukiOutputShowPartTitles"] = outputPreferences.ShowPartTitles;
         preferences["sukiOutputParts"] = ToOutputPartsJson(outputPreferences.Parts);
         preferences["sukiOverlayLayout"] = ToOverlayLayoutJson(
             RhodesOverlayLayoutCatalog.Normalize(outputPreferences.OverlayLayout));
@@ -241,6 +243,7 @@ public static class RhodesStateApiClient
         RhodesRunStateStore.ClearBossSelectionsForCampaign(root, JsonString(run, "campaignId"));
         root["bossFlags"] = new JsonArray();
         root["operators"] = new JsonArray();
+        root["operatorCounts"] = new JsonObject();
         root["relics"] = new JsonArray();
         root["usedRelicIds"] = new JsonArray();
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");

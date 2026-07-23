@@ -26,7 +26,7 @@
         <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
           <Button Content="撮影" Command="{Binding CaptureCommand}" />
           <Button Grid.Column="1" Content="基本情報"
-                  Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="runStatusFull" />
+                  Command="{Binding RunCommonRecognitionAndApplyCommand}" />
           <Button Grid.Column="2" Content="特殊値" Command="{Binding RunCurrentSpecialRecognitionAndApplyCommand}" />
           <Button Grid.Column="3" Content="オペレーター"
                   Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="operatorsFull" />
@@ -40,7 +40,7 @@
       <Border Classes="metricBand" Padding="0">
         <ItemsControl ItemsSource="{Binding HeaderStatusChips}">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><UniformGrid Columns="{Binding RunHeaderColumnCount}" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate>

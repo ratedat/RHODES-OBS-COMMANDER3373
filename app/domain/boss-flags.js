@@ -7,11 +7,19 @@ export function bossSectionAllowsMultiple(section) {
   return section?.mode === "multi" || section?.multiple === true;
 }
 
-export function getBossManualSections(config) {
+function bossSectionIsVisible(section, relicIds) {
+  if (relicIds === null || relicIds === undefined) return true;
+  const owned = new Set(relicIds || []);
+  if (section?.visibleWhenRelicId && !owned.has(section.visibleWhenRelicId)) return false;
+  const required = Array.isArray(section?.visibleWhenAllRelicIds) ? section.visibleWhenAllRelicIds.filter(Boolean) : [];
+  return required.every((id) => owned.has(id));
+}
+
+export function getBossManualSections(config, relicIds = null) {
   if (!config) return [];
   const sections = Array.isArray(config.manualSections) ? [...config.manualSections] : [];
   if (config.floor3 && !sections.some((section) => section.field === config.floor3.field)) sections.unshift(config.floor3);
-  return sections.filter((section) => section?.field);
+  return sections.filter((section) => section?.field && bossSectionIsVisible(section, relicIds));
 }
 
 export function bossSelectionValues(section, selection = {}) {
@@ -186,6 +194,10 @@ export function buildBossFlagEntries({ config, relicIds = [], manualBosses = [],
       const triggerRelics = bossRouteTriggerRelics(route, owned, relicMap);
       return { ...route, type: "relicBoss", source: "relic", triggerRelics, triggerRelic: triggerRelics[0] || null };
     }));
+  const activeRouteIds = new Set(activeRoutes.map((route) => route.id));
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    if (activeRouteIds.has(entries[index]?.id)) entries.splice(index, 1);
+  }
   for (const boss of config.defaultBosses || []) {
     const replaced = activeRoutes.some((route) => Number(route.replacesDefaultFloor) === Number(boss.floor));
     if (!replaced) entries.push({ ...boss, type: "defaultBoss", source: "default" });

@@ -17,6 +17,18 @@ public static class RhodesRunCatalog
         return new RhodesRunCatalogSnapshot(campaigns, operators, relics, state);
     }
 
+    public static RhodesRunCatalogSnapshot LoadFromStateJson(string stateJson, string dataRootOverride = "")
+    {
+        var dataRoot = string.IsNullOrWhiteSpace(dataRootOverride) ? ResolveDataRoot() : dataRootOverride;
+        var campaigns = LoadCampaigns(Path.Combine(dataRoot, "campaigns.json"));
+        var selectableEffects = LoadSelectableEffects(ResolveDataPath(dataRoot, "selectable-effects.json"));
+        using var document = JsonDocument.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson);
+        var state = LoadState(document.RootElement, campaigns, selectableEffects, dataRoot);
+        var operators = LoadOperators(Path.Combine(dataRoot, "operators.json"), dataRoot, state);
+        var relics = LoadRelics(Path.Combine(dataRoot, "relics.json"), dataRoot, state);
+        return new RhodesRunCatalogSnapshot(campaigns, operators, relics, state);
+    }
+
     private sealed record SelectableEffectPreview(
         string Id,
         string CampaignId,
@@ -30,7 +42,11 @@ public static class RhodesRunCatalog
         int Price,
         string ThoughtRank,
         string ThoughtLoad,
-        string ImageLocalPath);
+        string ImageLocalPath,
+        string ParentKey,
+        string ParentName,
+        string VariantRank,
+        string VariantLabel);
 
     public static IReadOnlyList<SukiSpecialEffectOption> LoadSpecialEffectOptions(string campaignId, string slot)
     {
@@ -49,7 +65,11 @@ public static class RhodesRunCatalog
                 item.Price,
                 item.ThoughtRank,
                 item.ThoughtLoad,
-                ResolveSelectableEffectImagePath(dataRoot, item)))
+                ResolveSelectableEffectImagePath(dataRoot, item),
+                item.ParentKey,
+                item.ParentName,
+                item.VariantRank,
+                item.VariantLabel))
             .DistinctBy(item => item.Id, StringComparer.Ordinal)
             .ToArray();
     }
@@ -137,7 +157,11 @@ public static class RhodesRunCatalog
                 JsonInt(item, "price"),
                 JsonString(item, "thoughtRank"),
                 JsonString(item, "thoughtLoad"),
-                JsonString(JsonObject(item, "image"), "localPath")))
+                JsonString(JsonObject(item, "image"), "localPath"),
+                JsonString(item, "parentKey"),
+                JsonString(item, "parentName"),
+                JsonString(item, "variantRank"),
+                JsonString(item, "variantLabel")))
             .Where(item => !string.IsNullOrWhiteSpace(item.Id))
             .ToArray();
     }
@@ -173,6 +197,7 @@ public static class RhodesRunCatalog
                     $"{id} {name} {rarity} {operatorClass} {branch}",
                     ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")));
                 choice.IsSelected = state.SelectedOperatorIds.Contains(id);
+                choice.SelectionCount = state.OperatorCounts.TryGetValue(id, out var count) ? count : 1;
                 choice.IsExcluded = state.ExcludedOperatorIds.Contains(id);
                 return choice;
             })
@@ -254,14 +279,23 @@ public static class RhodesRunCatalog
         }
 
         using var document = JsonDocument.Parse(File.ReadAllText(path));
-        var root = document.RootElement;
+        return LoadState(document.RootElement, campaigns, selectableEffects, dataRoot);
+    }
+
+    private static SukiRunStateSnapshot LoadState(
+        JsonElement root,
+        IReadOnlyList<SukiCampaignPreview> campaigns,
+        IReadOnlyList<SelectableEffectPreview> selectableEffects,
+        string dataRoot)
+    {
         var run = root.TryGetProperty("run", out var runElement) ? runElement : default;
         var preferences = root.TryGetProperty("preferences", out var prefElement) ? prefElement : default;
         var campaignId = JsonString(run, "campaignId", RhodesRunStateStore.StartupCampaignId);
         var performanceId = JsonString(run, "performanceId");
+        var selectedOperatorIds = ReadStringSet(root, "operators");
         return new SukiRunStateSnapshot(
             campaignId,
-            ReadStringSet(root, "operators"),
+            selectedOperatorIds,
             ReadStringSet(root, "relics"),
             ReadStringSet(preferences, "operatorExcludedIds"),
             ReadStringSet(preferences, "relicExcludedIds"),
@@ -285,6 +319,7 @@ public static class RhodesRunCatalog
             ResolvePerformanceDisplayName(dataRoot, campaignId, performanceId))
         {
             UsedRelicIds = ReadStringSet(root, "usedRelicIds"),
+            OperatorCounts = ReadPositiveIntMap(root, "operatorCounts", selectedOperatorIds),
         };
     }
 
@@ -379,6 +414,67 @@ public static class RhodesRunCatalog
             return 15;
         }
     }
+
+    /// <summary>
+    /// Wiki同期済みの難度表から、醒覚していない歳時の段階を解決する。
+    /// </summary>
+    public static string ResolveSuiSeasonalHourVariantRank(int difficulty)
+    {
+        var fallback = difficulty switch
+        {
+            <= 5 => "mourou",
+            <= 11 => "meiryou",
+            _ => "nyuukotsu",
+        };
+
+        try
+        {
+            var path = ResolveDataPath(ResolveDataRoot(), "difficulty-grades.json");
+            if (!File.Exists(path))
+                return fallback;
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            var root = document.RootElement;
+            if (!root.TryGetProperty("campaignDifficultyGrades", out var groups)
+                || groups.ValueKind != JsonValueKind.Object
+                || !groups.TryGetProperty("is6_sui", out var group)
+                || group.ValueKind != JsonValueKind.Object
+                || !group.TryGetProperty("grades", out var grades)
+                || grades.ValueKind != JsonValueKind.Array)
+            {
+                return fallback;
+            }
+
+            var targetGrade = Math.Clamp(difficulty, 1, Math.Max(1, JsonInt(group, "maxSelectableGrade")));
+            foreach (var grade in grades.EnumerateArray())
+            {
+                if (JsonInt(grade, "grade") != targetGrade)
+                    continue;
+
+                return JsonString(grade, "suiTime") switch
+                {
+                    "朦朧" => "mourou",
+                    "明瞭" => "meiryou",
+                    "入骨" => "nyuukotsu",
+                    _ => fallback,
+                };
+            }
+
+            return fallback;
+        }
+        catch
+        {
+            return fallback;
+        }
+    }
+
+    public static string ResolveSuiSeasonalHourVariantLabel(int difficulty) =>
+        ResolveSuiSeasonalHourVariantRank(difficulty) switch
+        {
+            "meiryou" => "明瞭",
+            "nyuukotsu" => "入骨",
+            _ => "朦朧",
+        };
 
     /// <summary>手動入力UI向け: 奇想天外分隊など、分隊に紐づく追加効果候補。</summary>
     public static IReadOnlyList<SukiSquadOption> LoadSquadRandomEffectOptions(string? campaignId, string? squadId)
@@ -560,11 +656,13 @@ public static class RhodesRunCatalog
                 $"{field.Label}の数値"),
             "effectSelect" => BuildEffectSelectState(campaignId, field, value, kind, profileId, effectsById),
             "operatorEffectAssignment" => BuildOperatorEffectAssignmentState(campaignId, field, value, kind, profileId, effectsById),
+            "operatorMultiSelect" => BuildOperatorMultiSelectState(campaignId, field, value, kind, profileId),
             "effectStackLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, true),
             "effectMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
             "effectRankedMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
             "revelationBoardLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
-            "coinLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, true),
+            "coinLoadout" => BuildCoinLoadoutState(campaignId, field, value, kind, profileId, effectsById),
+            "textMultiSelect" => BuildTextListState(campaignId, field, value, kind, profileId),
             _ => new SukiSpecialFieldState(
                 campaignId,
                 field.Id,
@@ -618,7 +716,29 @@ public static class RhodesRunCatalog
                     .Distinct(StringComparer.Ordinal)
                     .ToArray()
                 : [];
+        IReadOnlyList<SukiOperatorTargetRef>? operatorTargets = null;
+        if (value.ValueKind == JsonValueKind.Object
+            && value.TryGetProperty("operatorTargets", out var targetArray)
+            && targetArray.ValueKind == JsonValueKind.Array)
+        {
+            operatorTargets = targetArray.EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.Object)
+                .Select(item => new SukiOperatorTargetRef(
+                    JsonString(item, "operatorId"),
+                    Math.Max(1, JsonInt(item, "instance"))))
+                .Where(item => !string.IsNullOrWhiteSpace(item.OperatorId))
+                .DistinctBy(item => item.TargetKey, StringComparer.Ordinal)
+                .ToArray();
+        }
+        if (operatorIds.Length == 0 && operatorTargets is not null)
+        {
+            operatorIds = operatorTargets
+                .Select(item => item.OperatorId)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
         var effectLabel = ResolveEffectLabel(effectId, effectsById);
+        var targetCount = operatorTargets?.Count ?? operatorIds.Length;
         return new SukiSpecialFieldState(
             campaignId,
             field.Id,
@@ -627,10 +747,64 @@ public static class RhodesRunCatalog
             string.IsNullOrWhiteSpace(effectLabel) ? "未選択" : effectLabel,
             kind,
             profileId,
-            string.IsNullOrWhiteSpace(effectId) ? "取得値なし" : $"{effectLabel} / 対象{operatorIds.Length}名",
+            string.IsNullOrWhiteSpace(effectId) ? "取得値なし" : $"{effectLabel} / 対象{targetCount}名",
             effectId,
             string.IsNullOrWhiteSpace(effectId) ? [] : [effectId],
-            operatorIds);
+            operatorIds,
+            OperatorTargets: operatorTargets);
+    }
+
+    private static SukiSpecialFieldState BuildOperatorMultiSelectState(
+        string campaignId,
+        SukiCampaignSpecialField field,
+        JsonElement value,
+        string kind,
+        string profileId)
+    {
+        var operatorIds = value.ValueKind == JsonValueKind.Object
+            && value.TryGetProperty("operatorIds", out var operatorArray)
+            && operatorArray.ValueKind == JsonValueKind.Array
+                ? operatorArray.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString() ?? "")
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray()
+                : [];
+        IReadOnlyList<SukiOperatorTargetRef>? operatorTargets = null;
+        if (value.ValueKind == JsonValueKind.Object
+            && value.TryGetProperty("operatorTargets", out var targetArray)
+            && targetArray.ValueKind == JsonValueKind.Array)
+        {
+            operatorTargets = targetArray.EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.Object)
+                .Select(item => new SukiOperatorTargetRef(
+                    JsonString(item, "operatorId"),
+                    Math.Max(1, JsonInt(item, "instance"))))
+                .Where(item => !string.IsNullOrWhiteSpace(item.OperatorId))
+                .DistinctBy(item => item.TargetKey, StringComparer.Ordinal)
+                .ToArray();
+        }
+        if (operatorIds.Length == 0 && operatorTargets is not null)
+        {
+            operatorIds = operatorTargets
+                .Select(item => item.OperatorId)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        var targetCount = operatorTargets?.Count ?? operatorIds.Length;
+        return new SukiSpecialFieldState(
+            campaignId,
+            field.Id,
+            field.Label,
+            field.Type,
+            $"{targetCount}名",
+            kind,
+            profileId,
+            targetCount == 0 ? "取得値なし" : $"対象{targetCount}名",
+            OperatorIds: operatorIds,
+            OperatorTargets: operatorTargets);
     }
 
     private static SukiSpecialFieldState BuildEffectListState(
@@ -654,6 +828,110 @@ public static class RhodesRunCatalog
             profileId,
             entries.Labels.Count == 0 ? "取得値なし" : string.Join(" / ", entries.Labels),
             SelectedIds: entries.Ids);
+    }
+
+    private static SukiSpecialFieldState BuildTextListState(
+        string campaignId,
+        SukiCampaignSpecialField field,
+        JsonElement value,
+        string kind,
+        string profileId)
+    {
+        var values = value.ValueKind switch
+        {
+            JsonValueKind.Array => value.EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString()?.Trim() ?? ""),
+            JsonValueKind.String => [value.GetString()?.Trim() ?? ""],
+            _ => [],
+        };
+        var entries = values
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var unit = string.IsNullOrWhiteSpace(field.UnitLabel) ? "件" : field.UnitLabel;
+        return new SukiSpecialFieldState(
+            campaignId,
+            field.Id,
+            field.Label,
+            field.Type,
+            $"{entries.Length}{unit}",
+            kind,
+            profileId,
+            entries.Length == 0 ? "取得値なし" : string.Join(" / ", entries),
+            SelectedIds: entries);
+    }
+
+    private static SukiSpecialFieldState BuildCoinLoadoutState(
+        string campaignId,
+        SukiCampaignSpecialField field,
+        JsonElement value,
+        string kind,
+        string profileId,
+        IReadOnlyDictionary<string, SelectableEffectPreview> effectsById)
+    {
+        var entries = new List<SukiCoinLoadoutEntry>();
+
+        void AddEntry(JsonElement item)
+        {
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                var id = JsonElementString(item);
+                if (!string.IsNullOrWhiteSpace(id))
+                    entries.Add(new SukiCoinLoadoutEntry(id, "", 1));
+                return;
+            }
+
+            if (item.ValueKind != JsonValueKind.Object)
+                return;
+
+            var coinId = JsonString(item, "coinId");
+            if (string.IsNullOrWhiteSpace(coinId))
+                coinId = JsonString(item, "effectId");
+            if (string.IsNullOrWhiteSpace(coinId))
+                coinId = JsonString(item, "id");
+            if (string.IsNullOrWhiteSpace(coinId))
+                return;
+
+            entries.Add(new SukiCoinLoadoutEntry(
+                coinId,
+                JsonString(item, "statusId"),
+                Math.Clamp(JsonNullableInt(item, "count") ?? 1, 1, 99)));
+        }
+
+        if (value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in value.EnumerateArray())
+                AddEntry(item);
+        }
+        else
+        {
+            AddEntry(value);
+        }
+
+        var unit = string.IsNullOrWhiteSpace(field.UnitLabel) ? "枚" : field.UnitLabel;
+        var labels = entries.Select(entry =>
+        {
+            var coinName = ResolveEffectLabel(entry.CoinId, effectsById);
+            var statusName = string.IsNullOrWhiteSpace(entry.StatusId)
+                ? ""
+                : ResolveEffectLabel(entry.StatusId, effectsById);
+            var status = string.IsNullOrWhiteSpace(statusName) ? "" : $" [{statusName}]";
+            var count = entry.Count > 1 ? $" x{entry.Count}" : "";
+            return $"{coinName}{status}{count}";
+        }).ToArray();
+
+        return new SukiSpecialFieldState(
+            campaignId,
+            field.Id,
+            field.Label,
+            field.Type,
+            $"{entries.Sum(entry => entry.Count)}{unit}",
+            kind,
+            profileId,
+            labels.Length == 0 ? "取得値なし" : string.Join(" / ", labels),
+            SelectedIds: entries.Select(entry => entry.CoinId).Distinct(StringComparer.Ordinal).ToArray(),
+            CoinEntries: entries);
     }
 
     private static (int Total, IReadOnlyList<string> Labels, IReadOnlyList<string> Ids) ReadEffectEntries(
@@ -729,11 +1007,13 @@ public static class RhodesRunCatalog
             "number" => "数値",
             "effectSelect" => "候補選択",
             "operatorEffectAssignment" => "反応と対象者",
+            "operatorMultiSelect" => "対象者",
             "effectStackLoadout" => "個数入力",
             "effectMultiSelect" => "複数選択",
             "effectRankedMultiSelect" => "状態",
             "revelationBoardLoadout" => "啓示板",
             "coinLoadout" => "複数選択",
+            "textMultiSelect" => "複数入力",
             _ => string.IsNullOrWhiteSpace(type) ? "固有値" : type
         };
     }
@@ -749,6 +1029,7 @@ public static class RhodesRunCatalog
             ("is3_mizuki", "key") => "is3KeyFull",
             ("is3_mizuki", "light") => "is3LightHordeFull",
             ("is3_mizuki", "rejectionReaction") => "is3RejectionFull",
+            ("is3_mizuki", "operatorEvolution") => "operatorsFull",
             ("is3_mizuki", "revelations") => "is3RevelationFull",
             ("is3_mizuki", "hordeCalls") => "is3LightHordeFull",
             ("is4_sami", "collapseValue") => "is4CollapseValue",
@@ -758,6 +1039,7 @@ public static class RhodesRunCatalog
             ("is6_sui", "activeCoins") => "is6ActiveCoinsFull",
             ("is6_sui", "coins") => "is6CoinsFull",
             ("is6_sui", "seasonalHours") => "is6SeasonalHours",
+            ("is6_sui", "supportMartial") => "",
             _ => $"{campaignId}.{fieldId}"
         };
     }
@@ -835,6 +1117,34 @@ public static class RhodesRunCatalog
             .Select(item => item.GetString() ?? "")
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .ToArray();
+    }
+
+    private static IReadOnlyDictionary<string, int> ReadPositiveIntMap(
+        JsonElement element,
+        string propertyName,
+        IReadOnlySet<string> selectedOperatorIds)
+    {
+        var result = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (element.ValueKind != JsonValueKind.Object
+            || !element.TryGetProperty(propertyName, out var property)
+            || property.ValueKind != JsonValueKind.Object)
+        {
+            return result;
+        }
+
+        foreach (var entry in property.EnumerateObject())
+        {
+            if (!entry.Name.StartsWith("reserve_", StringComparison.OrdinalIgnoreCase)
+                || !selectedOperatorIds.Contains(entry.Name)
+                || entry.Value.ValueKind != JsonValueKind.Number
+                || !entry.Value.TryGetInt32(out var count)
+                || count <= 1)
+            {
+                continue;
+            }
+            result[entry.Name] = Math.Clamp(count, 2, SukiChoiceItem.MaximumSelectionCount);
+        }
+        return result;
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> ReadBossSelections(

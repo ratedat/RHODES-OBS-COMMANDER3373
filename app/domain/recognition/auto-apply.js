@@ -118,6 +118,10 @@ function operatorIdFromCandidate(candidate = {}) {
   return typeof operatorId === "string" && operatorId ? operatorId : null;
 }
 
+function isReserveOperatorId(operatorId) {
+  return typeof operatorId === "string" && operatorId.startsWith("reserve_");
+}
+
 function thoughtIdFromCandidate(candidate = {}) {
   const thoughtId = candidate.thoughtId || candidate.value;
   if (!thoughtId || typeof thoughtId !== "string") return null;
@@ -158,6 +162,7 @@ function syncRelicFullScanCandidates(state, suggestions = []) {
 function syncOperatorFullScanCandidates(state, suggestions = []) {
   const operatorSuggestions = [];
   const operatorIds = [];
+  const operatorCounts = new Map();
   const seen = new Set();
   for (const suggestion of suggestions || []) {
     const candidate = candidateFromSuggestion(suggestion);
@@ -170,10 +175,15 @@ function syncOperatorFullScanCandidates(state, suggestions = []) {
       seen.add(operatorId);
       operatorIds.push(operatorId);
     }
+    if (isReserveOperatorId(operatorId)) {
+      const count = Math.max(1, Math.min(99, Math.trunc(Number(candidate.count) || 1)));
+      operatorCounts.set(operatorId, Math.max(operatorCounts.get(operatorId) || 1, count));
+    }
   }
   if (!operatorSuggestions.length) return { applied: [], keys: new Set() };
 
   state.operators = operatorIds;
+  state.operatorCounts = Object.fromEntries([...operatorCounts].filter(([, count]) => count > 1));
   return {
     applied: operatorSuggestions,
     keys: new Set(operatorSuggestions.map(suggestionKey).filter(Boolean)),
