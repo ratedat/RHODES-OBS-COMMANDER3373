@@ -13,6 +13,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
 
   assert.match(csproj, /PackageReference Include="SukiUI" Version="7\.0\.1"/);
   assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.10\.0"/);
+  assert.match(csproj, /PackageReference Include="Maa\.Framework\.Runtimes" Version="5\.12\.2"/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes\.json/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes-generated\.json/);
   assert.match(csproj, /interface\.json/);

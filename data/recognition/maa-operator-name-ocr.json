@@ -779,7 +779,7 @@
       "临光"
     ],
     [
-      "^グ(ム|で|ン)",
+      "(^グ[ムでン玉広]|^死ン)",
       "古米"
     ],
     [
@@ -4269,6 +4269,74 @@
     [
       "ティティ",
       "缇缇"
+    ],
+    [
+      "演出用ウァン",
+      "演出望"
+    ],
+    [
+      "^「?印[」\\]]?",
+      "印字"
+    ],
+    [
+      "歳用山",
+      "岁用山"
+    ],
+    [
+      "^「?兵[」\\]]?",
+      "兵字"
+    ],
+    [
+      "鎮歳柱",
+      "镇岁柱"
+    ],
+    [
+      "書刀",
+      "书刀"
+    ],
+    [
+      "尾根",
+      "山脊"
+    ],
+    [
+      "^「?山[」\\]]?",
+      "山字"
+    ],
+    [
+      "タラクサカム",
+      "风絮"
+    ],
+    [
+      "^[碁暮]石",
+      "棋子"
+    ],
+    [
+      "^「?財[」\\]]?",
+      "财字"
+    ],
+    [
+      "(^ウァン|^ウァメン)",
+      "望"
+    ],
+    [
+      "^ジュー",
+      "矩"
+    ],
+    [
+      "^キリ$",
+      "断"
+    ],
+    [
+      "^「?友[」\\]]?",
+      "友字"
+    ],
+    [
+      "^「?食[」\\]]?",
+      "食字"
+    ],
+    [
+      "赤刃明霄チェン",
+      "赤刃明霄陈"
     ]
   ],
   "rules": [
@@ -7027,7 +7095,7 @@
     },
     {
       "index": 161,
-      "pattern": "^グ(ム|で|ン)",
+      "pattern": "(^グ[ムでン玉広]|^死ン)",
       "maaReplacement": "古米",
       "validRegex": true,
       "localMatches": [
@@ -16193,6 +16261,178 @@
         }
       ],
       "error": null
+    },
+    {
+      "index": 1034,
+      "pattern": "演出用ウァン",
+      "maaReplacement": "演出望",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1035,
+      "pattern": "^「?印[」\\]]?",
+      "maaReplacement": "印字",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1036,
+      "pattern": "歳用山",
+      "maaReplacement": "岁用山",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1037,
+      "pattern": "^「?兵[」\\]]?",
+      "maaReplacement": "兵字",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1038,
+      "pattern": "鎮歳柱",
+      "maaReplacement": "镇岁柱",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1039,
+      "pattern": "書刀",
+      "maaReplacement": "书刀",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1040,
+      "pattern": "尾根",
+      "maaReplacement": "山脊",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1041,
+      "pattern": "^「?山[」\\]]?",
+      "maaReplacement": "山字",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1042,
+      "pattern": "タラクサカム",
+      "maaReplacement": "风絮",
+      "validRegex": true,
+      "localMatches": [
+        {
+          "id": "taraxacum",
+          "name": "タラクサカム",
+          "rarity": 5,
+          "class": "医療",
+          "branch": "空癒師",
+          "hiddenByDefault": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "index": 1043,
+      "pattern": "^[碁暮]石",
+      "maaReplacement": "棋子",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1044,
+      "pattern": "^「?財[」\\]]?",
+      "maaReplacement": "财字",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1045,
+      "pattern": "(^ウァン|^ウァメン)",
+      "maaReplacement": "望",
+      "validRegex": true,
+      "localMatches": [
+        {
+          "id": "wang",
+          "name": "ウァン",
+          "rarity": 6,
+          "class": "特殊",
+          "branch": "罠師",
+          "hiddenByDefault": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "index": 1046,
+      "pattern": "^ジュー",
+      "maaReplacement": "矩",
+      "validRegex": true,
+      "localMatches": [
+        {
+          "id": "ju",
+          "name": "ジュー",
+          "rarity": 5,
+          "class": "狙撃",
+          "branch": "破城射手",
+          "hiddenByDefault": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "index": 1047,
+      "pattern": "^キリ$",
+      "maaReplacement": "断",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1048,
+      "pattern": "^「?友[」\\]]?",
+      "maaReplacement": "友字",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1049,
+      "pattern": "^「?食[」\\]]?",
+      "maaReplacement": "食字",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1050,
+      "pattern": "赤刃明霄チェン",
+      "maaReplacement": "赤刃明霄陈",
+      "validRegex": true,
+      "localMatches": [
+        {
+          "id": "ch_en3",
+          "name": "赤刃明霄チェン",
+          "rarity": 6,
+          "class": "前衛",
+          "branch": "術戦士",
+          "hiddenByDefault": false
+        }
+      ],
+      "error": null
     }
   ],
   "publicRecruitmentOperators": [
@@ -16912,6 +17152,17 @@
       ]
     },
     {
+      "maaId": "char_469_indigo",
+      "name": "インディゴ",
+      "rarity": 4,
+      "tags": [
+        "输出",
+        "控场",
+        "远程位",
+        "术师干员"
+      ]
+    },
+    {
       "maaId": "char_155_tiger",
       "name": "インドラ",
       "rarity": 5,
@@ -17535,6 +17786,18 @@
       ]
     },
     {
+      "maaId": "char_478_kirara",
+      "name": "キララ",
+      "rarity": 5,
+      "tags": [
+        "输出",
+        "生存",
+        "近战位",
+        "资深干员",
+        "特种干员"
+      ]
+    },
+    {
       "maaId": "char_103_angel",
       "name": "エクシア",
       "rarity": 6,
@@ -17921,14 +18184,26 @@
         "高级资深干员",
         "医疗干员"
       ]
+    },
+    {
+      "maaId": "char_426_billro",
+      "name": "カーネリアン",
+      "rarity": 6,
+      "tags": [
+        "群攻",
+        "防护",
+        "远程位",
+        "高级资深干员",
+        "术师干员"
+      ]
     }
   ],
   "summary": {
-    "rawRuleCount": 1034,
+    "rawRuleCount": 1051,
     "localOperatorCount": 432,
-    "rulesWithLocalMatches": 402,
-    "uniqueMatchedLocalOperators": 405,
+    "rulesWithLocalMatches": 406,
+    "uniqueMatchedLocalOperators": 409,
     "invalidRegexRules": 0,
-    "publicRecruitmentOperatorCount": 153
+    "publicRecruitmentOperatorCount": 156
   }
 }

@@ -175,7 +175,7 @@
       "present": true
     }
   ],
-  "syncedAt": "2026-07-10T03:44:45.249Z",
+  "syncedAt": "2026-07-24T01:19:23.807Z",
   "downloaded": [
     {
       "id": "common.ocr_config",
@@ -193,43 +193,43 @@
       "id": "jp.recruitment",
       "localPath": "third_party/maa/resource/global/YoStarJP/resource/recruitment.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/recruitment.json",
-      "bytes": 31546
+      "bytes": 32157
     },
     {
       "id": "jp.tasks",
       "localPath": "third_party/maa/resource/global/YoStarJP/resource/tasks/tasks.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/tasks/tasks.json",
-      "bytes": 81132
+      "bytes": 81876
     },
     {
       "id": "common.tasks",
       "localPath": "third_party/maa/resource/tasks/tasks.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/tasks.json",
-      "bytes": 177031
+      "bytes": 177072
     },
     {
       "id": "roguelike.base.tasks",
       "localPath": "third_party/maa/resource/tasks/Roguelike/base.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/base.json",
-      "bytes": 68524
+      "bytes": 68774
     },
     {
       "id": "roguelike.sami.tasks",
       "localPath": "third_party/maa/resource/tasks/Roguelike/Sami.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/Sami.json",
-      "bytes": 56290
+      "bytes": 56169
     },
     {
       "id": "roguelike.sarkaz.tasks",
       "localPath": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/Sarkaz.json",
-      "bytes": 45403
+      "bytes": 45230
     },
     {
       "id": "roguelike.jie-garden.tasks",
       "localPath": "third_party/maa/resource/tasks/Roguelike/JieGarden.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/JieGarden.json",
-      "bytes": 60033
+      "bytes": 59851
     },
     {
       "id": "roguelike.recruit.elite-0",
