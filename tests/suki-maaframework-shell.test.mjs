@@ -951,6 +951,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   const specialWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/SpecialWorkspaceView.axaml", "utf8");
   const choicesWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/ChoicesWorkspaceView.axaml", "utf8");
   const choicesWorkspaceCodeBehind = await fs.readFile("apps/rhodes-suki/Views/Workspaces/ChoicesWorkspaceView.axaml.cs", "utf8");
+  const outputWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/OutputWorkspaceView.axaml", "utf8");
   const debugWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/DebugWorkspaceView.axaml", "utf8");
   const xaml = [
     mainWindowXaml,
@@ -959,7 +960,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
     specialWorkspace,
     choicesWorkspace,
     recognitionWorkspace,
-    await fs.readFile("apps/rhodes-suki/Views/Workspaces/OutputWorkspaceView.axaml", "utf8"),
+    outputWorkspace,
     runtimeWorkspace,
     debugWorkspace,
   ].join("\n");
@@ -1308,15 +1309,25 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /Content="保存して反映" Command="\{Binding SaveSettingsCommand\}"/);
   assert.match(xaml, /0にすると停止/);
   assert.match(xaml, /OutputParts/);
-  assert.match(xaml, /OutputSeparateWindow/);
+  assert.doesNotMatch(xaml, /OutputSeparateWindow/);
   assert.match(xaml, /OutputTournamentMode/);
-  assert.match(xaml, /OutputTransparentBackground/);
-  assert.match(xaml, /OutputBackgroundTransparency/);
+  assert.match(xaml, /OutputBackgroundEnabled/);
+  assert.match(xaml, /OutputBackgroundOpacity/);
   assert.match(xaml, /OutputShowPartTitles/);
   assert.match(xaml, /OutputScrollSpeed/);
   assert.match(xaml, /ScrollEnabled/);
   assert.match(xaml, /HideExcluded/);
+  assert.match(xaml, /TournamentMode/);
+  assert.match(xaml, /BackgroundEnabled/);
+  assert.match(xaml, /BackgroundOpacity/);
+  assert.match(xaml, /ShowTitle/);
   assert.match(xaml, /BindingPath/);
+  assert.doesNotMatch(outputWorkspace, /<Expander Header="OBS設定ガイド"/);
+  assert.doesNotMatch(outputWorkspace, /<Expander Header="配信サーバーとURL"/);
+  assert.ok(
+    outputWorkspace.indexOf("統合Overlay設定") < outputWorkspace.indexOf("ライブレイアウト"),
+    "統合Overlay設定はライブレイアウトより前に表示する",
+  );
   assert.match(xaml, /RuntimeLayout\.Header\.Title/);
   assert.match(xaml, /RuntimeCapabilities/);
   assert.match(xaml, /InstallLabel/);
@@ -1331,6 +1342,12 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource PlainComboItemTemplate\}"/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource CampaignComboItemTemplate\}"/);
   assert.match(xaml, /Classes\.rejectionTarget="\{Binding IsRejectionReactionTarget\}"/);
+  assert.match(xaml, /Classes\.candleBearerTarget="\{Binding IsCandleBearerTarget\}"/);
+  assert.doesNotMatch(choicesWorkspace, /ToggleSuiCandleBearerTargetCommand/);
+  assert.doesNotMatch(choicesWorkspace, /IsCandleBearerToggleVisible/);
+  assert.match(specialWorkspace, /ManualSuiCandleBearerTargets/);
+  assert.match(specialWorkspace, /ApplyManualSuiCandleBearerTargetsCommand/);
+  assert.match(specialWorkspace, /持燭人（複数選択）/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbPresetSelectionTemplate\}"/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbMethodSelectionTemplate\}"/);
   assert.match(xaml, /Selector="ComboBoxItem"/);
@@ -1420,8 +1437,9 @@ test("Sui map recognition reads active coins without opening the held-coin workf
   )?.[1] ?? "";
 
   assert.match(allOperational, /"is6_sui"[^\n]+"is6ActiveCoinsFull"/);
+  assert.match(allOperational, /"is6_sui"[^\n]+"is6SeasonalHours"/);
   assert.doesNotMatch(allOperational, /"is6_sui"[^\n]+"is6CoinsFull"/);
-  assert.match(currentSpecial, /"is6_sui" => \["is6ActiveCoinsFull"\]/);
+  assert.match(currentSpecial, /"is6_sui" => \["is6ActiveCoinsFull", "is6SeasonalHours"\]/);
   assert.doesNotMatch(currentSpecial, /"is6_sui"[^\n]+"is6CoinsFull"/);
   assert.match(
     viewModel,
@@ -1441,6 +1459,10 @@ test("Sui held coin scrolling supplements full-list MAA OCR only for missing vis
     /plan\.ProfileId == "is6CoinsFull"[\s\S]*?RhodesOcrRegion_is6_coin_list_text/,
   );
   assert.match(viewModel, /PlanMissingOwnedNameOcrRequests\(/);
+  assert.match(
+    viewModel,
+    /RhodesSuiCoinStatusRecognizer\.RecognizeOwned\(\s*encodedImage,\s*candidateFrameResults,\s*imageInspections:\s*inspections\)/,
+  );
   assert.doesNotMatch(viewModel, /RecognizeOwnedWithOcrFallback\(/);
   assert.doesNotMatch(viewModel, /useOwnedCoinImageClassifier/);
 });

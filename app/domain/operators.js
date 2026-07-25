@@ -107,9 +107,13 @@ export function decorateMizukiRejectionTargets(operators, state) {
   const rejectionOperatorIds = state?.run?.campaignId === "is3_mizuki"
     ? new Set(state?.run?.special?.is3_mizuki?.rejectionReaction?.operatorIds || [])
     : new Set();
+  const candleBearerOperatorIds = state?.run?.campaignId === "is6_sui"
+    ? new Set(state?.run?.special?.is6_sui?.candleBearer?.operatorIds || [])
+    : new Set();
   return (operators || []).map((item) => ({
     ...item,
     isRejectionReactionTarget: rejectionOperatorIds.has(item.id),
+    isCandleBearerTarget: candleBearerOperatorIds.has(item.id),
   }));
 }
 

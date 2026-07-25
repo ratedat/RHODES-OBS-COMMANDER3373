@@ -72,6 +72,14 @@ var tests = new (string Name, Action Run)[]
     ("Sui owned coin candidate merger preserves duplicate counts across scroll frames", SuiOwnedCoinCandidateCounts),
     ("Sui owned coin OCR merger preserves duplicate counts without summing overlapping frames", SuiOwnedCoinOcrCandidateCounts),
     ("Sui owned coin status recognizer anchors status icons to OCR names", SuiOwnedCoinStatusRecognizer),
+    ("Sui owned coin status recognizer classifies the Round 2 multi-status frame after OCR anchors", SuiOwnedCoinStatusRound2Frame),
+    ("Coin stability manifest distinguishes known none and unknown status", CoinStabilityManifestStatusKinds),
+    ("Coin stability evaluator classifies slot name and status errors", CoinStabilityEvaluatorClassifiesErrors),
+    ("Coin stability evaluator emits a status confusion matrix", CoinStabilityEvaluatorBuildsStatusConfusionMatrix),
+    ("Coin stability threshold sweep keeps only zero false-positive points eligible", CoinStabilityThresholdSweepEnforcesZeroFalsePositives),
+    ("Coin stability result hash is deterministic across input order", CoinStabilityResultHashDeterministic),
+    ("Coin stability corpus discovers direct and bug report frames deterministically", CoinStabilityCorpusDiscovery),
+    ("Coin stability report writer emits the Phase 0 report set", CoinStabilityReportWriterEmitsReports),
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB presets include current MuMu nx_main layouts", AdbPresetCurrentMumuLayouts),
@@ -139,6 +147,7 @@ var tests = new (string Name, Action Run)[]
     ("Operator scan tracker skips resolved cards and stops on repeated viewports", OperatorScanTrackerCachesResolvedCards),
     ("Operator scan tracker keeps moving cards stable and duplicate reserves distinct", OperatorScanTrackerTracksMovingDuplicateReserves),
     ("Mizuki rejection card detector identifies the purple operator name", MizukiRejectionCardDetectorIdentifiesPurpleBand),
+    ("Sui candle bearer detector adds a left-edge marker without dropping operator OCR", SuiCandleBearerCardDetectorPreservesOperatorCandidate),
     ("Mizuki rejection targets expand reserve operator recruit instances", MizukiRejectionTargetsExpandReserveInstances),
     ("MAA recognition probe payloads target retained fields", RecognitionProbePayloadsTargetRetainedFields),
     ("MAA recognition invocation separates algorithm from parameters", MaaRecognitionInvocationSeparatesAlgorithm),
@@ -176,6 +185,8 @@ var tests = new (string Name, Action Run)[]
     ("Run catalog exposes Mizuki rejection reaction icons", RunCatalogMizukiRejectionIcons),
     ("Run catalog restores individual Mizuki rejection targets", RunCatalogMizukiRejectionTargetInstances),
     ("Mizuki operator presentation marks rejection and evolution targets in IS3", MizukiOperatorPresentationMarksTargets),
+    ("Sui operator presentation marks candle bearer targets in IS6", SuiOperatorPresentationMarksCandleBearerTargets),
+    ("Sui manual candle bearer selection expands recruited operator instances", SuiManualCandleBearerSelectionBuildsCandidates),
     ("Run catalog exposes Mizuki horde call and revelation icons", RunCatalogMizukiHordeCallIcons),
     ("Hallucination catalog exposes Wiki effects and normalizes overlapping OCR", HallucinationCatalogWikiOptions),
     ("Run catalog exposes Sarkaz boss selections from campaign data", RunCatalogSarkazBossSelections),
@@ -219,10 +230,11 @@ var tests = new (string Name, Action Run)[]
     ("Recognition candidate applier preserves IS3 rejection targets on effect-only refresh", CandidateMizukiRejectionEffectOnlyPreservesTargets),
     ("Recognition candidate applier replaces the IS6 seasonal hour selection", CandidateSuiSeasonalHoursApply),
     ("Recognition candidate applier keeps normal Sui seasonal hours tied to difficulty", CandidateSuiSeasonalHoursFollowDifficulty),
-    ("Recognition candidate applier replaces the IS6 manual support martial effects", CandidateSuiSupportMartialApply),
+    ("Run state pruning removes the obsolete IS6 support martial field", RunStateStorePrunesSuiSupportMartial),
     ("Recognition candidate applier updates IS3 rejection targets after operator scan", CandidateMizukiRejectionTargetOnlyApply),
     ("Recognition candidate applier persists individual reserve rejection targets", CandidateMizukiReserveRejectionTargetApply),
     ("Recognition candidate applier persists individual Mizuki evolution targets", CandidateMizukiEvolutionTargetApply),
+    ("Recognition candidate applier persists Sui candle bearer targets", CandidateSuiCandleBearerTargetApply),
     ("Recognition candidate applier can apply IS4 revelation and IS6 coin candidates", CandidateOtherSpecialApply),
     ("Recognition candidate applier replaces manual Sui coins with statuses", CandidateManualSuiValuesApply),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
@@ -2340,6 +2352,65 @@ static void LocalCandidateConverterSuiSeasonalHours()
         effectOnly[0].EffectId,
         "unique effect text identifies the seasonal hour before the shared awakening label");
 
+    var liveThreeHours = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6SeasonalHours",
+        [
+            M(
+                "RhodesOcrRegion_is6_seasonal_hour_detail_text",
+                [
+                    ("巳農", 0.97, 20),
+                    ("LV.2 明瞭", 0.96, 54),
+                    ("オペレーターの配置コスト+3", 0.94, 86),
+                    ("亥食", 0.97, 150),
+                    ("LV.2 明瞭", 0.96, 184),
+                    ("配置中の味方【歳】1名につき、全ての味方【歳】が3秒ごとにSPが1回復", 0.93, 216),
+                    ("寅詩", 0.97, 280),
+                    ("LV.1 醒覚", 0.96, 314),
+                    ("【伺燭客】の攻撃力+10%", 0.93, 346),
+                ]),
+        ],
+        "is6_sui");
+
+    Equal(3, liveThreeHours.Count, "live seasonal detail keeps all three simultaneous hours");
+    Equal(
+        "巳農（明瞭）|亥食（明瞭）|寅詩（醒覚）",
+        string.Join("|", liveThreeHours.Select(candidate => candidate.Label)),
+        "live seasonal detail resolves every displayed rank");
+
+    var liveOcrDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6SeasonalHours",
+        [
+            M(
+                "RhodesOcrRegion_is6_seasonal_hour_detail_text",
+                [
+                    ("“己農", 0.76, 88),
+                    ("LV.2", 0.93, 100),
+                    ("オペレーターの配置コスト+3", 0.94, 242),
+                    ("交食", 0.72, 460),
+                    ("LV.2", 0.92, 467),
+                    ("【歳】", 0.95, 567),
+                    ("が3秒ごと", 0.99, 567),
+                    ("【歳】|者につき,全ての味方", 0.84, 572),
+                    ("配置中の味方", 0.99, 574),
+                    ("にSP力1回復", 0.94, 628),
+                    ("敬刻士二之飯香を催す", 0.90, 703),
+                    ("実請", 0.47, 881),
+                    ("醒覚", 0.96, 888),
+                    ("Lw", 0.78, 892),
+                    ("[何燭客】の攻撃力+10%", 0.91, 994),
+                    ("敬刻三之白日に逍遥す", 0.86, 1069),
+                    ("歳時は醒覚E", 0.75, 1074),
+                    ("名を承けて令と為す", 0.88, 1110),
+                ]),
+        ],
+        "is6_sui");
+
+    Equal(3, liveOcrDrift.Count, "live OCR drift still keeps all three seasonal hours");
+    Equal(
+        "巳農（明瞭）|亥食（明瞭）|寅詩（醒覚）",
+        string.Join("|", liveOcrDrift.Select(candidate => candidate.Label)),
+        "level rows and flavor evidence isolate a damaged third title");
+
     static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score, int Y)> rows)
     {
         var resultRows = rows.Select(row =>
@@ -2560,6 +2631,35 @@ static void SuiActiveCoinOcrCandidateCounts()
     Equal(catchWindUp.Id, rowFallbackCandidates.Single(candidate => candidate.Label.StartsWith("捕風", StringComparison.Ordinal)).CoinId, "row OCR fallback resolves Catch Wind direction from its own prose");
     Equal(rusted.Id, rowFallbackCandidates.Single(candidate => candidate.CoinId == catchWindUp.Id).StatusId, "row OCR fallback keeps status in the same row");
 
+    var liveGarbledCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6ActiveCoinsFull",
+        [
+            ActiveRow(0, new[]
+            {
+                new { text = "花-録義即睛", score = 0.94, box = new[] { 25, 20, 220, 30 } },
+            }),
+        ],
+        "is6_sui");
+
+    Equal(1, liveGarbledCandidates.Count, "live garbled active coin heading remains a candidate");
+    Equal("錦囊即購", liveGarbledCandidates[0].Label, "live garbled active coin heading resolves to its canonical name");
+
+    foreach (var liveDrift in new[] { "花-録壺即購", "花-録壺即睛" })
+    {
+        var liveDriftCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+            "is6ActiveCoinsFull",
+            [
+                ActiveRow(0, new[]
+                {
+                    new { text = liveDrift, score = 0.82, box = new[] { 25, 20, 220, 30 } },
+                }),
+            ],
+            "is6_sui");
+
+        Equal(1, liveDriftCandidates.Count, $"{liveDrift} remains an active coin candidate");
+        Equal("錦囊即購", liveDriftCandidates[0].Label, $"{liveDrift} resolves to the canonical coin");
+    }
+
     static MaaTaskRunResult ActiveRow<T>(int slot, T[] rows) => new(
         $"RhodesDynamic_is6.active_coin_list_text.slot{slot}",
         "Succeeded",
@@ -2768,12 +2868,33 @@ static void SuiOwnedCoinImageRecognizerPerformance()
 
     var encoded = EncodePng(frame);
     _ = RhodesSuiCoinImageRecognizer.RecognizeOwned(encoded);
+    var diagnostics = new RhodesCoinRecognitionDiagnostics();
     var stopwatch = Stopwatch.StartNew();
-    var result = RhodesSuiCoinImageRecognizer.RecognizeOwned(encoded);
+    var detections = RhodesSuiCoinImageRecognizer.DetectOwned(encoded, options, diagnostics);
     stopwatch.Stop();
 
-    Equal(true, result.Hit, "representative owned coin frame is recognized");
+    Equal(4, detections.Count, "representative owned coin frame is recognized");
     Equal(true, stopwatch.Elapsed < TimeSpan.FromSeconds(2), $"owned coin frame elapsed {stopwatch.Elapsed.TotalMilliseconds:0}ms");
+    Equal(
+        true,
+        diagnostics.CoinComparisonCount < 7000,
+        $"canonical owned coin frame comparisons {diagnostics.CoinComparisonCount}");
+
+    using var shiftedFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul);
+    shiftedFrame.Erase(new SKColor(230, 220, 217));
+    using (var shiftedCanvas = new SKCanvas(shiftedFrame))
+        Draw(shiftedCanvas, coins[0].ImagePath, new SKRect(545, 153, 669, 277));
+    var shiftedDiagnostics = new RhodesCoinRecognitionDiagnostics();
+    var shiftedDetections = RhodesSuiCoinImageRecognizer.DetectOwned(
+        EncodePng(shiftedFrame),
+        options,
+        shiftedDiagnostics);
+
+    Equal(true, shiftedDetections.Any(detection => detection.CoinId == coins[0].Id), "shifted scaled coin falls back to broad search");
+    Equal(
+        true,
+        shiftedDiagnostics.CoinComparisonCount > diagnostics.CoinComparisonCount,
+        "shifted scaled coin uses more comparisons than the canonical fast path");
 
     static void Draw(SKCanvas canvas, string path, SKRect destination)
     {
@@ -2875,6 +2996,17 @@ static void SuiOwnedCoinOcrCandidateCounts()
     Equal(10, liveCandidates.Sum(candidate => candidate.Count), "live two-frame OCR keeps all ten held coins");
     Equal(2, liveCandidates.Single(candidate => candidate.Label == "金寒く水衍く").Count, "live duplicate coin count is preserved");
 
+    var liveMissingCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is6CoinsFull",
+        [OcrResult("人園衡-苦寒へ", "回花-鎚麦即照L")],
+        "is6_sui");
+
+    Equal(2, liveMissingCandidates.Count, "live clipped held coin headings remain candidates");
+    Equal(
+        "苦寒|錦囊即購",
+        string.Join("|", liveMissingCandidates.Select(candidate => candidate.Label).OrderBy(label => label, StringComparer.Ordinal)),
+        "live clipped held coin headings resolve to canonical names");
+
     static MaaTaskRunResult OcrResult(params string[] names) => new(
         "RhodesOcrRegion_is6_coin_list_text",
         "Succeeded",
@@ -2903,6 +3035,28 @@ static void SuiOwnedCoinStatusRecognizer()
         ("衛-志遂げんと配", 564, 612, 244, 32),
         ("志遂げんと欲す", 1124, 612, 244, 32));
 
+    using (var plainFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        plainFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(plainFrame))
+            Draw(canvas, coin.ImagePath, new SKRect(410, 295, 516, 401));
+
+        var plainDiagnostics = new RhodesCoinRecognitionDiagnostics();
+        var plainResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(plainFrame),
+            [OcrResult(("衛-志遂げんと配", 564, 612, 244, 32))],
+            coins,
+            statuses,
+            diagnostics: plainDiagnostics);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(plainResult, out _, out var plainDetections), "plain status result readable");
+        Equal("", plainDetections.Single().StatusId, "plain coin remains status-free");
+        Equal(
+            0L,
+            plainDiagnostics.StatusColorComparisonCount,
+            $"plain coin skips status classification ({plainResult.RecognitionDetailJson})");
+        Equal(0L, plainDiagnostics.StatusShapeComparisonCount, "plain coin skips status shape matching");
+    }
+
     using var frame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul);
     frame.Erase(new SKColor(230, 220, 217));
     using (var canvas = new SKCanvas(frame))
@@ -2912,16 +3066,43 @@ static void SuiOwnedCoinStatusRecognizer()
         Draw(canvas, coin.ImagePath, new SKRect(690, 295, 796, 401));
     }
 
+    var boundedProbes = RhodesSuiCoinStatusRecognizer.InspectOwnedStatusSlots(
+        EncodePng(frame),
+        [
+            new RhodesSuiCoinImageDetection(
+                coin.Id,
+                coin.Name,
+                0.95,
+                3,
+                new MaaRoi(410, 295, 106, 106),
+                RunnerUpScore: 0.80,
+                VisualStrength: 0.95),
+            new RhodesSuiCoinImageDetection(
+                coin.Id,
+                coin.Name,
+                0.95,
+                4,
+                new MaaRoi(690, 295, 106, 106),
+                RunnerUpScore: 0.80,
+                VisualStrength: 0.95),
+        ],
+        statuses);
+    var statusDiagnostics = new RhodesCoinRecognitionDiagnostics();
     var result = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
         EncodePng(frame),
         [ocr],
         coins,
-        statuses);
+        statuses,
+        diagnostics: statusDiagnostics);
     Equal(true, RhodesSuiCoinImageRecognizer.TryRead(result, out var fieldId, out var detections), "status result readable");
     Equal("coins", fieldId, "status result field");
     Equal(2, detections.Count, "both OCR anchored coins retained");
     Equal(status.Id, detections[0].StatusId, $"first coin receives the detected status ({result.RecognitionDetailJson})");
     Equal("", detections[1].StatusId, "second coin does not hallucinate a status");
+    Equal(
+        true,
+        statusDiagnostics.StatusColorComparisonCount < 5_000,
+        $"standard status uses the bounded fast classifier: comparisons={statusDiagnostics.StatusColorComparisonCount}; probes={JsonSerializer.Serialize(boundedProbes)}; {result.RecognitionDetailJson}");
 
     var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "is6CoinsFull",
@@ -2931,6 +3112,78 @@ static void SuiOwnedCoinStatusRecognizer()
     Equal(true, candidates.Any(candidate => candidate.CoinId == coin.Id && candidate.StatusId == status.Id), "status coin candidate retained");
     Equal(true, candidates.Any(candidate => candidate.CoinId == coin.Id && string.IsNullOrWhiteSpace(candidate.StatusId)), "plain coin candidate retained");
 
+    var focusedCoin = coins.Single(option => option.Id.EndsWith("is6_copper_f01", StringComparison.Ordinal));
+    using (var focusedFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        focusedFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(focusedFrame))
+        {
+            Draw(canvas, focusedCoin.ImagePath, new SKRect(828, 158, 934, 264));
+            Draw(canvas, status.ImagePath, new SKRect(893, 165, 937, 211));
+        }
+        var focusedResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(focusedFrame),
+            [FocusedOcrResult(1, "人園衡-苦寒へ")],
+            coins,
+            statuses);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(focusedResult, out _, out var focusedDetections), "focused status result readable");
+        Equal(1, focusedDetections.Count, "focused fallback OCR anchors one coin slot");
+        Equal(focusedCoin.Id, focusedDetections.Single().CoinId, "focused fallback OCR resolves the live clipped coin name");
+        Equal(status.Id, focusedDetections.Single().StatusId, "focused fallback OCR retains the shield status");
+        Equal(1, focusedDetections.Single().SlotIndex, "focused fallback OCR preserves its owned coin slot");
+    }
+
+    var rustStatus = statuses.Single(option => option.Id.EndsWith("is6_gild1", StringComparison.Ordinal));
+    var rustCoin = coins.Single(option => option.Id.EndsWith("is6_copper_f14", StringComparison.Ordinal));
+    using (var compactStatusFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        compactStatusFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(compactStatusFrame))
+        {
+            Draw(canvas, rustCoin.ImagePath, new SKRect(410, 295, 516, 401));
+            Draw(canvas, rustStatus.ImagePath, new SKRect(475, 302, 507, 335));
+            Draw(canvas, focusedCoin.ImagePath, new SKRect(690, 295, 796, 401));
+            Draw(canvas, status.ImagePath, new SKRect(755, 302, 787, 335));
+        }
+        var compactStatusResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(compactStatusFrame),
+            [
+                OcrResult(
+                    ("衡-慧にして災い避く", 564, 612, 244, 32),
+                    ("衡-苦寒", 1124, 612, 244, 32)),
+            ],
+            coins,
+            statuses);
+        var compactStatusProbes = RhodesSuiCoinStatusRecognizer.InspectOwnedStatusSlots(
+            EncodePng(compactStatusFrame),
+            [
+                new RhodesSuiCoinImageDetection(
+                    rustCoin.Id,
+                    rustCoin.Name,
+                    0.95,
+                    3,
+                    new MaaRoi(410, 295, 106, 106),
+                    RunnerUpScore: 0.80,
+                    VisualStrength: 0.95),
+                new RhodesSuiCoinImageDetection(
+                    focusedCoin.Id,
+                    focusedCoin.Name,
+                    0.95,
+                    4,
+                    new MaaRoi(690, 295, 106, 106),
+                    RunnerUpScore: 0.80,
+                    VisualStrength: 0.95),
+            ],
+            statuses);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(compactStatusResult, out _, out var compactStatusDetections), "compact status result readable");
+        Equal(2, compactStatusDetections.Count, "compact status frame retains both coins");
+        Equal(
+            rustStatus.Id,
+            compactStatusDetections.Single(item => item.CoinId == rustCoin.Id).StatusId,
+            $"compact rust marker is retained; probes={JsonSerializer.Serialize(compactStatusProbes)}; result={compactStatusResult.RecognitionDetailJson}");
+        Equal(status.Id, compactStatusDetections.Single(item => item.CoinId == focusedCoin.Id).StatusId, "compact shield marker is retained");
+    }
+
     var ambiguousStatus = statuses.Single(option => option.Id.EndsWith("is6_gild5", StringComparison.Ordinal));
     using (var ambiguousFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
     {
@@ -2938,15 +3191,289 @@ static void SuiOwnedCoinStatusRecognizer()
         using (var canvas = new SKCanvas(ambiguousFrame))
         {
             Draw(canvas, coin.ImagePath, new SKRect(410, 295, 516, 401));
-            Draw(canvas, ambiguousStatus.ImagePath, new SKRect(475, 302, 519, 348));
+            Draw(canvas, ambiguousStatus.ImagePath, new SKRect(475, 302, 519, 364));
         }
         var ambiguousResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
             EncodePng(ambiguousFrame),
             [OcrResult(("志遂げんと欲す", 564, 612, 244, 32))],
             coins,
             statuses);
+        var ambiguousProbes = RhodesSuiCoinStatusRecognizer.InspectOwnedStatusSlots(
+            EncodePng(ambiguousFrame),
+            [
+                new RhodesSuiCoinImageDetection(
+                    coin.Id,
+                    coin.Name,
+                    0.95,
+                    3,
+                    new MaaRoi(410, 295, 106, 106),
+                    RunnerUpScore: 0.80,
+                    VisualStrength: 0.95),
+            ],
+            statuses);
+        var ambiguousOnlyProbes = RhodesSuiCoinStatusRecognizer.InspectOwnedStatusSlots(
+            EncodePng(ambiguousFrame),
+            [
+                new RhodesSuiCoinImageDetection(
+                    coin.Id,
+                    coin.Name,
+                    0.95,
+                    3,
+                    new MaaRoi(410, 295, 106, 106),
+                    RunnerUpScore: 0.80,
+                    VisualStrength: 0.95),
+            ],
+            [ambiguousStatus]);
         Equal(true, RhodesSuiCoinImageRecognizer.TryRead(ambiguousResult, out _, out var ambiguousDetections), "ambiguous status result readable");
-        Equal(ambiguousStatus.Id, ambiguousDetections.Single().StatusId, "an actual ambiguous status survives the stricter threshold");
+        Equal(
+            ambiguousStatus.Id,
+            ambiguousDetections.Single().StatusId,
+            $"an actual ambiguous status survives the stricter threshold; probes={JsonSerializer.Serialize(ambiguousProbes)}; ambiguousOnly={JsonSerializer.Serialize(ambiguousOnlyProbes)}; result={ambiguousResult.RecognitionDetailJson}");
+    }
+
+    using (var imageAnchoredFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        imageAnchoredFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(imageAnchoredFrame))
+        {
+            Draw(canvas, focusedCoin.ImagePath, new SKRect(828, 158, 934, 264));
+            Draw(canvas, status.ImagePath, new SKRect(893, 165, 925, 198));
+        }
+
+        var imageAnchoredResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(imageAnchoredFrame),
+            [],
+            coins,
+            statuses,
+            [
+                new RhodesSuiCoinImageDetection(
+                    focusedCoin.Id,
+                    focusedCoin.Name,
+                    0.91,
+                    1,
+                    new MaaRoi(828, 158, 106, 106),
+                    RunnerUpScore: 0.82,
+                    VisualStrength: 0.90),
+            ]);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(imageAnchoredResult, out _, out var imageAnchoredDetections), "image anchored status result readable");
+        Equal(1, imageAnchoredDetections.Count, "image classification anchors a coin when name OCR misses");
+        Equal(status.Id, imageAnchoredDetections.Single().StatusId, "image anchored coin retains its status");
+    }
+
+    using (var statusRescueFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        statusRescueFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(statusRescueFrame))
+        {
+            Draw(canvas, focusedCoin.ImagePath, new SKRect(828, 158, 934, 264));
+            Draw(canvas, status.ImagePath, new SKRect(893, 165, 925, 198));
+            Draw(canvas, rustCoin.ImagePath, new SKRect(1090, 158, 1196, 264));
+        }
+
+        var statusRescueResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(statusRescueFrame),
+            [],
+            coins,
+            statuses,
+            [
+                new RhodesSuiCoinImageDetection(
+                    focusedCoin.Id,
+                    focusedCoin.Name,
+                    0.72,
+                    1,
+                    new MaaRoi(828, 158, 106, 106),
+                    RunnerUpScore: 0.71,
+                    VisualStrength: 0.90),
+                new RhodesSuiCoinImageDetection(
+                    rustCoin.Id,
+                    rustCoin.Name,
+                    0.72,
+                    2,
+                    new MaaRoi(1090, 158, 106, 106),
+                    RunnerUpScore: 0.71,
+                    VisualStrength: 0.90),
+            ]);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(statusRescueResult, out _, out var statusRescueDetections), "status rescue result readable");
+        Equal(0, statusRescueDetections.Count, "status evidence does not promote an unconfirmed image identity");
+        var statusProbes = RhodesSuiCoinStatusRecognizer.ProbeOwnedStatusSlots(
+            EncodePng(statusRescueFrame),
+            [
+                new RhodesSuiCoinImageDetection(
+                    focusedCoin.Id,
+                    focusedCoin.Name,
+                    0.72,
+                    1,
+                    new MaaRoi(828, 158, 106, 106),
+                    RunnerUpScore: 0.71,
+                    VisualStrength: 0.90),
+                new RhodesSuiCoinImageDetection(
+                    rustCoin.Id,
+                    rustCoin.Name,
+                    0.72,
+                    2,
+                    new MaaRoi(1090, 158, 106, 106),
+                    RunnerUpScore: 0.71,
+                    VisualStrength: 0.90),
+            ],
+            statuses);
+        Equal(1, statusProbes.Count, "status probing identifies only the status-bearing unresolved slot");
+        Equal(1, statusProbes.Single().SlotIndex, "status probing preserves the unresolved slot index");
+        Equal(status.Id, statusProbes.Single().StatusId, "status probing retains the detected status class");
+    }
+
+    using (var middleBandStatusFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        middleBandStatusFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(middleBandStatusFrame))
+        {
+            Draw(canvas, rustCoin.ImagePath, new SKRect(828, 158, 934, 264));
+            Draw(canvas, rustStatus.ImagePath, new SKRect(889, 170, 917, 199));
+        }
+
+        var middleBandInspections = new[]
+        {
+            new RhodesSuiCoinImageDetection(
+                rustCoin.Id,
+                rustCoin.Name,
+                0.72,
+                1,
+                new MaaRoi(828, 158, 106, 106),
+                RunnerUpScore: 0.71,
+                VisualStrength: 0.90),
+        };
+        var middleBandRawProbes = RhodesSuiCoinStatusRecognizer.InspectOwnedStatusSlots(
+            EncodePng(middleBandStatusFrame),
+            middleBandInspections,
+            statuses);
+        var middleBandProbes = RhodesSuiCoinStatusRecognizer.ProbeOwnedStatusSlots(
+            EncodePng(middleBandStatusFrame),
+            middleBandInspections,
+            statuses);
+        Equal(
+            1,
+            middleBandProbes.Count,
+            $"status probing covers the live middle vertical band ({JsonSerializer.Serialize(middleBandRawProbes)})");
+        Equal(1, middleBandProbes.Single().SlotIndex, "middle-band probing prioritizes the status-bearing slot");
+    }
+
+    using (var conflictingFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        conflictingFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(conflictingFrame))
+            Draw(canvas, focusedCoin.ImagePath, new SKRect(828, 158, 934, 264));
+
+        var conflictingResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(conflictingFrame),
+            [FocusedOcrResult(1, focusedCoin.Name)],
+            coins,
+            statuses,
+            [
+                new RhodesSuiCoinImageDetection(
+                    rustCoin.Id,
+                    rustCoin.Name,
+                    0.93,
+                    1,
+                    new MaaRoi(828, 158, 106, 106),
+                    RunnerUpScore: 0.82,
+                    VisualStrength: 0.91),
+            ]);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(conflictingResult, out _, out var conflictingDetections), "conflicting anchor result readable");
+        Equal(1, conflictingDetections.Count, "OCR and image anchors do not duplicate one slot");
+        Equal(focusedCoin.Id, conflictingDetections.Single().CoinId, "name OCR wins when image classification disagrees");
+    }
+
+    using (var mismatchedAnchorFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        mismatchedAnchorFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(mismatchedAnchorFrame))
+        {
+            Draw(canvas, rustCoin.ImagePath, new SKRect(410, 295, 516, 401));
+            Draw(canvas, rustStatus.ImagePath, new SKRect(475, 302, 519, 348));
+            Draw(canvas, focusedCoin.ImagePath, new SKRect(690, 295, 796, 401));
+        }
+
+        var mismatchedAnchorResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(mismatchedAnchorFrame),
+            [OcrResult((focusedCoin.Name, 1124, 612, 244, 32))],
+            coins,
+            statuses,
+            [
+                new RhodesSuiCoinImageDetection(
+                    rustCoin.Id,
+                    rustCoin.Name,
+                    0.93,
+                    4,
+                    new MaaRoi(410, 295, 106, 106),
+                    RunnerUpScore: 0.82,
+                    VisualStrength: 0.91),
+            ]);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(mismatchedAnchorResult, out _, out var mismatchedAnchorDetections), "mismatched geometry result readable");
+        Equal(1, mismatchedAnchorDetections.Count, "OCR coin remains present when image geometry disagrees");
+        Equal(focusedCoin.Id, mismatchedAnchorDetections.Single().CoinId, "OCR identity remains authoritative for mismatched geometry");
+        Equal("", mismatchedAnchorDetections.Single().StatusId, "another coin's marker is not attached through mismatched geometry");
+    }
+
+    using (var raisedStatusFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul))
+    {
+        raisedStatusFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(raisedStatusFrame))
+        {
+            Draw(canvas, focusedCoin.ImagePath, new SKRect(834, 154, 940, 260));
+            Draw(canvas, status.ImagePath, new SKRect(895, 130, 935, 170));
+        }
+
+        var raisedStatusDiagnostics = new RhodesCoinRecognitionDiagnostics();
+        var raisedStatusResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(raisedStatusFrame),
+            [FocusedOcrResult(1, focusedCoin.Name)],
+            coins,
+            statuses,
+            [
+                new RhodesSuiCoinImageDetection(
+                    rustCoin.Id,
+                    rustCoin.Name,
+                    0.64,
+                    1,
+                    new MaaRoi(834, 154, 106, 106),
+                    RunnerUpScore: 0.63,
+                    VisualStrength: 0.72),
+            ],
+            raisedStatusDiagnostics);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(raisedStatusResult, out _, out var raisedStatusDetections), "raised status result readable");
+        Equal(focusedCoin.Id, raisedStatusDetections.Single().CoinId, "OCR identity is retained while image inspection refines geometry");
+        Equal(
+            status.Id,
+            raisedStatusDetections.Single().StatusId,
+            $"status marker above the nominal slot is retained ({raisedStatusResult.RecognitionDetailJson})");
+        Equal(
+            true,
+            raisedStatusDiagnostics.StatusColorComparisonCount > statusDiagnostics.StatusColorComparisonCount,
+            "raised status falls back to the broad classifier instead of being discarded");
+    }
+
+    foreach (var expectedCoin in new[] { focusedCoin, coin, rustCoin })
+    {
+        using var anyStatusFrame = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul);
+        anyStatusFrame.Erase(new SKColor(230, 220, 217));
+        using (var canvas = new SKCanvas(anyStatusFrame))
+        {
+            Draw(canvas, expectedCoin.ImagePath, new SKRect(828, 158, 934, 264));
+            using var statusBitmap = SKBitmap.Decode(status.ImagePath);
+            var statusWidth = 32;
+            var statusHeight = (int)Math.Round(statusWidth * (statusBitmap.Height / (double)statusBitmap.Width));
+            Draw(canvas, status.ImagePath, new SKRect(893, 165, 893 + statusWidth, 165 + statusHeight));
+        }
+
+        var anyStatusResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+            EncodePng(anyStatusFrame),
+            [FocusedOcrResult(1, expectedCoin.Name)],
+            coins,
+            statuses);
+        Equal(true, RhodesSuiCoinImageRecognizer.TryRead(anyStatusResult, out _, out var anyStatusDetections), "any status result readable");
+        Equal(
+            status.Id,
+            anyStatusDetections.Single().StatusId,
+            $"the same status can attach to any coin ({expectedCoin.Name}; {anyStatusResult.RecognitionDetailJson})");
     }
 
     static MaaTaskRunResult OcrResult(params (string Text, int X, int Y, int Width, int Height)[] rows) => new(
@@ -2966,10 +3493,565 @@ static void SuiOwnedCoinStatusRecognizer()
         "OCR",
         true);
 
+    static MaaTaskRunResult FocusedOcrResult(int slotIndex, string text) => new(
+        $"RhodesDynamic_is6.coin_list_text.slot{slotIndex}",
+        "Succeeded",
+        true,
+        text,
+        JsonSerializer.Serialize(new
+        {
+            filtered_results = new[]
+            {
+                new
+                {
+                    text,
+                    score = 0.95,
+                    box = new[] { 0, 0, 600, 90 },
+                },
+            },
+        }),
+        "OCR",
+        true);
+
     static void Draw(SKCanvas canvas, string path, SKRect destination)
     {
         using var bitmap = SKBitmap.Decode(path);
         canvas.DrawBitmap(bitmap, destination);
+    }
+}
+
+static void SuiOwnedCoinStatusRound2Frame()
+{
+    var frameNames = new[]
+    {
+        "frame-20260725-074316-690-round2-status.png",
+        "frame-20260725-current-multi-status.png",
+    };
+    var coins = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coin");
+    var statuses = RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coinStatus");
+    var expected = new[]
+    {
+        (Slot: 0, Coin: "is6_copper_f05", Status: "is6_gild7", X: 548, Y: 158),
+        (Slot: 1, Coin: "is6_copper_f24", Status: "is6_gild1", X: 828, Y: 158),
+        (Slot: 2, Coin: "is6_copper_f29", Status: "", X: 1090, Y: 158),
+        (Slot: 3, Coin: "is6_copper_f28", Status: "is6_gild2", X: 410, Y: 295),
+        (Slot: 4, Coin: "is6_copper_b01", Status: "is6_gild8", X: 689, Y: 295),
+        (Slot: 5, Coin: "is6_copper_f31", Status: "", X: 952, Y: 295),
+        (Slot: 6, Coin: "is6_copper_b01", Status: "is6_gild10", X: 548, Y: 433),
+        (Slot: 8, Coin: "is6_copper_f04", Status: "", X: 1090, Y: 433),
+    };
+    var inspections = expected
+        .Select(item =>
+        {
+            var coin = coins.Single(option => option.Id.EndsWith(item.Coin, StringComparison.Ordinal));
+            return new RhodesSuiCoinImageDetection(
+                coin.Id,
+                coin.Name,
+                0.95,
+                item.Slot,
+                new MaaRoi(item.X, item.Y, 106, 106),
+                RunnerUpScore: 0.80,
+            VisualStrength: 0.95);
+        })
+        .ToArray();
+
+    foreach (var frameName in frameNames)
+    {
+        var framePath = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "tests",
+            "fixtures",
+            "sui-coins",
+            frameName);
+        Equal(true, File.Exists(framePath), $"Round 2 multi-status fixture exists: {frameName}");
+
+        var probes = RhodesSuiCoinStatusRecognizer.InspectOwnedStatusSlots(
+            File.ReadAllBytes(framePath),
+            inspections,
+            statuses);
+        Equal(
+            expected.Length,
+            probes.Count,
+            $"every labeled Round 2 slot is inspected in {frameName} ({JsonSerializer.Serialize(probes)})");
+        var mismatches = new List<string>();
+        foreach (var item in expected)
+        {
+            var probe = probes.Single(candidate => candidate.SlotIndex == item.Slot);
+            if ((item.Status.Length > 0) != probe.IsStatusPresent)
+                mismatches.Add($"slot{item.Slot}:present={probe.IsStatusPresent}/{item.Status.Length > 0}");
+            if (item.Status.Length == 0)
+                continue;
+
+            var status = statuses.Single(option => option.Id.EndsWith(item.Status, StringComparison.Ordinal));
+            if (!string.Equals(status.Id, probe.StatusId, StringComparison.Ordinal))
+                mismatches.Add($"slot{item.Slot}:status={probe.StatusId}/{status.Id}");
+        }
+
+        Equal(
+            "",
+            string.Join("|", mismatches),
+            $"Round 2 status mismatches in {frameName} ({JsonSerializer.Serialize(probes)})");
+    }
+}
+
+static void CoinStabilityManifestStatusKinds()
+{
+    var manifest = RhodesCoinStabilityManifest.Parse(
+        """
+        {
+          "schemaVersion": 1,
+          "frames": [
+            {
+              "frameId": "frame-a",
+              "profileId": "is6CoinsFull",
+              "passIndex": 0,
+              "slots": [
+                {
+                  "slotIndex": 0,
+                  "present": true,
+                  "coinId": "coin-a",
+                  "status": { "kind": "known", "statusId": "status-a" }
+                },
+                {
+                  "slotIndex": 1,
+                  "present": true,
+                  "coinId": "coin-b",
+                  "status": { "kind": "none", "statusId": "" }
+                },
+                {
+                  "slotIndex": 2,
+                  "present": true,
+                  "coinId": "coin-c",
+                  "status": { "kind": "unknown", "statusId": "" }
+                }
+              ]
+            }
+          ]
+        }
+        """);
+
+    Equal(1, manifest.Frames.Count, "one manifest frame");
+    Equal("known", manifest.Frames[0].Slots[0].Status.Kind, "known status kind");
+    Equal("none", manifest.Frames[0].Slots[1].Status.Kind, "none status kind");
+    Equal("unknown", manifest.Frames[0].Slots[2].Status.Kind, "unknown status kind");
+
+    ThrowsInvalidOperation(
+        () => RhodesCoinStabilityManifest.Parse(
+            """
+            {
+              "schemaVersion": 1,
+              "frames": [{
+                "frameId": "frame-a",
+                "profileId": "is6CoinsFull",
+                "slots": [{
+                  "slotIndex": 0,
+                  "present": true,
+                  "coinId": "coin-a",
+                  "status": { "kind": "known", "statusId": "" }
+                }]
+              }]
+            }
+            """),
+        "known status requires an id");
+}
+
+static void CoinStabilityEvaluatorClassifiesErrors()
+{
+    var expected = new RhodesCoinStabilityFrameExpectation(
+        "frame-a",
+        "is6CoinsFull",
+        0,
+        [
+            new RhodesCoinStabilitySlotExpectation(
+                0,
+                true,
+                "coin-a",
+                new RhodesCoinStabilityStatusExpectation("known", "status-a")),
+            new RhodesCoinStabilitySlotExpectation(
+                1,
+                true,
+                "coin-b",
+                new RhodesCoinStabilityStatusExpectation("none", "")),
+            new RhodesCoinStabilitySlotExpectation(
+                2,
+                true,
+                "coin-c",
+                new RhodesCoinStabilityStatusExpectation("known", "status-c")),
+            new RhodesCoinStabilitySlotExpectation(
+                3,
+                true,
+                "coin-d",
+                new RhodesCoinStabilityStatusExpectation("unknown", "")),
+        ]);
+    var observed = new[]
+    {
+        RhodesCoinStabilitySlotObservation.Create("frame-a", "is6CoinsFull", 0, 0, "coin-x", "status-a"),
+        RhodesCoinStabilitySlotObservation.Create("frame-a", "is6CoinsFull", 0, 1, "coin-b", "status-b"),
+        RhodesCoinStabilitySlotObservation.Create("frame-a", "is6CoinsFull", 0, 2, "coin-c", ""),
+        RhodesCoinStabilitySlotObservation.Create("frame-a", "is6CoinsFull", 0, 3, "coin-d", "status-d"),
+    };
+
+    var errors = RhodesCoinStabilityEvaluator.Compare(expected, observed);
+    Equal(true, errors.Any(error => error.ErrorClass == "coin_name_error" && error.SlotIndex == 0), "coin error classified");
+    Equal(true, errors.Any(error => error.ErrorClass == "status_false_positive" && error.SlotIndex == 1), "status false positive classified");
+    Equal(true, errors.Any(error => error.ErrorClass == "status_false_negative" && error.SlotIndex == 2), "status false negative classified");
+    Equal(false, errors.Any(error => error.SlotIndex == 3), "unknown status excluded from status errors");
+}
+
+static void CoinStabilityEvaluatorBuildsStatusConfusionMatrix()
+{
+    var manifest = new RhodesCoinStabilityManifest(
+        1,
+        [
+            new RhodesCoinStabilityFrameExpectation(
+                "frame-a",
+                "is6CoinsFull",
+                0,
+                [
+                    new RhodesCoinStabilitySlotExpectation(
+                        0,
+                        true,
+                        "coin-a",
+                        new RhodesCoinStabilityStatusExpectation("known", "status-a")),
+                    new RhodesCoinStabilitySlotExpectation(
+                        1,
+                        true,
+                        "coin-b",
+                        new RhodesCoinStabilityStatusExpectation("none")),
+                    new RhodesCoinStabilitySlotExpectation(
+                        2,
+                        true,
+                        "coin-c",
+                        new RhodesCoinStabilityStatusExpectation("unknown")),
+                ])
+        ]);
+    var observations = new[]
+    {
+        RhodesCoinStabilitySlotObservation.Create("frame-a", "is6CoinsFull", 0, 0, "coin-a", "status-b"),
+        RhodesCoinStabilitySlotObservation.Create("frame-a", "is6CoinsFull", 0, 1, "coin-b", ""),
+        RhodesCoinStabilitySlotObservation.Create("frame-a", "is6CoinsFull", 0, 2, "coin-c", "status-c"),
+    };
+
+    var matrix = RhodesCoinStabilityEvaluator.BuildStatusConfusionMatrix(manifest, observations);
+
+    Equal(2, matrix.Denominator, "unknown status is excluded from confusion denominator");
+    Equal(
+        1,
+        matrix.Cells.Single(cell => cell.Expected == "status-a" && cell.Actual == "status-b").Count,
+        "known wrong class is represented");
+    Equal(
+        1,
+        matrix.Cells.Single(cell => cell.Expected == "none" && cell.Actual == "none").Count,
+        "plain coin is represented");
+}
+
+static void CoinStabilityThresholdSweepEnforcesZeroFalsePositives()
+{
+    var manifest = new RhodesCoinStabilityManifest(
+        1,
+        [
+            new RhodesCoinStabilityFrameExpectation(
+                "frame-a",
+                "is6CoinsFull",
+                0,
+                [
+                    new RhodesCoinStabilitySlotExpectation(
+                        0,
+                        true,
+                        "coin-a",
+                        new RhodesCoinStabilityStatusExpectation("known", "status-a")),
+                    new RhodesCoinStabilitySlotExpectation(
+                        1,
+                        true,
+                        "coin-b",
+                        new RhodesCoinStabilityStatusExpectation("none")),
+                ])
+        ]);
+    var observations = new[]
+    {
+        StabilityObservation(
+            0,
+            "coin-a",
+            "",
+            predictedStatusId: "status-a",
+            statusScore: 0.82,
+            runnerUpScore: 0.72,
+            overlay: 0.08,
+            presence: 0.90),
+        StabilityObservation(
+            1,
+            "coin-b",
+            "",
+            predictedStatusId: "status-b",
+            statusScore: 0.75,
+            runnerUpScore: 0.73,
+            overlay: 0.04,
+            presence: 0.90),
+    };
+
+    var sweep = RhodesCoinStabilityEvaluator.RunThresholdSweep(
+        manifest,
+        observations,
+        scoreThresholds: [0.74, 0.80],
+        marginThresholds: [0.01],
+        overlayThresholds: [0.035],
+        presenceThresholds: [0.70]);
+
+    Equal(2, sweep.Count, "threshold grid is evaluated");
+    Equal(
+        false,
+        sweep.Single(point => point.Thresholds.Score == 0.74).MeetsFalsePositiveConstraint,
+        "low threshold is rejected when it creates a false positive");
+    var eligible = sweep.Single(point => point.Thresholds.Score == 0.80);
+    Equal(true, eligible.MeetsFalsePositiveConstraint, "zero false-positive point remains eligible");
+    Equal(2, eligible.Correct, "eligible point keeps the positive and negative labels correct");
+
+    static RhodesCoinStabilitySlotObservation StabilityObservation(
+        int slotIndex,
+        string coinId,
+        string statusId,
+        string predictedStatusId = "",
+        double statusScore = 0,
+        double runnerUpScore = 0,
+        double overlay = 0,
+        double presence = 0) =>
+        new(
+            "frame-a",
+            "is6CoinsFull",
+            0,
+            slotIndex,
+            true,
+            coinId,
+            statusId,
+            statusScore,
+            runnerUpScore,
+            overlay,
+            statusScore,
+            predictedStatusId,
+            [],
+            "",
+            "test",
+            "test",
+            CoinVisualStrength: presence);
+}
+
+static void CoinStabilityResultHashDeterministic()
+{
+    var first = RhodesCoinStabilitySlotObservation.Create(
+        "frame-b",
+        "is6ActiveCoinsFull",
+        0,
+        1,
+        "coin-b",
+        "");
+    var second = RhodesCoinStabilitySlotObservation.Create(
+        "frame-a",
+        "is6CoinsFull",
+        0,
+        0,
+        "coin-a",
+        "status-a");
+    var error = new RhodesCoinStabilityError(
+        "frame-a",
+        "is6CoinsFull",
+        0,
+        0,
+        "status_wrong_class",
+        "coin-a",
+        "status-b",
+        "coin-a",
+        "status-a",
+        "status differs");
+
+    var hashA = RhodesCoinStabilityEvaluator.ComputeResultHash([first, second], [error]);
+    var hashB = RhodesCoinStabilityEvaluator.ComputeResultHash([second, first], [error]);
+    Equal(hashA, hashB, "result hash ignores discovery order");
+}
+
+static void CoinStabilityCorpusDiscovery()
+{
+    var root = Directory.CreateTempSubdirectory("rhodes-coin-corpus-").FullName;
+    try
+    {
+        var framesDirectory = Path.Combine(root, "RHODES OBS COMMANDER3373 Debug Logs", "Frame Records");
+        var scansDirectory = Path.Combine(root, "RHODES OBS COMMANDER3373 Debug Logs", "Recognition Scans");
+        Directory.CreateDirectory(framesDirectory);
+        Directory.CreateDirectory(scansDirectory);
+        File.WriteAllBytes(Path.Combine(framesDirectory, "frame-frame-a.png"), [1, 2, 3]);
+        File.WriteAllText(
+            Path.Combine(framesDirectory, "frame-frame-a.json"),
+            """
+            {
+              "schemaVersion": 1,
+              "frameId": "frame-a",
+              "profileId": "is6CoinsFull",
+              "imagePath": "stale-absolute-path.png"
+            }
+            """);
+        File.WriteAllText(
+            Path.Combine(scansDirectory, "recognition-frame-a.json"),
+            """
+            {
+              "profileId": "is6CoinsFull",
+              "completedAt": "2026-07-25T00:00:00Z",
+              "evidence": {
+                "capture": { "frameId": "frame-a" },
+                "taskResults": [
+                  {
+                    "entry": "RhodesOcrRegion_is6_coin_list_text",
+                    "status": "Succeeded",
+                    "succeeded": true,
+                    "detail": "coins=1",
+                    "recognitionDetailJson": "{}",
+                    "algorithm": "OCR",
+                    "hit": true
+                  },
+                  {
+                    "entry": "RhodesSuiCoinImage_ownedCoins",
+                    "status": "Succeeded",
+                    "succeeded": true,
+                    "detail": "ownedCoins=1",
+                    "recognitionDetailJson": "{\"fieldId\":\"coins\",\"detections\":[]}",
+                    "algorithm": "ImageClassification",
+                    "hit": true
+                  },
+                  {
+                    "entry": "second-pass-must-not-leak",
+                    "status": "Succeeded",
+                    "succeeded": true,
+                    "detail": "",
+                    "recognitionDetailJson": "{}",
+                    "algorithm": "OCR",
+                    "hit": false
+                  }
+                ]
+              }
+            }
+            """);
+
+        var archivePath = Path.Combine(root, "bug-report.zip");
+        using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
+        {
+            AddText(
+                archive,
+                "Frame Records/frame-frame-a.json",
+                """{"schemaVersion":1,"frameId":"frame-a","profileId":"is6CoinsFull"}""");
+            AddBytes(archive, "Frame Records/frame-frame-a.png", [9, 9, 9]);
+            AddText(
+                archive,
+                "Frame Records/frame-frame-b.json",
+                """{"schemaVersion":1,"frameId":"frame-b","profileId":"is6ActiveCoinsFull"}""");
+            AddBytes(archive, "Frame Records/frame-frame-b.png", [4, 5, 6]);
+        }
+
+        var frames = RhodesCoinStabilityCorpus.Discover([root]);
+        Equal(2, frames.Count, "direct and ZIP frames are discovered once");
+        Equal("frame-a|frame-b", string.Join("|", frames.Select(frame => frame.FrameId)), "stable frame order");
+        Equal("file", frames[0].SourceKind, "direct frame wins over duplicate ZIP frame");
+        Equal("1,2,3", string.Join(",", frames[0].EncodedImage), "direct image bytes preserved");
+        Equal(2, frames[0].EvidenceTasks.Count, "only first pass evidence retained");
+        Equal("zip", frames[1].SourceKind, "bug report frame source kind");
+    }
+    finally
+    {
+        Directory.Delete(root, recursive: true);
+    }
+
+    static void AddText(ZipArchive archive, string path, string content)
+    {
+        var entry = archive.CreateEntry(path);
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write(content);
+    }
+
+    static void AddBytes(ZipArchive archive, string path, byte[] content)
+    {
+        var entry = archive.CreateEntry(path);
+        using var stream = entry.Open();
+        stream.Write(content);
+    }
+}
+
+static void CoinStabilityReportWriterEmitsReports()
+{
+    var root = Directory.CreateTempSubdirectory("rhodes-coin-reports-").FullName;
+    try
+    {
+        var observation = RhodesCoinStabilitySlotObservation.Create(
+            "frame-a",
+            "is6CoinsFull",
+            0,
+            0,
+            "coin-a",
+            "status-a");
+        var error = new RhodesCoinStabilityError(
+            "frame-a",
+            "is6CoinsFull",
+            0,
+            0,
+            "status_wrong_class",
+            "coin-a",
+            "status-b",
+            "coin-a",
+            "status-a",
+            "status differs");
+        var resultHash = RhodesCoinStabilityEvaluator.ComputeResultHash([observation], [error]);
+        var result = new RhodesCoinStabilityRunResult(
+            [observation],
+            [error],
+            [],
+            new RhodesCoinStabilitySummary(
+                1,
+                1,
+                1,
+                1,
+                1,
+                0,
+                1,
+                new Dictionary<string, int> { ["status_wrong_class"] = 1 },
+                0,
+                0,
+                1,
+                0,
+                resultHash),
+            new RhodesCoinStabilityRunMetadata(
+                1,
+                "commit",
+                "maa",
+                "template",
+                "master",
+                "manifest",
+                resultHash,
+                1,
+                10,
+                ["frames"]));
+
+        RhodesCoinStabilityReportWriter.Write(root, result);
+
+        foreach (var fileName in new[]
+        {
+            "observations.jsonl",
+            "errors.csv",
+            "summary.json",
+            "candidate-diff.json",
+            "run-metadata.json",
+            "confusion-matrix.json",
+            "threshold-sweep.json",
+        })
+        {
+            Equal(true, File.Exists(Path.Combine(root, fileName)), $"report exists: {fileName}");
+        }
+
+        var csv = File.ReadAllBytes(Path.Combine(root, "errors.csv"));
+        Equal(true, csv.Length >= 3 && csv[0] == 0xEF && csv[1] == 0xBB && csv[2] == 0xBF, "CSV uses UTF-8 BOM");
+        Equal(
+            resultHash,
+            JsonNode.Parse(File.ReadAllText(Path.Combine(root, "summary.json")))!["resultHash"]!.GetValue<string>(),
+            "summary preserves deterministic result hash");
+    }
+    finally
+    {
+        Directory.Delete(root, recursive: true);
     }
 }
 
@@ -3064,6 +4146,18 @@ static void SuiOwnedCoinOcrFallbackPlanner()
         "RhodesDynamic_is6.coin_list_text.slot3|RhodesDynamic_is6.coin_list_text.slot4",
         string.Join("|", missingRequests.Select(request => request.Entry)),
         "dim held slots remain eligible while empty slots are excluded");
+    var prioritizedRequests = RhodesSuiCoinImageRecognizer.PlanMissingOwnedNameOcrRequests(
+    [
+        new RhodesSuiCoinImageDetection("resolved", "resolved", 0.81, 0, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.70, VisualStrength: 0.95),
+        new RhodesSuiCoinImageDetection("unresolved", "unresolved", 0.64, 3, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.63, VisualStrength: 0.72),
+        new RhodesSuiCoinImageDetection("dim", "dim", 0.64, 4, new MaaRoi(0, 0, 1, 1), RunnerUpScore: 0.63, VisualStrength: 0.50),
+    ],
+    [broadOcr],
+    [4]);
+    Equal(
+        "RhodesDynamic_is6.coin_list_text.slot4|RhodesDynamic_is6.coin_list_text.slot3",
+        string.Join("|", prioritizedRequests.Select(request => request.Entry)),
+        "status-bearing held slots are OCRed before stronger plain slots");
 }
 
 static void LocalCandidateConverterAllProfiles()
@@ -3617,7 +4711,27 @@ static void SukiSettingsStore()
                 OverlayLayout:
                 [
                     new SukiOverlayLayoutState("status", true, 40, 30, 1200, 120, 2),
-                ]),
+                ],
+                OutputPreferences: new SukiOutputPreferences(
+                    TournamentMode: true,
+                    BackgroundEnabled: false,
+                    BackgroundOpacity: 64,
+                    ShowPartTitles: false,
+                    ScrollSpeed: 18,
+                    Parts:
+                    [
+                        new SukiOutputPartState(
+                            "operators",
+                            Enabled: true,
+                            ScrollEnabled: false,
+                            HideExcluded: true,
+                            Width: 420,
+                            Height: 620,
+                            TournamentMode: true,
+                            BackgroundEnabled: true,
+                            BackgroundOpacity: 25,
+                            ShowTitle: false),
+                    ])),
             path);
 
         var loaded = RhodesSukiSettingsStore.Load(path);
@@ -3629,6 +4743,17 @@ static void SukiSettingsStore()
         Equal(SukiAdbMethodCatalog.FastEmulatorMethodId, loaded.AdbScreencapMethodId, "screencap method");
         Equal(1, loaded.OverlayLayout?.Count ?? 0, "overlay layout count");
         Equal(40, loaded.OverlayLayout?[0].X ?? -1, "overlay layout x");
+        Equal(true, loaded.OutputPreferences?.TournamentMode ?? false, "output tournament mode");
+        Equal(false, loaded.OutputPreferences?.BackgroundEnabled ?? true, "output background disabled");
+        Equal(64, loaded.OutputPreferences?.BackgroundOpacity ?? -1, "output background opacity");
+        Equal(false, loaded.OutputPreferences?.ShowPartTitles ?? true, "output titles hidden");
+        Equal(18, loaded.OutputPreferences?.ScrollSpeed ?? -1, "output scroll speed");
+        Equal(1, loaded.OutputPreferences?.Parts.Count ?? 0, "output part count");
+        Equal("operators", loaded.OutputPreferences?.Parts[0].Id ?? "", "output part id");
+        Equal(true, loaded.OutputPreferences?.Parts[0].TournamentMode ?? false, "output part tournament mode");
+        Equal(true, loaded.OutputPreferences?.Parts[0].BackgroundEnabled ?? false, "output part background enabled");
+        Equal(25, loaded.OutputPreferences?.Parts[0].BackgroundOpacity ?? -1, "output part background opacity");
+        Equal(false, loaded.OutputPreferences?.Parts[0].ShowTitle ?? true, "output part title hidden");
     }
     finally
     {
@@ -4482,10 +5607,21 @@ static void RecognitionNavigationLoadsProfileSteps()
     Equal(2, activeCoins.OpenSteps.Count, "active coin panel open steps");
     Equal(2, activeCoins.RestoreSteps.Count, "active coin panel restore steps");
     Equal("tap", activeCoins.OpenSteps[0].Type, "active coin panel opens by tap");
-    Equal(515, activeCoins.OpenSteps[0].X, "active coin tap area x");
-    Equal(650, activeCoins.OpenSteps[0].Y, "active coin tap area y");
-    Equal(54, activeCoins.OpenSteps[0].Width, "active coin tap area targets only the first active slot");
+    Equal(606, activeCoins.OpenSteps[0].X, "active coin tap area x");
+    Equal(664, activeCoins.OpenSteps[0].Y, "active coin tap area y");
+    Equal(23, activeCoins.OpenSteps[0].Width, "active coin tap area targets only the first active slot");
+    Equal(29, activeCoins.OpenSteps[0].Height, "active coin tap area stays inside the first active slot");
     Equal(false, activeCoins.OpenSteps.Concat(activeCoins.RestoreSteps).Any(step => step.Type == "back"), "active coin panel never uses Android back");
+
+    var heldCoins = RhodesRecognitionNavigation.LoadFromJson(File.ReadAllText(path), "is6CoinsFull");
+    Equal(2, heldCoins.OpenSteps.Count, "held coin panel open steps");
+    Equal(2, heldCoins.RestoreSteps.Count, "held coin panel restore steps");
+    Equal("tap", heldCoins.OpenSteps[0].Type, "held coin panel opens by tap");
+    Equal(710, heldCoins.OpenSteps[0].X, "held coin tap area x excludes active coin icons and recruitment tickets");
+    Equal(664, heldCoins.OpenSteps[0].Y, "held coin tap area y");
+    Equal(75, heldCoins.OpenSteps[0].Width, "held coin tap area stays on the coin box button");
+    Equal(40, heldCoins.OpenSteps[0].Height, "held coin tap area stays inside the bottom bar button");
+    Equal(false, heldCoins.OpenSteps.Concat(heldCoins.RestoreSteps).Any(step => step.Type == "back"), "held coin panel never uses Android back");
 
     var lightAndHorde = RhodesRecognitionNavigation.LoadFromJson(File.ReadAllText(path), "is3LightHordeFull");
     Equal(610, lightAndHorde.OpenSteps[0].X, "Mizuki light panel tap starts inside the title button");
@@ -5316,6 +6452,61 @@ static void MizukiRejectionTargetsExpandReserveInstances()
         "reserve_sniper#1",
         legacyTargets.Single(target => target.IsSelected).TargetKey,
         "legacy aggregate target migrates to the first recruit instance");
+}
+
+static void SuiCandleBearerCardDetectorPreservesOperatorCandidate()
+{
+    var request = new MaaDynamicOcrRequest("operator.card.name.0", 661, 172, 180, 23, 1, 0.99);
+    using var flaggedFrame = new SKBitmap(1280, 720);
+    flaggedFrame.Erase(SKColors.Black);
+    using (var canvas = new SKCanvas(flaggedFrame))
+    {
+        canvas.DrawRect(
+            new SKRect(454, 162, 476, 189),
+            new SKPaint { Color = new SKColor(247, 73, 170) });
+        canvas.DrawRect(
+            new SKRect(454, 145, 476, 166),
+            new SKPaint { Color = new SKColor(255, 146, 28) });
+    }
+
+    var flagged = RhodesSuiCandleBearerCardDetector.Detect(EncodePng(flaggedFrame), request);
+    Equal(true, flagged.IsCandleBearer, "pink candle bearer marker is detected");
+    Equal(true, flagged.MarkerRatio > 0.25, "marker ratio retained as evidence");
+
+    var operatorResult = new MaaTaskRunResult(
+        request.Entry,
+        "Succeeded",
+        true,
+        "detail",
+        """{"filtered_results":[{"text":"レイディアン","score":0.99}]}""",
+        "OCR",
+        true);
+    var operatorCandidate = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [operatorResult],
+        "is6_sui").Single();
+    var markerResult = RhodesSuiCandleBearerCardDetector.CreateTaskResult(
+        request,
+        operatorCandidate,
+        flagged);
+    var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [operatorResult, markerResult],
+        "is6_sui");
+
+    Equal(2, candidates.Count, "operator OCR and candle bearer attribute are both retained");
+    Equal(true, candidates.Any(item => item.Kind == "operator" && item.OperatorId == operatorCandidate.OperatorId), "primary operator candidate retained");
+    Equal(true, candidates.Any(item => item.Kind == "sui" && item.FieldId == "candleBearer"), "candle bearer candidate added independently");
+
+    using var normalFrame = new SKBitmap(1280, 720);
+    normalFrame.Erase(new SKColor(35, 35, 35));
+    var normal = RhodesSuiCandleBearerCardDetector.Detect(EncodePng(normalFrame), request);
+    Equal(false, normal.IsCandleBearer, "gray card edge is not a candle bearer marker");
+    var normalCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [operatorResult],
+        "is6_sui");
+    Equal(1, normalCandidates.Count, "missing marker never removes the operator OCR candidate");
 }
 
 static void RecognitionProbePayloadsTargetRetainedFields()
@@ -7460,6 +8651,68 @@ static void MizukiOperatorPresentationMarksTargets()
     Equal(false, operators[1].IsEvolutionTarget, "same evolution field is ignored outside Mizuki");
 }
 
+static void SuiOperatorPresentationMarksCandleBearerTargets()
+{
+    var operators = new[]
+    {
+        new SukiChoiceItem(
+            "operator", "radiant", "レイディアン", "★6 特殊 / 鬼師", "特殊", "鬼師", "", "", 6, 1, false),
+        new SukiChoiceItem(
+            "operator", "elysium", "エリジウム", "★5 先鋒 / 旗手", "先鋒", "旗手", "", "", 5, 2, false),
+    };
+    var fields = new[]
+    {
+        new SukiSpecialFieldState(
+            "is6_sui",
+            "candleBearer",
+            "持燭人",
+            "operatorMultiSelect",
+            "1名",
+            "対象者",
+            "operatorsFull",
+            "対象1名",
+            OperatorIds: ["radiant"]),
+    };
+
+    RhodesMizukiOperatorPresentation.Apply("is6_sui", fields, operators);
+    Equal(true, operators[0].IsCandleBearerTarget, "Sui candle bearer target is marked");
+    Equal(false, operators[1].IsCandleBearerTarget, "unaffected Sui operator is not marked");
+
+    RhodesMizukiOperatorPresentation.Apply("is5_sarkaz", fields, operators);
+    Equal(false, operators[0].IsCandleBearerTarget, "stored candle bearer field is ignored outside Sui");
+}
+
+static void SuiManualCandleBearerSelectionBuildsCandidates()
+{
+    var targets = new[]
+    {
+        new SukiOperatorTargetOption("radiant", 1, "レイディアン", "", true),
+        new SukiOperatorTargetOption("reserve_defender", 1, "予備隊員-重装 1人目", "", true),
+        new SukiOperatorTargetOption("reserve_defender", 2, "予備隊員-重装 2人目", "", true),
+        new SukiOperatorTargetOption("elysium", 1, "エリジウム", "", false),
+    };
+
+    var candidates = RhodesSuiCandleBearerManualSelection.BuildCandidates(targets);
+    Equal(4, candidates.Count, "clear marker plus three recruited target instances emitted");
+    Equal(
+        "radiant#1|reserve_defender#1|reserve_defender#2",
+        string.Join(
+            '|',
+            candidates
+                .Where(candidate => !string.IsNullOrWhiteSpace(candidate.OperatorId))
+                .Select(candidate => $"{candidate.OperatorId}#{candidate.OperatorInstance}")),
+        "manual candle bearer targets preserve recruit instances");
+
+    foreach (var target in targets)
+        target.IsSelected = false;
+    candidates = RhodesSuiCandleBearerManualSelection.BuildCandidates(targets);
+    Equal(1, candidates.Count, "empty manual selection still emits an explicit clear marker");
+    Equal(
+        RhodesRecognitionCandidateApplier.NoMizukiSelectionId,
+        candidates[0].Value,
+        "manual clear marker uses the shared explicit none value");
+}
+
 static void RunCatalogMizukiHordeCallIcons()
 {
     var options = RhodesRunCatalog.LoadSpecialEffectOptions("is3_mizuki", "hordeCall");
@@ -8038,11 +9291,25 @@ static void SukiStateSyncWorkflowSettingsSuccess()
             new SukiChoicePersistenceOptions(true, false, false, false, true, false, 4, 4),
             new RhodesAdbApiSettings(true, "mumu", "M:/Program Files/Netease/MuMu Player 12/shell/adb.exe", "127.0.0.1:16384"),
             new SukiOutputPreferences(
-                true,
-                true,
-                true,
-                12,
-                [new SukiOutputPartState("operators", true, false, true, 360, 140)]),
+                TournamentMode: true,
+                BackgroundEnabled: false,
+                BackgroundOpacity: 100,
+                ShowPartTitles: true,
+                ScrollSpeed: 12,
+                Parts:
+                [
+                    new SukiOutputPartState(
+                        "operators",
+                        true,
+                        false,
+                        true,
+                        360,
+                        140,
+                        TournamentMode: true,
+                        BackgroundEnabled: false,
+                        BackgroundOpacity: 100,
+                        ShowTitle: true),
+                ]),
             "glm-ocr"),
         _ => Task.FromResult(new RhodesStateApiResult(
             """
@@ -8075,9 +9342,12 @@ static void SukiStateSyncWorkflowSettingsSuccess()
     Equal("is5_sarkaz_relic_001", updated["relics"]!.AsArray()[0]!.GetValue<string>(), "sync workflow relic selection");
     Equal("mumu", updated["adb"]!.AsObject()["connectionPreset"]!.GetValue<string>(), "sync workflow adb preset");
     Equal("127.0.0.1:16384", updated["adb"]!.AsObject()["serial"]!.GetValue<string>(), "sync workflow adb serial");
-    Equal("glm-ocr", updated["preferences"]!.AsObject()["ocrEngine"]!.GetValue<string>(), "sync workflow ocr engine");
-    Equal(true, updated["preferences"]!.AsObject()["sukiOutputSeparateWindow"]!.GetValue<bool>(), "sync workflow output window");
-    Equal("tournament", updated["mode"]!.GetValue<string>(), "sync workflow tournament mode");
+    var preferences = updated["preferences"]!.AsObject();
+    Equal("glm-ocr", preferences["ocrEngine"]!.GetValue<string>(), "sync workflow ocr engine");
+    Equal(true, preferences["sukiOutputTournamentMode"]!.GetValue<bool>(), "sync workflow tournament mode");
+    Equal(false, preferences["sukiOutputBackgroundEnabled"]!.GetValue<bool>(), "sync workflow background");
+    Equal(false, preferences.ContainsKey("sukiOutputSeparateWindow"), "removed output window setting");
+    Equal("casual", updated["mode"]!.GetValue<string>(), "output mode does not mutate run mode");
     Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "sync workflow prunes abandoned values");
 }
 
@@ -8089,7 +9359,13 @@ static void SukiStateSyncWorkflowSettingsFailure()
             [],
             new SukiChoicePersistenceOptions(false, false, false, false, false, false, 2, 2),
             new RhodesAdbApiSettings(true, "auto", "adb", ""),
-            new SukiOutputPreferences(false, false, false, 0, []),
+            new SukiOutputPreferences(
+                TournamentMode: false,
+                BackgroundEnabled: false,
+                BackgroundOpacity: 100,
+                ShowPartTitles: true,
+                ScrollSpeed: 0,
+                Parts: []),
             "maa-ocr"),
         _ => Task.FromResult(new RhodesStateApiResult("", "connection refused")),
         (_, _) => throw new InvalidOperationException("save should not run"),
@@ -8215,24 +9491,35 @@ static void StateApiSukiPreferencesApply()
             4,
             3),
         new SukiOutputPreferences(
-            true,
-            true,
-            false,
-            42,
+            TournamentMode: true,
+            BackgroundEnabled: true,
+            BackgroundOpacity: 35,
+            ShowPartTitles: false,
+            ScrollSpeed: 42,
+            Parts:
             [
-                new SukiOutputPartState("operators", true, false, true, 420, 132),
+                new SukiOutputPartState(
+                    "operators",
+                    true,
+                    false,
+                    true,
+                    420,
+                    132,
+                    TournamentMode: true,
+                    BackgroundEnabled: false,
+                    BackgroundOpacity: 20,
+                    ShowTitle: false),
                 new SukiOutputPartState("relics", true, true, true, 420, 170),
                 new SukiOutputPartState("special", true, true, false, 300, 126),
             ],
+            OverlayLayout:
             [
                 new SukiOverlayLayoutState("status", true, 40, 30, 1200, 120, 2),
                 new SukiOverlayLayoutState("operators", true, 1460, 300, 420, 620, 5),
-            ],
-            BackgroundTransparency: 35,
-            ShowPartTitles: false),
+            ]),
         "maa-ocr"))!.AsObject();
 
-    Equal("tournament", updated["mode"]!.GetValue<string>(), "mode tournament");
+    Equal("casual", updated["mode"]!.GetValue<string>(), "output mode keeps run mode");
     var preferences = updated["preferences"]!.AsObject();
     Equal("maa-ocr", preferences["ocrEngine"]!.GetValue<string>(), "ocr engine updated");
     Equal(true, preferences["operatorShowSelectedFirst"]!.GetValue<bool>(), "operator selected first");
@@ -8241,12 +9528,19 @@ static void StateApiSukiPreferencesApply()
     Equal(3, preferences["relicGridColumns"]!.GetValue<int>(), "relic columns");
     Equal(30, preferences["compactRelicScrollSpeed"]!.GetValue<int>(), "scroll speed clamped");
     Equal(30, preferences["horizontalOperatorScrollSpeed"]!.GetValue<int>(), "operator scroll speed");
-    Equal(true, preferences["sukiOutputSeparateWindow"]!.GetValue<bool>(), "separate window");
-    Equal(false, preferences["sukiOutputTransparentBackground"]!.GetValue<bool>(), "transparent background");
-    Equal(35, preferences["sukiOutputBackgroundTransparency"]!.GetValue<int>(), "background transparency");
+    Equal(true, preferences["sukiOutputTournamentMode"]!.GetValue<bool>(), "tournament output");
+    Equal(true, preferences["sukiOutputBackgroundEnabled"]!.GetValue<bool>(), "background enabled");
+    Equal(35, preferences["sukiOutputBackgroundOpacity"]!.GetValue<int>(), "background opacity");
     Equal(false, preferences["sukiOutputShowPartTitles"]!.GetValue<bool>(), "part title visibility");
+    Equal(false, preferences.ContainsKey("sukiOutputSeparateWindow"), "separate window removed");
+    Equal(false, preferences.ContainsKey("sukiOutputTransparentBackground"), "legacy transparent background removed");
     Equal(3, preferences["sukiOutputParts"]!.AsArray().Count, "output parts count");
-    Equal("operators", preferences["sukiOutputParts"]!.AsArray()[0]!.AsObject()["id"]!.GetValue<string>(), "first output part");
+    var firstOutputPart = preferences["sukiOutputParts"]!.AsArray()[0]!.AsObject();
+    Equal("operators", firstOutputPart["id"]!.GetValue<string>(), "first output part");
+    Equal(true, firstOutputPart["tournamentMode"]!.GetValue<bool>(), "part tournament output");
+    Equal(false, firstOutputPart["backgroundEnabled"]!.GetValue<bool>(), "part background override");
+    Equal(20, firstOutputPart["backgroundOpacity"]!.GetValue<int>(), "part background opacity");
+    Equal(false, firstOutputPart["showTitle"]!.GetValue<bool>(), "part title override");
     Equal(6, preferences["sukiOverlayLayout"]!.AsArray().Count, "overlay layout count");
     Equal(1460, preferences["sukiOverlayLayout"]!.AsArray()[2]!.AsObject()["x"]!.GetValue<int>(), "operator layout x");
     Equal(
@@ -9067,7 +10361,7 @@ static void CandidateSuiSeasonalHoursFollowDifficulty()
         "normal seasonal hours follow difficulty while awakening remains explicit");
 }
 
-static void CandidateSuiSupportMartialApply()
+static void RunStateStorePrunesSuiSupportMartial()
 {
     var state = JsonNode.Parse(
         """
@@ -9076,45 +10370,18 @@ static void CandidateSuiSupportMartialApply()
             "campaignId": "is6_sui",
             "special": {
               "is6_sui": {
+                "seasonalHours": ["is6_sui_selectable_seasonalHours_is6sst6_meiryou"],
                 "supportMartial": ["古い効果"]
               }
             }
           }
         }
         """)!.AsObject();
-    var candidates = new[]
-    {
-        RhodesRecognitionCandidateApplier.CreateNoSuiSupportMartialCandidate(),
-        new MaaCandidatePreview(
-            "sui",
-            "配置時に攻撃速度+20 (支武・手動入力)",
-            "配置時に攻撃速度+20",
-            "手動入力",
-            1.0,
-            CampaignId: "is6_sui",
-            FieldId: "supportMartial",
-            EffectId: "配置時に攻撃速度+20"),
-        new MaaCandidatePreview(
-            "sui",
-            "初回配置コスト-3 (支武・手動入力)",
-            "初回配置コスト-3",
-            "手動入力",
-            1.0,
-            CampaignId: "is6_sui",
-            FieldId: "supportMartial",
-            EffectId: "初回配置コスト-3"),
-    };
 
-    var summary = RhodesRecognitionCandidateApplier.Apply(
-        state,
-        candidates,
-        DateTimeOffset.Parse("2026-07-23T00:10:00Z"));
-
-    Equal(3, summary.AppliedCount, "Sui support martial candidates applied");
-    Equal(
-        "配置時に攻撃速度+20|初回配置コスト-3",
-        string.Join('|', state["run"]!["special"]!["is6_sui"]!["supportMartial"]!.AsArray().Select(item => item!.GetValue<string>())),
-        "Sui support martial effects replaced");
+    Equal(true, RhodesRunStateStore.PruneAbandonedRunValues(state), "obsolete support martial state is pruned");
+    var campaignSpecial = state["run"]!["special"]!["is6_sui"]!.AsObject();
+    Equal(false, campaignSpecial.ContainsKey("supportMartial"), "obsolete support martial field is removed");
+    Equal(true, campaignSpecial.ContainsKey("seasonalHours"), "supported seasonal hours remain intact");
 }
 
 static void CandidateMizukiRejectionTargetOnlyApply()
@@ -9273,6 +10540,100 @@ static void CandidateMizukiEvolutionTargetApply()
         DateTimeOffset.Parse("2026-07-23T09:01:00Z"));
     Equal(1, clearSummary.AppliedCount, "explicit empty evolution target selection applied");
     Equal(false, state["run"]!["special"]!["is3_mizuki"]!.AsObject().ContainsKey("operatorEvolution"), "evolution targets cleared");
+}
+
+static void CandidateSuiCandleBearerTargetApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is6_sui"
+          },
+          "operators": ["radiant", "reserve_defender"],
+          "operatorCounts": { "reserve_defender": 2 }
+        }
+        """)!.AsObject();
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [
+            new MaaCandidatePreview(
+                "sui",
+                "レイディアン",
+                "radiant",
+                "pink-left-marker",
+                0.96,
+                OperatorId: "radiant",
+                CampaignId: "is6_sui",
+                RecognitionKey: "maa-local:sui:candle-bearer:radiant:1",
+                FieldId: "candleBearer",
+                OperatorInstance: 1),
+            new MaaCandidatePreview(
+                "sui",
+                "予備隊員-重装 2人目",
+                "reserve_defender",
+                "pink-left-marker",
+                0.95,
+                OperatorId: "reserve_defender",
+                CampaignId: "is6_sui",
+                RecognitionKey: "maa-local:sui:candle-bearer:reserve_defender:2",
+                FieldId: "candleBearer",
+                OperatorInstance: 2),
+        ],
+        DateTimeOffset.Parse("2026-07-24T08:00:00Z"));
+
+    Equal(2, summary.AppliedCount, "individual candle bearer target candidates applied");
+    var candleBearer = state["run"]!["special"]!["is6_sui"]!["candleBearer"]!.AsObject();
+    Equal(
+        "radiant|reserve_defender",
+        string.Join('|', candleBearer["operatorIds"]!.AsArray().Select(item => item!.GetValue<string>())),
+        "candle bearer aggregate operator ids persisted");
+    Equal(
+        "radiant#1|reserve_defender#2",
+        string.Join('|', candleBearer["operatorTargets"]!.AsArray().Select(item =>
+        {
+            var target = item!.AsObject();
+            return $"{target["operatorId"]!.GetValue<string>()}#{target["instance"]!.GetValue<int>()}";
+        })),
+        "candle bearer recruit instances persisted");
+
+    var replacementSummary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [
+            RhodesRecognitionCandidateApplier.CreateNoSuiCandleBearerTargetCandidate(),
+            new MaaCandidatePreview(
+                "sui",
+                "レイディアン (手動選択)",
+                "radiant",
+                "手動入力",
+                1.0,
+                OperatorId: "radiant",
+                CampaignId: "is6_sui",
+                RecognitionKey: "manual:sui:candle-bearer:radiant:1",
+                FieldId: "candleBearer",
+                OperatorInstance: 1),
+        ],
+        DateTimeOffset.Parse("2026-07-24T08:00:30Z"));
+    Equal(2, replacementSummary.AppliedCount, "explicit replacement marker and target candidates applied together");
+    Equal(
+        "radiant#1",
+        string.Join('|', state["run"]!["special"]!["is6_sui"]!["candleBearer"]!["operatorTargets"]!.AsArray().Select(item =>
+        {
+            var target = item!.AsObject();
+            return $"{target["operatorId"]!.GetValue<string>()}#{target["instance"]!.GetValue<int>()}";
+        })),
+        "manual candle bearer replacement removes stale targets without clearing the new target");
+
+    var clearSummary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [RhodesRecognitionCandidateApplier.CreateNoSuiCandleBearerTargetCandidate()],
+        DateTimeOffset.Parse("2026-07-24T08:01:00Z"));
+    Equal(1, clearSummary.AppliedCount, "explicit empty candle bearer target selection applied");
+    Equal(
+        false,
+        state["run"]!["special"]!["is6_sui"]!.AsObject().ContainsKey("candleBearer"),
+        "candle bearer targets cleared");
 }
 
 static void CandidateOtherSpecialApply()

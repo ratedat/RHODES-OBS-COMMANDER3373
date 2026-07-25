@@ -1,5 +1,5 @@
 import {
-  clampOverlayBackgroundTransparency,
+  clampOverlayBackgroundOpacity,
   clampOverlayScrollSpeed,
   overlayScrollSpeedDefaults,
 } from "./overlay-config.js";
@@ -58,6 +58,34 @@ function normalizeBoolean(value) {
   return value === true || value === "true" || value === 1 || value === "1";
 }
 
+function normalizeOutputParts(value, defaults) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((part) => part && typeof part === "object" && String(part.id || "").trim())
+    .map((part) => ({
+      ...part,
+      id: String(part.id).trim(),
+      enabled: normalizeBoolean(part.enabled),
+      scrollEnabled: normalizeBoolean(part.scrollEnabled),
+      hideExcluded: normalizeBoolean(part.hideExcluded),
+      width: Math.max(1, Math.round(Number(part.width) || 1)),
+      height: Math.max(1, Math.round(Number(part.height) || 1)),
+      tournamentMode: part.tournamentMode == null
+        ? defaults.tournamentMode
+        : normalizeBoolean(part.tournamentMode),
+      backgroundEnabled: part.backgroundEnabled == null
+        ? defaults.backgroundEnabled
+        : normalizeBoolean(part.backgroundEnabled),
+      backgroundOpacity: clampOverlayBackgroundOpacity(
+        part.backgroundOpacity,
+        defaults.backgroundOpacity,
+      ),
+      showTitle: part.showTitle == null
+        ? defaults.showTitle
+        : normalizeBoolean(part.showTitle),
+    }));
+}
+
 export function normalizePreferences(value) {
   const preferences = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   preferences.showUnreleasedOperators = normalizeBoolean(preferences.showUnreleasedOperators);
@@ -69,14 +97,40 @@ export function normalizePreferences(value) {
   preferences.operatorExcludedIds = normalizeChoiceFilterIds(preferences.operatorExcludedIds);
   preferences.relicExcludedIds = normalizeChoiceFilterIds(preferences.relicExcludedIds);
   preferences.sukiOverlayLayout = normalizeCustomOverlayLayout(preferences.sukiOverlayLayout);
-  preferences.sukiOutputTransparentBackground = normalizeBoolean(preferences.sukiOutputTransparentBackground);
-  preferences.sukiOutputBackgroundTransparency = clampOverlayBackgroundTransparency(
-    preferences.sukiOutputBackgroundTransparency,
-    100,
+  const hasBackgroundEnabled = Object.prototype.hasOwnProperty.call(
+    preferences,
+    "sukiOutputBackgroundEnabled",
   );
+  if (!hasBackgroundEnabled
+      && Object.prototype.hasOwnProperty.call(preferences, "sukiOutputTransparentBackground")) {
+    const legacyTransparent = normalizeBoolean(preferences.sukiOutputTransparentBackground);
+    const legacyTransparency = clampOverlayBackgroundOpacity(
+      preferences.sukiOutputBackgroundTransparency,
+      100,
+    );
+    preferences.sukiOutputBackgroundEnabled = !legacyTransparent || legacyTransparency < 100;
+    preferences.sukiOutputBackgroundOpacity = legacyTransparent
+      ? 100 - legacyTransparency
+      : 100;
+  } else {
+    preferences.sukiOutputBackgroundEnabled = hasBackgroundEnabled
+      ? normalizeBoolean(preferences.sukiOutputBackgroundEnabled)
+      : false;
+    preferences.sukiOutputBackgroundOpacity = clampOverlayBackgroundOpacity(
+      preferences.sukiOutputBackgroundOpacity,
+      100,
+    );
+  }
+  preferences.sukiOutputTournamentMode = normalizeBoolean(preferences.sukiOutputTournamentMode);
   preferences.sukiOutputShowPartTitles = preferences.sukiOutputShowPartTitles == null
     ? true
     : normalizeBoolean(preferences.sukiOutputShowPartTitles);
+  preferences.sukiOutputParts = normalizeOutputParts(preferences.sukiOutputParts, {
+    tournamentMode: preferences.sukiOutputTournamentMode,
+    backgroundEnabled: preferences.sukiOutputBackgroundEnabled,
+    backgroundOpacity: preferences.sukiOutputBackgroundOpacity,
+    showTitle: preferences.sukiOutputShowPartTitles,
+  });
   for (const [key, fallback] of Object.entries(overlayScrollSpeedDefaults)) {
     preferences[key] = clampOverlayScrollSpeed(preferences[key], fallback);
   }

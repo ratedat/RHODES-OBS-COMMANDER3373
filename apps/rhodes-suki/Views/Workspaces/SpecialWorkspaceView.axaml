@@ -148,6 +148,54 @@
           <Separator />
 
           <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="持燭人（複数選択）" Classes="h3" />
+                <TextBlock Text="招集済みオペレーターを1人ずつ表示します。予備隊員が複数いる場合も個別に指定できます。" Classes="caption" TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Classes="primary"
+                      Content="持燭人を反映"
+                      Command="{Binding ApplyManualSuiCandleBearerTargetsCommand}" />
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding ManualSuiCandleBearerTargets}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Width="250"
+                          Height="64"
+                          Margin="0,0,8,8"
+                          Padding="8"
+                          Background="#11191A"
+                          BorderBrush="#2B3638"
+                          BorderThickness="1"
+                          CornerRadius="6">
+                    <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
+                      <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="この招集枠を持燭人として表示" />
+                      <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                        <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
+                      </Border>
+                      <TextBlock Grid.Column="2"
+                                 Text="{Binding Name}"
+                                 Foreground="#FF9AC2"
+                                 FontWeight="SemiBold"
+                                 VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <Separator />
+
+          <StackPanel Spacing="8">
             <TextBlock Text="銭匣" Classes="h3" />
             <TextBlock Text="有効銭はマップ、保有銭は銭匣画面から取得します。" Classes="caption" />
             <WrapPanel Orientation="Horizontal">

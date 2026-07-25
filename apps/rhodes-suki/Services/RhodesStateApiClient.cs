@@ -176,20 +176,14 @@ public static class RhodesStateApiClient
             preferences[field] = scrollSpeed;
         }
 
-        preferences["sukiOutputSeparateWindow"] = outputPreferences.SeparateWindow;
-        preferences["sukiOutputTransparentBackground"] = outputPreferences.TransparentBackground;
-        preferences["sukiOutputBackgroundTransparency"] = Math.Clamp(outputPreferences.BackgroundTransparency, 0, 100);
+        preferences["sukiOutputTournamentMode"] = outputPreferences.TournamentMode;
+        preferences["sukiOutputBackgroundEnabled"] = outputPreferences.BackgroundEnabled;
+        preferences["sukiOutputBackgroundOpacity"] = Math.Clamp(outputPreferences.BackgroundOpacity, 0, 100);
         preferences["sukiOutputShowPartTitles"] = outputPreferences.ShowPartTitles;
         preferences["sukiOutputParts"] = ToOutputPartsJson(outputPreferences.Parts);
         preferences["sukiOverlayLayout"] = ToOverlayLayoutJson(
             RhodesOverlayLayoutCatalog.Normalize(outputPreferences.OverlayLayout));
         ApplySarkazSpecialOverlayPreference(root, outputPreferences.Parts);
-
-        var currentMode = JsonString(root, "mode");
-        if (outputPreferences.TournamentMode)
-            root["mode"] = "tournament";
-        else if (string.Equals(currentMode, "tournament", StringComparison.OrdinalIgnoreCase))
-            root["mode"] = "casual";
 
         RhodesRunStateStore.PruneAbandonedRunValues(root);
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
@@ -294,6 +288,10 @@ public static class RhodesStateApiClient
                 ["hideExcluded"] = part.HideExcluded,
                 ["width"] = Math.Max(1, part.Width),
                 ["height"] = Math.Max(1, part.Height),
+                ["tournamentMode"] = part.TournamentMode,
+                ["backgroundEnabled"] = part.BackgroundEnabled,
+                ["backgroundOpacity"] = Math.Clamp(part.BackgroundOpacity, 0, 100),
+                ["showTitle"] = part.ShowTitle,
             });
         }
 

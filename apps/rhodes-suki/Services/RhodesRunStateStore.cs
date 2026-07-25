@@ -323,6 +323,11 @@ public static class RhodesRunStateStore
         {
             removed |= run.Remove(propertyName);
         }
+        if (run["special"] is JsonObject special
+            && special["is6_sui"] is JsonObject suiSpecial)
+        {
+            removed |= suiSpecial.Remove("supportMartial");
+        }
         return removed;
     }
 

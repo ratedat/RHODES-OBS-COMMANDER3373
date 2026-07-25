@@ -2,6 +2,12 @@ import { assetUrl, html, stars } from "../lib/format.js";
 import { renderRelicUsedBadge } from "./relic-used-badge.js";
 import { operatorRosterCount } from "../domain/operator-counts.js";
 
+function operatorNameClass(item) {
+  if (item.isCandleBearerTarget) return "candle-bearer-operator-name";
+  if (item.isRejectionReactionTarget) return "rejection-reaction-operator-name";
+  return "";
+}
+
 export const overlayPartOptions = [
   { id: "status", title: "Status", label: "ラン状態", hint: "上部バー / 1200x120" },
   { id: "relics", title: "Relics", label: "秘宝", hint: "横帯または下帯 / 1200x170" },
@@ -63,7 +69,7 @@ function renderOperatorsPart(args, context) {
     .filter((group) => group.items.length);
   const body = grouped.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("horizontalOperatorScrollSpeed")}">
     <div class="overlay-part-operator-groups">
-      ${grouped.map((group) => `<section class="overlay-part-operator-group"><h3>${stars(group.rarity)} <span>${operatorRosterCount(group.items)}</span></h3><div class="overlay-part-operator-grid">${group.items.map((item) => `<div class="overlay-part-operator"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><strong class="${item.isRejectionReactionTarget ? "rejection-reaction-operator-name" : ""}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${html(item.class || "-")} / ${html(item.branch || "-")}</span></div></div>`).join("")}</div></section>`).join("")}
+      ${grouped.map((group) => `<section class="overlay-part-operator-group"><h3>${stars(group.rarity)} <span>${operatorRosterCount(group.items)}</span></h3><div class="overlay-part-operator-grid">${group.items.map((item) => `<div class="overlay-part-operator"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${html(item.class || "-")} / ${html(item.branch || "-")}</span></div></div>`).join("")}</div></section>`).join("")}
     </div>
   </div>` : empty("未招集");
   return section("operators", "Operators", operatorRosterCount(args.operators), body);

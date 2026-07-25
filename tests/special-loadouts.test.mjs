@@ -181,25 +181,10 @@ test("IS#6 coin fields are visible in the special OBS output by default", () => 
   assert.equal(heldCoins.overlayEffectScope, "held");
 });
 
-test("IS#6 support martial keeps multiple manual effects in state and OBS output", () => {
+test("IS#6 does not expose the obsolete support martial field", () => {
   const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
   const campaign = campaigns.find((item) => item.id === "is6_sui");
-  const field = campaign.specialFields.find((item) => item.id === "supportMartial");
-  const special = {
-    supportMartial: ["配置時に攻撃速度+20", "初回配置コスト-3", "配置時に攻撃速度+20"],
-  };
-
-  assert.equal(field.type, "textMultiSelect");
-  assert.equal(field.overlayToggle, true);
-  assert.equal(field.overlayDefaultVisible, true);
-
-  const effects = getSelectedSpecialEffectsForField(field, special, {
-    campaignId: campaign.id,
-    selectableEffectMap: new Map(),
-    selectableEffectSource: [],
-  });
-  assert.deepEqual(effects.map((item) => item.name), ["配置時に攻撃速度+20", "初回配置コスト-3"]);
-  assert.deepEqual(effects.map((item) => item.slotLabel), ["支武", "支武"]);
+  assert.equal(campaign.specialFields.some((item) => item.id === "supportMartial"), false);
 });
 
 test("Mizuki operator assignments use human-readable OBS labels", () => {

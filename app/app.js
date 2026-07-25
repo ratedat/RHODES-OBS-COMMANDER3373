@@ -25,7 +25,7 @@ import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
 import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
-import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayBackgroundAlpha, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
+import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, isTournamentOverlay, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayBackgroundAlpha, resolveOverlayBackgroundEnabled, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
 import { normalizePreferences } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
@@ -1027,11 +1027,19 @@ function renderOverlay() {
   app.dataset.loading = "false";
   document.documentElement.style.setProperty(
     "--overlay-background-alpha",
-    String(resolveOverlayBackgroundAlpha(state.preferences)),
+    String(resolveOverlayBackgroundAlpha(state.preferences, overlayPart)),
+  );
+  document.documentElement.classList.toggle(
+    "overlay-background-disabled",
+    !resolveOverlayBackgroundEnabled(state.preferences, overlayPart),
+  );
+  document.documentElement.classList.toggle(
+    "overlay-tournament-mode",
+    isTournamentOverlay(state.preferences, overlayPart),
   );
   document.documentElement.classList.toggle(
     "overlay-part-titles-hidden",
-    Boolean(overlayPart) && !shouldShowOverlayPartTitles(state.preferences),
+    Boolean(overlayPart) && !shouldShowOverlayPartTitles(state.preferences, overlayPart),
   );
   app.className = overlayPart
     ? `overlay-app overlay-part overlay-part-${overlayPart} overlay-size-${overlaySize}`

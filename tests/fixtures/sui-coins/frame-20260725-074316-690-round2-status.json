@@ -1,0 +1,14 @@
+{
+  "appVersion": "1.0.0.0",
+  "capturedAt": "2026-07-24T22:43:16.690Z",
+  "frameId": "20260725-074316-690-round2-status",
+  "imageBytes": 3548522,
+  "imagePath": "frame-20260725-074316-690-round2-status.png",
+  "profileId": "is6CoinsFull",
+  "profileLabel": "保有銭",
+  "runtimeSummary": "MuMu Player / 127.0.0.1:16416 / ADB screencap / Round 2 multi-status fixture",
+  "schemaVersion": 1,
+  "source": "adb-round2-fixture",
+  "statePath": "",
+  "stateSnapshotPath": ""
+}

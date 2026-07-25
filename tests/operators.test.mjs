@@ -188,3 +188,34 @@ test("Mizuki rejection targets are decorated only during the Mizuki campaign", (
     false,
   );
 });
+
+test("Sui candle bearer targets are decorated only during the Sui campaign", () => {
+  const source = [
+    { id: "radiant", name: "レイディアン" },
+    { id: "elysium", name: "エリジウム" },
+  ];
+  const state = {
+    run: {
+      campaignId: "is6_sui",
+      special: {
+        is6_sui: {
+          candleBearer: {
+            operatorIds: ["radiant"],
+            operatorTargets: [{ operatorId: "radiant", instance: 1 }],
+          },
+        },
+      },
+    },
+  };
+
+  assert.deepEqual(
+    decorateMizukiRejectionTargets(source, state).map((item) => [item.id, item.isCandleBearerTarget]),
+    [["radiant", true], ["elysium", false]],
+  );
+  assert.equal(
+    decorateMizukiRejectionTargets(source, {
+      run: { ...state.run, campaignId: "is5_sarkaz" },
+    })[0].isCandleBearerTarget,
+    false,
+  );
+});

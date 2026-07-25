@@ -704,6 +704,10 @@ public sealed class SukiOutputPartPreview : INotifyPropertyChanged
     private bool _enabled;
     private bool _scrollEnabled;
     private bool _hideExcluded;
+    private bool _tournamentMode;
+    private bool _backgroundEnabled;
+    private int _backgroundOpacity;
+    private bool _showTitle;
     private int _width;
     private int _height;
 
@@ -716,7 +720,11 @@ public sealed class SukiOutputPartPreview : INotifyPropertyChanged
         bool scrollEnabled,
         bool hideExcluded,
         int width,
-        int height)
+        int height,
+        bool tournamentMode = false,
+        bool backgroundEnabled = false,
+        int backgroundOpacity = 100,
+        bool showTitle = true)
     {
         Id = id;
         Label = label;
@@ -725,6 +733,10 @@ public sealed class SukiOutputPartPreview : INotifyPropertyChanged
         _enabled = enabled;
         _scrollEnabled = scrollEnabled;
         _hideExcluded = hideExcluded;
+        _tournamentMode = tournamentMode;
+        _backgroundEnabled = backgroundEnabled;
+        _backgroundOpacity = Math.Clamp(backgroundOpacity, 0, 100);
+        _showTitle = showTitle;
         _width = width;
         _height = height;
     }
@@ -771,6 +783,55 @@ public sealed class SukiOutputPartPreview : INotifyPropertyChanged
             if (_hideExcluded == value)
                 return;
             _hideExcluded = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool TournamentMode
+    {
+        get => _tournamentMode;
+        set
+        {
+            if (_tournamentMode == value)
+                return;
+            _tournamentMode = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool BackgroundEnabled
+    {
+        get => _backgroundEnabled;
+        set
+        {
+            if (_backgroundEnabled == value)
+                return;
+            _backgroundEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int BackgroundOpacity
+    {
+        get => _backgroundOpacity;
+        set
+        {
+            var normalized = Math.Clamp(value, 0, 100);
+            if (_backgroundOpacity == normalized)
+                return;
+            _backgroundOpacity = normalized;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool ShowTitle
+    {
+        get => _showTitle;
+        set
+        {
+            if (_showTitle == value)
+                return;
+            _showTitle = value;
             OnPropertyChanged();
         }
     }
@@ -900,6 +961,7 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
     private bool _isUsed;
     private bool _isRejectionReactionTarget;
     private bool _isEvolutionTarget;
+    private bool _isCandleBearerTarget;
     private int _selectionCount = 1;
 
     public SukiChoiceItem(
@@ -990,6 +1052,18 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
             if (_isEvolutionTarget == value)
                 return;
             _isEvolutionTarget = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsCandleBearerTarget
+    {
+        get => _isCandleBearerTarget;
+        set
+        {
+            if (_isCandleBearerTarget == value)
+                return;
+            _isCandleBearerTarget = value;
             OnPropertyChanged();
         }
     }

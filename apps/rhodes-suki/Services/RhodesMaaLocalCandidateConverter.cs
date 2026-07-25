@@ -34,6 +34,11 @@ public static class RhodesMaaLocalCandidateConverter
             ["西の睡真"] = "西の廉貞",
             ["西の寵真"] = "西の廉貞",
             ["西の麻真"] = "西の廉貞",
+            ["苦寒へ"] = "苦寒",
+            ["録義即睛"] = "錦囊即購",
+            ["録壺即購"] = "錦囊即購",
+            ["録壺即睛"] = "錦囊即購",
+            ["鎚麦即照L"] = "錦囊即購",
         };
 
     private static readonly Lazy<IReadOnlyDictionary<string, IReadOnlyList<MaaCandidatePreview>>> StaticCandidatePreviewsByEntry =
@@ -69,6 +74,9 @@ public static class RhodesMaaLocalCandidateConverter
                 .Concat(activeCampaignId == "is3_mizuki"
                     ? MizukiRejectionCardCandidates(results)
                         .Concat(MizukiEvolutionCardCandidates(results))
+                    : [])
+                .Concat(activeCampaignId == "is6_sui"
+                    ? SuiCandleBearerCardCandidates(results)
                     : []);
         }
 
@@ -135,6 +143,9 @@ public static class RhodesMaaLocalCandidateConverter
             .Concat(activeCampaignId == "is3_mizuki"
                 ? MizukiRejectionCardCandidates(results)
                     .Concat(MizukiEvolutionCardCandidates(results))
+                : [])
+            .Concat(activeCampaignId == "is6_sui"
+                ? SuiCandleBearerCardCandidates(results)
                 : [])
             .Concat(RevelationCandidates(results))
             .Concat(CoinCandidates(results, "activeCoins"))
@@ -1063,17 +1074,18 @@ public static class RhodesMaaLocalCandidateConverter
                     Group = ResolveSuiSeasonalHourGroup(row.Text, groups),
                 })
                 .Where(item => item.Group is not null)
-                .GroupBy(item => item.Group!.Key, StringComparer.Ordinal)
-                .Select(group => group.OrderBy(item => item.Row.Y < 0 ? int.MaxValue : item.Row.Y).First())
                 .OrderBy(item => item.Row.Y < 0 ? int.MaxValue : item.Row.Y)
                 .ToArray();
 
-            if (nameRows.Length == 0)
+            var segmentStarts = SuiSeasonalHourSegmentStarts(
+                rows,
+                nameRows.Select(item => item.Row).ToArray());
+            if (segmentStarts.Length == 0)
             {
                 var fullText = string.Join("\n", rows.Select(row => row.Text));
-                var inferred = ResolveSuiSeasonalHourVariantByEffect(
+                var inferred = ResolveSuiSeasonalHourVariantFromSegment(
                     fullText,
-                    groups.SelectMany(group => group.Variants).ToArray());
+                    groups);
                 if (inferred is not null && emitted.Add(inferred.Id))
                 {
                     yield return SuiSeasonalHourCandidate(
@@ -1092,15 +1104,24 @@ public static class RhodesMaaLocalCandidateConverter
                 continue;
             }
 
-            for (var index = 0; index < nameRows.Length; index++)
+            for (var index = 0; index < segmentStarts.Length; index++)
             {
-                var match = nameRows[index];
-                var nextY = index + 1 < nameRows.Length ? nameRows[index + 1].Row.Y : int.MaxValue;
-                var segmentRows = match.Row.Y < 0
-                    ? rows
-                    : rows.Where(row => row.Y < 0 || (row.Y >= match.Row.Y - 4 && row.Y < nextY)).ToArray();
+                var startY = segmentStarts[index];
+                var nextY = index + 1 < segmentStarts.Length ? segmentStarts[index + 1] : int.MaxValue;
+                var segmentRows = rows
+                    .Where(row => row.Y < 0 || (row.Y >= startY && row.Y < nextY))
+                    .ToArray();
+                if (segmentRows.Length == 0)
+                    continue;
+
                 var rawText = string.Join("\n", segmentRows.Select(row => row.Text));
-                var variant = ResolveSuiSeasonalHourVariant(rawText, match.Group!.Variants);
+                var segmentGroup = nameRows
+                    .Where(item => item.Row.Y < 0 || (item.Row.Y >= startY && item.Row.Y < nextY))
+                    .Select(item => item.Group)
+                    .FirstOrDefault();
+                var variant = segmentGroup is null
+                    ? ResolveSuiSeasonalHourVariantFromSegment(rawText, groups)
+                    : ResolveSuiSeasonalHourVariant(rawText, segmentGroup.Variants);
                 if (variant is null || !emitted.Add(variant.Id))
                     continue;
 
@@ -1118,6 +1139,74 @@ public static class RhodesMaaLocalCandidateConverter
                 }
             }
         }
+    }
+
+    private static int[] SuiSeasonalHourSegmentStarts(
+        IReadOnlyList<OcrTextResult> rows,
+        IReadOnlyList<OcrTextResult> nameRows)
+    {
+        var levelAnchors = rows
+            .Where(row => row.Y >= 0 && IsSuiSeasonalHourLevelAnchor(row.Text))
+            .Select(row => row.Y)
+            .OrderBy(y => y)
+            .ToArray();
+        var clusteredLevelAnchors = new List<int>();
+        foreach (var y in levelAnchors)
+        {
+            if (clusteredLevelAnchors.Count == 0 || y - clusteredLevelAnchors[^1] > 24)
+                clusteredLevelAnchors.Add(y);
+        }
+
+        var starts = clusteredLevelAnchors
+            .Select(y => Math.Max(0, y - 48))
+            .ToList();
+        foreach (var row in nameRows.Where(row => row.Y >= 0))
+        {
+            var hasFollowingLevel = clusteredLevelAnchors.Any(
+                y => y >= row.Y - 4 && y <= row.Y + 56);
+            if (!hasFollowingLevel)
+                starts.Add(Math.Max(0, row.Y - 4));
+        }
+
+        return starts
+            .OrderBy(y => y)
+            .Aggregate(new List<int>(), (result, y) =>
+            {
+                if (result.Count == 0 || y - result[^1] > 24)
+                    result.Add(y);
+                return result;
+            })
+            .ToArray();
+    }
+
+    private static bool IsSuiSeasonalHourLevelAnchor(string text)
+    {
+        var normalized = NormalizeChoiceName(text);
+        if (normalized is "醒覚" or "入骨" or "明瞭" or "朦朧")
+            return true;
+
+        return Regex.IsMatch(
+            normalized,
+            "^[LI][VW][.．]?[1-4]",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static SelectableEffectCandidate? ResolveSuiSeasonalHourVariantFromSegment(
+        string text,
+        IReadOnlyList<SuiSeasonalHourGroup> groups)
+    {
+        var group = ResolveSuiSeasonalHourGroup(text, groups)
+            ?? ResolveSuiSeasonalHourGroupByEvidence(text, groups);
+        if (group is not null)
+        {
+            var groupedVariant = ResolveSuiSeasonalHourVariant(text, group.Variants);
+            if (groupedVariant is not null)
+                return groupedVariant;
+        }
+
+        return ResolveSuiSeasonalHourVariantByEffect(
+            text,
+            groups.SelectMany(item => item.Variants).ToArray());
     }
 
     private static MaaCandidatePreview SuiSeasonalHourCandidate(
@@ -1227,6 +1316,59 @@ public static class RhodesMaaLocalCandidateConverter
             && (fuzzy.Length == 1 || fuzzy[0].Distance < fuzzy[1].Distance)
                 ? fuzzy[0].Group
                 : null;
+    }
+
+    private static SuiSeasonalHourGroup? ResolveSuiSeasonalHourGroupByEvidence(
+        string text,
+        IReadOnlyList<SuiSeasonalHourGroup> groups)
+    {
+        var normalized = NormalizeChoiceName(text);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+
+        var flavorMatches = groups
+            .Select(group => new
+            {
+                Group = group,
+                Anchors = group.Variants
+                    .Select(variant => SuiSeasonalHourFlavorAnchor(variant.FlavorText))
+                    .Where(anchor => anchor.Length >= 6)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray(),
+            })
+            .Where(item => item.Anchors.Any(
+                anchor => normalized.Contains(anchor, StringComparison.Ordinal)))
+            .Take(2)
+            .ToArray();
+        if (flavorMatches.Length == 1)
+            return flavorMatches[0].Group;
+
+        var effectVariant = ResolveSuiSeasonalHourVariantByEffect(
+            text,
+            groups.SelectMany(group => group.Variants).ToArray());
+        if (effectVariant is null)
+            return null;
+
+        var key = string.IsNullOrWhiteSpace(effectVariant.ParentKey)
+            ? effectVariant.ParentName
+            : effectVariant.ParentKey;
+        return groups.FirstOrDefault(group => group.Key.Equals(key, StringComparison.Ordinal));
+    }
+
+    private static string SuiSeasonalHourFlavorAnchor(string flavorText)
+    {
+        var normalized = NormalizeChoiceName(flavorText);
+        var start = normalized.IndexOf("敬刻", StringComparison.Ordinal);
+        if (start < 0)
+            return "";
+
+        var anchor = normalized[start..];
+        var stop = new[] { "時に入る", "歳時は" }
+            .Select(value => anchor.IndexOf(value, StringComparison.Ordinal))
+            .Where(index => index >= 0)
+            .DefaultIfEmpty(anchor.Length)
+            .Min();
+        return anchor[..stop];
     }
 
     private static SelectableEffectCandidate? ResolveSuiSeasonalHourVariant(
@@ -2009,6 +2151,53 @@ public static class RhodesMaaLocalCandidateConverter
                 CampaignId: "is3_mizuki",
                 RecognitionKey: $"maa-local:mizuki:evolution-card:{operatorId}:{operatorInstance}",
                 FieldId: "operatorEvolution",
+                OperatorInstance: operatorInstance);
+        }
+    }
+
+    private static IEnumerable<MaaCandidatePreview> SuiCandleBearerCardCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var byId = RhodesRunCatalog.LoadDefault().Operators
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+            .ToDictionary(item => item.Id, StringComparer.Ordinal);
+        var emitted = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var taskResult in taskResults)
+        {
+            if (!RhodesSuiCandleBearerCardDetector.TryRead(
+                    taskResult,
+                    out var operatorId,
+                    out var label,
+                    out var score,
+                    out var operatorInstance))
+            {
+                continue;
+            }
+
+            if (byId.TryGetValue(operatorId, out var op))
+                label = op.Name;
+            if (string.IsNullOrWhiteSpace(label))
+                label = operatorId;
+            var supportsMultipleCount = operatorId.StartsWith("reserve_", StringComparison.Ordinal)
+                || label.StartsWith("予備隊員", StringComparison.Ordinal);
+            operatorInstance = supportsMultipleCount ? Math.Max(1, operatorInstance) : 1;
+            var targetKey = $"{operatorId}#{operatorInstance}";
+            if (!emitted.Add(targetKey))
+                continue;
+            var displayLabel = supportsMultipleCount
+                ? $"{label} {operatorInstance}人目"
+                : label;
+
+            yield return new MaaCandidatePreview(
+                "sui",
+                displayLabel,
+                operatorId,
+                "pink-left-marker",
+                score,
+                OperatorId: operatorId,
+                CampaignId: "is6_sui",
+                RecognitionKey: $"maa-local:sui:candle-bearer:{operatorId}:{operatorInstance}",
+                FieldId: "candleBearer",
                 OperatorInstance: operatorInstance);
         }
     }
@@ -3320,7 +3509,8 @@ public static class RhodesMaaLocalCandidateConverter
                 JsonString(item, "parentName"),
                 JsonString(item, "variantRank"),
                 JsonString(item, "variantLabel"),
-                JsonString(item, "effect")))
+                JsonString(item, "effect"),
+                JsonString(item, "flavorText")))
             .Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
             .ToArray();
     }
@@ -3417,7 +3607,8 @@ public static class RhodesMaaLocalCandidateConverter
         string ParentName,
         string VariantRank,
         string VariantLabel,
-        string Effect);
+        string Effect,
+        string FlavorText);
 
     private sealed record SuiSeasonalHourGroup(
         string Key,

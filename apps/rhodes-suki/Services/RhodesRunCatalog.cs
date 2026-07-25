@@ -1039,7 +1039,6 @@ public static class RhodesRunCatalog
             ("is6_sui", "activeCoins") => "is6ActiveCoinsFull",
             ("is6_sui", "coins") => "is6CoinsFull",
             ("is6_sui", "seasonalHours") => "is6SeasonalHours",
-            ("is6_sui", "supportMartial") => "",
             _ => $"{campaignId}.{fieldId}"
         };
     }

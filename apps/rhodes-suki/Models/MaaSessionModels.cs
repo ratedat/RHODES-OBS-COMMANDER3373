@@ -289,14 +289,13 @@ public static class SukiAdbMethodCatalog
 }
 
 public sealed record SukiOutputPreferences(
-    bool SeparateWindow,
     bool TournamentMode,
-    bool TransparentBackground,
+    bool BackgroundEnabled,
+    int BackgroundOpacity,
+    bool ShowPartTitles,
     int ScrollSpeed,
     IReadOnlyList<SukiOutputPartState> Parts,
-    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null,
-    int BackgroundTransparency = 100,
-    bool ShowPartTitles = true);
+    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null);
 
 public sealed record SukiOutputPartState(
     string Id,
@@ -304,7 +303,11 @@ public sealed record SukiOutputPartState(
     bool ScrollEnabled,
     bool HideExcluded,
     int Width,
-    int Height);
+    int Height,
+    bool TournamentMode = false,
+    bool BackgroundEnabled = false,
+    int BackgroundOpacity = 100,
+    bool ShowTitle = true);
 
 public sealed record SukiOverlayLayoutState(
     string Id,
@@ -329,7 +332,8 @@ public sealed record RhodesSukiSettings(
     int HudY = -1,
     string HudVisibleParts = "",
     bool AdbConnectionValidated = false,
-    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null);
+    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null,
+    SukiOutputPreferences? OutputPreferences = null);
 
 public sealed record MaaSessionSnapshot(
     string State,

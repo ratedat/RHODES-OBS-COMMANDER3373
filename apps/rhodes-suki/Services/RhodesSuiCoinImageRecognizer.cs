@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using RhodesSuki.Models;
 using SkiaSharp;
@@ -12,7 +13,9 @@ public sealed record RhodesSuiCoinImageDetection(
     MaaRoi Roi,
     string StatusId = "",
     double RunnerUpScore = 0,
-    double VisualStrength = 0);
+    double VisualStrength = 0,
+    double StatusScore = 0,
+    string PredictedStatusId = "");
 
 public sealed record RhodesSuiOwnedCoinRecognition(
     MaaTaskRunResult ImageResult,
@@ -20,6 +23,8 @@ public sealed record RhodesSuiOwnedCoinRecognition(
 
 public static class RhodesSuiCoinImageRecognizer
 {
+    internal const string OwnedNameEntryPrefix = "RhodesDynamic_is6.coin_list_text.slot";
+
     public const string ActiveEntry = "RhodesSuiCoinImage_activeCoins";
     public const string ActiveFieldId = "activeCoins";
     public const string OwnedEntry = "RhodesSuiCoinImage_ownedCoins";
@@ -44,6 +49,7 @@ public static class RhodesSuiCoinImageRecognizer
     private const int OwnedNameWidth = 200;
     private const int OwnedNameHeight = 30;
     private const int OwnedNameOffsetY = 47;
+    private const int OwnedCanonicalSize = 106;
     private const int CoinListRoiX = 120;
     private const int CoinListRoiY = 96;
     private const double CoinListOcrScale = 2;
@@ -124,6 +130,8 @@ public static class RhodesSuiCoinImageRecognizer
                 statusId = detection.StatusId,
                 runnerUpScore = detection.RunnerUpScore,
                 visualStrength = detection.VisualStrength,
+                statusScore = detection.StatusScore,
+                predictedStatusId = detection.PredictedStatusId,
             }),
         });
         return new MaaTaskRunResult(
@@ -138,21 +146,26 @@ public static class RhodesSuiCoinImageRecognizer
 
     public static IReadOnlyList<RhodesSuiCoinImageDetection> Detect(
         byte[] encodedImage,
-        IReadOnlyList<SukiSpecialEffectOption>? coinOptions = null)
+        IReadOnlyList<SukiSpecialEffectOption>? coinOptions = null,
+        RhodesCoinRecognitionDiagnostics? diagnostics = null)
     {
-        return InspectActive(encodedImage, coinOptions)
+        return InspectActive(encodedImage, coinOptions, diagnostics)
             .Where(IsConfidentActiveMatch)
             .ToArray();
     }
 
     public static IReadOnlyList<RhodesSuiCoinImageDetection> InspectActive(
         byte[] encodedImage,
-        IReadOnlyList<SukiSpecialEffectOption>? coinOptions = null)
+        IReadOnlyList<SukiSpecialEffectOption>? coinOptions = null,
+        RhodesCoinRecognitionDiagnostics? diagnostics = null)
     {
         if (encodedImage.Length == 0)
             return [];
 
+        var decodeWatch = Stopwatch.StartNew();
         using var decoded = SKBitmap.Decode(encodedImage);
+        decodeWatch.Stop();
+        diagnostics?.AddDecode(decodeWatch.Elapsed);
         if (decoded is null || decoded.Width <= 0 || decoded.Height <= 0)
             return [];
 
@@ -164,9 +177,10 @@ public static class RhodesSuiCoinImageRecognizer
             return [];
 
         var detections = new List<RhodesSuiCoinImageDetection>();
+        var matchingWatch = Stopwatch.StartNew();
         foreach (var slot in ActivePanelSlots)
         {
-            var match = BestSlotMatch(normalized, templates, slot);
+            var match = BestSlotMatch(normalized, templates, slot, diagnostics);
             if (match is null)
                 continue;
 
@@ -179,14 +193,17 @@ public static class RhodesSuiCoinImageRecognizer
                 RunnerUpScore: match.RunnerUpScore,
                 VisualStrength: match.VisualStrength));
         }
+        matchingWatch.Stop();
+        diagnostics?.AddCoinMatching(matchingWatch.Elapsed);
         return detections;
     }
 
     public static IReadOnlyList<RhodesSuiCoinImageDetection> DetectOwned(
         byte[] encodedImage,
-        IReadOnlyList<SukiSpecialEffectOption>? coinOptions = null)
+        IReadOnlyList<SukiSpecialEffectOption>? coinOptions = null,
+        RhodesCoinRecognitionDiagnostics? diagnostics = null)
     {
-        return InspectOwned(encodedImage, coinOptions)
+        return InspectOwned(encodedImage, coinOptions, diagnostics)
             .Where(IsConfidentOwnedMatch)
             .ToArray();
     }
@@ -249,7 +266,8 @@ public static class RhodesSuiCoinImageRecognizer
 
     public static IReadOnlyList<MaaDynamicOcrRequest> PlanMissingOwnedNameOcrRequests(
         IReadOnlyList<RhodesSuiCoinImageDetection> inspections,
-        IEnumerable<MaaTaskRunResult> frameTaskResults)
+        IEnumerable<MaaTaskRunResult> frameTaskResults,
+        IReadOnlyCollection<int>? prioritizedSlots = null)
     {
         var resolvedSlots = frameTaskResults
             .Where(result => result.Entry.Equals("RhodesOcrRegion_is6_coin_list_text", StringComparison.Ordinal))
@@ -264,7 +282,8 @@ public static class RhodesSuiCoinImageRecognizer
             .Where(detection => !resolvedSlots.Contains(detection.SlotIndex))
             .GroupBy(detection => detection.SlotIndex)
             .Select(group => group.OrderByDescending(detection => detection.VisualStrength).First())
-            .OrderByDescending(detection => detection.VisualStrength)
+            .OrderByDescending(detection => prioritizedSlots?.Contains(detection.SlotIndex) == true)
+            .ThenByDescending(detection => detection.VisualStrength)
             .ThenBy(detection => detection.SlotIndex)
             .Take(MaximumMissingNameOcrRequests)
             .Select(detection => BuildOwnedNameOcrRequest(detection.SlotIndex, detection.VisualStrength))
@@ -282,7 +301,7 @@ public static class RhodesSuiCoinImageRecognizer
         var x = Math.Clamp(slot.CenterX - (OwnedNameWidth / 2), 0, BaseWidth - OwnedNameWidth);
         var y = Math.Clamp(slot.CenterY + OwnedNameOffsetY, 0, BaseHeight - OwnedNameHeight);
         return new MaaDynamicOcrRequest(
-            $"RhodesDynamic_is6.coin_list_text.slot{slot.Index}",
+            $"{OwnedNameEntryPrefix}{slot.Index}",
             x,
             y,
             OwnedNameWidth,
@@ -309,14 +328,33 @@ public static class RhodesSuiCoinImageRecognizer
         return nearest?.Slot.Index;
     }
 
+    internal static bool TryGetOwnedSlotCenter(int slotIndex, out int centerX, out int centerY)
+    {
+        var slot = OwnedSlots.FirstOrDefault(item => item.Index == slotIndex);
+        if (slot is null)
+        {
+            centerX = 0;
+            centerY = 0;
+            return false;
+        }
+
+        centerX = slot.CenterX;
+        centerY = slot.CenterY;
+        return true;
+    }
+
     public static IReadOnlyList<RhodesSuiCoinImageDetection> InspectOwned(
         byte[] encodedImage,
-        IReadOnlyList<SukiSpecialEffectOption>? coinOptions = null)
+        IReadOnlyList<SukiSpecialEffectOption>? coinOptions = null,
+        RhodesCoinRecognitionDiagnostics? diagnostics = null)
     {
         if (encodedImage.Length == 0)
             return [];
 
+        var decodeWatch = Stopwatch.StartNew();
         using var decoded = SKBitmap.Decode(encodedImage);
+        decodeWatch.Stop();
+        diagnostics?.AddDecode(decodeWatch.Elapsed);
         if (decoded is null || decoded.Width <= 0 || decoded.Height <= 0)
             return [];
 
@@ -328,9 +366,10 @@ public static class RhodesSuiCoinImageRecognizer
             return [];
 
         var detections = new List<RhodesSuiCoinImageDetection>();
+        var matchingWatch = Stopwatch.StartNew();
         foreach (var slot in OwnedSlots)
         {
-            var match = BestOwnedSlotMatch(normalized, templates, slot);
+            var match = BestOwnedSlotMatch(normalized, templates, slot, diagnostics);
             if (match is null)
                 continue;
 
@@ -343,6 +382,8 @@ public static class RhodesSuiCoinImageRecognizer
                 RunnerUpScore: match.RunnerUpScore,
                 VisualStrength: match.VisualStrength));
         }
+        matchingWatch.Stop();
+        diagnostics?.AddCoinMatching(matchingWatch.Elapsed);
         return detections;
     }
 
@@ -356,10 +397,16 @@ public static class RhodesSuiCoinImageRecognizer
             || (detection.Score >= StrongScore && margin >= StrongMinimumMargin);
     }
 
-    private static bool IsConfidentOwnedMatch(RhodesSuiCoinImageDetection detection) =>
+    internal static bool IsConfidentOwnedMatch(RhodesSuiCoinImageDetection detection) =>
         detection.Score >= OwnedMinimumScore
         && detection.Score - detection.RunnerUpScore >= OwnedMinimumMargin
         && detection.VisualStrength >= OwnedMinimumVisualStrength;
+
+    private static bool IsConfidentOwnedMatch(SlotMatch? match) =>
+        match is not null
+        && match.Score >= OwnedMinimumScore
+        && match.Score - match.RunnerUpScore >= OwnedMinimumMargin
+        && match.VisualStrength >= OwnedMinimumVisualStrength;
 
     public static bool TryRead(
         MaaTaskRunResult taskResult,
@@ -409,7 +456,8 @@ public static class RhodesSuiCoinImageRecognizer
     private static SlotMatch? BestSlotMatch(
         SKBitmap frame,
         IReadOnlyList<CoinTemplate> templates,
-        ActivePanelSlot slot)
+        ActivePanelSlot slot,
+        RhodesCoinRecognitionDiagnostics? diagnostics)
     {
         var bestByCoin = new Dictionary<string, SlotMatch>(StringComparer.Ordinal);
         foreach (var xOffset in ActivePanelOffsets)
@@ -424,6 +472,7 @@ public static class RhodesSuiCoinImageRecognizer
                     var pixels = CropFeature(frame, roi);
                     foreach (var template in templates)
                     {
+                        diagnostics?.IncrementCoinComparisons();
                         var (score, visualStrength) = OwnedSimilarity(pixels, template);
                         if (!bestByCoin.TryGetValue(template.Option.Id, out var current)
                             || score > current.Score)
@@ -452,27 +501,48 @@ public static class RhodesSuiCoinImageRecognizer
     private static SlotMatch? BestOwnedSlotMatch(
         SKBitmap frame,
         IReadOnlyList<CoinTemplate> templates,
-        OwnedSlot slot)
+        OwnedSlot slot,
+        RhodesCoinRecognitionDiagnostics? diagnostics)
     {
         var coarseBestByCoin = new Dictionary<string, SlotMatch>(StringComparer.Ordinal);
+        EvaluateOwnedSlotRoi(
+            frame,
+            templates,
+            slot,
+            OwnedCanonicalSize,
+            0,
+            0,
+            coarseBestByCoin,
+            diagnostics);
+        var canonicalRanked = coarseBestByCoin.Values
+            .OrderByDescending(match => match.Score)
+            .Take(2)
+            .ToArray();
+        var canonicalMatch = canonicalRanked.Length == 0
+            ? null
+            : canonicalRanked[0] with
+            {
+                RunnerUpScore = canonicalRanked.ElementAtOrDefault(1)?.Score ?? 0,
+            };
+        if (IsConfidentOwnedMatch(canonicalMatch))
+            return canonicalMatch;
+
         foreach (var size in OwnedCoarseSizes)
         {
             foreach (var xOffset in OwnedCoarseXOffsets)
             {
-                var roi = OwnedRoi(slot, size, xOffset, 0);
-                if (!IsInside(frame, roi))
+                if (size == OwnedCanonicalSize && xOffset == 0)
                     continue;
 
-                var pixels = CropFeature(frame, roi);
-                foreach (var template in templates)
-                {
-                    var (score, visualStrength) = OwnedSimilarity(pixels, template);
-                    if (!coarseBestByCoin.TryGetValue(template.Option.Id, out var current)
-                        || score > current.Score)
-                    {
-                        coarseBestByCoin[template.Option.Id] = new SlotMatch(template, score, 0, roi, visualStrength);
-                    }
-                }
+                EvaluateOwnedSlotRoi(
+                    frame,
+                    templates,
+                    slot,
+                    size,
+                    xOffset,
+                    0,
+                    coarseBestByCoin,
+                    diagnostics);
             }
         }
 
@@ -520,6 +590,7 @@ public static class RhodesSuiCoinImageRecognizer
                     var pixels = CropFeature(frame, roi);
                     foreach (var template in shortlistedTemplates)
                     {
+                        diagnostics?.IncrementCoinComparisons();
                         var (score, visualStrength) = OwnedSimilarity(pixels, template);
                         if (!bestByCoin.TryGetValue(template.Option.Id, out var current)
                             || score > current.Score)
@@ -538,6 +609,33 @@ public static class RhodesSuiCoinImageRecognizer
         return ranked.Length == 0
             ? null
             : ranked[0] with { RunnerUpScore = ranked.ElementAtOrDefault(1)?.Score ?? 0 };
+    }
+
+    private static void EvaluateOwnedSlotRoi(
+        SKBitmap frame,
+        IReadOnlyList<CoinTemplate> templates,
+        OwnedSlot slot,
+        int size,
+        int xOffset,
+        int yOffset,
+        IDictionary<string, SlotMatch> bestByCoin,
+        RhodesCoinRecognitionDiagnostics? diagnostics)
+    {
+        var roi = OwnedRoi(slot, size, xOffset, yOffset);
+        if (!IsInside(frame, roi))
+            return;
+
+        var pixels = CropFeature(frame, roi);
+        foreach (var template in templates)
+        {
+            diagnostics?.IncrementCoinComparisons();
+            var (score, visualStrength) = OwnedSimilarity(pixels, template);
+            if (!bestByCoin.TryGetValue(template.Option.Id, out var current)
+                || score > current.Score)
+            {
+                bestByCoin[template.Option.Id] = new SlotMatch(template, score, 0, roi, visualStrength);
+            }
+        }
     }
 
     private static MaaRoi OwnedRoi(OwnedSlot slot, int size, int xOffset, int yOffset) =>

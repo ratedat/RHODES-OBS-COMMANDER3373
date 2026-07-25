@@ -9,6 +9,9 @@
     <Style Selector="TextBlock.evolutionTarget">
       <Setter Property="Foreground" Value="#FFD447" />
     </Style>
+    <Style Selector="TextBlock.candleBearerTarget">
+      <Setter Property="Foreground" Value="#FF6FAE" />
+    </Style>
     <Style Selector="TextBlock.rejectionTarget.evolutionTarget">
       <Setter Property="Foreground" Value="#C084FC" />
     </Style>
@@ -98,18 +101,20 @@
                             <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                           </Border>
                           <StackPanel Grid.Column="1" Spacing="2">
-                            <TextBlock Text="{Binding Name}" Classes.rejectionTarget="{Binding IsRejectionReactionTarget}" Classes.evolutionTarget="{Binding IsEvolutionTarget}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Name}" Classes.rejectionTarget="{Binding IsRejectionReactionTarget}" Classes.evolutionTarget="{Binding IsEvolutionTarget}" Classes.candleBearerTarget="{Binding IsCandleBearerTarget}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
                           </StackPanel>
                         </Grid>
                       </Button>
-                      <Border Grid.Column="1" Width="88" Padding="8,6" CornerRadius="6" BorderBrush="#356E67" BorderThickness="1" Background="#102925" IsVisible="{Binding IsSelectionCountVisible}" VerticalAlignment="Stretch">
-                        <StackPanel Spacing="3" VerticalAlignment="Center">
-                          <TextBlock Text="人数" FontSize="10" Opacity="0.72" HorizontalAlignment="Center" />
-                          <NumericUpDown Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding SelectionCount, Mode=TwoWay}" HorizontalAlignment="Stretch" />
-                        </StackPanel>
-                      </Border>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Border Width="88" Padding="8,6" CornerRadius="6" BorderBrush="#356E67" BorderThickness="1" Background="#102925" IsVisible="{Binding IsSelectionCountVisible}" VerticalAlignment="Stretch">
+                          <StackPanel Spacing="3" VerticalAlignment="Center">
+                            <TextBlock Text="人数" FontSize="10" Opacity="0.72" HorizontalAlignment="Center" />
+                            <NumericUpDown Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding SelectionCount, Mode=TwoWay}" HorizontalAlignment="Stretch" />
+                          </StackPanel>
+                        </Border>
+                      </StackPanel>
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

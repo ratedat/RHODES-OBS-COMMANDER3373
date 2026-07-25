@@ -80,6 +80,22 @@ test("operator names expose the Mizuki rejection target class", () => {
   assert.match(output, /class="rejection-reaction-operator-name">クルース/);
 });
 
+test("operator names expose the Sui candle bearer target class", () => {
+  const output = renderOverlayDense({
+    ...args,
+    operators: [{
+      id: "radiant",
+      name: "レイディアン",
+      rarity: 6,
+      class: "特殊",
+      isCandleBearerTarget: true,
+    }],
+    orientation: "horizontal",
+  }, context);
+
+  assert.match(output, /class="candle-bearer-operator-name">レイディアン/);
+});
+
 test("horizontal overlay renders selected Sarkaz thoughts with image and count", () => {
   const thought = {
     id: "thought-a",

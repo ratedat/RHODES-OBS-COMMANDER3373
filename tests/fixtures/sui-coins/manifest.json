@@ -1,0 +1,339 @@
+{
+  "schemaVersion": 1,
+  "frames": [
+    {
+      "frameId": "20260724-150851-351-4d10bbc72cc64b75af20c4a023f59096",
+      "profileId": "is6CoinsFull",
+      "passIndex": 0,
+      "slots": [
+        {
+          "slotIndex": 0,
+          "present": false,
+          "coinId": "",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 1,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b06",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 2,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b09",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 3,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b08",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 4,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b05",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 5,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b08",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 6,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b03",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 7,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b07",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 8,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b04",
+          "status": {
+            "kind": "unknown",
+            "statusId": ""
+          }
+        }
+      ]
+    },
+    {
+      "frameId": "20260724-172156-514-a61caa8637df4b5daec727ca977555ab",
+      "profileId": "is6CoinsFull",
+      "passIndex": 0,
+      "slots": [
+        {
+          "slotIndex": 0,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f04",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 1,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b06",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 2,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b09",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 3,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f29",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 4,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b03",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 5,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b08",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 6,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b08",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 7,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b07",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 8,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b04",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        }
+      ]
+    },
+    {
+      "frameId": "20260725-074316-690-round2-status",
+      "profileId": "is6CoinsFull",
+      "passIndex": 0,
+      "slots": [
+        {
+          "slotIndex": 0,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f05",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild7"
+          }
+        },
+        {
+          "slotIndex": 1,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f24",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild1"
+          }
+        },
+        {
+          "slotIndex": 2,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f29",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 3,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f28",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild2"
+          }
+        },
+        {
+          "slotIndex": 4,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b01",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild8"
+          }
+        },
+        {
+          "slotIndex": 5,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f31",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 6,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b01",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild10"
+          }
+        },
+        {
+          "slotIndex": 8,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f04",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        }
+      ]
+    },
+    {
+      "frameId": "20260725-current-multi-status",
+      "profileId": "is6CoinsFull",
+      "passIndex": 0,
+      "slots": [
+        {
+          "slotIndex": 0,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f05",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild7"
+          }
+        },
+        {
+          "slotIndex": 1,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f24",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild1"
+          }
+        },
+        {
+          "slotIndex": 2,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f29",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 3,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f28",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild2"
+          }
+        },
+        {
+          "slotIndex": 4,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b01",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild8"
+          }
+        },
+        {
+          "slotIndex": 5,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f31",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        },
+        {
+          "slotIndex": 6,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_b01",
+          "status": {
+            "kind": "known",
+            "statusId": "is6_sui_selectable_coinStatus_is6_gild10"
+          }
+        },
+        {
+          "slotIndex": 8,
+          "present": true,
+          "coinId": "is6_sui_selectable_coin_is6_copper_f04",
+          "status": {
+            "kind": "none",
+            "statusId": ""
+          }
+        }
+      ]
+    }
+  ]
+}

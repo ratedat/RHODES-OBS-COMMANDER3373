@@ -13,6 +13,8 @@ apps/**/bin/
 apps/**/obj/
 tests/**/bin/
 tests/**/obj/
+tools/**/bin/
+tools/**/obj/
 src-tauri/target/
 src-tauri/gen/
 src-tauri/resources/

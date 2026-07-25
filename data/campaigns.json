@@ -1329,13 +1329,9 @@
         "unitLabel": "職分"
       },
       {
-        "id": "supportMartial",
-        "label": "支武",
-        "type": "textMultiSelect",
-        "unitLabel": "件",
-        "overlayToggle": true,
-        "overlayDefaultVisible": true,
-        "overlayToggleLabel": "OBS表示"
+        "id": "candleBearer",
+        "label": "持燭人",
+        "type": "operatorMultiSelect"
       }
     ],
     "bossFlags": {

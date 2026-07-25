@@ -56,6 +56,31 @@ public static class RhodesSukiSettingsStore
 
     internal static RhodesSukiSettings Normalize(RhodesSukiSettings settings)
     {
+        var outputPreferences = settings.OutputPreferences;
+        if (outputPreferences is not null)
+        {
+            var parts = (outputPreferences.Parts ?? [])
+                .Where(part => !string.IsNullOrWhiteSpace(part.Id))
+                .Select(part => part with
+                {
+                    Id = part.Id.Trim(),
+                    Width = Math.Max(1, part.Width),
+                    Height = Math.Max(1, part.Height),
+                    BackgroundOpacity = Math.Clamp(part.BackgroundOpacity, 0, 100),
+                })
+                .GroupBy(part => part.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.Last())
+                .ToArray();
+
+            outputPreferences = outputPreferences with
+            {
+                BackgroundOpacity = Math.Clamp(outputPreferences.BackgroundOpacity, 0, 100),
+                ScrollSpeed = Math.Clamp(outputPreferences.ScrollSpeed, 0, 30),
+                Parts = parts,
+            };
+        }
+
+        var normalized = settings with { OutputPreferences = outputPreferences };
         var hasBareAdbPath = string.IsNullOrWhiteSpace(settings.AdbPath)
             || settings.AdbPath.Trim().Equals("adb", StringComparison.OrdinalIgnoreCase)
             || settings.AdbPath.Trim().Equals("adb.exe", StringComparison.OrdinalIgnoreCase);
@@ -63,9 +88,9 @@ public static class RhodesSukiSettingsStore
             && hasBareAdbPath
             && string.IsNullOrWhiteSpace(settings.AdbSerial))
         {
-            return settings with { SelectedAdbPresetId = "auto", AdbPath = "adb" };
+            normalized = normalized with { SelectedAdbPresetId = "auto", AdbPath = "adb" };
         }
 
-        return settings;
+        return normalized;
     }
 }

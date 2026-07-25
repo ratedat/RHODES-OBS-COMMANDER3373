@@ -1,5 +1,4 @@
 :root {
-  color-scheme: dark;
   --bg: #10100f;
   --panel: rgba(24, 24, 22, 0.92);
   --panel-soft: rgba(35, 34, 31, 0.76);
@@ -606,6 +605,12 @@ a:hover { text-decoration: underline; }
 .overlay-mode body {
   background: rgb(8 11 12 / var(--overlay-background-alpha, 1));
 }
+:root.overlay-background-disabled,
+.overlay-background-disabled body,
+.overlay-background-disabled #app {
+  color-scheme: normal;
+  background: transparent !important;
+}
 .overlay-app {
   width: 100vw;
   height: 100vh;
@@ -809,11 +814,50 @@ a:hover { text-decoration: underline; }
   gap: 7px;
   padding: 9px;
   color: var(--text);
-  background: rgba(15, 15, 14, 0.72);
+  background: rgb(15 15 14 / var(--overlay-background-alpha, 1));
   border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(3px);
   overflow: hidden;
+}
+.overlay-background-disabled .overlay-part-shell {
+  background: transparent !important;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.overlay-tournament-mode .overlay-part-shell {
+  gap: 4px;
+  padding: 6px;
+}
+.overlay-tournament-mode .overlay-part-head {
+  font-size: 10px;
+}
+.overlay-tournament-mode .overlay-part-head strong {
+  font-size: 12px;
+}
+.overlay-tournament-mode .overlay-part-operator-groups,
+.overlay-tournament-mode .overlay-part-operator-group {
+  gap: 3px;
+}
+.overlay-tournament-mode .overlay-part-operator-grid {
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 3px;
+}
+.overlay-tournament-mode .overlay-part-operator {
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 4px;
+  padding: 3px;
+}
+.overlay-tournament-mode .overlay-part-operator img {
+  width: 28px;
+  height: 28px;
+}
+.overlay-tournament-mode .overlay-part-effect-list .effect-row {
+  padding: 4px 5px;
+}
+.overlay-tournament-mode .overlay-part-boss-grid {
+  gap: 3px;
 }
 .overlay-part-head {
   display: flex;
@@ -845,6 +889,9 @@ a:hover { text-decoration: underline; }
 }
 .rejection-reaction-operator-name {
   color: #c084fc !important;
+}
+.candle-bearer-operator-name {
+  color: #ff6fae !important;
 }
 .overlay-part-status-main,
 .overlay-part-status-cell {
@@ -1460,6 +1507,39 @@ a:hover { text-decoration: underline; }
 .compact-boss-list { display: grid; gap: 5px; min-width: 0; }
 .special-stack { display: flex; gap: 8px; flex-wrap: wrap; }
 .footer-note { color: var(--muted); font-size: 11px; padding: 6px 2px; text-align: right; }
+
+/* Background OFF removes every neutral overlay surface while preserving content and state colors. */
+.overlay-background-disabled .compact-overlay-shell,
+.overlay-background-disabled .stream-overlay-shell,
+.overlay-background-disabled .overlay-card,
+.overlay-background-disabled .overlay-part-shell,
+.overlay-background-disabled .overlay-part-status-main,
+.overlay-background-disabled .overlay-part-status-cell,
+.overlay-background-disabled .overlay-part-relic,
+.overlay-background-disabled .overlay-part-operator,
+.overlay-background-disabled .overlay-part-empty,
+.overlay-background-disabled .stream-head,
+.overlay-background-disabled .stream-run,
+.overlay-background-disabled .stream-panel,
+.overlay-background-disabled .stream-relic-tile,
+.overlay-background-disabled .stream-operator-tile,
+.overlay-background-disabled .overlay-card-header,
+.overlay-background-disabled .kpi,
+.overlay-background-disabled .relic-tile,
+.overlay-background-disabled .operator-row,
+.overlay-background-disabled .effect-row,
+.overlay-background-disabled .boss-card,
+.overlay-background-disabled .boss-chip,
+.overlay-background-disabled .special-overlay-group > header,
+.overlay-background-disabled .special-overlay-chip,
+.overlay-background-disabled .compact-counts span,
+.overlay-background-disabled .compact-more,
+.overlay-background-disabled .stream-counts span {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
 
 @media (max-width: 1000px) {
   .mode-card-grid { grid-template-columns: 1fr; }

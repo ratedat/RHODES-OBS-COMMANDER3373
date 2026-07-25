@@ -145,10 +145,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _relicShowSelectedFirst;
     private bool _relicHideExcluded;
     private bool _relicSelectedOnly;
-    private bool _outputSeparateWindow = true;
     private bool _outputTournamentMode;
-    private bool _outputTransparentBackground = true;
-    private int _outputBackgroundTransparency = 100;
+    private bool _outputBackgroundEnabled;
+    private int _outputBackgroundOpacity = 100;
     private bool _outputShowPartTitles = true;
     private int _outputScrollSpeed = 13;
     private SukiOverlayLayoutPreview? _selectedOverlayLayoutItem;
@@ -354,6 +353,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ApplyManualMizukiValuesCommand = new AsyncRelayCommand(ApplyManualMizukiValuesAsync);
         ApplyManualSuiTicketCommand = new AsyncRelayCommand(ApplyManualSuiTicketAsync);
         ApplyManualSuiSeasonalHoursCommand = new AsyncRelayCommand(ApplyManualSuiSeasonalHoursAsync);
+        ApplyManualSuiCandleBearerTargetsCommand = new AsyncRelayCommand(ApplyManualSuiCandleBearerTargetsAsync);
         ApplyManualSuiValuesCommand = new AsyncRelayCommand(ApplyManualSuiValuesAsync);
         AddManualSuiCoinCommand = new AsyncRelayCommand(AddManualSuiCoinAsync);
         RemoveManualSuiCoinCommand = new AsyncRelayCommand(RemoveManualSuiCoinAsync);
@@ -829,6 +829,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiSpecialEffectOption> ManualMizukiRejectionOptions { get; } = [];
 
+    public ObservableCollection<SukiOperatorTargetOption> ManualSuiCandleBearerTargets { get; } = [];
+
     public ObservableCollection<SukiSpecialEffectOption> ManualSuiCoinTargets { get; } = [];
 
     public ObservableCollection<SukiSeasonalHourEditor> ManualSuiSeasonalHourEditors { get; } = [];
@@ -1302,17 +1304,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public bool OutputSeparateWindow
-    {
-        get => _outputSeparateWindow;
-        set
-        {
-            if (!SetProperty(ref _outputSeparateWindow, value))
-                return;
-            RefreshInspectorRows();
-        }
-    }
-
     public bool OutputTournamentMode
     {
         get => _outputTournamentMode;
@@ -1320,28 +1311,35 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _outputTournamentMode, value))
                 return;
+            foreach (var part in OutputParts)
+                part.TournamentMode = value;
             RefreshInspectorRows();
         }
     }
 
-    public bool OutputTransparentBackground
+    public bool OutputBackgroundEnabled
     {
-        get => _outputTransparentBackground;
+        get => _outputBackgroundEnabled;
         set
         {
-            if (!SetProperty(ref _outputTransparentBackground, value))
+            if (!SetProperty(ref _outputBackgroundEnabled, value))
                 return;
+            foreach (var part in OutputParts)
+                part.BackgroundEnabled = value;
             RefreshInspectorRows();
         }
     }
 
-    public int OutputBackgroundTransparency
+    public int OutputBackgroundOpacity
     {
-        get => _outputBackgroundTransparency;
+        get => _outputBackgroundOpacity;
         set
         {
-            if (!SetProperty(ref _outputBackgroundTransparency, Math.Clamp(value, 0, 100)))
+            var normalized = Math.Clamp(value, 0, 100);
+            if (!SetProperty(ref _outputBackgroundOpacity, normalized))
                 return;
+            foreach (var part in OutputParts)
+                part.BackgroundOpacity = normalized;
             RefreshInspectorRows();
         }
     }
@@ -1353,6 +1351,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _outputShowPartTitles, value))
                 return;
+            foreach (var part in OutputParts)
+                part.ShowTitle = value;
             RefreshInspectorRows();
         }
     }
@@ -2010,6 +2010,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ApplyManualMizukiValuesCommand { get; }
     public ICommand ApplyManualSuiTicketCommand { get; }
     public ICommand ApplyManualSuiSeasonalHoursCommand { get; }
+    public ICommand ApplyManualSuiCandleBearerTargetsCommand { get; }
     public ICommand ApplyManualSuiValuesCommand { get; }
     public ICommand AddManualSuiCoinCommand { get; }
     public ICommand RemoveManualSuiCoinCommand { get; }
@@ -2587,8 +2588,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             var visible = OutputParts.Count(part => part.Enabled);
             yield return new SukiInspectorRow("表示部品", $"{visible}/{OutputParts.Count}", $"scroll {OutputScrollSpeed}px/s");
-            yield return new SukiInspectorRow("別ウィンドウ", OutputSeparateWindow ? "ON" : "OFF", "OBSサイドカー");
-            yield return new SukiInspectorRow("大会向け", OutputTournamentMode ? "ON" : "OFF", "表示情報を絞る");
+            yield return new SukiInspectorRow(
+                "背景",
+                OutputBackgroundEnabled ? $"表示 {OutputBackgroundOpacity}%" : "非表示",
+                "OBSブラウザソースの背景");
+            yield return new SukiInspectorRow("大会向け簡潔表示", OutputTournamentMode ? "ON" : "OFF", "部品内の余白を圧縮");
             yield break;
         }
 
@@ -2683,6 +2687,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IsHudVisible = settings.HudVisible;
         _adbConnectionValidated = settings.AdbConnectionValidated;
         ApplyOverlayLayoutStates(settings.OverlayLayout);
+        ApplyOutputPreferences(settings.OutputPreferences);
     }
 
     private async Task SaveSettingsAsync()
@@ -2715,7 +2720,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             HudY,
             RhodesHudPartCatalog.SerializeEnabledIds(HudPartOptions),
             _adbConnectionValidated,
-            OverlayLayoutItems.Select(item => item.ToState()).ToArray());
+            OverlayLayoutItems.Select(item => item.ToState()).ToArray(),
+            BuildOutputPreferences());
+    }
+
+    private void ApplyOutputPreferences(SukiOutputPreferences? preferences)
+    {
+        if (preferences is null)
+            return;
+
+        OutputTournamentMode = preferences.TournamentMode;
+        OutputBackgroundEnabled = preferences.BackgroundEnabled;
+        OutputBackgroundOpacity = preferences.BackgroundOpacity;
+        OutputShowPartTitles = preferences.ShowPartTitles;
+        OutputScrollSpeed = preferences.ScrollSpeed;
+
+        foreach (var savedPart in preferences.Parts)
+        {
+            var part = OutputParts.FirstOrDefault(candidate =>
+                candidate.Id.Equals(savedPart.Id, StringComparison.OrdinalIgnoreCase));
+            if (part is null)
+                continue;
+
+            part.Enabled = savedPart.Enabled;
+            part.ScrollEnabled = savedPart.ScrollEnabled;
+            part.HideExcluded = savedPart.HideExcluded;
+            part.Width = Math.Max(1, savedPart.Width);
+            part.Height = Math.Max(1, savedPart.Height);
+            part.TournamentMode = savedPart.TournamentMode;
+            part.BackgroundEnabled = savedPart.BackgroundEnabled;
+            part.BackgroundOpacity = savedPart.BackgroundOpacity;
+            part.ShowTitle = savedPart.ShowTitle;
+        }
     }
 
     private async Task<string> SaveAdbSettingsToApiStateAsync()
@@ -2761,6 +2797,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         var tab = parameter as string;
         WorkspaceTab = RhodesWorkspaceRegistry.Normalize(tab);
+        if (string.Equals(WorkspaceTab, "special", StringComparison.Ordinal))
+            RefreshManualRunEditors();
         StatusMessage = $"{WorkspaceTitle}を表示しています。";
         return Task.CompletedTask;
     }
@@ -2837,25 +2875,36 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
-    private Task ToggleChoiceSelectedAsync(object? parameter)
+    private async Task ToggleChoiceSelectedAsync(object? parameter)
     {
         if (parameter is not SukiChoiceItem item)
-            return Task.CompletedTask;
+            return;
 
+        var removesCandleBearerTarget = string.Equals(CurrentCampaignId, "is6_sui", StringComparison.Ordinal)
+            && string.Equals(item.Kind, "operator", StringComparison.Ordinal)
+            && item.IsSelected
+            && item.IsCandleBearerTarget;
         item.IsSelected = !item.IsSelected;
         if (item.IsSelected)
             item.IsExcluded = false;
         else if (string.Equals(item.Kind, "relic", StringComparison.Ordinal))
             item.IsUsed = false;
+        if (removesCandleBearerTarget)
+        {
+            await PersistChoiceStateAsync();
+            await ApplyCandidatesPipelineAsync(
+                RhodesSuiCandleBearerManualSelection.BuildCandidates(BuildCurrentSuiCandleBearerTargetOptions()));
+        }
+
         if (string.Equals(item.Kind, "relic", StringComparison.Ordinal) && item.SupportsUsedFlag)
             RefreshRelicChoices();
         else
             RefreshChoiceAfterSelectionMutation(item.Kind);
         if (string.Equals(item.Kind, "relic", StringComparison.Ordinal))
             RefreshBossSections();
-        PersistChoiceStateInBackground();
+        if (!removesCandleBearerTarget)
+            PersistChoiceStateInBackground();
         StatusMessage = $"{item.Name}: {(item.IsSelected ? "選択しました。" : "選択を解除しました。")}";
-        return Task.CompletedTask;
     }
 
     private Task ToggleRelicUsedAsync(object? parameter)
@@ -4630,6 +4679,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private async Task ApplyManualSuiCandleBearerTargetsAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            await ApplyCandidatesPipelineAsync(
+                RhodesSuiCandleBearerManualSelection.BuildCandidates(ManualSuiCandleBearerTargets));
+            RefreshInspectorRows();
+            StatusMessage = "持燭人の対象を反映しました。";
+        });
+    }
+
     private void AddManualSuiSeasonalHourCandidates(ICollection<MaaCandidatePreview> candidates)
     {
         const string campaignId = "is6_sui";
@@ -4923,6 +4983,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     selectedSeasonalHourTargets.Contains(name))));
         TrimManualSuiSeasonalHourTargets(ManualSuiDogPaintingTargetLimit);
         NotifyManualSuiDogPaintingProperties();
+
+        var candleBearer = fields.GetValueOrDefault("candleBearer");
+        ReplaceCollection(
+            ManualSuiCandleBearerTargets,
+            RhodesRecruitedOperatorTargetCatalog.Build(
+                _allOperators,
+                candleBearer?.OperatorTargets,
+                candleBearer?.OperatorIds));
 
         _allManualSuiCoinOptions = RhodesRunCatalog.LoadSpecialEffectOptions(campaignId, "coin");
         var statuses = LoadManualSuiCoinStatusOptions();
@@ -5306,7 +5374,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "is2_phantom" => ["runStatusFull", "is2HallucinationsFull", "is2PerformanceFull", "operatorsFull", "relicsFull"],
             "is3_mizuki" => ["runStatusFull", "is3KeyFull", "is3LightHordeFull", "is3RejectionFull", "operatorsFull", "relicsFull"],
             "is4_sami" => ["runStatusFull", "is4RevelationFull", "operatorsFull", "relicsFull"],
-            "is6_sui" => ["runStatusFull", "is6BaseFull", "is6ActiveCoinsFull", "operatorsFull", "relicsFull"],
+            "is6_sui" => ["runStatusFull", "is6BaseFull", "is6ActiveCoinsFull", "is6SeasonalHours", "operatorsFull", "relicsFull"],
             _ => ["runStatusFull", "operatorsFull", "relicsFull"],
         };
         await RunProfilesAndApplyAsync(profileIds, "現在テーマの取得対象をすべて認識し、ラン状態へ反映しました。");
@@ -5320,7 +5388,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "is2_phantom" => ["is2HallucinationsFull", "is2PerformanceFull"],
             "is3_mizuki" => ["is3KeyFull", "is3LightHordeFull", "is3RejectionFull"],
             "is4_sami" => ["is4RevelationFull"],
-            "is6_sui" => ["is6ActiveCoinsFull"],
+            "is6_sui" => ["is6ActiveCoinsFull", "is6SeasonalHours"],
             _ => Array.Empty<string>(),
         };
 
@@ -6108,12 +6176,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             var candidateFrameResults = frameResults.ToList();
             var missingNameOcrCount = 0;
+            IReadOnlyList<RhodesSuiCoinImageDetection> inspections = [];
             if (encodedImage.Length > 0)
             {
-                var inspections = RhodesSuiCoinImageRecognizer.InspectOwned(encodedImage);
+                inspections = RhodesSuiCoinImageRecognizer.InspectOwned(encodedImage);
+                var statusProbes = RhodesSuiCoinStatusRecognizer.ProbeOwnedStatusSlots(
+                    encodedImage,
+                    inspections);
                 var missingNameRequests = RhodesSuiCoinImageRecognizer.PlanMissingOwnedNameOcrRequests(
                     inspections,
-                    frameResults);
+                    frameResults,
+                    statusProbes.Select(probe => probe.SlotIndex).ToHashSet());
                 foreach (var request in missingNameRequests)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -6133,7 +6206,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             MaaTaskRunResult? statusResult = null;
             if (encodedImage.Length > 0)
             {
-                statusResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(encodedImage, frameResults);
+                statusResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+                    encodedImage,
+                    candidateFrameResults,
+                    imageInspections: inspections);
                 ResourceTaskResults.Add(statusResult);
             }
             var candidateSource = statusResult is null
@@ -6218,6 +6294,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                                 request,
                                 resolvedOperators[0],
                                 rejectionDetection,
+                                operatorInstance));
+                        }
+                    }
+                    if (IsSuiCampaignSelected && resolvedOperators.Length == 1)
+                    {
+                        var candleBearerDetection = RhodesSuiCandleBearerCardDetector.Detect(encodedImage, request);
+                        if (candleBearerDetection.IsCandleBearer)
+                        {
+                            ResourceTaskResults.Add(RhodesSuiCandleBearerCardDetector.CreateTaskResult(
+                                request,
+                                resolvedOperators[0],
+                                candleBearerDetection,
                                 operatorInstance));
                         }
                     }
@@ -7210,20 +7298,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private SukiOutputPreferences BuildOutputPreferences()
     {
         return new SukiOutputPreferences(
-            OutputSeparateWindow,
-            OutputTournamentMode,
-            OutputTransparentBackground,
-            OutputScrollSpeed,
-            OutputParts.Select(part => new SukiOutputPartState(
+            TournamentMode: OutputTournamentMode,
+            BackgroundEnabled: OutputBackgroundEnabled,
+            BackgroundOpacity: OutputBackgroundOpacity,
+            ShowPartTitles: OutputShowPartTitles,
+            ScrollSpeed: OutputScrollSpeed,
+            Parts: OutputParts.Select(part => new SukiOutputPartState(
                 part.Id,
                 part.Enabled,
                 part.ScrollEnabled,
                 part.HideExcluded,
                 part.Width,
-                part.Height)).ToArray(),
-            OverlayLayoutItems.Select(item => item.ToState()).ToArray(),
-            BackgroundTransparency: OutputBackgroundTransparency,
-            ShowPartTitles: OutputShowPartTitles);
+                part.Height,
+                part.TournamentMode,
+                part.BackgroundEnabled,
+                part.BackgroundOpacity,
+                part.ShowTitle)).ToArray(),
+            OverlayLayout: OverlayLayoutItems.Select(item => item.ToState()).ToArray());
     }
 
     private SukiChoiceCatalogFilterState OperatorChoiceFilterState()
@@ -7277,7 +7368,36 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         RefreshOperatorSummaries();
-        PersistChoiceStateInBackground();
+        if (sender is SukiChoiceItem { IsCandleBearerTarget: true }
+            && string.Equals(CurrentCampaignId, "is6_sui", StringComparison.Ordinal))
+        {
+            _ = PersistSuiCandleBearerTargetsAfterChoiceChangeAsync();
+        }
+        else
+        {
+            PersistChoiceStateInBackground();
+        }
+    }
+
+    private async Task PersistSuiCandleBearerTargetsAfterChoiceChangeAsync()
+    {
+        if (!await PersistChoiceStateAsync())
+            return;
+        await ApplyCandidatesPipelineAsync(
+            RhodesSuiCandleBearerManualSelection.BuildCandidates(BuildCurrentSuiCandleBearerTargetOptions()));
+        RefreshOperatorChoices();
+        RefreshInspectorRows();
+    }
+
+    private IReadOnlyList<SukiOperatorTargetOption> BuildCurrentSuiCandleBearerTargetOptions()
+    {
+        var candleBearer = (_runState.SpecialFields ?? []).FirstOrDefault(field =>
+            string.Equals(field.CampaignId, "is6_sui", StringComparison.Ordinal)
+            && string.Equals(field.FieldId, "candleBearer", StringComparison.Ordinal));
+        return RhodesRecruitedOperatorTargetCatalog.Build(
+            _allOperators,
+            candleBearer?.OperatorTargets,
+            candleBearer?.OperatorIds);
     }
 
     private void RefreshRelicSummaries()

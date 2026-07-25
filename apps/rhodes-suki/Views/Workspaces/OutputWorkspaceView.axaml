@@ -10,10 +10,9 @@
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="12">
-    <Expander Header="OBS設定ガイド" IsExpanded="False">
-    <Border Classes="appleCard" Margin="0,8,0,0">
-      <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
-        <TextBlock Text="OBSへ表示するまで" Classes="h2" />
+    <Border Classes="appleCard">
+      <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+        <TextBlock Text="OBS設定ガイド / OBSへ表示するまで" Classes="h2" />
         <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="18">
           <StackPanel Spacing="3">
             <TextBlock Text="1. 配信サーバーを起動" FontSize="13" FontWeight="SemiBold" />
@@ -31,16 +30,17 @@
                        Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
         </Grid>
+        <TextBlock Grid.Row="2"
+                   Text="自動取得結果は配信前にラン・特殊値・選択画面で確認し、取得が不安定な状態付き項目は手動で補正してください。"
+                   Classes="caption" TextWrapping="Wrap" />
       </Grid>
     </Border>
-    </Expander>
 
     <!-- 配信サーバー: overlay/sidecar/state APIを提供する app/server.mjs をここから管理する -->
-    <Expander Header="配信サーバーとURL" IsExpanded="False">
-    <Border Classes="appleCard" Margin="0,8,0,0">
+    <Border Classes="appleCard">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
         <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-          <TextBlock Text="配信サーバー" Classes="h2" VerticalAlignment="Center" />
+          <TextBlock Text="配信サーバーとURL" Classes="h2" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1" Text="{Binding SidecarServerStatus}" Classes="mono" VerticalAlignment="Center" Margin="8,0,0,0" />
           <Button Grid.Column="2" Classes="primary" Content="起動" Command="{Binding StartSidecarServerCommand}" />
           <Button Grid.Column="3" Content="停止" Command="{Binding StopSidecarServerCommand}" />
@@ -90,7 +90,6 @@
                    Text="URLコピー後、OBSの「ソース」→「ブラウザ」→「URL」へ貼り付けます。「起動」はapp/server.mjsをNode.jsで起動します。「停止」はSukiが起動したサーバーだけを終了し、別途起動済みのサーバーは停止しません。" />
       </Grid>
     </Border>
-    </Expander>
 
     <!-- HUD (本人用透過小窓): 表示する内容をここで選ぶ -->
     <Expander Header="本人用HUD" IsExpanded="False">
@@ -119,6 +118,57 @@
       </Grid>
     </Border>
     </Expander>
+
+    <Border CornerRadius="8" Padding="12" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <StackPanel Spacing="2">
+            <TextBlock Text="統合Overlay設定" Classes="h2" />
+            <TextBlock Text="統合Overlayへ適用する既定値です。個別URLもまずこの設定を継承し、下の部品設定で変更した項目だけ個別値が優先されます。"
+                       Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="primary" Content="保存して反映" Command="{Binding SaveSettingsCommand}" VerticalAlignment="Center" />
+        </Grid>
+        <Border Grid.Row="1" Background="#302A16" BorderBrush="#7E6728" BorderThickness="1" CornerRadius="6" Padding="10,7">
+          <TextBlock Text="ここで変更した値は統合Overlayとすべての個別URLへ一括適用されます。個別設定は各部品カードから上書きして保存できます。"
+                     FontSize="11" TextWrapping="Wrap" />
+        </Border>
+        <Grid Grid.Row="2" RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="16" RowSpacing="12">
+          <StackPanel Spacing="2">
+            <CheckBox Content="大会向け簡潔表示" IsChecked="{Binding OutputTournamentMode, Mode=TwoWay}" />
+            <TextBlock Text="余白とカード密度を詰め、限られた配信領域へ多くの情報を表示します。" Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="2">
+            <CheckBox Content="背景を表示" IsChecked="{Binding OutputBackgroundEnabled, Mode=TwoWay}" />
+            <TextBlock Text="OFFではOBSの背景を完全透過にします。ONの場合だけ背景濃度を使います。" Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Spacing="2">
+            <TextBlock Text="背景濃度" FontSize="12" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0"
+                             Value="{Binding OutputBackgroundOpacity, Mode=TwoWay}"
+                             IsEnabled="{Binding OutputBackgroundEnabled}" />
+              <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="0%で完全透過、100%で不透明です。" Classes="caption" />
+          </StackPanel>
+          <StackPanel Grid.Row="1" Spacing="2">
+            <CheckBox Content="個別URLのタイトルを表示"
+                      IsChecked="{Binding OutputShowPartTitles, Mode=TwoWay}" />
+            <TextBlock Text="部品別URLの見出しと件数を表示します。" Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+            <TextBlock Text="スクロール速度" FontSize="12" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <TextBox Text="{Binding OutputScrollSpeed, Mode=TwoWay}" HorizontalContentAlignment="Right" />
+              <TextBlock Grid.Column="1" Text="px/s" Classes="caption" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="0にすると停止、最大30です。" Classes="caption" />
+          </StackPanel>
+        </Grid>
+        <TextBlock Grid.Row="3" Text="{Binding OutputPartsSection.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+      </Grid>
+    </Border>
 
     <Border Classes="appleCard">
       <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
@@ -237,68 +287,17 @@
       </StackPanel>
     </Expander>
 
-    <Border CornerRadius="8" Padding="12" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
-      <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-          <StackPanel Spacing="2">
-            <TextBlock Text="統合Overlay設定" Classes="h2" />
-            <TextBlock Text="設定変更後は「保存して反映」を押すと、Suki設定とstate APIへ保存されます。部品別URLでは各URL固有のレイアウトが優先されます。"
-                       Classes="caption" TextWrapping="Wrap" />
-          </StackPanel>
-          <Button Grid.Column="1" Classes="primary" Content="保存して反映" Command="{Binding SaveSettingsCommand}" VerticalAlignment="Center" />
-        </Grid>
-        <Grid Grid.Row="1" RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="16" RowSpacing="12">
-          <StackPanel Spacing="2">
-            <CheckBox Content="別ウィンドウ" IsChecked="{Binding OutputSeparateWindow, Mode=TwoWay}" />
-            <TextBlock Text="別ウィンドウ表示の設定値を保存します。" Classes="caption" TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Grid.Column="1" Spacing="2">
-            <CheckBox Content="大会向け" IsChecked="{Binding OutputTournamentMode, Mode=TwoWay}" />
-            <TextBlock Text="大会運用モードとして保存し、手動確認を優先します。" Classes="caption" TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Grid.Column="2" Spacing="2">
-            <CheckBox Content="透過背景" IsChecked="{Binding OutputTransparentBackground, Mode=TwoWay}" />
-            <TextBlock Text="OFFでは必ず不透明、ONでは下の透過率を使います。" Classes="caption" TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Grid.Row="1" Spacing="2">
-            <TextBlock Text="背景透過率" FontSize="12" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0"
-                             Value="{Binding OutputBackgroundTransparency, Mode=TwoWay}"
-                             IsEnabled="{Binding OutputTransparentBackground}" />
-              <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
-            </Grid>
-            <TextBlock Text="0%で不透明、100%で完全透過です。" Classes="caption" />
-          </StackPanel>
-          <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
-            <CheckBox Content="個別ウィンドウのタイトルを表示"
-                      IsChecked="{Binding OutputShowPartTitles, Mode=TwoWay}" />
-            <TextBlock Text="部品別URLの見出しと件数を表示します。" Classes="caption" TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Grid.Row="1" Grid.Column="2" Spacing="2">
-            <TextBlock Text="スクロール速度" FontSize="12" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <TextBox Text="{Binding OutputScrollSpeed, Mode=TwoWay}" HorizontalContentAlignment="Right" />
-              <TextBlock Grid.Column="1" Text="px/s" Classes="caption" VerticalAlignment="Center" />
-            </Grid>
-            <TextBlock Text="0にすると停止、最大30です。" Classes="caption" />
-          </StackPanel>
-        </Grid>
-        <TextBlock Grid.Row="2" Text="{Binding OutputPartsSection.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
-      </Grid>
-    </Border>
-
     <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
       <StackPanel Spacing="2">
         <TextBlock Text="出力部品設定" Classes="h2" />
         <TextBlock Classes="caption" TextWrapping="Wrap"
-                   Text="表示＝統合Overlayへ出す設定、スクロール＝一覧を自動で送る設定、除外反映＝選択画面で表示除外にした項目をOBSでも隠す設定です。現在は設定値として保存され、部品別URLの実表示は各URLの定義が優先されます。" />
+                   Text="表示＝統合Overlayへ出す設定、スクロール＝一覧を自動で送る設定、除外反映＝選択画面で表示除外にした項目をOBSでも隠す設定です。表示形式、背景、タイトルは部品別URLごとに保存されます。" />
       </StackPanel>
         <ItemsControl Grid.Row="1" ItemsSource="{Binding OutputParts}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Border CornerRadius="8" Padding="12" Margin="0,0,0,10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{Binding Label}" FontSize="15" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding BindingPath}" FontFamily="Consolas" FontSize="10" Opacity="0.48" />
@@ -309,8 +308,22 @@
                             ToolTip.Tip="内容が表示領域を超えた場合の自動スクロール設定です" />
                   <CheckBox Grid.Column="3" Content="除外反映" IsChecked="{Binding HideExcluded, Mode=TwoWay}" VerticalAlignment="Center"
                             ToolTip.Tip="選択カタログで表示除外にした項目をOBSでも隠す設定です" />
-                  <TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
-                  <TextBlock Grid.Row="2" Text="{Binding SizeLabel}" FontFamily="Consolas" FontSize="11" Opacity="0.6" />
+                  <Grid Grid.Row="1" Grid.ColumnSpan="4" ColumnDefinitions="Auto,Auto,Auto,Auto,*" ColumnSpacing="14">
+                    <CheckBox Content="大会向け簡潔表示" IsChecked="{Binding TournamentMode, Mode=TwoWay}"
+                              ToolTip.Tip="この個別URLだけ余白とカード密度を詰めます" />
+                    <CheckBox Grid.Column="1" Content="背景を表示" IsChecked="{Binding BackgroundEnabled, Mode=TwoWay}"
+                              ToolTip.Tip="OFFではこの個別URLの背景を完全透過にします" />
+                    <Grid Grid.Column="2" ColumnDefinitions="Auto,90,Auto" ColumnSpacing="6" IsEnabled="{Binding BackgroundEnabled}">
+                      <TextBlock Text="背景濃度" VerticalAlignment="Center" />
+                      <NumericUpDown Grid.Column="1" Minimum="0" Maximum="100" Increment="5" FormatString="0"
+                                     Value="{Binding BackgroundOpacity, Mode=TwoWay}" />
+                      <TextBlock Grid.Column="2" Text="%" Classes="caption" VerticalAlignment="Center" />
+                    </Grid>
+                    <CheckBox Grid.Column="3" Content="タイトル表示" IsChecked="{Binding ShowTitle, Mode=TwoWay}"
+                              ToolTip.Tip="この個別URLの見出しと件数を表示します" />
+                  </Grid>
+                  <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                  <TextBlock Grid.Row="3" Text="{Binding SizeLabel}" FontFamily="Consolas" FontSize="11" Opacity="0.6" />
                 </Grid>
               </Border>
             </DataTemplate>

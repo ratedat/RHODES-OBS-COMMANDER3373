@@ -121,6 +121,17 @@ public static class RhodesRecognitionCandidateApplier
         RecognitionKey: "manual:mizuki:evolution-targets:none",
         FieldId: "operatorEvolutionTargets");
 
+    public static MaaCandidatePreview CreateNoSuiCandleBearerTargetCandidate() => new(
+        "sui",
+        "持燭人対象なし",
+        NoMizukiSelectionId,
+        "持燭人対象を空にする",
+        1.0,
+        CampaignId: Is6CampaignId,
+        RecognitionKey: "manual:sui:candle-bearer-targets:none",
+        FieldId: "candleBearerTargets",
+        SlotKind: "clear");
+
     public static MaaCandidatePreview CreateNoSuiCoinCandidate(string fieldId)
     {
         var normalizedFieldId = fieldId.Equals("activeCoins", StringComparison.Ordinal)
@@ -137,17 +148,6 @@ public static class RhodesRecognitionCandidateApplier
             FieldId: normalizedFieldId,
             SlotKind: "clear");
     }
-
-    public static MaaCandidatePreview CreateNoSuiSupportMartialCandidate() => new(
-        "sui",
-        "支武なし",
-        "",
-        "手動入力",
-        1.0,
-        CampaignId: Is6CampaignId,
-        RecognitionKey: "manual:sui:supportMartial:clear",
-        FieldId: "supportMartial",
-        SlotKind: "clear");
 
     public static MaaCandidatePreview CreateNoSuiSeasonalHourCandidate() => new(
         "sui",
@@ -193,7 +193,7 @@ public static class RhodesRecognitionCandidateApplier
         if (!runStatusOnly)
             handledIndexes.UnionWith(ApplyIs6SeasonalHourCandidates(state, candidateList, applied));
         if (!runStatusOnly)
-            handledIndexes.UnionWith(ApplyIs6SupportMartialCandidates(state, candidateList, applied));
+            handledIndexes.UnionWith(ApplyIs6CandleBearerCandidates(state, candidateList, applied));
         foreach (var index in handledIndexes.OrderBy(value => value))
             outcomes.Add(Outcome(prepared.Active[index].Index, candidateList[index], "applied", AppliedFieldForCandidate(candidateList[index]), ""));
         var ignored = prepared.IgnoredDuplicates.Count;
@@ -909,6 +909,103 @@ public static class RhodesRecognitionCandidateApplier
         return 1;
     }
 
+    private static HashSet<int> ApplyIs6CandleBearerCandidates(
+        JsonObject state,
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        ICollection<string> applied)
+    {
+        var run = EnsureObject(state, "run");
+        if (!JsonString(run, "campaignId").Equals(Is6CampaignId, StringComparison.Ordinal))
+            return [];
+
+        var campaign = EnsureCampaignSpecialFromRun(run, Is6CampaignId);
+        if (campaign is null)
+            return [];
+
+        var recognizedOperatorIds = candidates
+            .Where(candidate => CandidateIsKind(candidate, "operator"))
+            .Select(candidate => CandidateId(candidate.OperatorId, candidate.Value))
+            .Where(operatorId => !string.IsNullOrWhiteSpace(operatorId))
+            .ToHashSet(StringComparer.Ordinal);
+        var recognizedOperatorCounts = candidates
+            .Where(candidate => CandidateIsKind(candidate, "operator"))
+            .Select(candidate => (
+                OperatorId: CandidateId(candidate.OperatorId, candidate.Value),
+                Count: Math.Max(1, candidate.Count)))
+            .Where(item => !string.IsNullOrWhiteSpace(item.OperatorId))
+            .GroupBy(item => item.OperatorId, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Max(item => item.Count),
+                StringComparer.Ordinal);
+        var targetRows = candidates
+            .Select((candidate, index) => (
+                Candidate: candidate,
+                Index: index,
+                OperatorId: candidate.OperatorId.Trim(),
+                OperatorInstance: Math.Max(1, candidate.OperatorInstance)))
+            .Where(item => CandidateIsKind(item.Candidate, "sui")
+                && item.Candidate.FieldId.Equals("candleBearer", StringComparison.Ordinal)
+                && CandidateCampaignIs(item.Candidate, Is6CampaignId)
+                && !string.IsNullOrWhiteSpace(item.OperatorId)
+                && (StringSetContains(state, "operators", item.OperatorId)
+                    || recognizedOperatorIds.Contains(item.OperatorId))
+                && item.OperatorInstance <= Math.Max(
+                    RecruitedOperatorCount(state, item.OperatorId),
+                    recognizedOperatorCounts.GetValueOrDefault(item.OperatorId, 0)))
+            .DistinctBy(
+                item => $"{item.OperatorId}#{item.OperatorInstance}",
+                StringComparer.Ordinal)
+            .ToArray();
+        var clearRow = candidates
+            .Select((candidate, index) => (Candidate: candidate, Index: index))
+            .FirstOrDefault(item => CandidateIsKind(item.Candidate, "sui")
+                && item.Candidate.FieldId.Equals("candleBearerTargets", StringComparison.Ordinal)
+                && CandidateCampaignIs(item.Candidate, Is6CampaignId)
+                && item.Candidate.SlotKind.Equals("clear", StringComparison.OrdinalIgnoreCase));
+        if (targetRows.Length == 0 && clearRow.Candidate is null)
+            return [];
+
+        var handled = new HashSet<int>();
+        if (targetRows.Length == 0)
+        {
+            campaign.Remove("candleBearer");
+            handled.Add(clearRow.Index);
+            applied.Add("sui:candleBearer:operators:none");
+            return handled;
+        }
+
+        var operatorIds = new JsonArray();
+        var operatorTargets = new JsonArray();
+        foreach (var operatorId in targetRows.Select(item => item.OperatorId).Distinct(StringComparer.Ordinal))
+            operatorIds.Add(operatorId);
+        foreach (var target in targetRows)
+        {
+            operatorTargets.Add(new JsonObject
+            {
+                ["operatorId"] = target.OperatorId,
+                ["instance"] = target.OperatorInstance,
+            });
+        }
+        campaign["candleBearer"] = new JsonObject
+        {
+            ["operatorIds"] = operatorIds,
+            ["operatorTargets"] = operatorTargets,
+        };
+
+        foreach (var target in targetRows)
+        {
+            handled.Add(target.Index);
+            applied.Add($"sui:candleBearer:operator:{target.OperatorId}#{target.OperatorInstance}");
+        }
+        if (clearRow.Candidate is not null)
+        {
+            handled.Add(clearRow.Index);
+            applied.Add("sui:candleBearer:operators:replace");
+        }
+        return handled;
+    }
+
     private static HashSet<int> ApplyIs6CoinCandidates(
         JsonObject state,
         IReadOnlyList<MaaCandidatePreview> candidates,
@@ -1087,59 +1184,6 @@ public static class RhodesRecognitionCandidateApplier
         {
             handled.Add(row.Index);
             applied.Add($"sui:seasonalHourTargets:{row.Target}");
-        }
-        return handled;
-    }
-
-    private static HashSet<int> ApplyIs6SupportMartialCandidates(
-        JsonObject state,
-        IReadOnlyList<MaaCandidatePreview> candidates,
-        ICollection<string> applied)
-    {
-        var run = EnsureObject(state, "run");
-        if (!JsonString(run, "campaignId").Equals(Is6CampaignId, StringComparison.Ordinal))
-            return [];
-
-        var campaign = EnsureCampaignSpecialFromRun(run, Is6CampaignId);
-        if (campaign is null)
-            return [];
-
-        var clearRows = candidates
-            .Select((candidate, index) => (Candidate: candidate, Index: index))
-            .Where(item => CandidateIsKind(item.Candidate, "sui")
-                && CandidateCampaignIs(item.Candidate, Is6CampaignId)
-                && item.Candidate.FieldId.Equals("supportMartial", StringComparison.Ordinal)
-                && item.Candidate.SlotKind.Equals("clear", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        var rows = candidates
-            .Select((candidate, index) => (
-                Candidate: candidate,
-                Index: index,
-                Value: CandidateId(candidate.EffectId, candidate.Value)))
-            .Where(item => CandidateIsKind(item.Candidate, "sui")
-                && CandidateCampaignIs(item.Candidate, Is6CampaignId)
-                && item.Candidate.FieldId.Equals("supportMartial", StringComparison.Ordinal)
-                && !item.Candidate.SlotKind.Equals("clear", StringComparison.OrdinalIgnoreCase)
-                && !string.IsNullOrWhiteSpace(item.Value))
-            .ToArray();
-        if (clearRows.Length == 0 && rows.Length == 0)
-            return [];
-
-        var values = new JsonArray();
-        foreach (var value in rows.Select(item => item.Value).Distinct(StringComparer.Ordinal))
-            values.Add(value);
-        campaign["supportMartial"] = values;
-
-        var handled = new HashSet<int>();
-        foreach (var clearRow in clearRows)
-        {
-            handled.Add(clearRow.Index);
-            applied.Add("sui:supportMartial:clear");
-        }
-        foreach (var row in rows)
-        {
-            handled.Add(row.Index);
-            applied.Add($"sui:supportMartial:{row.Value}");
         }
         return handled;
     }

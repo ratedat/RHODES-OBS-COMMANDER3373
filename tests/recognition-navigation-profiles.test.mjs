@@ -458,8 +458,8 @@ test("Sui held coin scan opens and closes the coin box with a randomized tap are
   const closer = (profile.restoreSteps || []).find((step) => step.type === "tap");
 
   assert.deepEqual(profile.targetScreenIds, ["sui-coin-list"]);
-  assert.deepEqual(opener?.point, { x: 744, y: 678 });
-  assert.deepEqual(opener?.area, { x: 704, y: 650, width: 82, height: 58 });
+  assert.deepEqual(opener?.point, { x: 747, y: 684 });
+  assert.deepEqual(opener?.area, { x: 710, y: 664, width: 75, height: 40 });
   assert.deepEqual(closer?.point, opener?.point);
   assert.deepEqual(closer?.area, opener?.area);
   assert.equal(profile.scrollPasses.length, 2);
