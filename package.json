@@ -10,6 +10,7 @@
     "test": "node --test tests/*.test.mjs",
     "dev": "node app/server.mjs",
     "dev:5174": "node app/server.mjs --port 5174",
+    "tournament:relay": "node services/tournament-relay/server.mjs",
     "suki:build": "dotnet build apps/rhodes-suki/RhodesSuki.csproj",
     "suki:test": "dotnet run --project tests/rhodes-suki/RhodesSuki.ServiceTests.csproj",
     "suki:run": "dotnet run --project apps/rhodes-suki/RhodesSuki.csproj",

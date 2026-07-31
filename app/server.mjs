@@ -23,6 +23,8 @@ import { createAdbAdapter, detectAdbConnections } from "./recognition/adapters/a
 import { detectWindowsHypervisor } from "./domain/system-diagnostics.js";
 import { createGlmOcrRuntimeManager } from "./domain/glm-ocr-runtime.js";
 import { createOllamaRuntimeManager } from "./domain/ollama-runtime.js";
+import { createTournamentRemoteHost } from "./domain/tournament-remote-host.js";
+import { createTournamentQuickPublishManager } from "./domain/tournament-quick-publish.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -468,6 +470,15 @@ function sendText(res, status, text) {
   res.end(text);
 }
 
+async function syncTournamentRemoteBestEffort(host) {
+  if (!host?.status?.().active) return;
+  try {
+    await host.sync();
+  } catch (error) {
+    console.error(`[tournament-remote] snapshot sync failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 async function readBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
@@ -512,8 +523,21 @@ export function createAppServer({
   hypervisorDetector = detectWindowsHypervisor,
   glmOcrRuntimeManager = createGlmOcrRuntimeManager({ stateDir: STATE_DIR }),
   ollamaRuntimeManager = createOllamaRuntimeManager({ stateDir: STATE_DIR }),
+  tournamentRemoteHost = createTournamentRemoteHost({
+    getState: ensureState,
+    getMaster: masterData,
+    saveState: async (state) => {
+      const normalized = normalizeState(state);
+      await writeJsonAtomic(CURRENT_STATE, normalized);
+      return normalized;
+    },
+  }),
+  tournamentQuickPublishManager = createTournamentQuickPublishManager({
+    runtimeRoot: path.join(ROOT, "cloudflared-runtime"),
+    remoteHost: tournamentRemoteHost,
+  }),
 } = {}) {
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
@@ -532,6 +556,7 @@ export function createAppServer({
     if (req.method === "PUT" && url.pathname === "/api/state") {
       const state = normalizeState(JSON.parse(await readBody(req)));
       await writeJsonAtomic(CURRENT_STATE, state);
+      void syncTournamentRemoteBestEffort(tournamentRemoteHost);
       return sendJson(res, 200, state);
     }
 
@@ -539,7 +564,62 @@ export function createAppServer({
       const previousState = await ensureState().catch(() => null);
       const state = normalizeState(preserveLocalConfigOnReset(initialStateFromExample(await readJson(EXAMPLE_STATE)), previousState));
       await writeJsonAtomic(CURRENT_STATE, state);
+      void syncTournamentRemoteBestEffort(tournamentRemoteHost);
       return sendJson(res, 200, state);
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/tournament/remote/status") {
+      return sendJson(res, 200, tournamentRemoteHost.status());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/tournament/remote/start") {
+      const bodyText = await readBody(req);
+      const body = bodyText ? JSON.parse(bodyText) : {};
+      const quickStatus = await tournamentQuickPublishManager.status();
+      if (quickStatus.active || quickStatus.starting || quickStatus.localRelayUrl) {
+        await tournamentQuickPublishManager.stop();
+      }
+      return sendJson(res, 201, await tournamentRemoteHost.start({
+        relayUrl: body.relayUrl,
+        playerLabel: body.playerLabel,
+        adminToken: body.adminToken,
+      }));
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/tournament/remote/sync") {
+      return sendJson(res, 200, await tournamentRemoteHost.sync());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/tournament/remote/stop") {
+      const quickStatus = await tournamentQuickPublishManager.status();
+      if (quickStatus.active || quickStatus.starting || quickStatus.localRelayUrl) {
+        return sendJson(res, 200, await tournamentQuickPublishManager.stop().then((status) => status.remote));
+      }
+      return sendJson(res, 200, await tournamentRemoteHost.stop());
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/tournament/quick/status") {
+      return sendJson(res, 200, await tournamentQuickPublishManager.status());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/tournament/quick/install") {
+      return sendJson(res, 200, await tournamentQuickPublishManager.install());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/tournament/quick/start") {
+      const bodyText = await readBody(req);
+      const body = bodyText ? JSON.parse(bodyText) : {};
+      return sendJson(res, 201, await tournamentQuickPublishManager.start({
+        playerLabel: body.playerLabel,
+      }));
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/tournament/quick/stop") {
+      return sendJson(res, 200, await tournamentQuickPublishManager.stop());
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/tournament/quick/uninstall") {
+      return sendJson(res, 200, await tournamentQuickPublishManager.uninstall());
     }
 
 
@@ -669,10 +749,14 @@ export function createAppServer({
     });
   }
   });
+  server.once("close", () => {
+    tournamentQuickPublishManager.stop().catch(() => {});
+  });
+  return server;
 }
 
-export function startServer({ port = PORT, host = "127.0.0.1", adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, ollamaRuntimeManager } = {}) {
-  const server = createAppServer({ adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, ollamaRuntimeManager });
+export function startServer({ port = PORT, host = "127.0.0.1", adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, ollamaRuntimeManager, tournamentRemoteHost, tournamentQuickPublishManager } = {}) {
+  const server = createAppServer({ adbDetector, adbTester, adbPathPicker, hypervisorDetector, glmOcrRuntimeManager, ollamaRuntimeManager, tournamentRemoteHost, tournamentQuickPublishManager });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {

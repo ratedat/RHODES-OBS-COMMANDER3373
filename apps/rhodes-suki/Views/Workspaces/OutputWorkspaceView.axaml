@@ -91,6 +91,116 @@
       </Grid>
     </Border>
 
+    <Border Classes="appleCard">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="10">
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+          <StackPanel Spacing="2">
+            <TextBlock Text="大会入力（簡易公開）" Classes="h2" />
+            <TextBlock Text="3373が入力画面の一時公開と中継を管理します。入力担当者へURLと入力コードだけを共有してください。"
+                       Classes="caption" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="primary" Content="簡易公開を開始"
+                  Command="{Binding StartTournamentQuickCommand}" />
+          <Button Grid.Column="2" Content="状態確認"
+                  Command="{Binding RefreshTournamentQuickCommand}" />
+          <Button Grid.Column="3" Content="停止"
+                  Command="{Binding StopTournamentQuickCommand}" />
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <StackPanel Spacing="4">
+            <TextBlock Text="プレイヤー表示名" FontSize="12" FontWeight="SemiBold" />
+            <TextBox Text="{Binding TournamentPlayerLabel, Mode=TwoWay}"
+                     PlaceholderText="Player" />
+          </StackPanel>
+          <Button Grid.Column="1" VerticalAlignment="Bottom" Content="簡易公開ランタイムを削除"
+                  Command="{Binding UninstallTournamentQuickCommand}" />
+        </Grid>
+
+        <Border Grid.Row="2" Background="#101617" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="10">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <StackPanel>
+              <TextBlock Text="{Binding TournamentQuickState}" FontSize="13" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding TournamentQuickPublicUrl}"
+                         Classes="mono" FontSize="11" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Text="{Binding TournamentQuickDetail}"
+                       Classes="caption" TextWrapping="Wrap" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+              <TextBlock Text="入力コード" Classes="caption" />
+              <SelectableTextBlock Text="{Binding TournamentRemoteEditorCode}"
+                                   FontFamily="Consolas" FontSize="15" FontWeight="SemiBold" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="3" ColumnDefinitions="150,*,Auto,Auto" ColumnSpacing="10">
+          <TextBlock Text="入力担当者URL" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <SelectableTextBlock Grid.Column="1" Text="{Binding TournamentRemoteInputUrl}"
+                               FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Content="URLコピー"
+                  CommandParameter="{Binding TournamentRemoteInputUrl}"
+                  Click="CopyUrlClick" />
+          <Button Grid.Column="3" Content="入力画面を開く"
+                  Command="{Binding OpenTournamentRemoteInputCommand}" />
+        </Grid>
+
+        <TextBlock Grid.Row="4" Classes="caption" TextWrapping="Wrap"
+                   Text="公開デバッグ版には必要なNode.jsとcloudflaredを同梱しています。OCRモデル、インストーラー、管理者権限は不要です。一時URLは停止または3373終了後に失効します。Cloudflareへの通信が遮断された場合は、停止した段階と詳細をここに表示します。" />
+      </Grid>
+    </Border>
+
+    <Expander Header="外部中継サーバー（上級者向け）" IsExpanded="False">
+      <Border Classes="appleCard" Margin="0,8,0,0">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+          <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="手動Relay接続" Classes="h2" />
+              <TextBlock Text="常設URLや独自インフラが必要な場合だけ使用します。通常は上の簡易公開を使用してください。"
+                         Classes="caption" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="primary" Content="開始"
+                    Command="{Binding StartTournamentRemoteCommand}" />
+            <Button Grid.Column="2" Content="現在値を同期"
+                    Command="{Binding SyncTournamentRemoteCommand}" />
+            <Button Grid.Column="3" Content="状態確認"
+                    Command="{Binding RefreshTournamentRemoteCommand}" />
+            <Button Grid.Column="4" Content="停止"
+                    Command="{Binding StopTournamentRemoteCommand}" />
+          </Grid>
+
+          <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Relay URL" FontSize="12" FontWeight="SemiBold" />
+              <TextBox Text="{Binding TournamentRelayUrl, Mode=TwoWay}"
+                       PlaceholderText="https://relay.example.com" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="4">
+              <TextBlock Text="Relay管理トークン" FontSize="12" FontWeight="SemiBold" />
+              <TextBox Text="{Binding TournamentAdminToken, Mode=TwoWay}"
+                       PasswordChar="●"
+                       PlaceholderText="開始時だけ入力" />
+            </StackPanel>
+          </Grid>
+
+          <Border Grid.Row="2" Background="#101617" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="10">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <StackPanel>
+                <TextBlock Text="{Binding TournamentRemoteState}" FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding TournamentRemoteSessionId, StringFormat='session: {0}'}"
+                           Classes="mono" FontSize="11" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="{Binding TournamentRemoteDetail}"
+                         Classes="caption" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+
+          <TextBlock Grid.Row="3" Classes="caption" TextWrapping="Wrap"
+                     Text="管理トークンは開始要求にだけ使用し、設定ファイルへ保存しません。中継サーバーはHTTPSと管理認証を必須にしてください。" />
+        </Grid>
+      </Border>
+    </Expander>
+
     <!-- HUD (本人用透過小窓): 表示する内容をここで選ぶ -->
     <Expander Header="本人用HUD" IsExpanded="False">
     <Border Classes="appleCard" Margin="0,8,0,0">

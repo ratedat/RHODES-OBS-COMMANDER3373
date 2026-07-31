@@ -107,6 +107,9 @@ public static class RhodesMaaLocalCandidateConverter
         else if (string.Equals(profileId, "is4RevelationFull", StringComparison.Ordinal))
             candidates = RevelationCandidates(taskResults);
 
+        else if (string.Equals(profileId, "is4ParadigmLost", StringComparison.Ordinal))
+            candidates = SamiParadigmLostCandidates(taskResults);
+
         else if (string.Equals(profileId, "is6BaseFull", StringComparison.Ordinal))
             candidates = BestRunStatusCandidates(RunStatusCandidates(taskResults, "is6_sui"));
 
@@ -148,6 +151,7 @@ public static class RhodesMaaLocalCandidateConverter
                 ? SuiCandleBearerCardCandidates(results)
                 : [])
             .Concat(RevelationCandidates(results))
+            .Concat(SamiParadigmLostCandidates(results))
             .Concat(CoinCandidates(results, "activeCoins"))
             .Concat(CoinCandidates(results, "coins"))
             .Concat(SuiSeasonalHourCandidates(results));
@@ -2304,31 +2308,184 @@ public static class RhodesMaaLocalCandidateConverter
 
         foreach (var taskResult in taskResults)
         {
-            if (!taskResult.Succeeded || !IsRevelationNameEntry(taskResult.Entry))
+            if (!taskResult.Succeeded
+                || !IsRevelationNameEntry(taskResult.Entry)
+                || IsFarSightRevelationEntry(taskResult.Entry))
+                continue;
+
+            var recognized = new List<(SelectableEffectCandidate Effect, string SlotKind, OcrTextResult Result, string Raw)>();
+            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
+            {
+                foreach (var token in RevelationChoiceNameTokens(textResult.Text, byNormalizedName))
+                {
+                    var normalized = RevelationOcrAlias(token.Normalized);
+                    if (!byNormalizedName.TryGetValue(normalized, out var matched))
+                        continue;
+                    recognized.Add((matched.Effect, matched.SlotKind, textResult, token.Raw));
+                }
+            }
+
+            var states = recognized
+                .Where(item => item.SlotKind.Equals("rhetoric", StringComparison.Ordinal))
+                .Select((item, index) => new
+                {
+                    Item = item,
+                    Index = index,
+                    TargetSlot = RevelationRhetoricTargetSlot(item.Effect.Effect),
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item.TargetSlot))
+                .ToArray();
+            var usedStateIndexes = new HashSet<int>();
+            var isCardScopedRow = taskResult.Entry.Contains(".row_", StringComparison.Ordinal);
+
+            foreach (var item in recognized.Where(item => item.SlotKind is "cause" or "structure"))
+            {
+                var state = states
+                    .Where(candidate => !usedStateIndexes.Contains(candidate.Index))
+                    .Where(candidate => candidate.TargetSlot.Equals(item.SlotKind, StringComparison.Ordinal))
+                    .Where(candidate => isCardScopedRow || IsSameRevelationCard(item.Result, candidate.Item.Result))
+                    .OrderBy(candidate => RevelationRowDistance(item.Result, candidate.Item.Result))
+                    .ThenByDescending(candidate => candidate.Item.Result.Confidence ?? 0)
+                    .FirstOrDefault();
+                if (state is not null)
+                    usedStateIndexes.Add(state.Index);
+
+                var stateId = state?.Item.Effect.Id ?? "";
+                var stateRaw = state?.Item.Raw ?? "";
+                var confidence = state is null
+                    ? item.Result.Confidence ?? 0
+                    : Math.Min(item.Result.Confidence ?? 0, state.Item.Result.Confidence ?? 0);
+                yield return new MaaCandidatePreview(
+                    "revelation",
+                    item.Effect.Name,
+                    item.Effect.Id,
+                    string.IsNullOrWhiteSpace(stateRaw) ? item.Raw : $"{item.Raw} [{stateRaw}]",
+                    Math.Max(0.68, confidence),
+                    CampaignId: item.Effect.CampaignId,
+                    RecognitionKey: $"maa-local:revelation:{item.Effect.Id}:{stateId}:{order}",
+                    FieldId: "revelation",
+                    SlotKind: item.SlotKind,
+                    EffectId: item.Effect.Id,
+                    StateId: stateId,
+                    Count: 1);
+                order++;
+            }
+        }
+    }
+
+    private static string RevelationOcrAlias(string normalized)
+    {
+        return normalized.StartsWith(NormalizeChoiceName("広域"), StringComparison.Ordinal)
+            ? NormalizeChoiceName("宏闊")
+            : normalized;
+    }
+
+    private static bool IsFarSightRevelationEntry(string entry) =>
+        entry.EndsWith(".far_sight", StringComparison.Ordinal);
+
+    private static IEnumerable<(string Raw, string Normalized)> RevelationChoiceNameTokens(
+        string value,
+        IReadOnlyDictionary<string, (SelectableEffectCandidate Effect, string SlotKind)> byNormalizedName)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var token in ChoiceNameTokens(value))
+        {
+            if (seen.Add(token.Normalized))
+                yield return token;
+        }
+
+        var whole = NormalizeChoiceName(value);
+        if (whole.Length == 1 && byNormalizedName.ContainsKey(whole) && seen.Add(whole))
+            yield return (value.Trim(), whole);
+        else if (whole.StartsWith(NormalizeChoiceName("広域"), StringComparison.Ordinal)
+                 && seen.Add(whole))
+            yield return (value.Trim(), whole);
+    }
+
+    private static bool IsSameRevelationCard(OcrTextResult item, OcrTextResult state)
+    {
+        if (item.Y < 0 || state.Y < 0)
+            return false;
+
+        var delta = RevelationRowCenter(state) - RevelationRowCenter(item);
+        return delta >= -24 && delta <= 120;
+    }
+
+    private static int RevelationRowDistance(OcrTextResult item, OcrTextResult state) =>
+        Math.Abs(RevelationRowCenter(state) - RevelationRowCenter(item));
+
+    private static int RevelationRowCenter(OcrTextResult result) =>
+        result.Y + Math.Max(0, result.Height / 2);
+
+    private static IEnumerable<MaaCandidatePreview> SamiParadigmLostCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var effects = LoadSelectableEffects()
+            .Where(effect => effect.Slot == "paradigmLost" && effect.CampaignId == "is4_sami")
+            .ToArray();
+        var byNormalizedName = effects
+            .GroupBy(effect => NormalizeChoiceName(effect.Name), StringComparer.Ordinal)
+            .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+        var matches = new List<(SelectableEffectCandidate Effect, string Raw, double Confidence, int Distance, int Order)>();
+        var order = 0;
+
+        foreach (var taskResult in taskResults)
+        {
+            if (!taskResult.Succeeded || !IsSamiParadigmLostNameEntry(taskResult.Entry))
                 continue;
 
             foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
             {
                 foreach (var token in ChoiceNameTokens(textResult.Text))
                 {
-                    if (!byNormalizedName.TryGetValue(token.Normalized, out var matched))
+                    if (byNormalizedName.TryGetValue(token.Normalized, out var exact))
+                    {
+                        matches.Add((exact, token.Raw, textResult.Confidence ?? 0, 0, order++));
+                        continue;
+                    }
+
+                    var fuzzy = effects
+                        .Select(effect => (
+                            Effect: effect,
+                            Distance: BestSubstringEditDistance(token.Normalized, NormalizeChoiceName(effect.Name))))
+                        .Where(item => item.Distance <= PerformanceDistanceThreshold(NormalizeChoiceName(item.Effect.Name).Length))
+                        .OrderBy(item => item.Distance)
+                        .ThenByDescending(item => NormalizeChoiceName(item.Effect.Name).Length)
+                        .ToArray();
+                    if (fuzzy.Length == 0 || (fuzzy.Length > 1 && fuzzy[0].Distance == fuzzy[1].Distance))
                         continue;
 
-                    yield return new MaaCandidatePreview(
-                        "revelation",
-                        matched.Effect.Name,
-                        matched.Effect.Id,
-                        token.Raw,
-                        Math.Max(0.68, textResult.Confidence ?? 0),
-                        CampaignId: matched.Effect.CampaignId,
-                        RecognitionKey: $"maa-local:revelation:{matched.Effect.Id}:{order}",
-                        FieldId: "revelation",
-                        SlotKind: matched.SlotKind,
-                        EffectId: matched.Effect.Id,
-                        Count: 1);
-                    order++;
+                    matches.Add((fuzzy[0].Effect, token.Raw, textResult.Confidence ?? 0, fuzzy[0].Distance, order++));
                 }
             }
+        }
+
+        var selected = matches
+            .GroupBy(item => string.IsNullOrWhiteSpace(item.Effect.ParentKey) ? item.Effect.Id : item.Effect.ParentKey, StringComparer.Ordinal)
+            .Select(group => group
+                .OrderBy(item => item.Distance)
+                .ThenByDescending(item => item.Confidence)
+                .ThenBy(item => item.Order)
+                .First())
+            .OrderBy(item => item.Order)
+            .ToArray();
+
+        for (var index = 0; index < selected.Length; index++)
+        {
+            var item = selected[index];
+            yield return new MaaCandidatePreview(
+                "revelation",
+                item.Effect.Name,
+                item.Effect.Id,
+                item.Raw,
+                Math.Max(0.68, item.Confidence - (item.Distance * 0.04)),
+                CampaignId: item.Effect.CampaignId,
+                RecognitionKey: $"maa-local:paradigm-lost:{item.Effect.Id}:{index}",
+                FieldId: "paradigmLost",
+                SlotKind: "paradigm",
+                EffectId: item.Effect.Id,
+                Count: 1);
         }
     }
 
@@ -2877,6 +3034,12 @@ public static class RhodesMaaLocalCandidateConverter
             || entry.Contains("is4.revelation_list_text", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsSamiParadigmLostNameEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is4_paradigm_lost_text", StringComparison.Ordinal)
+            || entry.Contains("is4.paradigm_lost_text", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsCoinNameEntry(string entry)
     {
         return entry.Equals("RhodesOcrRegion_is6_coin_list_text", StringComparison.Ordinal)
@@ -2917,6 +3080,15 @@ public static class RhodesMaaLocalCandidateConverter
             return "structure";
         if (groupLabel.Contains("修辞", StringComparison.Ordinal))
             return "rhetoric";
+        return "";
+    }
+
+    private static string RevelationRhetoricTargetSlot(string effect)
+    {
+        if (effect.Contains("本因", StringComparison.Ordinal))
+            return "cause";
+        if (effect.Contains("構成", StringComparison.Ordinal))
+            return "structure";
         return "";
     }
 
@@ -3267,20 +3439,28 @@ public static class RhodesMaaLocalCandidateConverter
     {
         var raw = value.Trim();
         var normalized = NormalizeDigits(value, allowRoman: true);
-        if (maximum == 18
+        var supportsNarrowLeadingOne = maximum is >= 10 and <= 19;
+        var maximumUnits = maximum - 10;
+        if (supportsNarrowLeadingOne
             && normalized.Length == 1
             && raw.StartsWith('^')
-            && normalized[0] is >= '0' and <= '8')
+            && normalized[0] is >= '0' and <= '9'
+            && normalized[0] - '0' <= maximumUnits)
         {
             normalized = $"1{normalized}";
         }
         if (!int.TryParse(normalized, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
             return null;
 
-        // Difficulty-18 themes can render the narrow leading 1 as 7,
-        // so repair only the otherwise impossible two-digit 70-78 range.
-        if (maximum == 18 && normalized.Length == 2 && number is >= 70 and <= 78)
+        // Some themes render the narrow leading 1 as 7. Repair only the
+        // otherwise impossible 70-7N range allowed by the campaign maximum.
+        if (supportsNarrowLeadingOne
+            && normalized.Length == 2
+            && number >= 70
+            && number <= 70 + maximumUnits)
+        {
             return number - 60;
+        }
 
         return number;
     }

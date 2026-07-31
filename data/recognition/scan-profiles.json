@@ -12,7 +12,8 @@
       "ocrRegionIds": [
         "run.ingot",
         "run.squad_card",
-        "run.squad_name"
+        "run.squad_name",
+        "run.difficulty_grade"
       ],
       "templateOcrRegions": [
         {
@@ -772,83 +773,198 @@
         "run-home",
         "sami-revelation-list"
       ],
-      "openSteps": [],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 809,
+            "y": 657
+          },
+          "label": "啓示板を開く",
+          "area": {
+            "x": 760,
+            "y": 635,
+            "width": 100,
+            "height": 70
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 300,
+          "label": "啓示板の表示待ち"
+        }
+      ],
       "scanRegion": {
-        "x": 90,
-        "y": 84,
-        "width": 1100,
-        "height": 540
+        "x": 15,
+        "y": 75,
+        "width": 405,
+        "height": 555
       },
       "scrollAxis": "vertical",
       "scrollDirection": "two-way",
-      "restoreSteps": [],
-      "maxScrolls": 16,
+      "restoreSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 43,
+            "y": 35
+          },
+          "label": "啓示板を閉じる",
+          "area": {
+            "x": 24,
+            "y": 14,
+            "width": 55,
+            "height": 46
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 300,
+          "label": "啓示板を閉じる待ち"
+        }
+      ],
+      "maxScrolls": 12,
       "endFingerprintStableCount": 2,
       "captureDelayMs": 160,
       "scrollPasses": [
         {
           "axis": "vertical",
           "direction": "down",
-          "label": "左レール下端方向スキャン",
+          "label": "啓示板左ペイン下端方向スキャン",
           "scroll": {
             "start": {
-              "x": 24,
-              "y": 610
+              "x": 250,
+              "y": 530
             },
             "end": {
-              "x": 24,
-              "y": 150
+              "x": 250,
+              "y": 185
             },
             "startArea": {
-              "x": 12,
-              "y": 550,
-              "width": 28,
-              "height": 70
+              "x": 160,
+              "y": 485,
+              "width": 180,
+              "height": 80
             },
             "endArea": {
-              "x": 12,
-              "y": 78,
-              "width": 28,
-              "height": 90
+              "x": 160,
+              "y": 145,
+              "width": 180,
+              "height": 80
             },
-            "durationMs": 650
+            "durationMs": 600
           },
-          "maxScrolls": 16,
+          "maxScrolls": 12,
           "endFingerprintStableCount": 2,
           "captureDelayMs": 160
         },
         {
           "axis": "vertical",
           "direction": "up",
-          "label": "左レール上端方向スキャン",
+          "label": "啓示板左ペイン上端方向スキャン",
           "scroll": {
             "start": {
-              "x": 24,
-              "y": 150
+              "x": 250,
+              "y": 185
             },
             "end": {
-              "x": 24,
-              "y": 610
+              "x": 250,
+              "y": 530
             },
             "startArea": {
-              "x": 12,
-              "y": 78,
-              "width": 28,
-              "height": 90
+              "x": 160,
+              "y": 145,
+              "width": 180,
+              "height": 80
             },
             "endArea": {
-              "x": 12,
-              "y": 550,
-              "width": 28,
-              "height": 70
+              "x": 160,
+              "y": 485,
+              "width": 180,
+              "height": 80
             },
-            "durationMs": 650
+            "durationMs": 600
           },
-          "maxScrolls": 16,
+          "maxScrolls": 12,
           "endFingerprintStableCount": 2,
           "captureDelayMs": 160
         }
       ]
+    },
+    {
+      "id": "is4ParadigmLost",
+      "label": "パラダイムロストスキャン",
+      "interfaceLabel": "パラダイムロスト",
+      "interfaceDescription": "IS#4で発動中のパラダイムロストを取得します。",
+      "campaignId": "is4_sami",
+      "candidateKind": "revelation",
+      "ocrEngine": "maa-ocr",
+      "baseResolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "knownScreenIds": [
+        "run-home",
+        "sami-paradigm-lost-detail"
+      ],
+      "openSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 646,
+            "y": 58
+          },
+          "label": "パラダイムロスト詳細を開く",
+          "area": {
+            "x": 610,
+            "y": 40,
+            "width": 72,
+            "height": 38
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 450,
+          "label": "パラダイムロスト詳細の表示待ち"
+        }
+      ],
+      "targetScreenIds": [
+        "sami-paradigm-lost-detail"
+      ],
+      "inferredScreenId": "sami-paradigm-lost-detail",
+      "scanRegion": {
+        "x": 335,
+        "y": 95,
+        "width": 655,
+        "height": 380
+      },
+      "scrollAxis": "none",
+      "scrollDirection": "none",
+      "restoreSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 646,
+            "y": 58
+          },
+          "label": "パラダイムロスト詳細を閉じる",
+          "area": {
+            "x": 610,
+            "y": 40,
+            "width": 72,
+            "height": 38
+          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 300,
+          "label": "パラダイムロスト詳細を閉じる待ち"
+        }
+      ],
+      "maxScrolls": 0,
+      "endFingerprintStableCount": 1,
+      "captureDelayMs": 120,
+      "navigationNote": "サーミのマップ上部中央にある崩壊値・パラダイム表示をタップし、詳細パネル内の名称をOCRする。同一系列では上位名称を優先し、複数系列はすべて保持する。"
     },
     {
       "id": "is5ThoughtFull",

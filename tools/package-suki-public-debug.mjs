@@ -7,12 +7,25 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const portableRoot = path.join(repoRoot, "outputs", "suki-portable");
 const releaseRoot = path.join(repoRoot, "outputs", "release");
+const nodeRuntime = {
+  version: "24.18.0",
+  distributionDirectory: "node-v24.18.0-win-x64",
+  archiveUrl: "https://nodejs.org/dist/v24.18.0/node-v24.18.0-win-x64.zip",
+  archiveSha256: "0ae68406b42d7725661da979b1403ec9926da205c6770827f33aac9d8f26e821",
+  maxBytes: 96 * 1024 * 1024,
+};
+const cloudflaredRuntime = {
+  version: "2026.7.2",
+  executableUrl:
+    "https://github.com/cloudflare/cloudflared/releases/download/2026.7.2/cloudflared-windows-amd64.exe",
+  executableSha256: "cdb5d4432f6ae1595654a692a51308b69d2bf7af961f5578d9391837cf072df9",
+  maxBytes: 80 * 1024 * 1024,
+};
 const excludedPortableEntries = new Set([
   "user-data",
   "RHODES OBS COMMANDER3373 Debug Logs",
   "glm-ocr-runtime",
   "ollama-runtime",
-  "nodejs-runtime",
 ]);
 
 function run(command, args, options = {}) {
@@ -59,8 +72,108 @@ async function copyPortablePayload(targetRoot) {
   });
 }
 
+async function downloadVerified(url, expectedSha256, targetPath, maxBytes) {
+  const response = await fetch(url, {
+    headers: { "user-agent": "RHODES-OBS-COMMANDER3373-public-debug-packager" },
+    redirect: "follow",
+  });
+  if (!response.ok) {
+    throw new Error(`公開用ランタイムの取得に失敗しました (HTTP ${response.status}): ${url}`);
+  }
+
+  const declaredLength = Number(response.headers.get("content-length") || 0);
+  if (declaredLength > maxBytes) {
+    throw new Error(`公開用ランタイムがサイズ上限を超えています: ${url}`);
+  }
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > maxBytes) {
+    throw new Error(`公開用ランタイムの内容またはサイズが不正です: ${url}`);
+  }
+
+  const actualSha256 = createHash("sha256").update(bytes).digest("hex");
+  if (actualSha256 !== expectedSha256.toLowerCase()) {
+    throw new Error(`公開用ランタイムのSHA-256検証に失敗しました: ${url}`);
+  }
+
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  await fs.writeFile(targetPath, bytes);
+}
+
+async function ensureBundledNodeRuntime(targetRoot) {
+  const runtimeRoot = path.join(targetRoot, "nodejs-runtime");
+  const installRoot = path.join(runtimeRoot, nodeRuntime.distributionDirectory);
+  const executablePath = path.join(installRoot, "node.exe");
+  try {
+    const version = run(executablePath, ["--version"], { capture: true });
+    if (version === `v${nodeRuntime.version}`) return;
+  } catch {
+    // Missing or mismatched runtimes are replaced from the pinned official archive.
+  }
+
+  const archivePath = path.join(runtimeRoot, ".node-runtime.zip");
+  await fs.rm(installRoot, { recursive: true, force: true });
+  await fs.rm(archivePath, { force: true });
+  try {
+    console.log(`Bundling Node.js v${nodeRuntime.version} for one-click publishing...`);
+    await downloadVerified(
+      nodeRuntime.archiveUrl,
+      nodeRuntime.archiveSha256,
+      archivePath,
+      nodeRuntime.maxBytes,
+    );
+    await fs.mkdir(runtimeRoot, { recursive: true });
+    run("tar.exe", [
+      "-xf",
+      archivePath,
+      "-C",
+      runtimeRoot,
+      `${nodeRuntime.distributionDirectory}/node.exe`,
+      `${nodeRuntime.distributionDirectory}/LICENSE`,
+    ]);
+    await fs.access(executablePath);
+    const version = run(executablePath, ["--version"], { capture: true });
+    if (version !== `v${nodeRuntime.version}`) {
+      throw new Error(`同梱Node.jsのバージョンが一致しません: ${version || "unknown"}`);
+    }
+  } finally {
+    await fs.rm(archivePath, { force: true });
+  }
+}
+
+async function ensureBundledCloudflaredRuntime(targetRoot) {
+  const executablePath = path.join(targetRoot, "cloudflared-runtime", "cloudflared.exe");
+  try {
+    if ((await sha256(executablePath)).toLowerCase() === cloudflaredRuntime.executableSha256) return;
+  } catch {
+    // Missing or mismatched runtimes are replaced below.
+  }
+
+  const temporaryPath = `${executablePath}.download`;
+  await fs.rm(executablePath, { force: true });
+  await fs.rm(temporaryPath, { force: true });
+  try {
+    console.log(`Bundling cloudflared v${cloudflaredRuntime.version} for one-click publishing...`);
+    await downloadVerified(
+      cloudflaredRuntime.executableUrl,
+      cloudflaredRuntime.executableSha256,
+      temporaryPath,
+      cloudflaredRuntime.maxBytes,
+    );
+    await fs.rename(temporaryPath, executablePath);
+  } finally {
+    await fs.rm(temporaryPath, { force: true });
+  }
+}
+
+async function ensureBundledPublicRuntime(targetRoot) {
+  await ensureBundledNodeRuntime(targetRoot);
+  await ensureBundledCloudflaredRuntime(targetRoot);
+}
+
 async function addWebOverlayRuntime(targetRoot) {
   await fs.cp(path.join(repoRoot, "app"), path.join(targetRoot, "app"), { recursive: true });
+  await fs.cp(path.join(repoRoot, "services"), path.join(targetRoot, "services"), { recursive: true });
   await copyFile(path.join(repoRoot, "package.json"), path.join(targetRoot, "package.json"));
   await copyFile(
     path.join(repoRoot, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json"),
@@ -77,6 +190,7 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
     ["docs/discord-public-debug-guide.md", "docs/discord-public-debug-guide.md"],
     ["docs/discord-public-debug-guide.md", "DISCORD_USAGE.md"],
     ["docs/sarkaz-test-guide.md", "docs/sarkaz-test-guide.md"],
+    ["docs/tournament-remote-input.md", "docs/tournament-remote-input.md"],
   ];
   for (const [source, target] of copies) {
     await copyFile(path.join(repoRoot, source), path.join(targetRoot, target));
@@ -100,9 +214,9 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
 
 ## OBS Overlay / Sidecar
 
-OBS出力を使う場合は「出力」画面の「Node.js導入」から管理版Node.jsを任意導入できます。インストーラーや管理者権限は不要です。
-導入後に配信サーバーを起動し、Overlay URLまたは部品別URLの「コピー」からOBSブラウザソースへ追加します。PATH上にNode.jsがある場合はそのまま利用できます。
-Web表示ソースは配布内の \`app/server.mjs\` に同梱しています。ADB/OCR検証だけならNode.jsは不要です。
+OBS出力と大会入力の簡易公開に必要なNode.jsとcloudflaredは検証済みのものを同梱しています。
+インストーラー、管理者権限、OCRモデルの導入は不要です。「出力」画面から配信サーバーまたは「簡易公開を開始」を実行してください。
+セキュリティ製品やネットワークがCloudflareへの通信を遮断した場合は、画面に表示される失敗段階と詳細を報告ZIPへ添付してください。
 
 ## 対象と制約
 
@@ -207,6 +321,7 @@ await fs.mkdir(releaseRoot, { recursive: true });
 await fs.rm(packageRoot, { recursive: true, force: true });
 await fs.rm(zipPath, { force: true });
 await copyPortablePayload(packageRoot);
+await ensureBundledPublicRuntime(packageRoot);
 await addWebOverlayRuntime(packageRoot);
 await resetPublicState(packageRoot);
 await writeDistributionProfile(packageRoot);

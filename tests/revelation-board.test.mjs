@@ -97,6 +97,22 @@ test("revelation board migrates old stack entries without losing rhetoric effect
   ]);
 });
 
+test("revelation board accepts the paired Avalonia entry shape", () => {
+  const value = normalizeRevelationBoardValue(field, "is4_sami", {
+    entries: [
+      { effectId: "structure-a", stateId: "rhetoric-b", slotKind: "structure", count: 1 },
+      { effectId: "cause-a", stateId: "rhetoric-a", slotKind: "cause", count: 1 },
+    ],
+  }, selectableEffectSource);
+
+  assert.equal(value.causeId, "cause-a");
+  assert.equal(value.structureId, "structure-a");
+  assert.deepEqual(value.rhetorics, [
+    { effectId: "rhetoric-b", count: 1 },
+    { effectId: "rhetoric-a", count: 1 },
+  ]);
+});
+
 test("revelation board selected effects include rhetoric effects as their own entries", () => {
   const effects = getSelectedSpecialEffectsForField(field, {
     revelation: {
@@ -107,9 +123,31 @@ test("revelation board selected effects include rhetoric effects as their own en
   }, context);
 
   assert.deepEqual(effects.map((item) => [item.slotLabel, item.name, item.effect]), [
-    ["啓示板 本因", "本因A", "本因の効果"],
     ["啓示板 構成", "構成A", "構成の効果"],
+    ["啓示板 本因", "本因A", "本因の効果"],
     ["啓示板 修辞", "修辞A x2", "修辞Aの効果"],
+  ]);
+});
+
+test("paired revelation entries are grouped into structure and cause overlays", () => {
+  const value = {
+    entries: [
+      { effectId: "cause-a", stateId: "rhetoric-a", slotKind: "cause", count: 1 },
+      { effectId: "structure-a", stateId: "rhetoric-b", slotKind: "structure", count: 2 },
+    ],
+  };
+  const effects = getSelectedSpecialEffectsForField(field, { revelation: value }, context);
+
+  assert.equal(formatRevelationBoardValue(field, value, context), "構成2件 / 本因1件");
+  assert.deepEqual(effects.map((item) => [
+    item.overlayGroupLabel,
+    item.slotLabel,
+    item.name,
+    item.quantity,
+    item.effect,
+  ]), [
+    ["啓示板・構成", "啓示板 構成", "構成A [修辞B]", 2, "構成の効果 / 修辞 修辞B: 修辞Bの効果"],
+    ["啓示板・本因", "啓示板 本因", "本因A [修辞A]", 1, "本因の効果 / 修辞 修辞A: 修辞Aの効果"],
   ]);
 });
 

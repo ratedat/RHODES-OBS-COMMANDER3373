@@ -98,7 +98,35 @@ export function formatEffectStackValue(field, value, context) {
   return `${total}${unit} / ${entries.length}枠`;
 }
 
+function asPairedRevelationEntries(value) {
+  const source = Array.isArray(value) ? value : asSpecialObject(value).entries;
+  if (!Array.isArray(source)) return [];
+  return source.map((rawEntry) => {
+    const entry = asSpecialObject(rawEntry);
+    const slotKind = String(entry.slotKind || "").trim().toLowerCase();
+    return {
+      effectId: String(entry.effectId || entry.id || "").trim(),
+      stateId: String(entry.stateId || entry.state || "").trim(),
+      slotKind,
+      count: clampCoinCount(entry.count),
+    };
+  }).filter((entry) => entry.effectId && (entry.slotKind === "structure" || entry.slotKind === "cause"));
+}
+
 export function formatRevelationBoardValue(field, value, context) {
+  const entries = asPairedRevelationEntries(value);
+  if (entries.length) {
+    const structureCount = entries
+      .filter((entry) => entry.slotKind === "structure")
+      .reduce((sum, entry) => sum + entry.count, 0);
+    const causeCount = entries
+      .filter((entry) => entry.slotKind === "cause")
+      .reduce((sum, entry) => sum + entry.count, 0);
+    return [
+      structureCount ? `構成${structureCount}件` : "",
+      causeCount ? `本因${causeCount}件` : "",
+    ].filter(Boolean).join(" / ");
+  }
   const board = normalizeRevelationBoardValue(field, context.campaignId, value, context.selectableEffectSource);
   const cause = getSelectableEffect(context, board.causeId);
   const structure = getSelectableEffect(context, board.structureId);
@@ -247,19 +275,64 @@ export function getSelectedSpecialEffectsForField(field, special, context) {
       });
     }
   } else if (field.type === "revelationBoardLoadout") {
-    const board = normalizeRevelationBoardValue(field, context.campaignId, special[field.id], context.selectableEffectSource);
-    const cause = getSelectableEffect(context, board.causeId);
-    if (cause) effects.push({ ...cause, slotLabel: `${field.label || cause.slotLabel} 本因` });
-    const structure = getSelectableEffect(context, board.structureId);
-    if (structure) effects.push({ ...structure, slotLabel: `${field.label || structure.slotLabel} 構成` });
-    for (const entry of board.rhetorics) {
-      const item = getSelectableEffect(context, entry.effectId);
-      if (!item) continue;
-      effects.push({
-        ...item,
-        slotLabel: `${field.label || item.slotLabel} 修辞`,
-        name: `${item.name} x${entry.count}`,
+    const entries = asPairedRevelationEntries(special[field.id]);
+    if (entries.length) {
+      const orderedEntries = [...entries].sort((left, right) => {
+        const order = { structure: 0, cause: 1 };
+        return order[left.slotKind] - order[right.slotKind];
       });
+      for (const entry of orderedEntries) {
+        const item = getSelectableEffect(context, entry.effectId);
+        if (!item) continue;
+        const rhetoric = entry.stateId ? getSelectableEffect(context, entry.stateId) : null;
+        const groupLabel = entry.slotKind === "structure" ? "構成" : "本因";
+        const effectParts = [
+          item.effect,
+          rhetoric?.effect ? `修辞 ${rhetoric.name}: ${rhetoric.effect}` : "",
+        ].filter(Boolean);
+        effects.push({
+          ...item,
+          groupLabel,
+          slotLabel: `${field.label || item.slotLabel} ${groupLabel}`,
+          name: `${item.name}${rhetoric ? ` [${rhetoric.name}]` : ""}`,
+          quantity: entry.count,
+          overlayGroupId: `${field.id}-${entry.slotKind}`,
+          overlayGroupLabel: `${field.label || "啓示板"}・${groupLabel}`,
+          overlayGroupUnit: "件",
+          effect: effectParts.join(" / "),
+        });
+      }
+    } else {
+      const board = normalizeRevelationBoardValue(field, context.campaignId, special[field.id], context.selectableEffectSource);
+      const structure = getSelectableEffect(context, board.structureId);
+      if (structure) effects.push({
+        ...structure,
+        slotLabel: `${field.label || structure.slotLabel} 構成`,
+        overlayGroupId: `${field.id}-structure`,
+        overlayGroupLabel: `${field.label || "啓示板"}・構成`,
+        overlayGroupUnit: "件",
+      });
+      const cause = getSelectableEffect(context, board.causeId);
+      if (cause) effects.push({
+        ...cause,
+        slotLabel: `${field.label || cause.slotLabel} 本因`,
+        overlayGroupId: `${field.id}-cause`,
+        overlayGroupLabel: `${field.label || "啓示板"}・本因`,
+        overlayGroupUnit: "件",
+      });
+      for (const entry of board.rhetorics) {
+        const item = getSelectableEffect(context, entry.effectId);
+        if (!item) continue;
+        effects.push({
+          ...item,
+          slotLabel: `${field.label || item.slotLabel} 修辞`,
+          name: `${item.name} x${entry.count}`,
+          quantity: entry.count,
+          overlayGroupId: `${field.id}-rhetoric`,
+          overlayGroupLabel: `${field.label || "啓示板"}・修辞`,
+          overlayGroupUnit: "件",
+        });
+      }
     }
   } else if (field.type === "coinLoadout") {
     for (const entry of asCoinEntries(special[field.id])) {

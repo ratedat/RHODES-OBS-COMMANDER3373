@@ -19,7 +19,7 @@ public static class RhodesMaaRecognitionPolicy
 
     public static bool RequiresManualDifficulty(string? campaignId)
     {
-        return campaignId is "is2_phantom" or "is3_mizuki" or "is4_sami";
+        return campaignId is "is2_phantom" or "is3_mizuki";
     }
 
     public static bool IsRetainedRecognitionSource(string? id, string? candidateField = "")

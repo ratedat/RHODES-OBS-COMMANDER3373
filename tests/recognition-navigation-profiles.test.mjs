@@ -65,6 +65,7 @@ test("scan profiles own the server-side OCR engine routing", async () => {
     operatorsFull: "maa-ocr",
     relicsFull: "maa-ocr",
     is4RevelationFull: "maa-ocr",
+    is4ParadigmLost: "maa-ocr",
     is5ThoughtFull: "maa-ocr",
     is5AgeFull: "maa-ocr",
     is2HallucinationsFull: "maa-ocr",
@@ -128,6 +129,7 @@ test("run status profile is scoped to retained base and IS-specific values only"
     "run.ingot",
     "run.squad_card",
     "run.squad_name",
+    "run.difficulty_grade",
   ]);
   const templateIds = profile.templateOcrRegions.map((region) => region.idPrefix);
   assert.deepEqual(templateIds.slice(0, 3), [
@@ -312,8 +314,14 @@ test("vertical full scan profiles sweep down and back up without Android edge ge
 
   const revelation = profiles.get("is4RevelationFull");
   for (const pass of revelation.scrollPasses) {
-    assert.ok(pass.scroll.startArea.x <= 16, "revelation start area should stay inside its left rail");
-    assert.ok(pass.scroll.endArea.x <= 16, "revelation end area should stay inside its left rail");
+    assert.ok(
+      pass.scroll.startArea.x + pass.scroll.startArea.width <= 420,
+      "revelation start area should stay inside its left pane",
+    );
+    assert.ok(
+      pass.scroll.endArea.x + pass.scroll.endArea.width <= 420,
+      "revelation end area should stay inside its left pane",
+    );
   }
 });
 
@@ -444,7 +452,13 @@ test("ADB scan profiles restore overlays with tap actions instead of Android Bac
     }
 
     const closer = (profile.restoreSteps || []).find((step) => step.type === "tap");
-    assert.ok(closer, `${id} should close by tapping the same overlay button`);
+    assert.ok(closer, `${id} should close with an in-game tap`);
+    if (id === "is4RevelationFull") {
+      assert.ok(closer.area.x + closer.area.width <= 100, `${id} restore tap should stay inside the top-left close control`);
+      assert.ok(closer.area.y + closer.area.height <= 80, `${id} restore tap should stay inside the top-left close control`);
+      continue;
+    }
+
     assert.deepEqual(closer.point, opener.point, `${id} restore tap should reuse the opener point`);
     assert.deepEqual(closer.area, opener.area, `${id} restore tap should reuse the opener randomized area`);
   }

@@ -54,6 +54,12 @@
       "default_expand": false
     },
     {
+      "name": "is4ParadigmLost",
+      "label": "パラダイムロスト",
+      "description": "IS#4で発動中のパラダイムロストを取得します。",
+      "default_expand": false
+    },
+    {
       "name": "is5ThoughtFull",
       "label": "思案",
       "description": "IS#5の思案を取得します。",
@@ -293,12 +299,13 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is5ThoughtFull, is5AgeFull, is2HallucinationsFull, is2PerformanceFull, is3KeyFull, is3LightHordeFull, is3RejectionFull, is6BaseFull, is6ActiveCoinsFull, is6CoinsFull, is6SeasonalHours",
+      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is4ParadigmLost, is5ThoughtFull, is5AgeFull, is2HallucinationsFull, is2PerformanceFull, is3KeyFull, is3LightHordeFull, is3RejectionFull, is6BaseFull, is6ActiveCoinsFull, is6CoinsFull, is6SeasonalHours",
       "group": [
         "runStatusFull",
         "operatorsFull",
         "relicsFull",
         "is4RevelationFull",
+        "is4ParadigmLost",
         "is5ThoughtFull",
         "is5AgeFull",
         "is2HallucinationsFull",
@@ -442,7 +449,10 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_grade"
+      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_grade / profiles: runStatusFull",
+      "group": [
+        "runStatusFull"
+      ]
     },
     {
       "name": "rhodes_ocr_region_run_difficulty_block",
@@ -499,6 +509,21 @@
       "description": "OCR / maa-tasks.ocrRegions / is4.revelation_list_text / profiles: is4RevelationFull",
       "group": [
         "is4RevelationFull"
+      ]
+    },
+    {
+      "name": "rhodes_ocr_region_is4_paradigm_lost_text",
+      "label": "生成: is4.paradigm_lost_text",
+      "entry": "RhodesOcrRegion_is4_paradigm_lost_text",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / is4.paradigm_lost_text / profiles: is4ParadigmLost",
+      "group": [
+        "is4ParadigmLost"
       ]
     },
     {
@@ -1334,6 +1359,12 @@
           }
         },
         {
+          "name": "rhodes_ocr_region_run_difficulty_grade",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
           "name": "rhodes_template_run_status_full_run_idea_current",
           "option": {
             "enabled": true
@@ -1638,6 +1669,25 @@
         },
         {
           "name": "rhodes_ocr_region_is4_revelation_list_text",
+          "option": {
+            "enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "is4ParadigmLost",
+      "label": "パラダイムロスト",
+      "description": "パラダイムロストプロファイルのResource taskだけを選択します。",
+      "task": [
+        {
+          "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is4_paradigm_lost_text",
           "option": {
             "enabled": true
           }

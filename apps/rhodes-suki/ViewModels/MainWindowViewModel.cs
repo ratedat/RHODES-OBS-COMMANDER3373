@@ -114,6 +114,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly RhodesSidecarServerLauncher _sidecarServer;
     private RhodesNodeRuntimeStatus _nodeRuntimeStatus;
     private string _sidecarServerStatus = "未確認";
+    private string _tournamentRelayUrl = "";
+    private string _tournamentPlayerLabel = "Player";
+    private string _tournamentAdminToken = "";
+    private RhodesTournamentRemoteStatus _tournamentRemoteStatus = new();
+    private RhodesTournamentQuickPublishStatus _tournamentQuickStatus = new();
+    private readonly RhodesTournamentRemoteStateTracker _tournamentRemoteStateTracker = new();
+    private DispatcherTimer? _tournamentRemoteRefreshTimer;
+    private bool _tournamentRemoteRefreshInProgress;
     private string _selectedRoiPreviewKey = "";
     private int[] _roiDragOrigin = [];
     private double _roiDragStartX;
@@ -351,6 +359,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ApplyManualSarkazValuesCommand = new AsyncRelayCommand(ApplyManualSarkazValuesAsync);
         ApplyManualPhantomValuesCommand = new AsyncRelayCommand(ApplyManualPhantomValuesAsync);
         ApplyManualMizukiValuesCommand = new AsyncRelayCommand(ApplyManualMizukiValuesAsync);
+        ApplyManualSamiRevelationCommand = new AsyncRelayCommand(ApplyManualSamiRevelationAsync);
+        ApplyManualSamiParadigmCommand = new AsyncRelayCommand(ApplyManualSamiParadigmAsync);
+        AddManualSamiRevelationCommand = new AsyncRelayCommand(AddManualSamiRevelationAsync);
+        RemoveManualSamiRevelationCommand = new AsyncRelayCommand(RemoveManualSamiRevelationAsync);
         ApplyManualSuiTicketCommand = new AsyncRelayCommand(ApplyManualSuiTicketAsync);
         ApplyManualSuiSeasonalHoursCommand = new AsyncRelayCommand(ApplyManualSuiSeasonalHoursAsync);
         ApplyManualSuiCandleBearerTargetsCommand = new AsyncRelayCommand(ApplyManualSuiCandleBearerTargetsAsync);
@@ -377,6 +389,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ToggleHudVisibilityCommand = new AsyncRelayCommand(() => { IsHudVisible = !IsHudVisible; return Task.CompletedTask; });
         StartSidecarServerCommand = new AsyncRelayCommand(StartSidecarServerAsync);
         StopSidecarServerCommand = new AsyncRelayCommand(StopSidecarServerAsync);
+        RefreshTournamentQuickCommand = new AsyncRelayCommand(RefreshTournamentQuickAsync);
+        StartTournamentQuickCommand = new AsyncRelayCommand(StartTournamentQuickAsync);
+        StopTournamentQuickCommand = new AsyncRelayCommand(StopTournamentQuickAsync);
+        UninstallTournamentQuickCommand = new AsyncRelayCommand(UninstallTournamentQuickAsync);
+        RefreshTournamentRemoteCommand = new AsyncRelayCommand(RefreshTournamentRemoteAsync);
+        StartTournamentRemoteCommand = new AsyncRelayCommand(StartTournamentRemoteAsync);
+        SyncTournamentRemoteCommand = new AsyncRelayCommand(SyncTournamentRemoteAsync);
+        StopTournamentRemoteCommand = new AsyncRelayCommand(StopTournamentRemoteAsync);
+        OpenTournamentRemoteInputCommand = new AsyncRelayCommand(OpenTournamentRemoteInputAsync);
         ConvertResourceTaskResultsCommand = new AsyncRelayCommand(ConvertResourceTaskResultsAsync);
         ApplyCandidateResultsCommand = new AsyncRelayCommand(ApplyCandidateResultsAsync);
         RunProbeCommand = new AsyncRelayCommand(parameter => RunProbeAsync(parameter as MaaProbePayloadPreview));
@@ -406,6 +427,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshOverlayPartLinks();
         RefreshAdbDiagnosticSteps();
         _campaignSelectionSyncEnabled = true;
+        _tournamentRemoteRefreshTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(750),
+        };
+        _tournamentRemoteRefreshTimer.Tick += OnTournamentRemoteRefreshTimerTick;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -664,6 +690,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(IsSarkazCampaignSelected));
             OnPropertyChanged(nameof(IsPhantomCampaignSelected));
             OnPropertyChanged(nameof(IsMizukiCampaignSelected));
+            OnPropertyChanged(nameof(IsSamiCampaignSelected));
             OnPropertyChanged(nameof(IsSuiCampaignSelected));
             OnPropertyChanged(nameof(IsManualDifficultyCampaign));
             OnPropertyChanged(nameof(ManualDifficultyGuidance));
@@ -829,6 +856,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiSpecialEffectOption> ManualMizukiRejectionOptions { get; } = [];
 
+    public ObservableCollection<SukiRevelationEntryEditor> ManualSamiRevelationEntries { get; } = [];
+
+    public ObservableCollection<SukiRevelationEntryEditor> ManualSamiStructureEntries { get; } = [];
+
+    public ObservableCollection<SukiRevelationEntryEditor> ManualSamiCauseEntries { get; } = [];
+
+    public ObservableCollection<SukiSpecialEffectOption> ManualSamiCauseCatalog { get; } = [];
+
+    public ObservableCollection<SukiSpecialEffectOption> ManualSamiStructureCatalog { get; } = [];
+
+    public ObservableCollection<SukiSeasonalHourEditor> ManualSamiParadigmEditors { get; } = [];
+
     public ObservableCollection<SukiOperatorTargetOption> ManualSuiCandleBearerTargets { get; } = [];
 
     public ObservableCollection<SukiSpecialEffectOption> ManualSuiCoinTargets { get; } = [];
@@ -912,6 +951,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         "is3_mizuki",
         StringComparison.Ordinal);
 
+    public bool IsSamiCampaignSelected => string.Equals(
+        SelectedCampaign?.Id ?? _runState.CampaignId,
+        "is4_sami",
+        StringComparison.Ordinal);
+
     public bool IsSuiCampaignSelected => string.Equals(
         SelectedCampaign?.Id ?? _runState.CampaignId,
         "is6_sui",
@@ -923,6 +967,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ? "共通値・幻覚・演目をADB取得・認識・反映"
             : IsMizukiCampaignSelected
                 ? "共通値・源石錐・鍵・灯火・大群・拒絶反応・オペをADB取得・認識・反映"
+                : IsSamiCampaignSelected
+                    ? "共通値・啓示板・パラダイムロストをADB取得・認識・反映"
                 : "共通値をADB取得・認識・反映";
 
     public bool IsChoicesWorkspaceVisible => WorkspaceTab == "choices";
@@ -1536,6 +1582,104 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string NodeRuntimeDetail => _nodeRuntimeStatus.Detail;
 
+    public string TournamentRelayUrl
+    {
+        get => _tournamentRelayUrl;
+        set => SetProperty(ref _tournamentRelayUrl, value?.Trim() ?? "");
+    }
+
+    public string TournamentPlayerLabel
+    {
+        get => _tournamentPlayerLabel;
+        set => SetProperty(ref _tournamentPlayerLabel, string.IsNullOrWhiteSpace(value) ? "Player" : value.Trim());
+    }
+
+    public string TournamentAdminToken
+    {
+        get => _tournamentAdminToken;
+        set => SetProperty(ref _tournamentAdminToken, value ?? "");
+    }
+
+    public bool TournamentRemoteIsActive => _tournamentRemoteStatus.Active;
+
+    public string TournamentRemoteState => TournamentRemoteIsActive ? "稼働中" : "停止中";
+
+    public string TournamentRemoteDetail
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_tournamentRemoteStatus.LastError))
+                return _tournamentRemoteStatus.LastError;
+            if (!TournamentRemoteIsActive)
+                return "大会入力セッションは開始されていません。";
+
+            var detail = $"{_tournamentRemoteStatus.PlayerLabel} / session={_tournamentRemoteStatus.SessionId}";
+            if (!string.IsNullOrWhiteSpace(_tournamentRemoteStatus.LastSyncedAt))
+                detail += $" / 最終同期={_tournamentRemoteStatus.LastSyncedAt}";
+            return detail;
+        }
+    }
+
+    public string TournamentRemoteInputUrl => _tournamentRemoteStatus.InputUrl;
+
+    public string TournamentRemoteEditorCode => _tournamentRemoteStatus.EditorCode;
+
+    public string TournamentRemoteSessionId => _tournamentRemoteStatus.SessionId;
+
+    public bool TournamentQuickIsInstalled => _tournamentQuickStatus.Installed;
+
+    public bool TournamentQuickIsActive => _tournamentQuickStatus.Active;
+
+    public string TournamentQuickState
+    {
+        get
+        {
+            if (_tournamentQuickStatus.Active)
+                return "簡易公開中";
+            return _tournamentQuickStatus.Stage switch
+            {
+                "failed" => "開始失敗",
+                "installing" => "ランタイム確認中",
+                "starting-relay" => "中継サーバー起動中",
+                "starting-tunnel" => "一時URL発行中",
+                "waiting-route" => "公開経路確認中",
+                "creating-session" => "入力画面準備中",
+                "ready" => "開始可能",
+                _ when _tournamentQuickStatus.Starting => "開始処理中",
+                _ => _tournamentQuickStatus.Installed ? "停止中" : "準備未完了",
+            };
+        }
+    }
+
+    public string TournamentQuickDetail
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_tournamentQuickStatus.LastError))
+            {
+                if (string.IsNullOrWhiteSpace(_tournamentQuickStatus.Diagnostic)
+                    || string.Equals(
+                        _tournamentQuickStatus.LastError,
+                        _tournamentQuickStatus.Diagnostic,
+                        StringComparison.Ordinal))
+                {
+                    return _tournamentQuickStatus.LastError;
+                }
+
+                return $"{_tournamentQuickStatus.LastError} / 詳細: {_tournamentQuickStatus.Diagnostic}";
+            }
+            if (_tournamentQuickStatus.Active)
+                return $"一時公開URL: {_tournamentQuickStatus.PublicUrl}";
+            if (!string.IsNullOrWhiteSpace(_tournamentQuickStatus.Diagnostic))
+                return _tournamentQuickStatus.Diagnostic;
+            if (_tournamentQuickStatus.Installed)
+                return $"簡易公開ランタイム v{_tournamentQuickStatus.Version} を利用できます。";
+            return "公開デバッグ版には必要なランタイムが同梱されています。「簡易公開を開始」を押してください。";
+        }
+    }
+
+    public string TournamentQuickPublicUrl => _tournamentQuickStatus.PublicUrl;
+
     /// <summary>部品単位でOBSへ追加するためのURL一覧。</summary>
     public ObservableCollection<SukiOverlayPartLink> OverlayPartLinks { get; } = [];
 
@@ -2008,6 +2152,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ApplyManualSarkazValuesCommand { get; }
     public ICommand ApplyManualPhantomValuesCommand { get; }
     public ICommand ApplyManualMizukiValuesCommand { get; }
+    public ICommand ApplyManualSamiRevelationCommand { get; }
+    public ICommand ApplyManualSamiParadigmCommand { get; }
+    public ICommand AddManualSamiRevelationCommand { get; }
+    public ICommand RemoveManualSamiRevelationCommand { get; }
     public ICommand ApplyManualSuiTicketCommand { get; }
     public ICommand ApplyManualSuiSeasonalHoursCommand { get; }
     public ICommand ApplyManualSuiCandleBearerTargetsCommand { get; }
@@ -2028,6 +2176,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand StartSidecarServerCommand { get; }
 
     public ICommand StopSidecarServerCommand { get; }
+
+    public ICommand RefreshTournamentQuickCommand { get; }
+
+    public ICommand StartTournamentQuickCommand { get; }
+
+    public ICommand StopTournamentQuickCommand { get; }
+
+    public ICommand UninstallTournamentQuickCommand { get; }
+
+    public ICommand RefreshTournamentRemoteCommand { get; }
+
+    public ICommand StartTournamentRemoteCommand { get; }
+
+    public ICommand SyncTournamentRemoteCommand { get; }
+
+    public ICommand StopTournamentRemoteCommand { get; }
+
+    public ICommand OpenTournamentRemoteInputCommand { get; }
 
     public ICommand ConvertResourceTaskResultsCommand { get; }
 
@@ -2055,6 +2221,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
+        if (_tournamentRemoteRefreshTimer is not null)
+        {
+            _tournamentRemoteRefreshTimer.Stop();
+            _tournamentRemoteRefreshTimer.Tick -= OnTournamentRemoteRefreshTimerTick;
+        }
         foreach (var item in _allOperators)
             item.PropertyChanged -= OnOperatorChoicePropertyChanged;
         _lastCaptureImage?.Dispose();
@@ -2205,58 +2376,382 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(NodeRuntimeDetail));
     }
 
-    private async Task StartSidecarServerAsync()
+    private Task StartSidecarServerAsync()
     {
-        await RunBusyAsync(async () =>
+        return RunBusyAsync(async () =>
         {
-            StatusMessage = "配信サーバーの状態を確認しています。";
-            var before = await RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
-            if (before.Installed)
+            await EnsureSidecarServerReadyAsync(installNodeIfNeeded: false);
+        });
+    }
+
+    private async Task<bool> EnsureSidecarServerReadyAsync(
+        bool installNodeIfNeeded,
+        bool requireQuickPublishApi = false)
+    {
+        StatusMessage = "配信サーバーの状態を確認しています。";
+        var before = await RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
+        var compatibilityFallback = "";
+        if (before.Installed)
+        {
+            var compatibility = requireQuickPublishApi
+                ? await RhodesSidecarApiCompatibility.ProbeQuickPublishAsync(RhodesApiUrl)
+                : new RhodesSidecarCompatibilityResult(true, "基本API対応");
+            if (compatibility.Supported)
             {
                 _rhodesApiStatus = before;
                 SidecarServerStatus = $"稼働中 (外部起動) · {RhodesApiUrl}";
-                StatusMessage = "配信サーバーは既に稼働しています。OBSブラウザソースにOverlayのURLを設定してください。";
+                StatusMessage = "配信サーバーは既に稼働しています。";
                 RefreshRuntimeCapabilities();
-                return;
+                return true;
             }
 
-            var launch = _sidecarServer.Start(RhodesApiUrl);
-            UpdateNodeRuntimeStatus(_nodeRuntime.Probe());
-            if (!launch.Succeeded)
+            var incompatibleUrl = RhodesApiUrl;
+            if (_sidecarServer.IsOwnedProcessRunning)
             {
-                SidecarServerStatus = "起動失敗";
-                StatusMessage = launch.Message;
-                return;
-            }
-
-            StatusMessage = launch.Message;
-            await Task.Delay(TimeSpan.FromMilliseconds(1500));
-            var after = await RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
-            _rhodesApiStatus = after;
-            if (after.Installed)
-            {
-                SidecarServerStatus = $"稼働中 (Sukiが管理) · {RhodesApiUrl}";
-                StatusMessage = $"配信サーバーが応答しました。Overlay: {RhodesApiUrl}/overlay / Sidecar: {RhodesApiUrl}/sidecar";
+                _sidecarServer.Stop();
+                compatibilityFallback = $"{incompatibleUrl} の旧サーバーを再起動しました";
             }
             else
             {
-                var detail = string.IsNullOrWhiteSpace(_sidecarServer.LastError) ? after.Detail : _sidecarServer.LastError;
-                SidecarServerStatus = $"応答なし: {detail}";
-                StatusMessage = $"配信サーバーを起動しましたが応答がありません: {detail}";
+                try
+                {
+                    RhodesApiUrl = RhodesSidecarApiCompatibility.FindAvailableLoopbackUrl(incompatibleUrl);
+                    compatibilityFallback = $"{incompatibleUrl} は簡易公開API非対応のため {RhodesApiUrl} を使用します";
+                }
+                catch (Exception ex)
+                {
+                    SidecarServerStatus = "互換サーバー起動失敗";
+                    StatusMessage = $"旧配信サーバーを回避できませんでした: {ex.Message}";
+                    RefreshRuntimeCapabilities();
+                    return false;
+                }
+            }
+        }
+
+        UpdateNodeRuntimeStatus(_nodeRuntime.Probe());
+        if (!_nodeRuntimeStatus.IsAvailable && installNodeIfNeeded)
+        {
+            StatusMessage = $"初回準備: Node.js v{RhodesNodeRuntimeManager.NodeVersion}をダウンロード・検証しています。";
+            var install = await _nodeRuntime.InstallAsync();
+            UpdateNodeRuntimeStatus(install.Status);
+            if (!install.Succeeded)
+            {
+                SidecarServerStatus = "起動失敗";
+                StatusMessage = install.Message;
+                return false;
+            }
+        }
+
+        var launch = _sidecarServer.Start(RhodesApiUrl);
+        UpdateNodeRuntimeStatus(_nodeRuntime.Probe());
+        if (!launch.Succeeded)
+        {
+            SidecarServerStatus = "起動失敗";
+            StatusMessage = launch.Message;
+            return false;
+        }
+
+        StatusMessage = string.IsNullOrWhiteSpace(compatibilityFallback)
+            ? launch.Message
+            : $"{compatibilityFallback}。{launch.Message}";
+        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+        var after = await RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
+        _rhodesApiStatus = after;
+        if (after.Installed)
+        {
+            if (requireQuickPublishApi)
+            {
+                var compatibility = await RhodesSidecarApiCompatibility.ProbeQuickPublishAsync(RhodesApiUrl);
+                if (!compatibility.Supported)
+                {
+                    _sidecarServer.Stop();
+                    SidecarServerStatus = $"簡易公開API非対応: {compatibility.Detail}";
+                    StatusMessage = $"現行配信サーバーを起動しましたが簡易公開APIを確認できません: {compatibility.Detail}";
+                    RefreshRuntimeCapabilities();
+                    return false;
+                }
             }
 
+            SidecarServerStatus = $"稼働中 (Sukiが管理) · {RhodesApiUrl}";
+            StatusMessage = string.IsNullOrWhiteSpace(compatibilityFallback)
+                ? $"配信サーバーが応答しました。Overlay: {RhodesApiUrl}/overlay / Sidecar: {RhodesApiUrl}/sidecar"
+                : $"{compatibilityFallback}。Overlay: {RhodesApiUrl}/overlay / Sidecar: {RhodesApiUrl}/sidecar";
             RefreshRuntimeCapabilities();
-        });
+            return true;
+        }
+
+        var detail = string.IsNullOrWhiteSpace(_sidecarServer.LastError) ? after.Detail : _sidecarServer.LastError;
+        SidecarServerStatus = $"応答なし: {detail}";
+        StatusMessage = $"配信サーバーを起動しましたが応答がありません: {detail}";
+        RefreshRuntimeCapabilities();
+        return false;
     }
 
     private async Task StopSidecarServerAsync()
     {
-        await RunBusyAsync(() =>
+        await RunBusyAsync(async () =>
         {
+            if (_tournamentQuickStatus.Active || _tournamentQuickStatus.Starting
+                || !string.IsNullOrWhiteSpace(_tournamentQuickStatus.LocalRelayUrl))
+            {
+                var quickResult = await RhodesTournamentRemoteApiClient.QuickStopAsync(RhodesApiUrl);
+                ApplyTournamentQuickResult(quickResult);
+            }
             StatusMessage = _sidecarServer.Stop();
             SidecarServerStatus = _sidecarServer.IsOwnedProcessRunning ? SidecarServerStatus : "停止";
-            return Task.CompletedTask;
         });
+    }
+
+    private Task RefreshTournamentQuickAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            var probe = await RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
+            if (!probe.Installed)
+            {
+                StatusMessage = "配信サーバーが起動していません。「簡易公開を開始」を押すと自動で準備します。";
+                return;
+            }
+
+            var result = await RhodesTournamentRemoteApiClient.QuickStatusAsync(RhodesApiUrl);
+            ApplyTournamentQuickResult(result);
+            StatusMessage = result.Succeeded
+                ? $"簡易公開: {TournamentQuickState}"
+                : $"簡易公開の状態確認に失敗しました: {result.Error}";
+        });
+    }
+
+    private Task StartTournamentQuickAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            if (!await EnsureSidecarServerReadyAsync(
+                    installNodeIfNeeded: true,
+                    requireQuickPublishApi: true))
+                return;
+
+            StatusMessage = "簡易公開を準備しています。Cloudflareへの一時公開経路を作成しています。";
+            var result = await RhodesTournamentRemoteApiClient.QuickStartAsync(
+                RhodesApiUrl,
+                TournamentPlayerLabel);
+            if (!result.Succeeded)
+            {
+                var statusResult = await RhodesTournamentRemoteApiClient.QuickStatusAsync(RhodesApiUrl);
+                ApplyTournamentQuickResult(statusResult.Succeeded
+                    ? new RhodesTournamentQuickPublishResult(statusResult.Status, result.Error)
+                    : result);
+                StatusMessage = $"簡易公開を開始できませんでした（{TournamentQuickState}）: {TournamentQuickDetail}";
+                return;
+            }
+
+            ApplyTournamentQuickResult(result);
+            await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings());
+            StatusMessage = $"簡易公開を開始しました。入力担当者へURLと入力コードを共有してください: {TournamentRemoteInputUrl}";
+        });
+    }
+
+    private Task StopTournamentQuickAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            var result = await RhodesTournamentRemoteApiClient.QuickStopAsync(RhodesApiUrl);
+            ApplyTournamentQuickResult(result);
+            StatusMessage = result.Succeeded
+                ? "簡易公開を停止しました。発行した一時URLは利用できなくなります。"
+                : $"簡易公開を停止できませんでした: {result.Error}";
+        });
+    }
+
+    private Task UninstallTournamentQuickAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            var probe = await RhodesApiStatusProbe.ProbeAsync(RhodesApiUrl);
+            if (!probe.Installed)
+            {
+                StatusMessage = "配信サーバーを起動してから簡易公開ランタイムを削除してください。";
+                return;
+            }
+
+            var result = await RhodesTournamentRemoteApiClient.QuickUninstallAsync(RhodesApiUrl);
+            ApplyTournamentQuickResult(result);
+            StatusMessage = result.Succeeded
+                ? "簡易公開ランタイムを実行フォルダから削除しました。"
+                : $"簡易公開ランタイムを削除できませんでした: {result.Error}";
+        });
+    }
+
+    private Task RefreshTournamentRemoteAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            var result = await RhodesTournamentRemoteApiClient.StatusAsync(RhodesApiUrl);
+            ApplyTournamentRemoteResult(result);
+            if (result.Succeeded && result.Status.Active)
+                await ImportTournamentRemoteStateAsync(result.Status, force: true);
+            StatusMessage = result.Succeeded
+                ? $"大会入力セッション: {TournamentRemoteState}"
+                : $"大会入力セッションの状態確認に失敗しました: {result.Error}";
+        });
+    }
+
+    private Task StartTournamentRemoteAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(TournamentRelayUrl))
+            {
+                StatusMessage = "Relay URLを入力してください。";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(TournamentAdminToken))
+            {
+                StatusMessage = "Relayの管理トークンを入力してください。トークンは設定へ保存されません。";
+                return;
+            }
+
+            var result = await RhodesTournamentRemoteApiClient.StartAsync(
+                RhodesApiUrl,
+                TournamentRelayUrl,
+                TournamentPlayerLabel,
+                TournamentAdminToken);
+            ApplyTournamentRemoteResult(result);
+            if (!result.Succeeded)
+            {
+                StatusMessage = $"大会入力セッションを開始できませんでした: {result.Error}";
+                return;
+            }
+
+            TournamentAdminToken = "";
+            await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings());
+            StatusMessage = $"大会入力セッションを開始しました: {TournamentRemoteInputUrl}";
+        });
+    }
+
+    private Task SyncTournamentRemoteAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            var result = await RhodesTournamentRemoteApiClient.SyncAsync(RhodesApiUrl);
+            ApplyTournamentRemoteResult(result);
+            StatusMessage = result.Succeeded
+                ? "現在のラン状態を大会入力画面へ同期しました。"
+                : $"大会入力画面への同期に失敗しました: {result.Error}";
+        });
+    }
+
+    private Task StopTournamentRemoteAsync()
+    {
+        return RunBusyAsync(async () =>
+        {
+            var result = await RhodesTournamentRemoteApiClient.StopAsync(RhodesApiUrl);
+            ApplyTournamentRemoteResult(result);
+            StatusMessage = result.Succeeded
+                ? "大会入力セッションを停止しました。"
+                : $"大会入力セッションを停止できませんでした: {result.Error}";
+        });
+    }
+
+    private Task OpenTournamentRemoteInputAsync()
+    {
+        if (string.IsNullOrWhiteSpace(TournamentRemoteInputUrl))
+        {
+            StatusMessage = "入力URLがありません。大会入力セッションを開始してください。";
+            return Task.CompletedTask;
+        }
+
+        return OpenExternalUrlAsync(TournamentRemoteInputUrl, "大会入力画面");
+    }
+
+    private void ApplyTournamentRemoteResult(RhodesTournamentRemoteResult result)
+    {
+        _tournamentRemoteStatus = result.Succeeded
+            ? result.Status
+            : _tournamentRemoteStatus with { LastError = result.Error };
+        OnPropertyChanged(nameof(TournamentRemoteIsActive));
+        OnPropertyChanged(nameof(TournamentRemoteState));
+        OnPropertyChanged(nameof(TournamentRemoteDetail));
+        OnPropertyChanged(nameof(TournamentRemoteInputUrl));
+        OnPropertyChanged(nameof(TournamentRemoteEditorCode));
+        OnPropertyChanged(nameof(TournamentRemoteSessionId));
+
+        if (result.Succeeded && result.Status.Active)
+        {
+            _tournamentRemoteRefreshTimer?.Start();
+        }
+        else if (result.Succeeded)
+        {
+            _tournamentRemoteRefreshTimer?.Stop();
+            _tournamentRemoteStateTracker.Reset();
+        }
+    }
+
+    private async void OnTournamentRemoteRefreshTimerTick(object? sender, EventArgs eventArgs)
+    {
+        await RefreshTournamentRemoteStateFromApiAsync();
+    }
+
+    private async Task RefreshTournamentRemoteStateFromApiAsync()
+    {
+        if (IsBusy || _tournamentRemoteRefreshInProgress || !_tournamentRemoteStatus.Active)
+            return;
+
+        try
+        {
+            _tournamentRemoteRefreshInProgress = true;
+            var result = await RhodesTournamentRemoteApiClient.StatusAsync(RhodesApiUrl);
+            ApplyTournamentRemoteResult(result);
+            if (!result.Succeeded || !result.Status.Active)
+                return;
+
+            await ImportTournamentRemoteStateAsync(result.Status, force: false);
+        }
+        catch (Exception exception)
+        {
+            StatusMessage = $"遠隔入力の本体反映に失敗しました: {exception.Message}";
+        }
+        finally
+        {
+            _tournamentRemoteRefreshInProgress = false;
+        }
+    }
+
+    private async Task ImportTournamentRemoteStateAsync(
+        RhodesTournamentRemoteStatus status,
+        bool force)
+    {
+        if (!force && !_tournamentRemoteStateTracker.ShouldImport(status))
+            return;
+
+        var error = await SyncRunStateFromApiCoreAsync();
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            StatusMessage = $"遠隔入力の本体反映に失敗しました: {error}";
+            return;
+        }
+
+        _tournamentRemoteStateTracker.MarkImported(status);
+        StatusMessage = $"遠隔入力を本体へ反映しました（受信位置 {status.Cursor}）。";
+    }
+
+    private void ApplyTournamentQuickResult(RhodesTournamentQuickPublishResult result)
+    {
+        _tournamentQuickStatus = result.Succeeded
+            ? result.Status
+            : result.Status with { LastError = result.Error };
+        OnPropertyChanged(nameof(TournamentQuickIsInstalled));
+        OnPropertyChanged(nameof(TournamentQuickIsActive));
+        OnPropertyChanged(nameof(TournamentQuickState));
+        OnPropertyChanged(nameof(TournamentQuickDetail));
+        OnPropertyChanged(nameof(TournamentQuickPublicUrl));
+
+        if (_tournamentQuickStatus.Remote is not null)
+        {
+            ApplyTournamentRemoteResult(new RhodesTournamentRemoteResult(
+                _tournamentQuickStatus.Remote,
+                result.Succeeded ? "" : result.Error));
+        }
     }
 
     private IEnumerable<SukiStatusChip> BuildHeaderStatusChips()
@@ -2480,12 +2975,48 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             foreach (var field in specialFields)
             {
+                if (campaignId == "is4_sami" && field.FieldId == "revelation")
+                {
+                    foreach (var preview in BuildSamiRevelationPreviews(field))
+                        yield return preview;
+                    continue;
+                }
                 yield return new SukiSpecialValuePreview(field.Label, field.Value, field.Kind, field.ProfileId, field.Detail);
             }
             yield break;
         }
 
         yield return new SukiSpecialValuePreview("固有値", "未定義", "キャンペーン", "campaign.special", "このISの固有値定義を追加してください");
+    }
+
+    private static IEnumerable<SukiSpecialValuePreview> BuildSamiRevelationPreviews(SukiSpecialFieldState field)
+    {
+        var options = RhodesRunCatalog.LoadSpecialEffectOptions("is4_sami", "revelationBoard")
+            .GroupBy(option => option.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        var entries = field.EffectEntries ?? [];
+
+        foreach (var (slotKind, label) in new[] { ("structure", "構成"), ("cause", "本因") })
+        {
+            var groupedEntries = entries
+                .Where(entry => entry.SlotKind.Equals(slotKind, StringComparison.Ordinal))
+                .ToArray();
+            var detail = groupedEntries.Length == 0
+                ? "取得値なし"
+                : string.Join(" / ", groupedEntries.Select(entry =>
+                {
+                    var name = options.GetValueOrDefault(entry.EffectId)?.Name ?? entry.EffectId;
+                    var rhetoric = options.GetValueOrDefault(entry.StateId)?.Name ?? entry.StateId;
+                    return string.IsNullOrWhiteSpace(rhetoric) ? name : $"{name} [{rhetoric}]";
+                }));
+
+            yield return new SukiSpecialValuePreview(
+                $"啓示板・{label}",
+                $"{groupedEntries.Sum(entry => Math.Max(1, entry.Count))}件",
+                label,
+                field.ProfileId,
+                detail);
+        }
     }
 
     private void RefreshInspectorRows()
@@ -2675,6 +3206,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         AdbSerial = settings.AdbSerial;
         AdbConfigJson = string.IsNullOrWhiteSpace(settings.AdbConfigJson) ? "{}" : settings.AdbConfigJson;
         RhodesApiUrl = string.IsNullOrWhiteSpace(settings.RhodesApiUrl) ? "http://127.0.0.1:5173" : settings.RhodesApiUrl;
+        TournamentRelayUrl = settings.TournamentRelayUrl;
+        TournamentPlayerLabel = settings.TournamentPlayerLabel;
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == settings.SelectedAdbPresetId) ?? SelectedAdbPreset;
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile =>
             RhodesPublicDebugPolicy.IsProfileAllowed(settings.SelectedResourceProfileId, _distributionProfile)
@@ -2721,7 +3254,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RhodesHudPartCatalog.SerializeEnabledIds(HudPartOptions),
             _adbConnectionValidated,
             OverlayLayoutItems.Select(item => item.ToState()).ToArray(),
-            BuildOutputPreferences());
+            BuildOutputPreferences(),
+            TournamentRelayUrl,
+            TournamentPlayerLabel);
     }
 
     private void ApplyOutputPreferences(SukiOutputPreferences? preferences)
@@ -4647,6 +5182,96 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private async Task ApplyManualSamiRevelationAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var candidates = new List<MaaCandidatePreview>
+            {
+                RhodesRecognitionCandidateApplier.CreateNoSamiRevelationCandidate(),
+            };
+            foreach (var editor in ManualSamiRevelationEntries)
+            {
+                candidates.Add(new MaaCandidatePreview(
+                    "revelation",
+                    $"{editor.Name} [{editor.StateLabel}] (手動入力)",
+                    editor.EffectId,
+                    "手動入力",
+                    1.0,
+                    CampaignId: "is4_sami",
+                    FieldId: "revelation",
+                    SlotKind: editor.SlotKind,
+                    EffectId: editor.EffectId,
+                    StateId: editor.StateId));
+            }
+
+            await ApplyCandidatesPipelineAsync(candidates);
+            RefreshInspectorRows();
+        });
+    }
+
+    private async Task ApplyManualSamiParadigmAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var candidates = new List<MaaCandidatePreview>
+            {
+                RhodesRecognitionCandidateApplier.CreateNoSamiParadigmLostCandidate(),
+            };
+            foreach (var editor in ManualSamiParadigmEditors.Where(editor => !string.IsNullOrWhiteSpace(editor.SelectedId)))
+            {
+                candidates.Add(new MaaCandidatePreview(
+                    "revelation",
+                    $"{editor.SelectedOption.Name} (パラダイムロスト・手動入力)",
+                    editor.SelectedId,
+                    "手動入力",
+                    1.0,
+                    CampaignId: "is4_sami",
+                    FieldId: "paradigmLost",
+                    SlotKind: "paradigm",
+                    EffectId: editor.SelectedId));
+            }
+
+            await ApplyCandidatesPipelineAsync(candidates);
+            RefreshInspectorRows();
+        });
+    }
+
+    private Task AddManualSamiRevelationAsync(object? parameter)
+    {
+        if (parameter is not SukiSpecialEffectOption option)
+            return Task.CompletedTask;
+
+        var slotKind = option.GroupLabel.Equals("本因", StringComparison.Ordinal) ? "cause" : "structure";
+        ManualSamiRevelationEntries.Add(new SukiRevelationEntryEditor(
+            option,
+            slotKind,
+            LoadManualSamiRhetoricOptions(slotKind)));
+        RefreshManualSamiRevelationGroups();
+        StatusMessage = $"{option.Name}を啓示板へ追加しました。";
+        return Task.CompletedTask;
+    }
+
+    private Task RemoveManualSamiRevelationAsync(object? parameter)
+    {
+        if (parameter is SukiRevelationEntryEditor editor)
+        {
+            ManualSamiRevelationEntries.Remove(editor);
+            RefreshManualSamiRevelationGroups();
+        }
+        return Task.CompletedTask;
+    }
+
+    private static IReadOnlyList<SukiSpecialEffectOption> LoadManualSamiRhetoricOptions(string slotKind)
+    {
+        var targetLabel = slotKind.Equals("cause", StringComparison.Ordinal) ? "本因：" : "構成：";
+        return new[] { new SukiSpecialEffectOption("", "修辞なし") }
+            .Concat(RhodesRunCatalog.LoadSpecialEffectOptions("is4_sami", "revelationBoard")
+                .Where(option => option.GroupLabel.Equals("修辞", StringComparison.Ordinal)
+                    && option.Effect.StartsWith(targetLabel, StringComparison.Ordinal)))
+            .ToArray();
+    }
+
     private async Task ApplyManualSuiValuesAsync()
     {
         await RunBusyAsync(async () =>
@@ -4864,6 +5489,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshManualSarkazEditors();
         RefreshManualPhantomEditors();
         RefreshManualMizukiEditors();
+        RefreshManualSamiEditors();
         RefreshManualSuiEditors();
         RefreshManualSquadRandomEffectOptions();
         RefreshBossSections();
@@ -5023,6 +5649,69 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(SelectedManualSuiCoinCategory));
         }
         RefreshManualSuiCoinCatalogFilter();
+    }
+
+    private void RefreshManualSamiEditors()
+    {
+        const string campaignId = "is4_sami";
+        var fields = (_runState.SpecialFields ?? [])
+            .Where(field => field.CampaignId.Equals(campaignId, StringComparison.Ordinal))
+            .ToDictionary(field => field.FieldId, StringComparer.Ordinal);
+        var revelationOptions = RhodesRunCatalog.LoadSpecialEffectOptions(campaignId, "revelationBoard");
+        var effectsById = revelationOptions
+            .Where(option => !option.GroupLabel.Equals("修辞", StringComparison.Ordinal))
+            .DistinctBy(option => option.Id, StringComparer.Ordinal)
+            .ToDictionary(option => option.Id, StringComparer.Ordinal);
+
+        ReplaceCollection(
+            ManualSamiCauseCatalog,
+            revelationOptions.Where(option => option.GroupLabel.Equals("本因", StringComparison.Ordinal)));
+        ReplaceCollection(
+            ManualSamiStructureCatalog,
+            revelationOptions.Where(option => option.GroupLabel.Equals("構成", StringComparison.Ordinal)));
+
+        var revelationEntries = new List<SukiRevelationEntryEditor>();
+        foreach (var entry in fields.GetValueOrDefault("revelation")?.EffectEntries ?? [])
+        {
+            if (!effectsById.TryGetValue(entry.EffectId, out var option))
+                continue;
+            var slotKind = entry.SlotKind.Equals("cause", StringComparison.Ordinal) ? "cause" : "structure";
+            revelationEntries.Add(new SukiRevelationEntryEditor(
+                option,
+                slotKind,
+                LoadManualSamiRhetoricOptions(slotKind),
+                entry.StateId));
+        }
+        ReplaceCollection(ManualSamiRevelationEntries, revelationEntries);
+        RefreshManualSamiRevelationGroups();
+
+        var selectedParadigms = (fields.GetValueOrDefault("paradigmLost")?.SelectedIds ?? [])
+            .ToHashSet(StringComparer.Ordinal);
+        var paradigmEditors = RhodesRunCatalog.LoadSpecialEffectOptions(campaignId, "paradigmLost")
+            .Where(option => !string.IsNullOrWhiteSpace(option.ParentKey))
+            .GroupBy(option => option.ParentKey, StringComparer.Ordinal)
+            .Select(group =>
+            {
+                var first = group.First();
+                var none = new SukiSpecialEffectOption("", "なし", ParentKey: first.ParentKey, ParentName: first.ParentName);
+                var options = new[] { none }
+                    .Concat(group.OrderBy(option => option.VariantRank.Equals("upper", StringComparison.Ordinal) ? 1 : 0))
+                    .ToArray();
+                var selectedId = group.FirstOrDefault(option => selectedParadigms.Contains(option.Id))?.Id ?? "";
+                return new SukiSeasonalHourEditor(first.ParentKey, first.ParentName, options, selectedId);
+            })
+            .ToArray();
+        ReplaceCollection(ManualSamiParadigmEditors, paradigmEditors);
+    }
+
+    private void RefreshManualSamiRevelationGroups()
+    {
+        ReplaceCollection(
+            ManualSamiStructureEntries,
+            ManualSamiRevelationEntries.Where(editor => editor.SlotKind.Equals("structure", StringComparison.Ordinal)));
+        ReplaceCollection(
+            ManualSamiCauseEntries,
+            ManualSamiRevelationEntries.Where(editor => editor.SlotKind.Equals("cause", StringComparison.Ordinal)));
     }
 
     private void RefreshManualSuiSeasonalHourEditors(IReadOnlySet<string> selectedSeasonalHours)
@@ -5373,7 +6062,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "is5_sarkaz" => new[] { "runStatusFull", "is5ThoughtFull", "is5AgeFull", "operatorsFull", "relicsFull" },
             "is2_phantom" => ["runStatusFull", "is2HallucinationsFull", "is2PerformanceFull", "operatorsFull", "relicsFull"],
             "is3_mizuki" => ["runStatusFull", "is3KeyFull", "is3LightHordeFull", "is3RejectionFull", "operatorsFull", "relicsFull"],
-            "is4_sami" => ["runStatusFull", "is4RevelationFull", "operatorsFull", "relicsFull"],
+            "is4_sami" => ["runStatusFull", "is4RevelationFull", "is4ParadigmLost", "operatorsFull", "relicsFull"],
             "is6_sui" => ["runStatusFull", "is6BaseFull", "is6ActiveCoinsFull", "is6SeasonalHours", "operatorsFull", "relicsFull"],
             _ => ["runStatusFull", "operatorsFull", "relicsFull"],
         };
@@ -5387,7 +6076,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "is5_sarkaz" => new[] { "is5ThoughtFull", "is5AgeFull" },
             "is2_phantom" => ["is2HallucinationsFull", "is2PerformanceFull"],
             "is3_mizuki" => ["is3KeyFull", "is3LightHordeFull", "is3RejectionFull"],
-            "is4_sami" => ["is4RevelationFull"],
+            "is4_sami" => ["is4RevelationFull", "is4ParadigmLost"],
             "is6_sui" => ["is6ActiveCoinsFull", "is6SeasonalHours"],
             _ => Array.Empty<string>(),
         };
@@ -5819,6 +6508,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         var path = parameter as string;
         var url = RhodesPreviewUrlBuilder.Build(RhodesApiUrl, path ?? "/sidecar");
+        return OpenExternalUrlAsync(url, "プレビュー");
+    }
+
+    private Task OpenExternalUrlAsync(string url, string label)
+    {
         try
         {
             Process.Start(new ProcessStartInfo
@@ -5826,11 +6520,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 FileName = url,
                 UseShellExecute = true,
             });
-            StatusMessage = $"プレビューを開きました: {url}";
+            StatusMessage = $"{label}を開きました: {url}";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"プレビューを開けませんでした: {ex.Message}";
+            StatusMessage = $"{label}を開けませんでした: {ex.Message}";
         }
 
         return Task.CompletedTask;
@@ -6007,8 +6701,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return false;
             }
 
-            var expandedInitialCoinFrame = plan.ProfileId == "is6CoinsFull";
-            if (expandedInitialCoinFrame)
+            var expandedInitialTargetFrame = plan.ProfileId is
+                "is6CoinsFull" or "is4RevelationFull" or "is4ParadigmLost";
+            if (expandedInitialTargetFrame)
             {
                 await RunTemplateOcrExpansionsAsync(
                     execution.TaskResults,
@@ -6035,6 +6730,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 {
                     "runStatusFull" => "分隊情報画面を確認できません。左下の分隊アイコンが表示されたマップ画面から再実行してください。",
                     "relicsFull" => "秘宝一覧を確認できません。マップ画面から再実行してください。戦闘・イベント詳細画面では秘宝認識を実行できません。",
+                    "is4RevelationFull" => "啓示板の本因・構成を確認できません。啓示板を開き直して再実行してください。",
+                    "is4ParadigmLost" => "パラダイムロストの詳細を確認できません。マップ画面から再実行してください。",
                     "is5AgeFull" => "時代詳細画面を確認できません。時代が発生していない場合は候補なしになります。",
                     "is6CoinsFull" => "銭匣の保有銭一覧を確認できません。マップ画面から再実行してください。",
                     _ => "オペレーターカードの基準点を確認できません。隊員一覧が開いているか確認して再実行してください。",
@@ -6047,7 +6744,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var operatorScanTracker = plan.ProfileId == "operatorsFull"
                 ? new RhodesOperatorScanTracker()
                 : null;
-            if (!expandedInitialCoinFrame)
+            if (!expandedInitialTargetFrame)
             {
                 await RunTemplateOcrExpansionsAsync(
                     execution.TaskResults,
@@ -6128,7 +6825,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RhodesOperatorScanTracker? operatorScanTracker = null)
     {
         var frameResults = templateResults as MaaTaskRunResult[] ?? templateResults.ToArray();
-        if (string.Equals(CandidateApiProfileId(), "is6ActiveCoinsFull", StringComparison.Ordinal))
+        var profileId = CandidateApiProfileId();
+        foreach (var request in RhodesSamiSpecialOcrPlanner.BuildRequests(profileId, encodedImage))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = await _session.RunResourceRecognitionAsync(
+                request.Entry,
+                request.PayloadJson,
+                encodedImage,
+                cancellationToken,
+                request.Scale);
+            ResourceTaskResults.Add(result);
+            RefreshResourceTaskDiagnostics();
+        }
+
+        if (string.Equals(profileId, "is6ActiveCoinsFull", StringComparison.Ordinal))
         {
             var candidateFrameResults = frameResults.ToList();
             var visibleRowCount = 0;
@@ -6172,7 +6883,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = $"有効銭: 画像で{visibleRowCount}行 / MAA-OCRで{recognizedRowCount}枚・{frameOcrCandidates.Length}種 / 行別補完{fallbackOcrCount}件";
             RefreshResourceTaskDiagnostics();
         }
-        else if (string.Equals(CandidateApiProfileId(), "is6CoinsFull", StringComparison.Ordinal))
+        else if (string.Equals(profileId, "is6CoinsFull", StringComparison.Ordinal))
         {
             var candidateFrameResults = frameResults.ToList();
             var missingNameOcrCount = 0;
@@ -6436,7 +7147,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         var taskEntries = ScrollRecognitionTaskEntries(plan).ToArray();
-        if (taskEntries.Length == 0 && plan.ProfileId != "is6CoinsFull")
+        if (taskEntries.Length == 0
+            && plan.ProfileId is not ("is6CoinsFull" or "is4RevelationFull"))
             return;
         var initialCandidateCount = CurrentLocalCandidateCount(plan.ProfileId);
         var expectedCandidateCount = plan.ProfileId == "relicsFull"
@@ -6468,16 +7180,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         if (RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll(
                 plan.ProfileId,
+                initialCandidateCount,
                 expectedCandidateCount,
                 campaignId))
         {
+            var expectedLabel = expectedCandidateCount?.ToString(CultureInfo.InvariantCulture) ?? "?";
             StatusMessage =
-                $"秘宝候補{initialCandidateCount}/{expectedCandidateCount}件: 3行以内の固定表示のため、画面を閉じる可能性があるスクロールは実行せず終了しました。";
+                $"秘宝候補{initialCandidateCount}/{expectedLabel}件: 3行以内の固定表示のため、画面を閉じる可能性があるスクロールは実行せず終了しました。";
             return;
         }
         var scanRegion = RhodesRecognitionScrollPlan.LoadScanRegionDefault(plan.ProfileId);
 
         var previousPassScrolls = 0;
+        var completedPassCount = 0;
         var reachedExpectedCandidateCount = false;
         foreach (var pass in passes)
         {
@@ -6559,8 +7274,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     break;
                 }
 
-                if (executedScrolls >= pass.MinScrolls
-                    && operatorScanTracker?.CanStopCurrentViewport == true)
+                if (RhodesRecognitionRuntimePlan.CanStopResolvedOperatorViewport(
+                        plan.ProfileId,
+                        executedScrolls,
+                        pass.MinScrolls,
+                        stableFrames,
+                        pass.EndFingerprintStableCount,
+                        operatorScanTracker?.CanStopCurrentViewport == true))
                 {
                     break;
                 }
@@ -6577,14 +7297,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             previousPassScrolls = executedScrolls;
+            completedPassCount++;
             if (reachedExpectedCandidateCount)
             {
                 StatusMessage = $"秘宝候補{CurrentLocalCandidateCount(plan.ProfileId)}/{expectedCandidateCount}件: 所持数と一致したため終了しました。";
                 break;
             }
-            if (plan.ProfileId == "operatorsFull"
-                && stableFrames > 0
-                && operatorScanTracker?.CanStopScan == true)
+            if (RhodesRecognitionRuntimePlan.CanStopResolvedOperatorScan(
+                    plan.ProfileId,
+                    completedPassCount,
+                    passes.Count,
+                    operatorScanTracker?.CanStopScan == true))
             {
                 StatusMessage = "表示済みオペレーターをすべて解決したためスキャンを終了しました。";
                 break;

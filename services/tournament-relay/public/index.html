@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>RHODES Tournament Input</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">RHODES OBS COMMANDER3373</p>
+        <h1 id="player-label">大会入力</h1>
+      </div>
+      <div class="connection-state" id="connection-state">接続中</div>
+    </header>
+
+    <main class="workspace">
+      <section class="state-pane" aria-labelledby="state-title">
+        <div class="pane-heading">
+          <div>
+            <p class="section-label">CURRENT STATE</p>
+            <h2 id="state-title">現在の配信状態</h2>
+          </div>
+          <button class="icon-button" id="refresh-button" type="button" title="最新状態を再読込" aria-label="最新状態を再読込">↻</button>
+        </div>
+        <div id="state-summary" class="state-summary"></div>
+        <div class="selection-summary">
+          <article>
+            <h3>オペレーター <span id="operator-count">0</span></h3>
+            <div id="selected-operators" class="compact-list"></div>
+          </article>
+          <article>
+            <h3>秘宝 <span id="relic-count">0</span></h3>
+            <div id="selected-relics" class="compact-list"></div>
+          </article>
+          <article>
+            <h3>ボス</h3>
+            <div id="selected-bosses" class="compact-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="input-pane" aria-labelledby="input-title">
+        <div class="pane-heading">
+          <div>
+            <p class="section-label">INPUT</p>
+            <h2 id="input-title">入力・訂正</h2>
+          </div>
+          <button class="danger-button" id="clear-run-button" type="button">ランをクリア</button>
+        </div>
+        <nav class="tabs" id="input-tabs" aria-label="入力項目">
+          <button class="active" data-tab="run" type="button">ラン</button>
+          <button data-tab="special" type="button">特殊値</button>
+          <button data-tab="operators" type="button">オペレーター</button>
+          <button data-tab="relics" type="button">秘宝</button>
+          <button data-tab="bosses" type="button">ボス</button>
+        </nav>
+        <div class="pending-bar" id="pending-bar">
+          <div>
+            <strong id="pending-summary">未送信の変更はありません</strong>
+            <span id="pending-detail">入力内容は、この端末内だけに保持されています。</span>
+          </div>
+          <div class="pending-actions">
+            <button class="command-button" id="discard-button" type="button" disabled>変更を破棄</button>
+            <button class="command-button primary" id="send-button" type="button" disabled>変更を送信</button>
+          </div>
+        </div>
+        <div id="editor" class="editor"></div>
+      </section>
+
+      <section class="history-pane" aria-labelledby="history-title">
+        <div class="pane-heading">
+          <div>
+            <p class="section-label">HISTORY</p>
+            <h2 id="history-title">適用履歴</h2>
+          </div>
+          <span class="history-note">「変更を送信」後、配信PCへ即時反映されます</span>
+        </div>
+        <ol id="history-list" class="history-list"></ol>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/assets/input.js"></script>
+  </body>
+</html>

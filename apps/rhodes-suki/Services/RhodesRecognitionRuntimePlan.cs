@@ -45,7 +45,7 @@ public static class RhodesRecognitionRuntimePlan
     }
 
     public static bool IsScrollProfile(string profileId) =>
-        profileId is "operatorsFull" or "relicsFull" or "is5ThoughtFull" or "is6CoinsFull";
+        profileId is "operatorsFull" or "relicsFull" or "is4RevelationFull" or "is5ThoughtFull" or "is6CoinsFull";
 
     public static bool ShouldSkipScroll(
         string profileId,
@@ -71,9 +71,18 @@ public static class RhodesRecognitionRuntimePlan
 
     public static bool ShouldStopBeforeRelicScroll(
         string profileId,
+        int candidateCount,
         int? expectedCandidateCount,
-        string campaignId) =>
-        IsKnownNonScrollableRelicList(profileId, expectedCandidateCount, campaignId);
+        string campaignId)
+    {
+        if (IsKnownNonScrollableRelicList(profileId, expectedCandidateCount, campaignId))
+            return true;
+
+        return profileId == "relicsFull"
+            && !campaignId.Equals(PhantomCampaignId, StringComparison.Ordinal)
+            && expectedCandidateCount is null
+            && candidateCount is > 0 and < RelicVisibleItemCapacity;
+    }
 
     public static bool ShouldEndRelicPassAfterImmobileProbe(
         string profileId,
@@ -135,6 +144,16 @@ public static class RhodesRecognitionRuntimePlan
                 .Any(candidate => candidate.Kind.Equals("coin", StringComparison.Ordinal));
         }
 
+        if (profileId is "is4RevelationFull" or "is4ParadigmLost")
+        {
+            var fieldId = profileId == "is4RevelationFull" ? "revelation" : "paradigmLost";
+            return RhodesMaaLocalCandidateConverter.FromTaskResults(
+                    profileId,
+                    results,
+                    "is4_sami")
+                .Any(candidate => candidate.FieldId.Equals(fieldId, StringComparison.Ordinal));
+        }
+
         var requiredEntry = profileId switch
         {
             "operatorsFull" => OperatorCardTemplateEntry,
@@ -168,5 +187,31 @@ public static class RhodesRecognitionRuntimePlan
         return candidateStableCount > 0
             && stableCandidateCount >= candidateStableCount
             && stableFrameCount > 0;
+    }
+
+    public static bool CanStopResolvedOperatorViewport(
+        string profileId,
+        int executedScrolls,
+        int minScrolls,
+        int stableFrameCount,
+        int fingerprintStableCount,
+        bool trackerCanStop)
+    {
+        return profileId.Equals("operatorsFull", StringComparison.Ordinal)
+            && trackerCanStop
+            && executedScrolls >= minScrolls
+            && stableFrameCount >= Math.Max(1, fingerprintStableCount);
+    }
+
+    public static bool CanStopResolvedOperatorScan(
+        string profileId,
+        int completedPassCount,
+        int totalPassCount,
+        bool trackerCanStop)
+    {
+        return profileId.Equals("operatorsFull", StringComparison.Ordinal)
+            && trackerCanStop
+            && totalPassCount > 0
+            && completedPassCount >= totalPassCount;
     }
 }

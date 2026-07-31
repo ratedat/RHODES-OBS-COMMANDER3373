@@ -333,7 +333,9 @@ public sealed record RhodesSukiSettings(
     string HudVisibleParts = "",
     bool AdbConnectionValidated = false,
     IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null,
-    SukiOutputPreferences? OutputPreferences = null);
+    SukiOutputPreferences? OutputPreferences = null,
+    string TournamentRelayUrl = "",
+    string TournamentPlayerLabel = "Player");
 
 public sealed record MaaSessionSnapshot(
     string State,

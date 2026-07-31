@@ -109,6 +109,7 @@ public sealed class SukiSeasonalHourEditor : INotifyPropertyChanged
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOption)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedId)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedEffect)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedImagePath)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsDogPaintingTargetSelectionVisible)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DogPaintingTargetLimit)));
         }
@@ -116,6 +117,7 @@ public sealed class SukiSeasonalHourEditor : INotifyPropertyChanged
 
     public string SelectedId => SelectedOption.Id;
     public string SelectedEffect => SelectedOption.Effect;
+    public string SelectedImagePath => SelectedOption.ImagePath;
     public bool IsDogPaintingTargetSelectionVisible => ParentKey.Equals("is6sst11", StringComparison.Ordinal)
         && DogPaintingTargetLimit > 0;
     public int DogPaintingTargetLimit => SelectedOption.VariantRank switch
@@ -125,6 +127,54 @@ public sealed class SukiSeasonalHourEditor : INotifyPropertyChanged
         "nyuukotsu" => 3,
         _ => 0,
     };
+}
+
+public sealed class SukiRevelationEntryEditor : INotifyPropertyChanged
+{
+    private SukiSpecialEffectOption _selectedState;
+
+    public SukiRevelationEntryEditor(
+        SukiSpecialEffectOption effectOption,
+        string slotKind,
+        IReadOnlyList<SukiSpecialEffectOption> stateOptions,
+        string stateId = "")
+    {
+        EffectOption = effectOption;
+        SlotKind = slotKind;
+        StateOptions = stateOptions;
+        _selectedState = stateOptions.FirstOrDefault(option => option.Id.Equals(stateId, StringComparison.Ordinal))
+            ?? stateOptions.First();
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public SukiSpecialEffectOption EffectOption { get; }
+    public string EffectId => EffectOption.Id;
+    public string Name => EffectOption.Name;
+    public string Effect => EffectOption.Effect;
+    public string ImagePath => EffectOption.ImagePath;
+    public string SlotKind { get; }
+    public string SlotLabel => SlotKind.Equals("cause", StringComparison.Ordinal) ? "本因" : "構成";
+    public IReadOnlyList<SukiSpecialEffectOption> StateOptions { get; }
+
+    public SukiSpecialEffectOption SelectedState
+    {
+        get => _selectedState;
+        set
+        {
+            if (value is null || ReferenceEquals(_selectedState, value))
+                return;
+            _selectedState = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedState)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StateId)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StateLabel)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StateImagePath)));
+        }
+    }
+
+    public string StateId => SelectedState.Id;
+    public string StateLabel => string.IsNullOrWhiteSpace(StateId) ? "修辞なし" : SelectedState.Name;
+    public string StateImagePath => SelectedState.ImagePath;
 }
 
 public sealed class SukiHallucinationOption : INotifyPropertyChanged
@@ -452,6 +502,12 @@ public sealed record SukiCoinLoadoutEntry(
     string StatusId,
     int Count);
 
+public sealed record SukiEffectLoadoutEntry(
+    string EffectId,
+    string StateId,
+    string SlotKind,
+    int Count);
+
 public sealed class SukiCoinLoadoutEditor : INotifyPropertyChanged
 {
     private int _count;
@@ -522,6 +578,7 @@ public sealed record SukiSpecialFieldState(
     IReadOnlyList<string>? SelectedIds = null,
     IReadOnlyList<string>? OperatorIds = null,
     IReadOnlyList<SukiCoinLoadoutEntry>? CoinEntries = null,
+    IReadOnlyList<SukiEffectLoadoutEntry>? EffectEntries = null,
     IReadOnlyList<SukiOperatorTargetRef>? OperatorTargets = null);
 
 public sealed record SukiCampaignWorkspacePreview(

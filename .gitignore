@@ -48,6 +48,7 @@ data/current-state.json
 data/electron/
 data/glm-ocr-runtime/
 data/ollama-runtime/
+cloudflared-runtime/
 user-data/
 user-data/state/glm-ocr-runtime/
 user-data/state/ollama-runtime/

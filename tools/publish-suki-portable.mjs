@@ -13,6 +13,7 @@ const preservedTopLevelEntries = new Set([
   "glm-ocr-runtime",
   "ollama-runtime",
   "nodejs-runtime",
+  "cloudflared-runtime",
 ]);
 
 function assertSafeOutputPath() {
@@ -128,8 +129,19 @@ async function copyWebOverlayRuntime() {
   const target = path.join(outputDir, "app");
   await fs.rm(target, { recursive: true, force: true });
   await fs.cp(source, target, { recursive: true });
+  const relaySource = path.join(repoRoot, "services", "tournament-relay");
+  const relayTarget = path.join(outputDir, "services", "tournament-relay");
+  await fs.rm(relayTarget, { recursive: true, force: true });
+  await fs.mkdir(path.dirname(relayTarget), { recursive: true });
+  await fs.cp(relaySource, relayTarget, { recursive: true });
+  await fs.mkdir(path.join(outputDir, "docs"), { recursive: true });
+  await fs.copyFile(
+    path.join(repoRoot, "docs", "tournament-remote-input.md"),
+    path.join(outputDir, "docs", "tournament-remote-input.md"),
+  );
   await fs.copyFile(path.join(repoRoot, "package.json"), path.join(outputDir, "package.json"));
   await fs.access(path.join(target, "server.mjs"));
+  await fs.access(path.join(relayTarget, "server.mjs"));
 }
 
 async function copyWebOverlayAssets() {

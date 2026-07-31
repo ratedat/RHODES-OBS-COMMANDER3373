@@ -171,6 +171,28 @@ public static class RhodesRecognitionCandidateApplier
         FieldId: "seasonalHourTargets",
         SlotKind: "clear");
 
+    public static MaaCandidatePreview CreateNoSamiRevelationCandidate() => new(
+        "revelation",
+        "啓示板なし",
+        "",
+        "手動入力",
+        1.0,
+        CampaignId: Is4CampaignId,
+        RecognitionKey: "manual:sami:revelation:clear",
+        FieldId: "revelation",
+        SlotKind: "clear");
+
+    public static MaaCandidatePreview CreateNoSamiParadigmLostCandidate() => new(
+        "revelation",
+        "パラダイムロストなし",
+        "",
+        "手動入力",
+        1.0,
+        CampaignId: Is4CampaignId,
+        RecognitionKey: "manual:sami:paradigm-lost:clear",
+        FieldId: "paradigmLost",
+        SlotKind: "clear");
+
     private static SukiCandidateApplySummary Apply(
         JsonObject state,
         IEnumerable<MaaCandidatePreview> candidates,
@@ -186,6 +208,8 @@ public static class RhodesRecognitionCandidateApplier
         var handledIndexes = ApplyCampaignCandidates(state, candidateList, applied);
         if (!runStatusOnly)
             handledIndexes.UnionWith(ApplyIs3SpecialCandidates(state, candidateList, applied));
+        if (!runStatusOnly)
+            handledIndexes.UnionWith(ApplyIs4ParadigmCandidates(state, candidateList, applied));
         if (!runStatusOnly)
             handledIndexes.UnionWith(ApplyIs5SpecialCandidates(state, candidateList, applied));
         if (!runStatusOnly)
@@ -265,7 +289,7 @@ public static class RhodesRecognitionCandidateApplier
             return $"mizuki:{fieldId}:{value}";
         }
         if (CandidateIsKind(candidate, "revelation"))
-            return $"revelation:{CandidateId(candidate.EffectId, candidate.Value)}";
+            return $"revelation:{CandidateId(candidate.EffectId, candidate.Value)}:{candidate.StateId.Trim()}";
         if (CandidateIsKind(candidate, "coin"))
             return $"coin:{CandidateId(candidate.CoinId, candidate.Value)}";
         if (CandidateIsKind(candidate, "sui"))
@@ -1576,41 +1600,151 @@ public static class RhodesRecognitionCandidateApplier
         if (!CandidateCampaignIs(candidate, Is4CampaignId))
             return false;
 
-        var effectId = CandidateId(candidate.EffectId, candidate.Value);
-        if (string.IsNullOrWhiteSpace(effectId))
-            return false;
-
         var fieldId = NormalizeRevelationFieldId(candidate.FieldId);
         var slotKind = candidate.SlotKind.Trim().ToLowerInvariant();
-        if (slotKind is not ("cause" or "causeid" or "structure" or "structureid" or "rhetoric" or "rhetoricid"))
-            return false;
-
         var run = EnsureObject(state, "run");
         var campaign = EnsureCampaignSpecialFromRun(run, Is4CampaignId);
         if (campaign is null)
             return false;
 
+        if (slotKind.Equals("clear", StringComparison.Ordinal))
+        {
+            campaign[fieldId] = new JsonObject
+            {
+                ["entries"] = new JsonArray(),
+            };
+            applied.Add($"revelation:{fieldId}:clear");
+            return true;
+        }
+
+        var effectId = CandidateId(candidate.EffectId, candidate.Value);
+        if (string.IsNullOrWhiteSpace(effectId))
+            return false;
+
+        if (slotKind is not ("cause" or "causeid" or "structure" or "structureid"))
+            return false;
+        slotKind = slotKind.StartsWith("cause", StringComparison.Ordinal) ? "cause" : "structure";
+        var stateId = candidate.StateId.Trim();
+
         var board = EnsureObject(campaign, fieldId);
-        if (slotKind is "cause" or "causeid")
+        var entries = EnsureRevelationEntries(board);
+        JsonObject? sameBaseWithoutState = null;
+        foreach (var node in entries)
         {
-            board["causeId"] = effectId;
-            applied.Add($"revelation:cause:{effectId}");
-            return true;
+            if (node is not JsonObject entry
+                || !JsonString(entry, "effectId").Equals(effectId, StringComparison.Ordinal)
+                || !JsonString(entry, "slotKind").Equals(slotKind, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var existingStateId = JsonString(entry, "stateId");
+            if (existingStateId.Equals(stateId, StringComparison.Ordinal))
+                return false;
+            if (string.IsNullOrWhiteSpace(existingStateId))
+                sameBaseWithoutState = entry;
         }
 
-        if (slotKind is "structure" or "structureid")
+        if (!string.IsNullOrWhiteSpace(stateId) && sameBaseWithoutState is not null)
         {
-            board["structureId"] = effectId;
-            applied.Add($"revelation:structure:{effectId}");
+            sameBaseWithoutState["stateId"] = stateId;
+            applied.Add($"revelation:{slotKind}:{effectId}:{stateId}");
             return true;
         }
+        if (string.IsNullOrWhiteSpace(stateId)
+            && entries.OfType<JsonObject>().Any(entry =>
+                JsonString(entry, "effectId").Equals(effectId, StringComparison.Ordinal)
+                && JsonString(entry, "slotKind").Equals(slotKind, StringComparison.Ordinal)))
+        {
+            return false;
+        }
 
-        board["rhetorics"] = MergeCountedEntries(
-            board["rhetorics"] as JsonArray,
-            effectId,
-            Math.Clamp(candidate.Count <= 0 ? 1 : candidate.Count, 1, 99));
-        applied.Add($"revelation:rhetoric:{effectId}");
+        entries.Add(new JsonObject
+        {
+            ["effectId"] = effectId,
+            ["stateId"] = stateId,
+            ["slotKind"] = slotKind,
+            ["count"] = Math.Clamp(candidate.Count <= 0 ? 1 : candidate.Count, 1, 99),
+        });
+        applied.Add($"revelation:{slotKind}:{effectId}:{stateId}");
         return true;
+    }
+
+    private static HashSet<int> ApplyIs4ParadigmCandidates(
+        JsonObject state,
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        ICollection<string> applied)
+    {
+        var run = EnsureObject(state, "run");
+        if (!JsonString(run, "campaignId").Equals(Is4CampaignId, StringComparison.Ordinal))
+            return [];
+
+        var rows = candidates
+            .Select((candidate, index) => (
+                Candidate: candidate,
+                Index: index,
+                EffectId: CandidateId(candidate.EffectId, candidate.Value)))
+            .Where(item => CandidateIsKind(item.Candidate, "revelation")
+                && CandidateCampaignIs(item.Candidate, Is4CampaignId)
+                && item.Candidate.FieldId.Equals("paradigmLost", StringComparison.Ordinal))
+            .ToArray();
+        if (rows.Length == 0)
+            return [];
+
+        var campaign = EnsureCampaignSpecialFromRun(run, Is4CampaignId);
+        if (campaign is null)
+            return [];
+
+        var selected = new JsonArray();
+        foreach (var effectId in rows
+            .Where(item => !item.Candidate.SlotKind.Equals("clear", StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.EffectId)
+            .Where(effectId => !string.IsNullOrWhiteSpace(effectId))
+            .Distinct(StringComparer.Ordinal))
+        {
+            selected.Add(effectId);
+        }
+        campaign["paradigmLost"] = selected;
+
+        var handled = new HashSet<int>();
+        foreach (var row in rows)
+        {
+            handled.Add(row.Index);
+            applied.Add(row.Candidate.SlotKind.Equals("clear", StringComparison.OrdinalIgnoreCase)
+                ? "revelation:paradigmLost:clear"
+                : $"revelation:paradigmLost:{row.EffectId}");
+        }
+        return handled;
+    }
+
+    private static JsonArray EnsureRevelationEntries(JsonObject board)
+    {
+        if (board["entries"] is JsonArray entries)
+            return entries;
+
+        entries = [];
+        AddLegacyRevelationEntry(board, entries, "causeId", "cause");
+        AddLegacyRevelationEntry(board, entries, "structureId", "structure");
+        board.Remove("causeId");
+        board.Remove("structureId");
+        board.Remove("rhetorics");
+        board["entries"] = entries;
+        return entries;
+    }
+
+    private static void AddLegacyRevelationEntry(JsonObject board, JsonArray entries, string propertyName, string slotKind)
+    {
+        var effectId = JsonString(board, propertyName);
+        if (string.IsNullOrWhiteSpace(effectId))
+            return;
+
+        entries.Add(new JsonObject
+        {
+            ["effectId"] = effectId,
+            ["stateId"] = "",
+            ["slotKind"] = slotKind,
+            ["count"] = 1,
+        });
     }
 
     private static bool ApplyCoinCandidate(JsonObject state, MaaCandidatePreview candidate, ICollection<string> applied)

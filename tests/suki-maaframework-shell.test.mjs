@@ -10,6 +10,10 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   const publicDebugPackager = await fs.readFile("tools/package-suki-public-debug.mjs", "utf8");
   const discordGuide = await fs.readFile("docs/discord-public-debug-guide.md", "utf8");
   const server = await fs.readFile("app/server.mjs", "utf8");
+  const outputWorkspace = await fs.readFile(
+    "apps/rhodes-suki/Views/Workspaces/OutputWorkspaceView.axaml",
+    "utf8",
+  );
 
   assert.match(csproj, /PackageReference Include="SukiUI" Version="7\.0\.1"/);
   assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.10\.0"/);
@@ -52,6 +56,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(portablePublisher, /"user-data"/);
   assert.match(portablePublisher, /"RHODES OBS COMMANDER3373 Debug Logs"/);
   assert.match(portablePublisher, /"nodejs-runtime"/);
+  assert.match(portablePublisher, /"cloudflared-runtime"/);
   assert.match(portablePublisher, /EnableCompressionInSingleFile=true/);
   assert.match(portablePublisher, /DebugSymbols=false/);
   assert.match(portablePublisher, /copyMaaNativeRuntimeToRuntimes/);
@@ -63,15 +68,29 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(publicDebugPackager, /"glm-ocr-runtime"/);
   assert.match(publicDebugPackager, /"ollama-runtime"/);
   assert.match(publicDebugPackager, /"nodejs-runtime"/);
+  assert.match(publicDebugPackager, /"cloudflared-runtime"/);
+  const excludedPortableEntries = publicDebugPackager.match(
+    /const excludedPortableEntries = new Set\(\[[\s\S]*?\]\);/,
+  )?.[0] ?? "";
+  assert.doesNotMatch(excludedPortableEntries, /nodejs-runtime/);
+  assert.doesNotMatch(excludedPortableEntries, /cloudflared-runtime/);
+  assert.match(publicDebugPackager, /ensureBundledPublicRuntime\(packageRoot\)/);
+  assert.match(publicDebugPackager, /node-v24\.18\.0-win-x64/);
+  assert.match(publicDebugPackager, /cloudflared-windows-amd64\.exe/);
+  assert.match(publicDebugPackager, /path\.join\(repoRoot, "services"\)/);
   assert.match(publicDebugPackager, /README_PUBLIC_DEBUG\.md/);
   assert.match(publicDebugPackager, /DISCORD_USAGE\.md/);
   assert.match(publicDebugPackager, /docs\/discord-public-debug-guide\.md/);
   assert.match(publicDebugPackager, /path\.join\(repoRoot, "app"\)/);
-  assert.match(publicDebugPackager, /app\/server\.mjs/);
+  assert.match(publicDebugPackager, /copyPortablePayload\(packageRoot\)/);
   assert.match(publicDebugPackager, /overlay-state\.example\.json/);
   assert.match(publicDebugPackager, /current-state\.json/);
   assert.match(publicDebugPackager, /distribution-profile\.json/);
   assert.match(publicDebugPackager, /public-debug/);
+  assert.match(outputWorkspace, /大会入力（簡易公開）/u);
+  assert.match(outputWorkspace, /簡易公開を開始/u);
+  assert.match(outputWorkspace, /OCRモデル、インストーラー、管理者権限は不要/u);
+  assert.match(outputWorkspace, /外部中継サーバー（上級者向け）/u);
   assert.ok(discordGuide.length <= 2000, "Discord guide fits in one standard message");
   assert.match(discordGuide, /ZIPをすべて展開/u);
   assert.match(discordGuide, /ADB取得・認識・反映/u);
@@ -1115,6 +1134,9 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(specialWorkspace, /ImagePath, Converter=\{StaticResource BitmapPathConverter\}/);
   assert.match(specialWorkspace, /ManualThoughtEditors/);
   assert.match(specialWorkspace, /SpecialValuePreviews/);
+  assert.match(specialWorkspace, /ManualSamiStructureEntries/);
+  assert.match(specialWorkspace, /ManualSamiCauseEntries/);
+  assert.doesNotMatch(specialWorkspace, /ItemsSource="\{Binding ManualSamiRevelationEntries\}"/);
   assert.match(specialWorkspace, /IsPhantomCampaignSelected/);
   assert.match(specialWorkspace, /ManualPerformanceOptions/);
   assert.match(specialWorkspace, /ManualHallucinationOptions/);
@@ -1443,7 +1465,7 @@ test("Sui map recognition reads active coins without opening the held-coin workf
   assert.doesNotMatch(currentSpecial, /"is6_sui"[^\n]+"is6CoinsFull"/);
   assert.match(
     viewModel,
-    /CandidateApiProfileId\(\), "is6ActiveCoinsFull"[\s\S]*?RhodesSuiCoinImageRecognizer\.InspectActive\(encodedImage\)[\s\S]*?PlanActivePanelOcrRequests\(inspections\)[\s\S]*?_session\.RunResourceRecognitionAsync/,
+    /string\.Equals\(profileId, "is6ActiveCoinsFull"[\s\S]*?RhodesSuiCoinImageRecognizer\.InspectActive\(encodedImage\)[\s\S]*?PlanActivePanelOcrRequests\(inspections\)[\s\S]*?_session\.RunResourceRecognitionAsync/,
   );
   assert.doesNotMatch(
     viewModel,

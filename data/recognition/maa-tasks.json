@@ -186,6 +186,7 @@
         "operatorsFull",
         "relicsFull",
         "is4RevelationFull",
+        "is4ParadigmLost",
         "is5ThoughtFull",
         "is5AgeFull",
         "is2HallucinationsFull",
@@ -383,6 +384,9 @@
     },
     {
       "id": "run.difficulty_grade",
+      "profileIds": [
+        "runStatusFull"
+      ],
       "roi": [
         130,
         552,
@@ -437,10 +441,23 @@
         "is4RevelationFull"
       ],
       "roi": [
-        90,
-        84,
-        1100,
-        540
+        15,
+        75,
+        405,
+        555
+      ],
+      "scale": 2
+    },
+    {
+      "id": "is4.paradigm_lost_text",
+      "profileIds": [
+        "is4ParadigmLost"
+      ],
+      "roi": [
+        335,
+        95,
+        655,
+        380
       ],
       "scale": 2
     },

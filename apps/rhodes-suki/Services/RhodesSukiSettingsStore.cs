@@ -80,7 +80,14 @@ public static class RhodesSukiSettingsStore
             };
         }
 
-        var normalized = settings with { OutputPreferences = outputPreferences };
+        var normalized = settings with
+        {
+            OutputPreferences = outputPreferences,
+            TournamentRelayUrl = settings.TournamentRelayUrl?.Trim() ?? "",
+            TournamentPlayerLabel = string.IsNullOrWhiteSpace(settings.TournamentPlayerLabel)
+                ? "Player"
+                : settings.TournamentPlayerLabel.Trim(),
+        };
         var hasBareAdbPath = string.IsNullOrWhiteSpace(settings.AdbPath)
             || settings.AdbPath.Trim().Equals("adb", StringComparison.OrdinalIgnoreCase)
             || settings.AdbPath.Trim().Equals("adb.exe", StringComparison.OrdinalIgnoreCase);

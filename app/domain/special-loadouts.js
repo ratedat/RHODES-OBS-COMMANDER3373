@@ -77,8 +77,13 @@ export function normalizeRevelationBoardValue(field, campaignId, value, selectab
   const byId = selectableEffectMap(selectableEffectSource);
   const next = { causeId: null, structureId: null, rhetorics: [] };
 
-  if (Array.isArray(value)) {
-    for (const entry of asEffectStackEntries(value)) {
+  const entrySource = Array.isArray(value)
+    ? value
+    : Array.isArray(value?.entries)
+      ? value.entries
+      : null;
+  if (entrySource) {
+    for (const entry of asEffectStackEntries(entrySource)) {
       const item = byId.get(entry.effectId);
       if (item && causeOptions.has(item.id) && !next.causeId) next.causeId = item.id;
       else if (item && structureOptions.has(item.id) && !next.structureId) next.structureId = item.id;

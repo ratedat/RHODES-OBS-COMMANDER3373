@@ -827,7 +827,8 @@ public static class RhodesRunCatalog
             kind,
             profileId,
             entries.Labels.Count == 0 ? "取得値なし" : string.Join(" / ", entries.Labels),
-            SelectedIds: entries.Ids);
+            SelectedIds: entries.Ids,
+            EffectEntries: entries.Entries);
     }
 
     private static SukiSpecialFieldState BuildTextListState(
@@ -934,7 +935,7 @@ public static class RhodesRunCatalog
             CoinEntries: entries);
     }
 
-    private static (int Total, IReadOnlyList<string> Labels, IReadOnlyList<string> Ids) ReadEffectEntries(
+    private static (int Total, IReadOnlyList<string> Labels, IReadOnlyList<string> Ids, IReadOnlyList<SukiEffectLoadoutEntry> Entries) ReadEffectEntries(
         JsonElement value,
         IReadOnlyDictionary<string, SelectableEffectPreview> effectsById,
         bool sumCounts)
@@ -942,8 +943,9 @@ public static class RhodesRunCatalog
         var total = 0;
         var labels = new List<string>();
         var ids = new List<string>();
+        var entries = new List<SukiEffectLoadoutEntry>();
 
-        void AddEntry(string id, int count)
+        void AddEntry(string id, string stateId, string slotKind, int count)
         {
             if (string.IsNullOrWhiteSpace(id))
                 return;
@@ -951,43 +953,69 @@ public static class RhodesRunCatalog
             count = Math.Max(1, count);
             total += sumCounts ? count : 1;
             ids.Add(id);
+            entries.Add(new SukiEffectLoadoutEntry(id, stateId, slotKind, count));
             var name = ResolveEffectLabel(id, effectsById);
-            labels.Add(sumCounts && count > 1 ? $"{name} x{count}" : name);
+            var stateName = string.IsNullOrWhiteSpace(stateId) ? "" : ResolveEffectLabel(stateId, effectsById);
+            var state = string.IsNullOrWhiteSpace(stateName) ? "" : $" [{stateName}]";
+            var quantity = sumCounts && count > 1 ? $" x{count}" : "";
+            labels.Add($"{name}{state}{quantity}");
+        }
+
+        void AddObjectEntry(JsonElement item)
+        {
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                AddEntry(JsonElementString(item), "", "", 1);
+                return;
+            }
+
+            if (item.ValueKind != JsonValueKind.Object)
+                return;
+
+            var id = JsonString(item, "effectId");
+            if (string.IsNullOrWhiteSpace(id))
+                id = JsonString(item, "id");
+            if (string.IsNullOrWhiteSpace(id))
+                id = JsonString(item, "coinId");
+            AddEntry(
+                id,
+                JsonString(item, "stateId"),
+                JsonString(item, "slotKind"),
+                JsonNullableInt(item, "count") ?? 1);
         }
 
         if (value.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in value.EnumerateArray())
-            {
-                if (item.ValueKind == JsonValueKind.String)
-                {
-                    AddEntry(JsonElementString(item), 1);
-                    continue;
-                }
-
-                if (item.ValueKind == JsonValueKind.Object)
-                {
-                    var id = JsonString(item, "effectId");
-                    if (string.IsNullOrWhiteSpace(id))
-                        id = JsonString(item, "id");
-                    if (string.IsNullOrWhiteSpace(id))
-                        id = JsonString(item, "coinId");
-                    AddEntry(id, JsonNullableInt(item, "count") ?? 1);
-                }
-            }
+                AddObjectEntry(item);
         }
         else if (value.ValueKind == JsonValueKind.Object)
         {
-            foreach (var property in value.EnumerateObject())
+            if (value.TryGetProperty("entries", out var nestedEntries)
+                && nestedEntries.ValueKind == JsonValueKind.Array)
             {
-                var count = property.Value.ValueKind == JsonValueKind.Number
-                    ? JsonElementNullableInt(property.Value) ?? 1
-                    : JsonNullableInt(property.Value, "count") ?? 1;
-                AddEntry(property.Name, count);
+                foreach (var item in nestedEntries.EnumerateArray())
+                    AddObjectEntry(item);
+            }
+            else if (!string.IsNullOrWhiteSpace(JsonString(value, "causeId"))
+                || !string.IsNullOrWhiteSpace(JsonString(value, "structureId")))
+            {
+                AddEntry(JsonString(value, "causeId"), "", "cause", 1);
+                AddEntry(JsonString(value, "structureId"), "", "structure", 1);
+            }
+            else
+            {
+                foreach (var property in value.EnumerateObject())
+                {
+                    var count = property.Value.ValueKind == JsonValueKind.Number
+                        ? JsonElementNullableInt(property.Value) ?? 1
+                        : JsonNullableInt(property.Value, "count") ?? 1;
+                    AddEntry(property.Name, "", "", count);
+                }
             }
         }
 
-        return (total, labels, ids.Distinct(StringComparer.Ordinal).ToArray());
+        return (total, labels, ids.Distinct(StringComparer.Ordinal).ToArray(), entries);
     }
 
     private static string ResolveEffectLabel(string effectId, IReadOnlyDictionary<string, SelectableEffectPreview> effectsById)
