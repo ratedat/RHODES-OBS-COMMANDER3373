@@ -167,6 +167,15 @@ test("IS#5 thought field uses countable effect stack entries without state slots
   ]);
 });
 
+test("IS#4 omits obsolete collapse value and exposes countable revelation entries", () => {
+  const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
+  const campaign = campaigns.find((item) => item.id === "is4_sami");
+  const revelation = campaign.specialFields.find((item) => item.id === "revelation");
+
+  assert.equal(campaign.specialFields.some((field) => field.id === "collapseValue"), false);
+  assert.equal(revelation.type, "revelationBoardLoadout");
+});
+
 test("IS#6 coin fields are visible in the special OBS output by default", () => {
   const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
   const campaign = campaigns.find((item) => item.id === "is6_sui");
@@ -179,6 +188,71 @@ test("IS#6 coin fields are visible in the special OBS output by default", () => 
   assert.equal(heldCoins.overlayToggle, true);
   assert.equal(heldCoins.overlayDefaultVisible, true);
   assert.equal(heldCoins.overlayEffectScope, "held");
+});
+
+test("IS#4 Sami special values are visible in integrated and part overlays", () => {
+  const campaigns = JSON.parse(readFileSync(new URL("../data/campaigns.json", import.meta.url), "utf8"));
+  const effectData = JSON.parse(readFileSync(new URL("../data/selectable-effects.json", import.meta.url), "utf8"));
+  const campaign = campaigns.find((item) => item.id === "is4_sami");
+  const fields = campaign.specialFields.filter((field) => ["paradigmLost", "revelation"].includes(field.id));
+  const paradigmField = fields.find((field) => field.id === "paradigmLost");
+  const selectableEffectMap = new Map(effectData.selectableEffects.map((item) => [item.id, item]));
+  const context = {
+    campaignId: campaign.id,
+    selectableEffectMap,
+    selectableEffectSource: effectData.selectableEffects,
+  };
+  const special = {
+    paradigmLost: [
+      "is4_sami_selectable_paradigmLost_paradigm1_lower",
+      "is4_sami_selectable_paradigmLost_paradigm2_upper",
+    ],
+    revelation: {
+      entries: [
+        {
+          effectId: "is4_sami_selectable_revelationBoard_is4_aestar1",
+          stateId: "is4_sami_selectable_revelationBoard_is4_rhetoric2",
+          slotKind: "structure",
+          count: 2,
+        },
+        {
+          effectId: "is4_sami_selectable_revelationBoard_is4_kvama1",
+          slotKind: "cause",
+          count: 1,
+        },
+      ],
+    },
+  };
+
+  assert.deepEqual(fields.map((field) => [field.id, field.overlayToggle, field.overlayDefaultVisible]), [
+    ["paradigmLost", true, true],
+    ["revelation", true, true],
+  ]);
+  assert.equal(formatSpecialValue(paradigmField, special.paradigmLost, context), "2件");
+
+  const effects = getOverlaySpecialEffects(fields, special, context);
+  assert.deepEqual(effects.map((item) => item.overlayGroupLabel), [
+    "パラダイムロスト",
+    "パラダイムロスト",
+    "啓示板・構成",
+    "啓示板・本因",
+  ]);
+  assert.deepEqual(effects.map((item) => item.name), [
+    "数的崩壊",
+    "蔓延する崩壊",
+    "追放者 [自給]",
+    "歌唱",
+  ]);
+  assert.equal(effects[2].quantity, 2);
+
+  const hiddenRevelation = getOverlaySpecialEffects(fields, {
+    ...special,
+    revelationOverlayVisible: false,
+  }, context);
+  assert.deepEqual(hiddenRevelation.map((item) => item.overlayGroupLabel), [
+    "パラダイムロスト",
+    "パラダイムロスト",
+  ]);
 });
 
 test("IS#6 does not expose the obsolete support martial field", () => {

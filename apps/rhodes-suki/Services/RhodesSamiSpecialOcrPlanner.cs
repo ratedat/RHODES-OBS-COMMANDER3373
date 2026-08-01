@@ -28,10 +28,12 @@ public static class RhodesSamiSpecialOcrPlanner
 
     private static readonly (int X, int Y, int Width, int Height)[] ParadigmRows =
     [
-        (335, 95, 655, 95),
-        (335, 190, 655, 95),
-        (335, 285, 655, 95),
-        (335, 380, 655, 95),
+        // Keep each ROI on the card title band. Wider/taller regions overlap the
+        // adjacent card and can make MAA-OCR prefer the next title instead.
+        (355, 342, 610, 48),
+        (355, 427, 610, 48),
+        (355, 512, 610, 48),
+        (355, 597, 610, 48),
     ];
 
     public static IReadOnlyList<MaaDynamicOcrRequest> BuildRequests(

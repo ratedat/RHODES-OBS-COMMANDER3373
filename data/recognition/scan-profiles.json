@@ -911,15 +911,15 @@
         {
           "type": "tap",
           "point": {
-            "x": 646,
-            "y": 58
+            "x": 722,
+            "y": 75
           },
           "label": "パラダイムロスト詳細を開く",
           "area": {
-            "x": 610,
-            "y": 40,
-            "width": 72,
-            "height": 38
+            "x": 690,
+            "y": 65,
+            "width": 75,
+            "height": 25
           }
         },
         {
@@ -934,25 +934,25 @@
       "inferredScreenId": "sami-paradigm-lost-detail",
       "scanRegion": {
         "x": 335,
-        "y": 95,
+        "y": 330,
         "width": 655,
-        "height": 380
+        "height": 320
       },
-      "scrollAxis": "none",
-      "scrollDirection": "none",
+      "scrollAxis": "vertical",
+      "scrollDirection": "two-way",
       "restoreSteps": [
         {
           "type": "tap",
           "point": {
-            "x": 646,
-            "y": 58
+            "x": 722,
+            "y": 75
           },
           "label": "パラダイムロスト詳細を閉じる",
           "area": {
-            "x": 610,
-            "y": 40,
-            "width": 72,
-            "height": 38
+            "x": 690,
+            "y": 65,
+            "width": 75,
+            "height": 25
           }
         },
         {
@@ -961,10 +961,44 @@
           "label": "パラダイムロスト詳細を閉じる待ち"
         }
       ],
-      "maxScrolls": 0,
-      "endFingerprintStableCount": 1,
-      "captureDelayMs": 120,
-      "navigationNote": "サーミのマップ上部中央にある崩壊値・パラダイム表示をタップし、詳細パネル内の名称をOCRする。同一系列では上位名称を優先し、複数系列はすべて保持する。"
+      "maxScrolls": 24,
+      "endFingerprintStableCount": 2,
+      "captureDelayMs": 180,
+      "scrollPasses": [
+        {
+          "axis": "vertical",
+          "direction": "down",
+          "label": "パラダイムロスト下端方向スキャン",
+          "scroll": {
+            "start": { "x": 820, "y": 405 },
+            "end": { "x": 820, "y": 175 },
+            "startArea": { "x": 740, "y": 365, "width": 170, "height": 75 },
+            "endArea": { "x": 740, "y": 140, "width": 170, "height": 70 },
+            "durationMs": 520
+          },
+          "maxScrolls": 24,
+          "endFingerprintStableCount": 2,
+          "captureDelayMs": 180
+        },
+        {
+          "axis": "vertical",
+          "direction": "up",
+          "label": "パラダイムロスト開始位置へ復帰",
+          "mirrorPreviousPassScrolls": true,
+          "collectCandidates": false,
+          "scroll": {
+            "start": { "x": 820, "y": 175 },
+            "end": { "x": 820, "y": 405 },
+            "startArea": { "x": 740, "y": 140, "width": 170, "height": 70 },
+            "endArea": { "x": 740, "y": 365, "width": 170, "height": 75 },
+            "durationMs": 520
+          },
+          "maxScrolls": 24,
+          "endFingerprintStableCount": 2,
+          "captureDelayMs": 180
+        }
+      ],
+      "navigationNote": "サーミのマップ上部中央にあるパラダイム表示をタップし、詳細パネルを終端まで縦スクロールして名称をOCRする。1画面の表示件数や既知系統数を総取得上限にせず、同一系列では上位名称を優先し、複数系列はすべて保持する。"
     },
     {
       "id": "is5ThoughtFull",

@@ -26,7 +26,7 @@
                   Command="{Binding DataContext.RemoveManualSamiRevelationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                   CommandParameter="{Binding}" />
           <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
-          <Grid Grid.Row="2" Grid.ColumnSpan="3" ColumnDefinitions="Auto,32,*" ColumnSpacing="8">
+          <Grid Grid.Row="2" Grid.ColumnSpan="3" ColumnDefinitions="Auto,32,*,Auto,96" ColumnSpacing="8">
             <TextBlock Text="修辞" VerticalAlignment="Center" FontWeight="SemiBold" />
             <Border Grid.Column="1" Width="30" Height="30" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
               <Image Source="{Binding StateImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
@@ -34,6 +34,11 @@
             <ComboBox Grid.Column="2"
                       ItemsSource="{Binding StateOptions}"
                       SelectedItem="{Binding SelectedState, Mode=TwoWay}" />
+            <TextBlock Grid.Column="3" Text="個数" VerticalAlignment="Center" FontWeight="SemiBold" />
+            <NumericUpDown Grid.Column="4"
+                           Minimum="1"
+                           Maximum="99"
+                           Value="{Binding Count, Mode=TwoWay}" />
           </Grid>
         </Grid>
       </Border>
@@ -88,24 +93,25 @@
 
       <Border Classes="appleCard" IsVisible="{Binding IsSamiCampaignSelected}">
         <StackPanel Spacing="16">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <Grid ColumnDefinitions="*" ColumnSpacing="10">
             <StackPanel Spacing="2">
               <TextBlock Text="サーミ特殊値の手動入力" Classes="h2" />
-              <TextBlock Text="啓示板は本因・構成と、それぞれに付随する修辞を1組として編集します。" Classes="caption" TextWrapping="Wrap" />
+              <TextBlock Text="パラダイムロストと啓示板を個別に取得・編集します。" Classes="caption" TextWrapping="Wrap" />
             </StackPanel>
-            <Button Grid.Column="1"
-                    Content="啓示板を取得"
-                    Command="{Binding RunProfileRecognitionAndApplyCommand}"
-                    CommandParameter="is4RevelationFull" />
           </Grid>
 
-          <StackPanel Spacing="10">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <Grid RowDefinitions="Auto,Auto,Auto">
+          <StackPanel Grid.Row="2" Spacing="10" Margin="0,16,0,0">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
               <StackPanel Spacing="2">
                 <TextBlock Text="啓示板" Classes="h3" />
-                <TextBlock Text="同じ本因・構成でも修辞が異なる場合は別の啓示として保持します。修辞だけを単独では登録しません。" Classes="caption" TextWrapping="Wrap" />
+                <TextBlock Text="同じ構成・本因と同じ修辞だけを個数としてまとめます。修辞なし、修辞あり、異なる修辞は別項目として保持し、いずれも複数所持できます。" Classes="caption" TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
+                      Content="啓示板を取得"
+                      Command="{Binding RunProfileRecognitionAndApplyCommand}"
+                      CommandParameter="is4RevelationFull" />
+              <Button Grid.Column="2"
                       Classes="primary"
                       Content="啓示板を反映"
                       Command="{Binding ApplyManualSamiRevelationCommand}" />
@@ -194,15 +200,19 @@
             </Expander>
           </StackPanel>
 
-          <Separator />
+          <Separator Grid.Row="1" Margin="0,16,0,0" />
 
-          <StackPanel Spacing="10">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <StackPanel Grid.Row="0" Spacing="10">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
               <StackPanel Spacing="2">
                 <TextBlock Text="パラダイムロスト" Classes="h3" />
                 <TextBlock Text="複数系統を同時に選択できます。各系統は未発生・下位・上位のいずれかです。" Classes="caption" TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
+                      Content="パラダイムロストを取得"
+                      Command="{Binding RunProfileRecognitionAndApplyCommand}"
+                      CommandParameter="is4ParadigmLost" />
+              <Button Grid.Column="2"
                       Classes="primary"
                       Content="パラダイムロストを反映"
                       Command="{Binding ApplyManualSamiParadigmCommand}" />
@@ -230,6 +240,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
+          </Grid>
         </StackPanel>
       </Border>
 

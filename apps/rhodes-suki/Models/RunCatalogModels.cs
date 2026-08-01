@@ -131,19 +131,22 @@ public sealed class SukiSeasonalHourEditor : INotifyPropertyChanged
 
 public sealed class SukiRevelationEntryEditor : INotifyPropertyChanged
 {
+    private int _count;
     private SukiSpecialEffectOption _selectedState;
 
     public SukiRevelationEntryEditor(
         SukiSpecialEffectOption effectOption,
         string slotKind,
         IReadOnlyList<SukiSpecialEffectOption> stateOptions,
-        string stateId = "")
+        string stateId = "",
+        int count = 1)
     {
         EffectOption = effectOption;
         SlotKind = slotKind;
         StateOptions = stateOptions;
         _selectedState = stateOptions.FirstOrDefault(option => option.Id.Equals(stateId, StringComparison.Ordinal))
             ?? stateOptions.First();
+        _count = Math.Clamp(count, 1, 99);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -175,6 +178,19 @@ public sealed class SukiRevelationEntryEditor : INotifyPropertyChanged
     public string StateId => SelectedState.Id;
     public string StateLabel => string.IsNullOrWhiteSpace(StateId) ? "修辞なし" : SelectedState.Name;
     public string StateImagePath => SelectedState.ImagePath;
+
+    public int Count
+    {
+        get => _count;
+        set
+        {
+            var normalized = Math.Clamp(value, 1, 99);
+            if (_count == normalized)
+                return;
+            _count = normalized;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Count)));
+        }
+    }
 }
 
 public sealed class SukiHallucinationOption : INotifyPropertyChanged

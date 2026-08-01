@@ -212,4 +212,49 @@ test("Mizuki special overlay renders distinct horde, rejection, and revelation g
   assert.match(output, /拒絶反応/);
   assert.match(output, /啓示/);
   assert.equal((output.match(/>1件</g) || []).length, 3);
+  assert.equal((output.match(/class="stream-scroll special-overlay-group-scroll"/g) || []).length, 3);
+  assert.doesNotMatch(output, /stream-special-scroll" data-autoscroll/);
+});
+
+test("Sami special part keeps paradigm lost and revelation groups independently visible", () => {
+  const output = renderSpecialOverlayBlock([
+    {
+      id: "paradigm",
+      name: "同期性喪失",
+      slotLabel: "パラダイムロスト",
+      overlayGroupId: "sami-paradigm-lost",
+      overlayGroupLabel: "パラダイムロスト",
+      overlayGroupUnit: "件",
+      effect: "探索への影響",
+    },
+    {
+      id: "structure",
+      name: "門 x2 / 戦士",
+      slotLabel: "構成",
+      overlayGroupId: "revelation-structure",
+      overlayGroupLabel: "啓示板・構成",
+      overlayGroupUnit: "枚",
+      effect: "協語を発動する",
+      quantity: 2,
+    },
+    {
+      id: "cause",
+      name: "驚き x2",
+      slotLabel: "本因",
+      overlayGroupId: "revelation-cause",
+      overlayGroupLabel: "啓示板・本因",
+      overlayGroupUnit: "枚",
+      effect: "スポットを変化させる",
+      quantity: 2,
+    },
+  ], "part", "verticalRelicScrollSpeed", () => 12);
+
+  assert.match(output, /special-overlay-group-sami-paradigm-lost/);
+  assert.match(output, /special-overlay-group-revelation-structure/);
+  assert.match(output, /special-overlay-group-revelation-cause/);
+  assert.match(output, /同期性喪失/);
+  assert.match(output, /門 x2/);
+  assert.match(output, /驚き x2/);
+  assert.equal((output.match(/class="stream-scroll special-overlay-group-scroll"/g) || []).length, 3);
+  assert.doesNotMatch(output, /stream-special-scroll" data-autoscroll/);
 });

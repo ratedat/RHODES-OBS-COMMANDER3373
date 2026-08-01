@@ -32,16 +32,24 @@ function groupSpecialOverlayItems(items) {
   return [...groups.values()];
 }
 
-function renderSpecialOverlayGroups(items) {
+function renderSpecialOverlayGroups(items, { independentScroll = false, scrollSpeed = 0 } = {}) {
   const groups = groupSpecialOverlayItems(items);
-  if (groups.length === 1 && groups[0].id === "default") return renderSpecialOverlayItems(items);
+  if (groups.length === 1 && groups[0].id === "default") {
+    const body = renderSpecialOverlayItems(items);
+    return independentScroll
+      ? `<div class="stream-scroll special-overlay-group-scroll" data-autoscroll data-scroll-speed="${scrollSpeed}">${body}</div>`
+      : body;
+  }
   return `<div class="special-overlay-groups">
     ${groups.map((group) => {
       const count = group.items.reduce((sum, item) => sum + Math.max(1, Number(item.quantity) || 1), 0);
       const classId = String(group.id).replace(/[^a-z0-9_-]/gi, "-");
+      const body = renderSpecialOverlayItems(group.items);
       return `<section class="special-overlay-group special-overlay-group-${html(classId)}">
         <header><strong>${html(group.label || "特殊値")}</strong><span>${count}${html(group.unit)}</span></header>
-        ${renderSpecialOverlayItems(group.items)}
+        ${independentScroll
+          ? `<div class="stream-scroll special-overlay-group-scroll" data-autoscroll data-scroll-speed="${scrollSpeed}">${body}</div>`
+          : body}
       </section>`;
     }).join("")}
   </div>`;
@@ -50,10 +58,12 @@ function renderSpecialOverlayGroups(items) {
 export function renderSpecialOverlayBlock(items, mode, speedKey, getOverlayScrollSpeed) {
   if (!items.length) return "";
   const isCompact = mode === "compact";
-  return `<section class="${isCompact ? "compact-section compact-special-section" : "stream-special-section"}">
+  const isPart = mode === "part";
+  const scrollSpeed = getOverlayScrollSpeed(speedKey);
+  return `<section class="${isCompact ? "compact-section compact-special-section" : `stream-special-section${isPart ? " special-overlay-part-section" : ""}`}">
     <div class="${isCompact ? "compact-section-head" : "stream-section-head"}"><span>Special</span><span>${items.length}</span></div>
-    <div class="stream-scroll ${isCompact ? "compact-special-scroll" : "stream-special-scroll"}" data-autoscroll data-scroll-speed="${getOverlayScrollSpeed(speedKey)}">
-      ${renderSpecialOverlayGroups(items)}
+    <div class="stream-scroll ${isCompact ? "compact-special-scroll" : "stream-special-scroll"}"${isPart ? "" : ` data-autoscroll data-scroll-speed="${scrollSpeed}"`}>
+      ${renderSpecialOverlayGroups(items, { independentScroll: isPart, scrollSpeed })}
     </div>
   </section>`;
 }

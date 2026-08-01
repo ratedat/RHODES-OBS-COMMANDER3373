@@ -74,8 +74,10 @@ test("revelation board keeps cause, structure, and rhetoric stacks separate", ()
   }, selectableEffectSource);
 
   assert.deepEqual(value, {
-    causeId: "cause-a",
-    structureId: "structure-a",
+    entries: [
+      { effectId: "cause-a", stateId: null, slotKind: "cause", count: 1 },
+      { effectId: "structure-a", stateId: null, slotKind: "structure", count: 1 },
+    ],
     rhetorics: [
       { effectId: "rhetoric-a", count: 3 },
       { effectId: "rhetoric-b", count: 1 },
@@ -89,12 +91,12 @@ test("revelation board migrates old stack entries without losing rhetoric effect
     { effectId: "structure-a", count: 1, stateId: "rhetoric-b" },
   ], selectableEffectSource);
 
-  assert.equal(value.causeId, "cause-a");
-  assert.equal(value.structureId, "structure-a");
-  assert.deepEqual(value.rhetorics, [
-    { effectId: "rhetoric-a", count: 1 },
-    { effectId: "rhetoric-b", count: 1 },
-  ]);
+  assert.deepEqual(value, {
+    entries: [
+      { effectId: "cause-a", stateId: "rhetoric-a", slotKind: "cause", count: 1 },
+      { effectId: "structure-a", stateId: "rhetoric-b", slotKind: "structure", count: 1 },
+    ],
+  });
 });
 
 test("revelation board accepts the paired Avalonia entry shape", () => {
@@ -105,12 +107,12 @@ test("revelation board accepts the paired Avalonia entry shape", () => {
     ],
   }, selectableEffectSource);
 
-  assert.equal(value.causeId, "cause-a");
-  assert.equal(value.structureId, "structure-a");
-  assert.deepEqual(value.rhetorics, [
-    { effectId: "rhetoric-b", count: 1 },
-    { effectId: "rhetoric-a", count: 1 },
-  ]);
+  assert.deepEqual(value, {
+    entries: [
+      { effectId: "structure-a", stateId: "rhetoric-b", slotKind: "structure", count: 1 },
+      { effectId: "cause-a", stateId: "rhetoric-a", slotKind: "cause", count: 1 },
+    ],
+  });
 });
 
 test("revelation board selected effects include rhetoric effects as their own entries", () => {
@@ -151,6 +153,33 @@ test("paired revelation entries are grouped into structure and cause overlays", 
   ]);
 });
 
+test("revelation board merges only identical effect rhetoric and slot combinations", () => {
+  const value = normalizeRevelationBoardValue(field, "is4_sami", {
+    entries: [
+      { effectId: "cause-a", stateId: "", slotKind: "cause", count: 1 },
+      { effectId: "cause-a", stateId: "", slotKind: "cause", count: 1 },
+      { effectId: "cause-a", stateId: "rhetoric-a", slotKind: "cause", count: 1 },
+      { effectId: "cause-a", stateId: "rhetoric-a", slotKind: "cause", count: 2 },
+      { effectId: "cause-a", stateId: "rhetoric-b", slotKind: "cause", count: 1 },
+    ],
+  }, selectableEffectSource);
+
+  assert.deepEqual(value, {
+    entries: [
+      { effectId: "cause-a", stateId: null, slotKind: "cause", count: 2 },
+      { effectId: "cause-a", stateId: "rhetoric-a", slotKind: "cause", count: 3 },
+      { effectId: "cause-a", stateId: "rhetoric-b", slotKind: "cause", count: 1 },
+    ],
+  });
+
+  const effects = getSelectedSpecialEffectsForField(field, { revelation: value }, context);
+  assert.deepEqual(effects.map((item) => [item.name, item.quantity]), [
+    ["本因A", 2],
+    ["本因A [修辞A]", 3],
+    ["本因A [修辞B]", 1],
+  ]);
+});
+
 test("revelation board summary shows separate counts", () => {
   const summary = formatRevelationBoardValue(field, {
     causeId: "cause-a",
@@ -161,5 +190,5 @@ test("revelation board summary shows separate counts", () => {
     ]),
   }, context);
 
-  assert.equal(summary, "本因A / 構成A / 修辞3枚");
+  assert.equal(summary, "構成1件 / 本因1件 / 修辞3枚");
 });

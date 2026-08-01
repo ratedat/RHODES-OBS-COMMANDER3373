@@ -237,10 +237,6 @@
                              "label":  "同時配置可能人数"
                          },
                          {
-                             "id":  "collapseValue",
-                             "label":  "崩壊値"
-                         },
-                         {
                              "id":  "thought",
                              "label":  "思案"
                          },

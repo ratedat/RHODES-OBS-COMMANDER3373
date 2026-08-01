@@ -52,10 +52,6 @@ function revelationBoardOptionSet(field, campaignId, group, selectableEffectSour
   return new Set(selectableEffects.getRevelationBoardOptions(selectableEffectSource, field, campaignId, group).map((item) => item.id));
 }
 
-function selectableEffectMap(selectableEffectSource) {
-  return new Map((selectableEffectSource || []).map((item) => [item.id, item]));
-}
-
 export function mergeRevelationRhetorics(entries) {
   const merged = new Map();
   for (const entry of asEffectStackEntries(entries)) {
@@ -70,12 +66,51 @@ export function mergeRevelationRhetorics(entries) {
   return [...merged.values()];
 }
 
+function revelationEntryKey(entry) {
+  return `${entry.slotKind}\u001f${entry.effectId}\u001f${entry.stateId || ""}`;
+}
+
+function normalizeRevelationEntries(entrySource, causeOptions, structureOptions, rhetoricOptions) {
+  const merged = new Map();
+  for (const rawEntry of entrySource || []) {
+    if (!rawEntry || typeof rawEntry !== "object") continue;
+
+    const effectId = String(rawEntry.effectId || rawEntry.id || "").trim();
+    const requestedSlot = String(rawEntry.slotKind || rawEntry.slot || "").trim().toLowerCase();
+    const inferredSlot = causeOptions.has(effectId)
+      ? "cause"
+      : structureOptions.has(effectId)
+        ? "structure"
+        : "";
+    const slotKind = requestedSlot === "cause" || requestedSlot === "structure"
+      ? requestedSlot
+      : inferredSlot;
+    if (!effectId || !slotKind) continue;
+    if (slotKind === "cause" && !causeOptions.has(effectId)) continue;
+    if (slotKind === "structure" && !structureOptions.has(effectId)) continue;
+
+    const rawStateId = String(rawEntry.stateId || rawEntry.state || rawEntry.statusId || "").trim();
+    const entry = {
+      effectId,
+      stateId: rawStateId && rhetoricOptions.has(rawStateId) ? rawStateId : null,
+      slotKind,
+      count: clampCoinCount(rawEntry.count),
+    };
+    const key = revelationEntryKey(entry);
+    if (merged.has(key)) {
+      const current = merged.get(key);
+      current.count = clampCoinCount(current.count + entry.count);
+    } else {
+      merged.set(key, entry);
+    }
+  }
+  return [...merged.values()];
+}
+
 export function normalizeRevelationBoardValue(field, campaignId, value, selectableEffectSource = []) {
   const causeOptions = revelationBoardOptionSet(field, campaignId, "cause", selectableEffectSource);
   const structureOptions = revelationBoardOptionSet(field, campaignId, "structure", selectableEffectSource);
   const rhetoricOptions = revelationBoardOptionSet(field, campaignId, "rhetoric", selectableEffectSource);
-  const byId = selectableEffectMap(selectableEffectSource);
-  const next = { causeId: null, structureId: null, rhetorics: [] };
 
   const entrySource = Array.isArray(value)
     ? value
@@ -83,23 +118,17 @@ export function normalizeRevelationBoardValue(field, campaignId, value, selectab
       ? value.entries
       : null;
   if (entrySource) {
-    for (const entry of asEffectStackEntries(entrySource)) {
-      const item = byId.get(entry.effectId);
-      if (item && causeOptions.has(item.id) && !next.causeId) next.causeId = item.id;
-      else if (item && structureOptions.has(item.id) && !next.structureId) next.structureId = item.id;
-      else if (item && rhetoricOptions.has(item.id)) next.rhetorics.push({ effectId: item.id, count: entry.count });
-
-      if (entry.stateId && rhetoricOptions.has(entry.stateId)) {
-        next.rhetorics.push({ effectId: entry.stateId, count: entry.count });
-      }
-    }
-    next.rhetorics = mergeRevelationRhetorics(next.rhetorics);
-    return next;
+    return { entries: normalizeRevelationEntries(entrySource, causeOptions, structureOptions, rhetoricOptions) };
   }
 
   const raw = asRevelationBoardValue(value);
-  next.causeId = causeOptions.has(raw.causeId) ? raw.causeId : null;
-  next.structureId = structureOptions.has(raw.structureId) ? raw.structureId : null;
-  next.rhetorics = mergeRevelationRhetorics(raw.rhetorics.filter((entry) => rhetoricOptions.has(entry.effectId)));
-  return next;
+  const entries = [];
+  if (causeOptions.has(raw.causeId)) {
+    entries.push({ effectId: raw.causeId, stateId: null, slotKind: "cause", count: 1 });
+  }
+  if (structureOptions.has(raw.structureId)) {
+    entries.push({ effectId: raw.structureId, stateId: null, slotKind: "structure", count: 1 });
+  }
+  const rhetorics = mergeRevelationRhetorics(raw.rhetorics.filter((entry) => rhetoricOptions.has(entry.effectId)));
+  return rhetorics.length > 0 ? { entries, rhetorics } : { entries };
 }

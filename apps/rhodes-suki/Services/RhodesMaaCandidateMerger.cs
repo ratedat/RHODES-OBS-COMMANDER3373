@@ -53,6 +53,9 @@ public static class RhodesMaaCandidateMerger
             if (MergeOperatorCountEvidence(merged, candidate))
                 continue;
 
+            if (MergeRevelationCountEvidence(merged, candidate))
+                continue;
+
             if (MergeRelicUsageEvidence(merged, candidate))
                 continue;
 
@@ -61,6 +64,34 @@ public static class RhodesMaaCandidateMerger
         }
 
         return merged;
+    }
+
+    private static bool MergeRevelationCountEvidence(
+        IList<MaaCandidatePreview> existing,
+        MaaCandidatePreview candidate)
+    {
+        if (!IsKind(candidate, "revelation") || candidate.Count <= 0)
+            return false;
+
+        var key = RevelationKey(candidate);
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        for (var index = 0; index < existing.Count; index++)
+        {
+            var current = existing[index];
+            if (!IsKind(current, "revelation")
+                || !RevelationKey(current).Equals(key, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var preferred = PreferParadigmVariant(current, candidate) ? candidate : current;
+            existing[index] = preferred with { Count = Math.Max(current.Count, candidate.Count) };
+            return true;
+        }
+
+        return false;
     }
 
     private static bool MergeOperatorCountEvidence(
@@ -242,6 +273,8 @@ public static class RhodesMaaCandidateMerger
             return "";
 
         var fieldId = CandidateId(candidate.FieldId, "revelation");
+        if (fieldId.Equals("paradigmLost", StringComparison.Ordinal))
+            effectId = ParadigmFamilyId(effectId);
         return string.Join(
             "\u001f",
             [
@@ -254,6 +287,33 @@ public static class RhodesMaaCandidateMerger
                 candidate.StateId.Trim(),
             ]);
     }
+
+    private static bool PreferParadigmVariant(
+        MaaCandidatePreview current,
+        MaaCandidatePreview candidate)
+    {
+        if (!current.FieldId.Equals("paradigmLost", StringComparison.Ordinal)
+            || !candidate.FieldId.Equals("paradigmLost", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return !IsUpperParadigm(current.EffectId) && IsUpperParadigm(candidate.EffectId);
+    }
+
+    private static string ParadigmFamilyId(string effectId)
+    {
+        if (effectId.EndsWith("_lower", StringComparison.Ordinal)
+            || effectId.EndsWith("_upper", StringComparison.Ordinal))
+        {
+            return effectId[..effectId.LastIndexOf('_')];
+        }
+
+        return effectId;
+    }
+
+    private static bool IsUpperParadigm(string effectId) =>
+        effectId.EndsWith("_upper", StringComparison.Ordinal);
 
     private static string CoinKey(MaaCandidatePreview candidate)
     {

@@ -2295,6 +2295,7 @@ public static class RhodesMaaLocalCandidateConverter
 
     private static IEnumerable<MaaCandidatePreview> RevelationCandidates(IEnumerable<MaaTaskRunResult> taskResults)
     {
+        var results = taskResults as MaaTaskRunResult[] ?? taskResults.ToArray();
         var effects = LoadSelectableEffects()
             .Where(effect => effect.Slot == "revelationBoard" && effect.CampaignId == "is4_sami")
             .Select(effect => (Effect: effect, SlotKind: RevelationSlotKind(effect.GroupLabel)))
@@ -2304,13 +2305,26 @@ public static class RhodesMaaLocalCandidateConverter
             .GroupBy(item => NormalizeChoiceName(item.Effect.Name), StringComparer.Ordinal)
             .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+        var detections = new List<(MaaCandidatePreview Candidate, int FrameIndex, int Order)>();
         var order = 0;
+        var frameIndex = 0;
+        var previousRowIndex = 0;
+        var hasCardScopedRows = results.Any(result => RevelationEntryRowIndex(result.Entry) > 0);
 
-        foreach (var taskResult in taskResults)
+        foreach (var taskResult in results)
         {
+            var rowIndex = RevelationEntryRowIndex(taskResult.Entry);
+            if (rowIndex > 0)
+            {
+                if (previousRowIndex > 0 && rowIndex <= previousRowIndex)
+                    frameIndex++;
+                previousRowIndex = rowIndex;
+            }
+
             if (!taskResult.Succeeded
                 || !IsRevelationNameEntry(taskResult.Entry)
-                || IsFarSightRevelationEntry(taskResult.Entry))
+                || IsFarSightRevelationEntry(taskResult.Entry)
+                || (hasCardScopedRows && rowIndex == 0))
                 continue;
 
             var recognized = new List<(SelectableEffectCandidate Effect, string SlotKind, OcrTextResult Result, string Raw)>();
@@ -2355,7 +2369,7 @@ public static class RhodesMaaLocalCandidateConverter
                 var confidence = state is null
                     ? item.Result.Confidence ?? 0
                     : Math.Min(item.Result.Confidence ?? 0, state.Item.Result.Confidence ?? 0);
-                yield return new MaaCandidatePreview(
+                detections.Add((new MaaCandidatePreview(
                     "revelation",
                     item.Effect.Name,
                     item.Effect.Id,
@@ -2367,18 +2381,67 @@ public static class RhodesMaaLocalCandidateConverter
                     SlotKind: item.SlotKind,
                     EffectId: item.Effect.Id,
                     StateId: stateId,
-                    Count: 1);
+                    Count: 1), frameIndex, order));
                 order++;
             }
         }
+
+        var aggregated = detections
+            .GroupBy(item => RevelationCountKey(item.Candidate), StringComparer.Ordinal)
+            .Select(group =>
+            {
+                var best = group
+                    .OrderByDescending(item => item.Candidate.Confidence ?? 0)
+                    .ThenBy(item => item.Order)
+                    .First();
+                var maximumVisibleCount = group
+                    .GroupBy(item => item.FrameIndex)
+                    .Max(frame => frame.Count());
+                return (
+                    Candidate: best.Candidate with
+                    {
+                        Count = maximumVisibleCount,
+                        RecognitionKey = $"maa-local:revelation:{best.Candidate.EffectId}:{best.Candidate.StateId}:{best.Order}",
+                    },
+                    Order: group.Min(item => item.Order));
+            })
+            .OrderBy(item => item.Order)
+            .ToArray();
+
+        foreach (var item in aggregated)
+            yield return item.Candidate;
     }
+
+    private static int RevelationEntryRowIndex(string entry)
+    {
+        var match = Regex.Match(entry, @"\.row_(?<row>\d+)", RegexOptions.CultureInvariant);
+        return match.Success
+            && int.TryParse(match.Groups["row"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var row)
+                ? row
+                : 0;
+    }
+
+    private static string RevelationCountKey(MaaCandidatePreview candidate) =>
+        string.Join(
+            "\u001f",
+            [candidate.FieldId, candidate.SlotKind, candidate.EffectId, candidate.StateId]);
 
     private static string RevelationOcrAlias(string normalized)
     {
-        return normalized.StartsWith(NormalizeChoiceName("広域"), StringComparison.Ordinal)
-            ? NormalizeChoiceName("宏闊")
-            : normalized;
+    var boundaryTolerant = normalized.Trim(
+        '{', '｛', '}', '｝',
+        '.', '．', ',', '，', '、', '。',
+        ':', '：', ';', '；');
+
+    if (boundaryTolerant.Equals(NormalizeChoiceName("持続"), StringComparison.Ordinal))
+    {
+        return NormalizeChoiceName("存続");
     }
+
+    return boundaryTolerant.StartsWith(NormalizeChoiceName("広域"), StringComparison.Ordinal)
+        ? NormalizeChoiceName("宏闊")
+        : boundaryTolerant;
+}
 
     private static bool IsFarSightRevelationEntry(string entry) =>
         entry.EndsWith(".far_sight", StringComparison.Ordinal);
@@ -2465,6 +2528,7 @@ public static class RhodesMaaLocalCandidateConverter
             .GroupBy(item => string.IsNullOrWhiteSpace(item.Effect.ParentKey) ? item.Effect.Id : item.Effect.ParentKey, StringComparer.Ordinal)
             .Select(group => group
                 .OrderBy(item => item.Distance)
+                .ThenByDescending(item => item.Effect.VariantRank.Equals("upper", StringComparison.OrdinalIgnoreCase))
                 .ThenByDescending(item => item.Confidence)
                 .ThenBy(item => item.Order)
                 .First())

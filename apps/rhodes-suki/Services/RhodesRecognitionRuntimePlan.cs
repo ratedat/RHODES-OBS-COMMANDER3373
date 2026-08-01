@@ -45,7 +45,7 @@ public static class RhodesRecognitionRuntimePlan
     }
 
     public static bool IsScrollProfile(string profileId) =>
-        profileId is "operatorsFull" or "relicsFull" or "is4RevelationFull" or "is5ThoughtFull" or "is6CoinsFull";
+        profileId is "operatorsFull" or "relicsFull" or "is4RevelationFull" or "is4ParadigmLost" or "is5ThoughtFull" or "is6CoinsFull";
 
     public static bool ShouldSkipScroll(
         string profileId,

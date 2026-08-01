@@ -976,8 +976,16 @@ a:hover { text-decoration: underline; }
 .overlay-part-effect-list .effect-text { font-size: 11px; }
 .overlay-part-boss-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px; }
 .overlay-part-special .stream-special-section { height: 100%; margin-top: 0; grid-template-rows: auto minmax(0, 1fr); }
-.overlay-part-special .stream-special-scroll { max-height: none; height: 100%; }
-.overlay-part-special .special-overlay-grid { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+.overlay-part-special .stream-special-scroll { max-height: none; height: 100%; min-height: 0; }
+.overlay-part-special .special-overlay-groups {
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  height: 100%;
+  min-height: 0;
+  align-items: stretch;
+}
+.overlay-part-special .special-overlay-group { grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.overlay-part-special .special-overlay-group-scroll { min-height: 0; max-height: none; overflow: hidden; }
+.overlay-part-special .special-overlay-grid { grid-template-columns: 1fr; }
 @media (max-width: 720px) {
   .overlay-part-status-grid { grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(64px, 0.4fr)); }
   .overlay-part-status-main strong { font-size: 15px; }

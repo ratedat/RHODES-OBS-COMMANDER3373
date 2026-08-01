@@ -2912,25 +2912,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshChoicesFromRunState(SukiRunStateSnapshot state)
     {
+        var choicesChanged = false;
         _isRestoringChoiceState = true;
         try
         {
             foreach (var item in _allOperators)
             {
-                item.IsSelected = state.SelectedOperatorIds.Contains(item.Id);
-                item.SelectionCount = state.OperatorCounts.TryGetValue(item.Id, out var count) ? count : 1;
+                var isSelected = state.SelectedOperatorIds.Contains(item.Id);
+                var selectionCount = state.OperatorCounts.TryGetValue(item.Id, out var count) ? count : 1;
+                choicesChanged |= item.IsSelected != isSelected || item.SelectionCount != selectionCount;
+                item.IsSelected = isSelected;
+                item.SelectionCount = selectionCount;
             }
             foreach (var item in _allRelics)
             {
-                item.IsSelected = state.SelectedRelicIds.Contains(item.Id);
-                item.IsUsed = item.IsSelected && state.UsedRelicIds.Contains(item.Id);
+                var isSelected = state.SelectedRelicIds.Contains(item.Id);
+                var isUsed = isSelected && state.UsedRelicIds.Contains(item.Id);
+                choicesChanged |= item.IsSelected != isSelected || item.IsUsed != isUsed;
+                item.IsSelected = isSelected;
+                item.IsUsed = isUsed;
             }
         }
         finally
         {
             _isRestoringChoiceState = false;
         }
-        RefreshChoiceLists();
+        if (choicesChanged)
+            RefreshChoiceLists();
     }
 
     private void ReloadRunStateFromStore()
@@ -2971,16 +2979,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var specialFields = (_runState.SpecialFields ?? Array.Empty<SukiSpecialFieldState>())
             .Where(field => string.Equals(field.CampaignId, campaignId, StringComparison.Ordinal))
             .ToArray();
+        if (campaignId == "is4_sami")
+        {
+            var paradigmField = specialFields.FirstOrDefault(field => field.FieldId == "paradigmLost");
+            yield return paradigmField is null
+                ? new SukiSpecialValuePreview("パラダイムロスト", "0件", "状態", "is4ParadigmLost", "取得値なし")
+                : new SukiSpecialValuePreview(
+                    paradigmField.Label,
+                    paradigmField.Value,
+                    paradigmField.Kind,
+                    paradigmField.ProfileId,
+                    paradigmField.Detail);
+
+            var revelationField = specialFields.FirstOrDefault(field => field.FieldId == "revelation");
+            if (revelationField is null)
+            {
+                yield return new SukiSpecialValuePreview("啓示板・構成", "0件", "構成", "is4RevelationFull", "取得値なし");
+                yield return new SukiSpecialValuePreview("啓示板・本因", "0件", "本因", "is4RevelationFull", "取得値なし");
+            }
+            else
+            {
+                foreach (var preview in BuildSamiRevelationPreviews(revelationField))
+                    yield return preview;
+            }
+
+            foreach (var field in specialFields.Where(field => field.FieldId is not "paradigmLost" and not "revelation"))
+                yield return new SukiSpecialValuePreview(field.Label, field.Value, field.Kind, field.ProfileId, field.Detail);
+            yield break;
+        }
         if (specialFields.Length > 0)
         {
             foreach (var field in specialFields)
             {
-                if (campaignId == "is4_sami" && field.FieldId == "revelation")
-                {
-                    foreach (var preview in BuildSamiRevelationPreviews(field))
-                        yield return preview;
-                    continue;
-                }
                 yield return new SukiSpecialValuePreview(field.Label, field.Value, field.Kind, field.ProfileId, field.Detail);
             }
             yield break;
@@ -3007,7 +3037,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 {
                     var name = options.GetValueOrDefault(entry.EffectId)?.Name ?? entry.EffectId;
                     var rhetoric = options.GetValueOrDefault(entry.StateId)?.Name ?? entry.StateId;
-                    return string.IsNullOrWhiteSpace(rhetoric) ? name : $"{name} [{rhetoric}]";
+                    var quantity = entry.Count > 1 ? $" x{entry.Count}" : "";
+                    return string.IsNullOrWhiteSpace(rhetoric)
+                        ? $"{name}{quantity}"
+                        : $"{name} [{rhetoric}]{quantity}";
                 }));
 
             yield return new SukiSpecialValuePreview(
@@ -5202,7 +5235,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     FieldId: "revelation",
                     SlotKind: editor.SlotKind,
                     EffectId: editor.EffectId,
-                    StateId: editor.StateId));
+                    StateId: editor.StateId,
+                    Count: editor.Count));
             }
 
             await ApplyCandidatesPipelineAsync(candidates);
@@ -5680,7 +5714,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 option,
                 slotKind,
                 LoadManualSamiRhetoricOptions(slotKind),
-                entry.StateId));
+                entry.StateId,
+                entry.Count));
         }
         ReplaceCollection(ManualSamiRevelationEntries, revelationEntries);
         RefreshManualSamiRevelationGroups();
@@ -6666,7 +6701,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return false;
         }
 
-        var shouldRestoreTarget = plan.ProfileId != "operatorsFull";
+        var shouldRestoreTarget = false;
         _lastResourceExecutionPlan = plan;
         try
         {
@@ -7148,7 +7183,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         var taskEntries = ScrollRecognitionTaskEntries(plan).ToArray();
         if (taskEntries.Length == 0
-            && plan.ProfileId is not ("is6CoinsFull" or "is4RevelationFull"))
+            && plan.ProfileId is not ("is6CoinsFull" or "is4RevelationFull" or "is4ParadigmLost"))
             return;
         var initialCandidateCount = CurrentLocalCandidateCount(plan.ProfileId);
         var expectedCandidateCount = plan.ProfileId == "relicsFull"

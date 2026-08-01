@@ -462,7 +462,7 @@ static void CandidateMergerSupplementsLocalCandidates()
             new MaaCandidatePreview("thought", "枯れ木と若枝", "fallback", "枯れ木と若枝", 0.88, CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
             new MaaCandidatePreview("thought", "走る都市", "fallback", "走る都市", 0.87, CampaignId: "is5_sarkaz", ThoughtId: "thought_b"),
             new MaaCandidatePreview("age", "天災の時代（全盛期）", "age_prime", "天災の時代（全盛期）", 0.9, CampaignId: "is5_sarkaz", AgeId: "age_prime"),
-            new MaaCandidatePreview("revelation", "歌唱", "fallback", "歌唱 [自給]", 0.99, CampaignId: "is4_sami", FieldId: "revelation", SlotKind: "cause", EffectId: "cause_a", StateId: "rhetoric_a"),
+            new MaaCandidatePreview("revelation", "歌唱", "fallback", "歌唱 [自給]", 0.99, CampaignId: "is4_sami", FieldId: "revelation", SlotKind: "cause", EffectId: "cause_a", StateId: "rhetoric_a", Count: 2),
             new MaaCandidatePreview("revelation", "歌唱", "fallback", "歌唱 [循環]", 0.89, CampaignId: "is4_sami", FieldId: "revelation", SlotKind: "cause", EffectId: "cause_a", StateId: "rhetoric_b"),
             new MaaCandidatePreview("coin", "通宝A", "fallback", "通宝A", 0.99, CampaignId: "is6_sui", CoinId: "coin_a", Count: 1),
             new MaaCandidatePreview("coin", "通宝A裏", "fallback", "通宝A", 0.89, CampaignId: "is6_sui", CoinId: "coin_a", Face: "back", Count: 1),
@@ -473,6 +473,7 @@ static void CandidateMergerSupplementsLocalCandidates()
     Equal("thought_a|thought_b", string.Join("|", merged.Where(item => item.Kind == "thought").Select(item => item.ThoughtId)), "local MAA thought set replaces primary thought candidates");
     Equal("age_prime", string.Join("|", merged.Where(item => item.Kind == "age").Select(item => item.AgeId)), "local age supplemented");
     Equal("rhetoric_a|rhetoric_b", string.Join("|", merged.Where(item => item.Kind == "revelation").Select(item => item.StateId)), "merged revelation states");
+    Equal(2, merged.Single(item => item.Kind == "revelation" && item.StateId == "rhetoric_a").Count, "merged revelation keeps maximum simultaneous count");
     Equal("coin_a", string.Join("|", merged.Where(item => item.Kind == "coin").Select(item => item.CoinId)), "merged coin candidates ignore obsolete face");
 }
 
@@ -2253,6 +2254,76 @@ static void LocalCandidateConverterRevelation()
         viewportCandidates.Single(item => item.Label == "門").StateId,
         "wide rhetoric prose is attached to the single-character structure");
 
+    var repeatedArrivalCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is4RevelationFull",
+        [
+            M("RhodesOcrRegion_is4.revelation_list_text.dynamic.row_1", [("到来", 0.96, 120, 100), ("広域", 0.94, 140, 145)]),
+            M("RhodesOcrRegion_is4.revelation_list_text.dynamic.row_2", [("到来", 0.95, 120, 100), ("広域", 0.93, 140, 145)]),
+            M("RhodesOcrRegion_is4.revelation_list_text.dynamic.row_1", [("到来", 0.94, 120, 100), ("広域", 0.92, 140, 145)]),
+            M("RhodesOcrRegion_is4.revelation_list_text.dynamic.row_2", [("到来", 0.93, 120, 100), ("広域", 0.91, 140, 145)]),
+        ]);
+    Equal(1, repeatedArrivalCandidates.Count, "repeated arrival revelations are merged by effect and rhetoric");
+    Equal(2, repeatedArrivalCandidates[0].Count, "two visible arrival cards survive overlapping scroll frames");
+
+    var malformedRhetoricBracketCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is4RevelationFull",
+        [
+            M(
+                "RhodesOcrRegion_is4.revelation_list_text.dynamic.row_3",
+                [("門", 0.98, 142, 295), ("{広域】ほかのランダムな1箇所の", 0.88, 336, 237)]),
+            M(
+                "RhodesOcrRegion_is4.revelation_list_text.dynamic.row_2",
+                [("門", 0.95, 142, 295), ("[広域】ほかのランダムな1箇所の", 0.89, 337, 236)]),
+        ]);
+    Equal(1, malformedRhetoricBracketCandidates.Count, "malformed rhetoric bracket does not split one revelation into bare and rhetoric variants");
+    Equal(
+        "is4_sami_selectable_revelationBoard_is4_rhetoric4",
+        malformedRhetoricBracketCandidates.Single().StateId,
+        "malformed left bracket still resolves the wide rhetoric");
+    Equal(1, malformedRhetoricBracketCandidates.Single().Count, "the same revelation across scroll frames remains one copy");
+
+    var punctuatedRhetoricCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is4RevelationFull",
+        [
+            M(
+                "RhodesOcrRegion_is4.revelation_list_text.dynamic.row_2",
+                [("驚き", 0.97, 142, 295), ("【循環】", 0.91, 336, 237)]),
+            M(
+                "RhodesOcrRegion_is4.revelation_list_text.dynamic.row_2",
+                [("驚き", 0.96, 142, 295), ("[循環】.", 0.90, 337, 236)]),
+        ]);
+    Equal(1, punctuatedRhetoricCandidates.Count, "punctuated rhetoric OCR does not split one cause into bare and rhetoric variants");
+    Equal(
+        "is4_sami_selectable_revelationBoard_is4_rhetoric3",
+        punctuatedRhetoricCandidates.Single().StateId,
+        "punctuated rhetoric still resolves circulation");
+    Equal(1, punctuatedRhetoricCandidates.Single().Count, "the same punctuated cause across frames remains one copy");
+
+    var warriorSustainCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is4RevelationFull",
+        [
+            M(
+                "RhodesOcrRegion_is4.revelation_list_text.dynamic.row_2",
+                [
+                    ("戦士", 0.999999, 109, 298),
+                    ("【持続】", 0.946831, 339, 272),
+                    ("初回宣告時の消費なし", 0.997282, 522, 278),
+                ]),
+            M(
+                "RhodesOcrRegion_is4.revelation_list_text.dynamic.row_2",
+                [
+                    ("戦士", 0.999999, 109, 297),
+                    ("[持続】,", 0.993759, 341, 274),
+                    ("初回宣告時の消費なし", 0.919195, 523, 279),
+                ]),
+        ]);
+    Equal(1, warriorSustainCandidates.Count, "warrior with sustain rhetoric remains one revelation across OCR variants");
+    Equal(
+        "is4_sami_selectable_revelationBoard_is4_rhetoric1",
+        warriorSustainCandidates.Single().StateId,
+        "screen label sustain resolves to the continuation rhetoric");
+    Equal(1, warriorSustainCandidates.Single().Count, "warrior sustain snapshots remain one physical card");
+
     static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score, int X, int Y)> rows)
     {
         var resultRows = rows.Select(row =>
@@ -2323,9 +2394,10 @@ static void SamiSpecialOcrPlannerTargetsVisibleRows()
         "far-sight detection follows the dynamically located row");
 
     var paradigm = RhodesSamiSpecialOcrPlanner.BuildRequests("is4ParadigmLost");
-    Equal(4, paradigm.Count, "paradigm detail panel covers four non-overlapping text bands");
+    Equal(4, paradigm.Count, "paradigm detail panel covers all four visible active card titles");
     Equal(true, paradigm.All(item => item.Entry.Contains("is4.paradigm_lost_text.row_", StringComparison.Ordinal)), "paradigm entries are converter-compatible");
-    Equal(true, paradigm.All(item => item.Y >= 95 && item.Y + item.Height <= 475), "paradigm OCR stays inside the detail panel");
+    Equal(true, paradigm.All(item => item.Y >= 340 && item.Y + item.Height <= 650), "paradigm OCR stays on the four active card title bands");
+    Equal(true, paradigm.All(item => item.Height <= 48), "paradigm OCR title bands do not overlap adjacent cards");
     Equal(0, RhodesSamiSpecialOcrPlanner.BuildRequests("relicsFull").Count, "other profiles do not receive Sami OCR requests");
 
     static void FillRevelationBand(SKBitmap bitmap, int y, int height, SKColor color)
@@ -2360,6 +2432,76 @@ static void LocalCandidateConverterSamiParadigmLost()
     Equal("paradigm|paradigm", string.Join("|", candidates.Select(item => item.SlotKind)), "paradigm slot kinds");
     Equal("paradigmLost|paradigmLost", string.Join("|", candidates.Select(item => item.FieldId)), "paradigm field ids");
     Equal("is4_sami", candidates[0].CampaignId, "paradigm campaign id");
+
+    var fourVisibleCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is4ParadigmLost",
+        [
+            M("RhodesOcrRegion_is4.paradigm_lost_text.row_1", [("同期性喪失", 0.96)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.row_2", [("広義的社会パラドクス", 0.94)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.row_3", [("非直線移動", 0.97)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.row_4", [("接触性損傷", 0.99)]),
+        ]);
+    Equal(4, fourVisibleCandidates.Count, "four independently cropped paradigm titles are all retained");
+    Equal(
+        "is4_sami_selectable_paradigmLost_paradigm8_upper|is4_sami_selectable_paradigmLost_paradigm5_lower|is4_sami_selectable_paradigmLost_paradigm3_lower|is4_sami_selectable_paradigmLost_paradigm7_lower",
+        string.Join("|", fourVisibleCandidates.Select(item => item.EffectId)),
+        "the visible four-card frame keeps synchronization loss and the other three paradigms");
+
+    var allFamiliesAcrossScroll = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "is4ParadigmLost",
+        [
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_0.row_1", [("数的崩壊", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_0.row_2", [("具現する崩壊", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_0.row_3", [("非直線移動", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_0.row_4", [("実体化する感情", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_1.row_1", [("広義的社会パラドクス", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_1.row_2", [("気圧異常", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_1.row_3", [("接触性損傷", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_1.row_4", [("同期性消耗", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_2.row_1", [("局部的認識不可", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_2.row_2", [("画像破損", 0.99)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_2.row_3", [("完全なる数的崩壊", 0.88)]),
+            M("RhodesOcrRegion_is4.paradigm_lost_text.scroll_2.row_4", [("同期性喪失", 0.88)]),
+        ]);
+    Equal(10, allFamiliesAcrossScroll.Count, "all ten paradigm families survive multi-frame scroll accumulation");
+    Equal(
+        true,
+        allFamiliesAcrossScroll.Any(item => item.EffectId == "is4_sami_selectable_paradigmLost_paradigm1_upper")
+            && allFamiliesAcrossScroll.Any(item => item.EffectId == "is4_sami_selectable_paradigmLost_paradigm8_upper"),
+        "upper variants replace previously observed lower variants even at lower OCR confidence");
+
+    var mergedVariants = RhodesMaaCandidateMerger.Merge(
+        [
+            new MaaCandidatePreview(
+                "revelation",
+                "同期性消耗",
+                "is4_sami_selectable_paradigmLost_paradigm8_lower",
+                "同期性消耗",
+                0.99,
+                CampaignId: "is4_sami",
+                FieldId: "paradigmLost",
+                SlotKind: "paradigm",
+                EffectId: "is4_sami_selectable_paradigmLost_paradigm8_lower",
+                Count: 1),
+        ],
+        [
+            new MaaCandidatePreview(
+                "revelation",
+                "同期性喪失",
+                "is4_sami_selectable_paradigmLost_paradigm8_upper",
+                "同期性喪失",
+                0.88,
+                CampaignId: "is4_sami",
+                FieldId: "paradigmLost",
+                SlotKind: "paradigm",
+                EffectId: "is4_sami_selectable_paradigmLost_paradigm8_upper",
+                Count: 1),
+        ]);
+    Equal(1, mergedVariants.Count, "API and local evidence keep one candidate per paradigm family");
+    Equal(
+        "is4_sami_selectable_paradigmLost_paradigm8_upper",
+        mergedVariants.Single().EffectId,
+        "merged paradigm evidence prefers the upper variant");
 
     static MaaTaskRunResult M(string entry, IReadOnlyList<(string Text, double Score)> rows)
     {
@@ -6233,6 +6375,7 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
     Equal(false, RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount("relicsFull", 8, 9), "incomplete count remains active");
     Equal(true, RhodesRecognitionRuntimePlan.IsScrollProfile("is5ThoughtFull"), "thought list uses scroll recognition");
     Equal(true, RhodesRecognitionRuntimePlan.IsScrollProfile("is4RevelationFull"), "Sami revelation board uses left-pane scroll recognition");
+    Equal(true, RhodesRecognitionRuntimePlan.IsScrollProfile("is4ParadigmLost"), "Sami paradigm lost detail uses vertical scroll recognition");
     Equal(true, RhodesRecognitionRuntimePlan.IsScrollProfile("is6CoinsFull"), "owned coin board uses horizontal scroll recognition");
 }
 
@@ -8649,7 +8792,7 @@ static void RunFieldRegistryRetainedFields()
             new SukiSpecialFieldState("is5_sarkaz", "thought", "思案", "effectStackLoadout", "2個", "個数入力", "is5ThoughtFull", ""),
             new SukiSpecialFieldState("is5_sarkaz", "idea", "構想", "number", "3", "数値", "run.idea.current", ""),
             new SukiSpecialFieldState("is5_sarkaz", "age", "時代", "effectSelect", "溶魂の端緒", "候補選択", "is5AgeFull", ""),
-            new SukiSpecialFieldState("is4_sami", "collapseValue", "崩壊値", "number", "9", "数値", "is4CollapseValue", "")
+            new SukiSpecialFieldState("is4_sami", "paradigmLost", "パラダイムロスト", "effectRankedMultiSelect", "2件", "状態", "is4ParadigmLost", "")
         ]);
 
     var header = RhodesRunFieldRegistry.BuildHeaderStatusChips(state).ToArray();
@@ -11083,11 +11226,26 @@ static void CandidateSuiCandleBearerTargetApply()
 
 static void CandidateOtherSpecialApply()
 {
-    var revelationState = JsonNode.Parse("""{ "run": { "campaignId": "is4_sami" } }""")!.AsObject();
+    var revelationState = JsonNode.Parse(
+        """
+        {
+          "run": {
+            "campaignId": "is4_sami",
+            "special": {
+              "is4_sami": {
+                "revelation": {
+                  "entries": [{ "effectId": "stale", "stateId": "", "slotKind": "cause", "count": 9 }]
+                }
+              }
+            }
+          }
+        }
+        """)!.AsObject();
     var revelationSummary = RhodesRecognitionCandidateApplier.Apply(
         revelationState,
         [
-            new MaaCandidatePreview("revelation", "本因A", "fallback", "本因A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "cause", EffectId: "cause_a", StateId: "rhetoric_a"),
+            new MaaCandidatePreview("revelation", "本因A", "fallback", "本因A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "cause", EffectId: "cause_a", StateId: "rhetoric_a", Count: 2),
+            new MaaCandidatePreview("revelation", "本因A", "fallback", "本因A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "cause", EffectId: "cause_a", Count: 2),
             new MaaCandidatePreview("revelation", "構成A", "fallback", "構成A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "structure", EffectId: "structure_a", StateId: "rhetoric_b"),
             new MaaCandidatePreview("revelation", "本因A", "fallback", "本因A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "cause", EffectId: "cause_a", StateId: "rhetoric_c"),
             new MaaCandidatePreview("revelation", "修辞A", "fallback", "修辞A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "rhetoric", EffectId: "rhetoric_a"),
@@ -11095,20 +11253,41 @@ static void CandidateOtherSpecialApply()
         ],
         DateTimeOffset.Parse("2026-07-01T00:00:00Z"));
 
-    Equal(3, revelationSummary.AppliedCount, "applied revelation count");
+    Equal(4, revelationSummary.AppliedCount, "applied revelation count");
     Equal(2, revelationSummary.IgnoredCount, "standalone rhetoric and other-campaign coin are ignored");
     var board = revelationState["run"]!.AsObject()["special"]!.AsObject()["is4_sami"]!.AsObject()["revelation"]!.AsObject();
     var revelationEntries = board["entries"]!.AsArray();
-    Equal(3, revelationEntries.Count, "same revelation with a different rhetoric remains distinct");
+    Equal(4, revelationEntries.Count, "same revelation with no rhetoric or a different rhetoric remains distinct");
+    Equal(false, revelationEntries.Any(item => item!["effectId"]!.GetValue<string>().Equals("stale", StringComparison.Ordinal)), "full revelation scan removes stale entries");
+    Equal(2, revelationEntries[0]!.AsObject()["count"]!.GetValue<int>(), "simultaneous duplicate revelation count is stored");
     Equal(
-        "cause_a:rhetoric_a:cause|structure_a:rhetoric_b:structure|cause_a:rhetoric_c:cause",
+        "cause_a:rhetoric_a:cause|cause_a::cause|structure_a:rhetoric_b:structure|cause_a:rhetoric_c:cause",
         string.Join('|', revelationEntries.Select(item =>
         {
             var entry = item!.AsObject();
-            return $"{entry["effectId"]!.GetValue<string>()}:{entry["stateId"]!.GetValue<string>()}:{entry["slotKind"]!.GetValue<string>()}";
+            return $"{entry["effectId"]!.GetValue<string>()}:{entry["stateId"]?.GetValue<string>() ?? ""}:{entry["slotKind"]!.GetValue<string>()}";
         })),
         "revelation state is stored on its parent entry");
+    Equal(2, revelationEntries[1]!.AsObject()["count"]!.GetValue<int>(), "no-rhetoric revelation keeps its own duplicate count");
     Equal(false, board.ContainsKey("rhetorics"), "standalone rhetoric list is retired");
+
+    var repeatedRevelationSummary = RhodesRecognitionCandidateApplier.Apply(
+        revelationState,
+        [new MaaCandidatePreview("revelation", "本因A", "fallback", "本因A", 0.9, CampaignId: "is4_sami", FieldId: "revelationBoard", SlotKind: "cause", EffectId: "cause_a", StateId: "rhetoric_a", Count: 3)],
+        DateTimeOffset.Parse("2026-07-01T00:01:00Z"));
+    Equal(1, repeatedRevelationSummary.AppliedCount, "new revelation scan replaces the previous board");
+    board = revelationState["run"]!.AsObject()["special"]!.AsObject()["is4_sami"]!.AsObject()["revelation"]!.AsObject();
+    revelationEntries = board["entries"]!.AsArray();
+    Equal(1, revelationEntries.Count, "previous revelation entries are removed after a new full scan");
+    Equal(3, revelationEntries[0]!.AsObject()["count"]!.GetValue<int>(), "replacement keeps the detected simultaneous count");
+
+    var clearRevelationSummary = RhodesRecognitionCandidateApplier.Apply(
+        revelationState,
+        [RhodesRecognitionCandidateApplier.CreateNoSamiRevelationCandidate()],
+        DateTimeOffset.Parse("2026-07-01T00:02:00Z"));
+    Equal(1, clearRevelationSummary.AppliedCount, "explicit empty revelation selection applied");
+    revelationEntries = revelationState["run"]!.AsObject()["special"]!.AsObject()["is4_sami"]!.AsObject()["revelation"]!.AsObject()["entries"]!.AsArray();
+    Equal(0, revelationEntries.Count, "explicit empty revelation selection clears the board");
 
     var coinState = JsonNode.Parse(
         """

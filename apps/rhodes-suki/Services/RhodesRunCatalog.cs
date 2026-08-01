@@ -660,7 +660,7 @@ public static class RhodesRunCatalog
             "effectStackLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, true),
             "effectMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
             "effectRankedMultiSelect" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
-            "revelationBoardLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, false),
+            "revelationBoardLoadout" => BuildEffectListState(campaignId, field, value, kind, profileId, effectsById, true),
             "coinLoadout" => BuildCoinLoadoutState(campaignId, field, value, kind, profileId, effectsById),
             "textMultiSelect" => BuildTextListState(campaignId, field, value, kind, profileId),
             _ => new SukiSpecialFieldState(
@@ -1060,7 +1060,6 @@ public static class RhodesRunCatalog
             ("is3_mizuki", "operatorEvolution") => "operatorsFull",
             ("is3_mizuki", "revelations") => "is3RejectionFull",
             ("is3_mizuki", "hordeCalls") => "is3LightHordeFull",
-            ("is4_sami", "collapseValue") => "is4CollapseValue",
             ("is4_sami", "paradigmLost") => "is4ParadigmLost",
             ("is4_sami", "revelation") => "is4RevelationFull",
             ("is6_sui", "ticket") => "is6BaseFull",
