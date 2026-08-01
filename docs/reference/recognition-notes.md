@@ -15,7 +15,7 @@ Recognition is intentionally lower priority than the manual and tournament workf
 
 ## MAA OCR reference
 
-OCR/ADB半自動取得の詳細調査は [maa-ocr-research.md](./maa-ocr-research.md) にまとめる。MAAのROI/OcrDetect/ocrReplace/NumberOcrReplaceの考え方を、本プロジェクトのOCRタスクJSON設計へ反映する。
+OCR/ADB半自動取得の詳細調査は [maa-ocr-research.md](maa-ocr-research.md) にまとめる。MAAのROI/OcrDetect/ocrReplace/NumberOcrReplaceの考え方を、本プロジェクトのOCRタスクJSON設計へ反映する。
 
 ## ADB navigation entry points
 

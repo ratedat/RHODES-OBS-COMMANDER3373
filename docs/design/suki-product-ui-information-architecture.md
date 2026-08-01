@@ -2,7 +2,7 @@
 
 This document records the product UI coverage needed as the Suki/Avalonia shell replaces the former Control v2 desktop surface.
 
-The Japanese design philosophy summary is recorded in `docs/suki-design-philosophy-ja.md`.
+The Japanese design philosophy summary is recorded in `suki-design-philosophy-ja.md`.
 
 ## Current Assessment
 

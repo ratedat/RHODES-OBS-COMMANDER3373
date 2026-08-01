@@ -1,10 +1,10 @@
 # Suki MAA Workbench Design Principles
 
-This document records the current UI direction for the Suki/Avalonia verification shell and keeps it aligned with the Figma summary and Stitch brief.
+This document records the current UI direction for the Suki/Avalonia verification shell.
 
-For the full product surface and information architecture, see `docs/suki-product-ui-information-architecture.md`. This document describes the current screen direction; the information architecture document defines the larger UI scope that the Suki shell still needs to cover.
+For the full product surface and information architecture, see `suki-product-ui-information-architecture.md`. This document describes the current screen direction; the information architecture document defines the larger UI scope that the Suki shell still needs to cover.
 
-For the Japanese design philosophy summary, see `docs/suki-design-philosophy-ja.md`.
+For the Japanese design philosophy summary, see `suki-design-philosophy-ja.md`.
 
 ## Product Role
 
@@ -17,7 +17,7 @@ The Suki shell is a maintainer/debugger workbench for validating and correcting 
 - Three-pane workspace: workspace navigation belongs on the left, operational work happens in the center, and the right side stays as an inspector plus evidence/results.
 - Stable workspaces over tab sprawl: keep `Run`, `Choices`, `Recognition`, `Output`, `Runtime`, and `Debug` as durable work areas. New IS values, recognition profiles, output blocks, and runtime capabilities should appear inside those areas as schema-driven sections.
 - MAA as the source of truth: UI names and grouping should map directly to MAA task/profile concepts where possible.
-- Stitch as a visual contract: Stitch output is used to refine visual direction, while production implementation remains SukiUI/Avalonia XAML.
+- Design references are guidance only: production implementation remains SukiUI/Avalonia XAML and the runtime behavior is the source of truth.
 - Low-chrome dark UI: the interface should stay quiet, readable, and focused on logs, captures, and task rows.
 - No nested page cards: top-level panels are allowed; repeated rows can be framed, but page sections should not become stacked cards inside cards.
 - Stable dimensions: side columns, toolbar rows, screenshot preview, and task/result rows should not shift when text, paths, or JSON change.
@@ -65,6 +65,5 @@ The design must make these states legible:
 
 - Production UI lives in `apps/rhodes-suki/Views/MainWindow.axaml`.
 - Run catalog and choice filtering live in `apps/rhodes-suki/Services/RhodesRunCatalog.cs` and `apps/rhodes-suki/Services/RhodesChoiceFilter.cs`.
-- Stitch prompt lives in `docs/stitch-suki-workbench-brief.md`.
-- Full product UI coverage is tracked in `docs/suki-product-ui-information-architecture.md`.
+- Full product UI coverage is tracked in `suki-product-ui-information-architecture.md`.
 - Figma summary file should mirror these decisions and stay as a design/reference artifact, not the runtime source of truth.

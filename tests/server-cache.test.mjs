@@ -34,7 +34,7 @@ test("app shell and module files are served with strict no-cache headers", async
     assert.equal(thirdPartyNotices.status, 200);
     assert.match(thirdPartyNotices.headers.get("content-type"), /^text\/markdown/);
 
-    const licenseDocs = await fetch(`http://127.0.0.1:${port}/docs/licenses.md`);
+    const licenseDocs = await fetch(`http://127.0.0.1:${port}/docs/legal/licenses.md`);
     assert.equal(licenseDocs.status, 200);
     assert.match(licenseDocs.headers.get("content-type"), /^text\/markdown/);
   } finally {

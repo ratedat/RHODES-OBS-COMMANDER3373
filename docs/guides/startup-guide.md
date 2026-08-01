@@ -111,7 +111,7 @@ npm.cmd run suki:run
 
 MAAFramework取得はブラウザのHTMLだけでは端末操作できません。アプリ内のローカル実行環境がADB接続、スクリーンショット、MAA-OCRを担当します。
 
-対応エミュレーター、Google Play Games開発者エミュレーター、Hyper-V診断、標準serial、トラブルシュートは `docs/adb-setup.md` を参照してください。
+対応エミュレーター、Google Play Games開発者エミュレーター、Hyper-V診断、標準serial、トラブルシュートは `adb-setup.md` を参照してください。
 
 ADB実行ファイルが見つからない場合は、Android platform-toolsをPATHに入れるか、Suki/AvaloniaのADB設定でパスを選択します。環境変数で明示する場合は次を使えます。
 

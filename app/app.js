@@ -714,7 +714,7 @@ function renderLicensesPage() {
           <a href="https://github.com/ratedat/RHODES-OBS-COMMANDER3373" target="_blank" rel="noreferrer">GitHubリポジトリ</a>
           <a href="/LICENSE" target="_blank" rel="noreferrer">AGPL本文</a>
           <a href="/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">第三者表記</a>
-          <a href="/docs/licenses.md" target="_blank" rel="noreferrer">運用メモ</a>
+          <a href="/docs/legal/licenses.md" target="_blank" rel="noreferrer">運用メモ</a>
         </div>
       </section>
       <section class="licenses-panel">

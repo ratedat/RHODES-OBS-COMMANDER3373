@@ -4,21 +4,42 @@ This directory is for public, project-facing documentation only. It should expla
 
 Do not place Codex/Stitch working notes, prompt handoff files, generated design drafts, or temporary preview artifacts here. Keep those in `.agent-work/`, which is intentionally ignored by Git.
 
-## Key Documents
+## User Guides
 
-- `startup-guide.md` - app startup, OBS URLs, port usage, and ADB setup notes
-- `adb-setup.md` - supported ADB presets, emulator setup, Hyper-V diagnostics, and troubleshooting
-- `debugger-adb-report-guide.md` - short instructions bundled with debugger ZIPs for ADB/OCR bug reports
-- `licenses.md` - license, source availability, and third-party attribution policy
-- `architecture.md` - state and overlay architecture
-- `data-sources.md` - source extraction notes
-- `data-summary.md` - extracted campaign data coverage
-- `effect-calculation.md` - relic/squad effect calculation design
-- `maa-ocr-research.md` - ADB/OCR research notes that are useful to the implementation
-- `recognition-notes.md` - recognition implementation notes
-- `maaframework-family-roadmap.md` - MAAFramework/SukiUI migration roadmap and active recognition boundaries
+- [Startup and OBS setup](guides/startup-guide.md)
+- [ADB setup and troubleshooting](guides/adb-setup.md)
+- [Debugger ADB/OCR report guide](guides/debugger-adb-report-guide.md)
+- [Public-debug Discord guide](guides/discord-public-debug-guide.md)
+- [Tournament remote input](guides/tournament-remote-input.md)
+- [Sarkaz recognition test guide](guides/sarkaz-test-guide.md)
+- [GLM-OCR optional verification setup](guides/glm-ocr-setup.md)
+- [PaddleOCR legacy notes](guides/paddle-ocr-setup.md)
 
-- [GLM-OCR optional verification setup](glm-ocr-setup.md)
-- [PaddleOCR legacy notes](paddle-ocr-setup.md)
+## Technical Reference
 
-- [MAA OCR adoption](maa-ocr-adoption.md)
+- [Architecture](reference/architecture.md)
+- [Data sources](reference/data-sources.md)
+- [Campaign data coverage](reference/data-summary.md)
+- [Effect calculation](reference/effect-calculation.md)
+- [Recognition notes](reference/recognition-notes.md)
+- [MAA OCR adoption](reference/maa-ocr-adoption.md)
+- [MAA OCR research](reference/maa-ocr-research.md)
+- [MAAFramework family roadmap](reference/maaframework-family-roadmap.md)
+- [IS#6 coin OCR corpus](reference/sui-coin-ocr-corpus.md)
+
+## Product Design
+
+- [Control-v2 screen design](design/control-v2-screen-design.md)
+- [Suki design philosophy](design/suki-design-philosophy-ja.md)
+- [Product UI information architecture](design/suki-product-ui-information-architecture.md)
+- [Suki workbench design principles](design/suki-workbench-design-principles.md)
+- [Preview images](previews/)
+
+## Decisions And Legal
+
+- [ADR-0001: Adopt MAAFramework and SukiUI](decisions/0001-adopt-maaframework-and-sukiui.md)
+- [License and source availability](legal/licenses.md)
+
+## Internal Working Notes
+
+Codex handoffs, consultation prompts, temporary implementation plans, and generated design briefs belong under `.agent-work/handoff/` and are not committed.

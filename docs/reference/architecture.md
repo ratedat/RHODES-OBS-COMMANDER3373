@@ -41,7 +41,7 @@ Calculation is modeled as a separate normalized rule layer on top of the raw wik
 - `data/difficulty-variant-sources.json` configures difficulty-dependent relic extraction and is the source for generated tier mappings.
 - `data/difficulty-tiers.json` maps numeric run difficulty to campaign-specific effect variant tiers, generated from `data/difficulty-variant-sources.json`.
 - `data/relic-effect-variants.json` stores the corresponding tier-specific relic effect text.
-- `docs/effect-calculation.md` describes the full rule model, target selectors, stacking behavior, and coverage workflow.
+- `effect-calculation.md` describes the full rule model, target selectors, stacking behavior, and coverage workflow.
 
 The overlay should display both calculated summaries and raw source text. Missing normalized rules are reported as unparsed sources rather than treated as errors.
 

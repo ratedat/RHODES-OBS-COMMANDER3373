@@ -8,7 +8,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   const packageJson = await fs.readFile("package.json", "utf8");
   const portablePublisher = await fs.readFile("tools/publish-suki-portable.mjs", "utf8");
   const publicDebugPackager = await fs.readFile("tools/package-suki-public-debug.mjs", "utf8");
-  const discordGuide = await fs.readFile("docs/discord-public-debug-guide.md", "utf8");
+  const discordGuide = await fs.readFile("docs/guides/discord-public-debug-guide.md", "utf8");
   const server = await fs.readFile("app/server.mjs", "utf8");
   const outputWorkspace = await fs.readFile(
     "apps/rhodes-suki/Views/Workspaces/OutputWorkspaceView.axaml",
@@ -80,7 +80,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(publicDebugPackager, /path\.join\(repoRoot, "services"\)/);
   assert.match(publicDebugPackager, /README_PUBLIC_DEBUG\.md/);
   assert.match(publicDebugPackager, /DISCORD_USAGE\.md/);
-  assert.match(publicDebugPackager, /docs\/discord-public-debug-guide\.md/);
+  assert.match(publicDebugPackager, /docs\/guides\/discord-public-debug-guide\.md/);
   assert.match(publicDebugPackager, /path\.join\(repoRoot, "app"\)/);
   assert.match(publicDebugPackager, /copyPortablePayload\(packageRoot\)/);
   assert.match(publicDebugPackager, /overlay-state\.example\.json/);
@@ -1424,7 +1424,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
 });
 
 test("MAAFramework roadmap records 1280x720 as a 16:9 base coordinate system", async () => {
-  const roadmap = await fs.readFile("docs/maaframework-family-roadmap.md", "utf8");
+  const roadmap = await fs.readFile("docs/reference/maaframework-family-roadmap.md", "utf8");
   const notice = await fs.readFile("THIRD_PARTY_NOTICES.md", "utf8");
 
   assert.match(roadmap, /1280x720/);
@@ -1490,8 +1490,7 @@ test("Sui held coin scrolling supplements full-list MAA OCR only for missing vis
 });
 
 test("Suki design docs require operational operator and relic UI", async () => {
-  const principles = await fs.readFile("docs/suki-workbench-design-principles.md", "utf8");
-  const stitch = await fs.readFile("docs/stitch-suki-workbench-brief.md", "utf8");
+  const principles = await fs.readFile("docs/design/suki-workbench-design-principles.md", "utf8");
 
   assert.match(principles, /Operational selection first/);
   assert.match(principles, /Stable workspaces over tab sprawl/);
@@ -1499,11 +1498,6 @@ test("Suki design docs require operational operator and relic UI", async () => {
   assert.match(principles, /Output part enabled/);
   assert.match(principles, /Runtime required vs optional capabilities/);
   assert.match(principles, /RhodesRunCatalog/);
-  assert.match(stitch, /Run workspace/);
-  assert.match(stitch, /Choices workspace/);
-  assert.match(stitch, /Output workspace/);
-  assert.match(stitch, /Runtime workspace/);
-  assert.match(stitch, /IS campaign selected and switchable/);
 });
 
 test("Apple Design prototype stays independent from the operational Suki shell", async () => {

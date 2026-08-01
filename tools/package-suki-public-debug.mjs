@@ -185,12 +185,12 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
   const copies = [
     ["LICENSE", "LICENSE"],
     ["THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"],
-    ["docs/adb-setup.md", "docs/adb-setup.md"],
-    ["docs/debugger-adb-report-guide.md", "docs/debugger-adb-report-guide.md"],
-    ["docs/discord-public-debug-guide.md", "docs/discord-public-debug-guide.md"],
-    ["docs/discord-public-debug-guide.md", "DISCORD_USAGE.md"],
-    ["docs/sarkaz-test-guide.md", "docs/sarkaz-test-guide.md"],
-    ["docs/tournament-remote-input.md", "docs/tournament-remote-input.md"],
+    ["docs/guides/adb-setup.md", "docs/guides/adb-setup.md"],
+    ["docs/guides/debugger-adb-report-guide.md", "docs/guides/debugger-adb-report-guide.md"],
+    ["docs/guides/discord-public-debug-guide.md", "docs/guides/discord-public-debug-guide.md"],
+    ["docs/guides/discord-public-debug-guide.md", "DISCORD_USAGE.md"],
+    ["docs/guides/sarkaz-test-guide.md", "docs/guides/sarkaz-test-guide.md"],
+    ["docs/guides/tournament-remote-input.md", "docs/guides/tournament-remote-input.md"],
   ];
   for (const [source, target] of copies) {
     await copyFile(path.join(repoRoot, source), path.join(targetRoot, target));
@@ -226,7 +226,7 @@ OBS出力と大会入力の簡易公開に必要なNode.jsとcloudflaredは検�
 - Android Back keyeventは使いません。タップとスワイプは指定矩形内でランダム化されます。
 
 Discordへ貼り付ける短い手順は \`DISCORD_USAGE.md\` にあります。
-詳細は \`docs/sarkaz-test-guide.md\`、\`docs/debugger-adb-report-guide.md\`、\`docs/adb-setup.md\` を参照してください。
+詳細は \`docs/guides/sarkaz-test-guide.md\`、\`docs/guides/debugger-adb-report-guide.md\`、\`docs/guides/adb-setup.md\` を参照してください。
 
 Source: https://github.com/ratedat/RHODES-OBS-COMMANDER3373
 Revision: ${sourceRevision}${sourceStatus ? ` (${sourceStatus})` : ""}

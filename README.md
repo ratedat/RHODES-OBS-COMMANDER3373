@@ -14,13 +14,14 @@ Target campaigns:
 
 See:
 
-- `docs/startup-guide.md` for app startup, OBS URL, port, and ADB setup notes
-- `docs/adb-setup.md` for supported ADB presets, emulator setup, Google Play Games developer emulator notes, Hyper-V diagnostics, and troubleshooting
-- `docs/licenses.md` for license, source availability, and third-party notices
-- `docs/architecture.md` for state and overlay architecture
-- `docs/data-sources.md` for source extraction notes
-- `docs/data-summary.md` for extracted campaign data coverage
-- `docs/effect-calculation.md` for relic/squad effect calculation design
+- `docs/README.md` for the categorized documentation index
+- `docs/guides/startup-guide.md` for app startup, OBS URL, port, and ADB setup notes
+- `docs/guides/adb-setup.md` for supported ADB presets, emulator setup, Google Play Games developer emulator notes, Hyper-V diagnostics, and troubleshooting
+- `docs/legal/licenses.md` for license, source availability, and third-party notices
+- `docs/reference/architecture.md` for state and overlay architecture
+- `docs/reference/data-sources.md` for source extraction notes
+- `docs/reference/data-summary.md` for extracted campaign data coverage
+- `docs/reference/effect-calculation.md` for relic/squad effect calculation design
 - `data/wikiru-campaign-sources.json` for adding or updating campaign wiki extraction targets
 - `data/performance-sources.json` for adding or updating campaign performance/event-buff extraction targets such as IS#2 演目
 - `data/performances.json` for generated selectable performance/event-buff names and effects
@@ -120,7 +121,7 @@ Runtime state is stored in `data/current-state.json` and is intentionally ignore
 
 RHODES OBS COMMANDER3373 is licensed under AGPL-3.0-only. The full license text is included in `LICENSE`.
 
-Source code is available at https://github.com/ratedat/RHODES-OBS-COMMANDER3373. Third-party attribution, including MaaAssistantArknights notes for future ADB/OCR work, is tracked in `THIRD_PARTY_NOTICES.md` and `docs/licenses.md`.
+Source code is available at https://github.com/ratedat/RHODES-OBS-COMMANDER3373. Third-party attribution, including MaaAssistantArknights notes for future ADB/OCR work, is tracked in `THIRD_PARTY_NOTICES.md` and `docs/legal/licenses.md`.
 
 ## Data Update Workflow
 
