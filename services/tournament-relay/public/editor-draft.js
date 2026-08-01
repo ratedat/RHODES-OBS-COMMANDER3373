@@ -58,7 +58,26 @@ function clearRunState(state) {
   return next;
 }
 
-export function applyDraftOperation(state, operation) {
+export function difficultyTierEntries(master, campaignId) {
+  const config = master?.difficultyTiers?.[campaignId];
+  if (Array.isArray(config)) return config;
+  return Array.isArray(config?.tiers) ? config.tiers : [];
+}
+
+function resolveDifficultyTierId(master, run) {
+  const config = master?.difficultyTiers?.[run?.campaignId];
+  const tiers = difficultyTierEntries(master, run?.campaignId);
+  const value = run?.difficulty === null || run?.difficulty === undefined || run?.difficulty === ""
+    ? null
+    : Number(run.difficulty);
+  if (!Number.isFinite(value)) return null;
+  const tier = tiers.find((item) =>
+    value >= Number(item.minDifficulty)
+      && (item.maxDifficulty === null || item.maxDifficulty === undefined || value <= Number(item.maxDifficulty)));
+  return tier?.id || (!Array.isArray(config) ? config?.defaultTierId : null) || null;
+}
+
+export function applyDraftOperation(state, operation, master) {
   if (operation.type === "run.clear") return clearRunState(state);
 
   const next = clone(state || {});
@@ -80,8 +99,11 @@ export function applyDraftOperation(state, operation) {
         value = value === null || value === undefined || value === "" ? null : value;
       }
       next.run[operation.field] = value;
+      if (operation.field === "difficulty") {
+        next.run.difficultyTierId = resolveDifficultyTierId(master, next.run);
+      }
       if (operation.field === "squadId") {
-        next.run.squad = value;
+        next.run.squad = null;
         next.run.squadRandomEffectOptionId = null;
       }
       break;
@@ -133,7 +155,7 @@ export function applyDraftOperation(state, operation) {
   return next;
 }
 
-export function buildDraftState(state, operations) {
+export function buildDraftState(state, operations, master) {
   if (!operations?.length) return null;
-  return operations.reduce((current, operation) => applyDraftOperation(current, operation), clone(state || {}));
+  return operations.reduce((current, operation) => applyDraftOperation(current, operation, master), clone(state || {}));
 }

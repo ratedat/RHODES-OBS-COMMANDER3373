@@ -1,4 +1,5 @@
 import { getBossManualSections, normalizeBossSelections } from "./boss-flags.js";
+import { applyDifficultyTier } from "./difficulty.js";
 import { normalizeOperatorCounts } from "./operator-counts.js";
 import {
   normalizeCoinLoadoutEntries,
@@ -35,6 +36,12 @@ function campaignById(master, campaignId) {
 
 function currentCampaign(state, master) {
   return campaignById(master, state?.run?.campaignId);
+}
+
+function difficultyTierEntries(master, campaignId) {
+  const config = master?.difficultyTiers?.[campaignId];
+  if (Array.isArray(config)) return config;
+  return Array.isArray(config?.tiers) ? config.tiers : [];
 }
 
 function specialField(campaign, fieldId) {
@@ -165,7 +172,7 @@ function normalizeRunValue(state, master, field, value) {
   if (field === "difficultyTierId") {
     const id = boundedText(value, 120);
     if (!id) return null;
-    const entries = master?.difficultyTiers?.[campaignId] || [];
+    const entries = difficultyTierEntries(master, campaignId);
     if (!entries.some((item) => item.id === id)) throw operationError(`存在しない等級Tierです: ${id}`);
     return id;
   }
@@ -258,8 +265,9 @@ export function applyTournamentRemoteOperation(state, master, operation) {
       if (!RUN_FIELDS.has(operation.field)) throw operationError(`許可されていないラン項目です: ${operation.field}`);
       const value = normalizeRunValue(next, master, operation.field, operation.value);
       next.run[operation.field] = value;
+      if (operation.field === "difficulty") applyDifficultyTier(master, next.run);
       if (operation.field === "squadId") {
-        next.run.squad = value;
+        next.run.squad = null;
         next.run.squadRandomEffectOptionId = null;
       }
       break;

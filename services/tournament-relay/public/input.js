@@ -4,6 +4,7 @@ import {
 } from "/assets/editor-refresh-policy.js";
 import {
   buildDraftState,
+  difficultyTierEntries,
   operationKey,
   upsertDraftOperation,
 } from "/assets/editor-draft.js";
@@ -174,7 +175,8 @@ function snapshot() {
 }
 
 function rebuildDraftState() {
-  draftState = buildDraftState(liveSnapshot().state, pendingOperations);
+  const live = liveSnapshot();
+  draftState = buildDraftState(live.state, pendingOperations, live.master);
 }
 
 function renderPending() {
@@ -389,7 +391,7 @@ function renderRunEditor() {
     run.squadRandomEffectOptionId,
     "追加効果を選択",
   );
-  const tier = selectControl(master.difficultyTiers?.[currentCampaign?.id] || [], run.difficultyTierId, "Tierを選択");
+  const tier = selectControl(difficultyTierEntries(master, currentCampaign?.id), run.difficultyTierId, "Tierを選択");
   const performances = (master.performances || []).filter((item) => !item.campaignId || item.campaignId === currentCampaign?.id);
   const performance = selectControl(performances, run.performanceId, "演目を選択");
 

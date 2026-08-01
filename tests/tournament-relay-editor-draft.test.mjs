@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildDraftState,
+  difficultyTierEntries,
   operationKey,
   upsertDraftOperation,
 } from "../services/tournament-relay/public/editor-draft.js";
@@ -19,6 +20,20 @@ function baseState() {
     relics: [],
     usedRelicIds: [],
     bossSelections: {},
+  };
+}
+
+function master() {
+  return {
+    difficultyTiers: {
+      is5_sarkaz: {
+        defaultTierId: "realistic",
+        tiers: [
+          { id: "realistic", minDifficulty: 0, maxDifficulty: 2 },
+          { id: "imaginary", minDifficulty: 9, maxDifficulty: null },
+        ],
+      },
+    },
   };
 }
 
@@ -90,4 +105,33 @@ test("run clear becomes the new draft baseline and later edits are retained", ()
   assert.deepEqual(operations.map(operationKey), ["run:clear", "run:ingot"]);
   assert.equal(draft.run.ingot, 7);
   assert.deepEqual(draft.operators, []);
+});
+
+test("editor draft writes canonical squad state and derives difficulty tier", () => {
+  const live = baseState();
+  live.run.campaignId = "is5_sarkaz";
+  live.run.squad = "legacy-squad";
+  live.run.squadRandomEffectOptionId = "stale-effect";
+
+  const draft = buildDraftState(live, [
+    { type: "run.set", field: "difficulty", value: 9 },
+    { type: "run.set", field: "squadId", value: "is5-squad" },
+  ], master());
+
+  assert.equal(draft.run.difficulty, 9);
+  assert.equal(draft.run.difficultyTierId, "imaginary");
+  assert.equal(draft.run.squadId, "is5-squad");
+  assert.equal(draft.run.squad, null);
+  assert.equal(draft.run.squadRandomEffectOptionId, null);
+});
+
+test("difficulty tier entries unwrap canonical definitions and retain legacy arrays", () => {
+  assert.deepEqual(
+    difficultyTierEntries(master(), "is5_sarkaz").map((item) => item.id),
+    ["realistic", "imaginary"],
+  );
+  assert.deepEqual(
+    difficultyTierEntries({ difficultyTiers: { legacy: [{ id: "legacy" }] } }, "legacy"),
+    [{ id: "legacy" }],
+  );
 });

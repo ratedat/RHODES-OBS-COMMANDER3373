@@ -183,7 +183,50 @@ test("remote operations validate squad random effects and clear stale effects wh
     field: "squadId",
     value: replacementSquad.id,
   });
+  assert.equal(changed.state.run.squadId, replacementSquad.id);
+  assert.equal(changed.state.run.squad, null);
   assert.equal(changed.state.run.squadRandomEffectOptionId, null);
+});
+
+test("remote difficulty updates the canonical value and derives the configured tier", async () => {
+  const master = await loadMaster();
+  let state = applyTournamentRemoteOperation(baseState(), master, {
+    type: "campaign.set",
+    campaignId: "is5_sarkaz",
+  }).state;
+
+  state = applyTournamentRemoteOperation(state, master, {
+    type: "run.set",
+    field: "difficulty",
+    value: 9,
+  }).state;
+
+  assert.equal(state.run.difficulty, 9);
+  assert.equal(state.run.difficultyTierId, "imaginary");
+});
+
+test("remote difficulty tier validation accepts object-shaped tier definitions", async () => {
+  const master = await loadMaster();
+  let state = applyTournamentRemoteOperation(baseState(), master, {
+    type: "campaign.set",
+    campaignId: "is5_sarkaz",
+  }).state;
+
+  state = applyTournamentRemoteOperation(state, master, {
+    type: "run.set",
+    field: "difficultyTierId",
+    value: "fantastical",
+  }).state;
+
+  assert.equal(state.run.difficultyTierId, "fantastical");
+  assert.throws(
+    () => applyTournamentRemoteOperation(state, master, {
+      type: "run.set",
+      field: "difficultyTierId",
+      value: "missing-tier",
+    }),
+    /存在しない等級Tier/,
+  );
 });
 
 test("special operations normalize effect and operator assignment values", async () => {
