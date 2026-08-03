@@ -15,6 +15,7 @@ import { applyDifficultyTier, difficultyEffectTexts, difficultySummary as summar
 import { isActiveManualRule, summarizeRelicEffects as summarizeRelicEffectMetrics, summarizeTextEffects } from "./domain/effect-metrics.js";
 import { decorateMizukiRejectionTargets, sortOperators as sortOperatorsByPreference } from "./domain/operators.js";
 import { normalizeOperatorCounts, operatorCountFor, operatorRosterCount } from "./domain/operator-counts.js";
+import { normalizeOperatorPromotionLevels, operatorPromotionLevelFor } from "./domain/operator-promotions.js";
 import { prioritizeOwnedRelics, supportsRelicUsedFlag } from "./domain/relic-usage.js";
 import { buildStartTemplateSummary, getEffectiveRelicIds, mergeEffectiveSpecial, phaseLabel } from "./domain/start-templates.js";
 import { controlModeOptions, getControlMode, normalizeControlMode } from "./domain/ui-modes.js";
@@ -552,7 +553,11 @@ function getBossFlagEntries(campaignId = getCampaign()?.id) {
 function getRecruitedOperators() {
   const ops = (state.operators || []).map((id) => {
     const operator = maps.operator.get(id);
-    return operator ? { ...operator, count: operatorCountFor(id, state.operatorCounts) } : null;
+    return operator ? {
+      ...operator,
+      count: operatorCountFor(id, state.operatorCounts),
+      promotionLevel: operatorPromotionLevelFor(id, state.operatorPromotionLevels),
+    } : null;
   }).filter(Boolean);
   return sortOperators(decorateMizukiRejectionTargets(ops, state));
 }
@@ -675,6 +680,7 @@ function ensureStateShape() {
     : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.operatorCounts = normalizeOperatorCounts(state.operatorCounts, state.operators);
+  state.operatorPromotionLevels = normalizeOperatorPromotionLevels(state.operatorPromotionLevels, state.operators);
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
   normalizeBossSelections();
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
@@ -838,6 +844,7 @@ function renderOperatorControlRow(item, active, excludedOrOptions = false) {
   const options = typeof excludedOrOptions === "object" ? excludedOrOptions : { excluded: Boolean(excludedOrOptions), showExclude: true };
   return renderOperatorControlRowComponent(item, active, {
     count: operatorCountFor(item.id, state.operatorCounts),
+    promotionLevel: operatorPromotionLevelFor(item.id, state.operatorPromotionLevels),
     ...options,
   });
 }

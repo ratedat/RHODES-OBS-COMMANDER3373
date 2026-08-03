@@ -40,6 +40,7 @@ function baseState() {
     },
     operators: [],
     operatorCounts: {},
+    operatorPromotionLevels: {},
     relics: [],
     usedRelicIds: [],
     bossFlags: [],
@@ -80,6 +81,43 @@ test("remote operations update only allowed state fields", async () => {
   assert.deepEqual(relicResult.state.usedRelicIds, [relic.id]);
   assert.deepEqual(relicResult.state.adb, state.adb);
   assert.deepEqual(relicResult.state.preferences, state.preferences);
+});
+
+test("operator promotion updates are retained only for selected elite-two capable operators", async () => {
+  const master = await loadMaster();
+  const fourStarOrHigher = master.operators.find((item) => Number(item.rarity) >= 4);
+  const threeStarOrLower = master.operators.find((item) => Number(item.rarity) <= 3);
+
+  let state = applyTournamentRemoteOperation(baseState(), master, {
+    type: "operator.set",
+    operatorId: fourStarOrHigher.id,
+    selected: true,
+    promotionLevel: 2,
+  }).state;
+  assert.equal(state.operatorPromotionLevels[fourStarOrHigher.id], 2);
+
+  state = applyTournamentRemoteOperation(state, master, {
+    type: "operator.set",
+    operatorId: fourStarOrHigher.id,
+    selected: true,
+    count: 1,
+  }).state;
+  assert.equal(state.operatorPromotionLevels[fourStarOrHigher.id], 2);
+
+  state = applyTournamentRemoteOperation(state, master, {
+    type: "operator.set",
+    operatorId: fourStarOrHigher.id,
+    selected: false,
+  }).state;
+  assert.deepEqual(state.operatorPromotionLevels, {});
+
+  state = applyTournamentRemoteOperation(state, master, {
+    type: "operator.set",
+    operatorId: threeStarOrLower.id,
+    selected: true,
+    promotionLevel: 2,
+  }).state;
+  assert.deepEqual(state.operatorPromotionLevels, {});
 });
 
 test("batch operation applies all edits as one state transition", async () => {

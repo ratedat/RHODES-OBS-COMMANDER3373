@@ -95,7 +95,8 @@ public static class RhodesMaaCandidateApiClient
                 JsonString(candidate, "coinId"),
                 JsonString(candidate, "statusId"),
                 JsonString(candidate, "face"),
-                JsonInt(candidate, "count"));
+                JsonInt(candidate, "count"),
+                PromotionLevel: JsonInt(candidate, "promotionLevel"));
             if (IsRetainedCandidate(preview))
                 previews.Add(preview);
         }

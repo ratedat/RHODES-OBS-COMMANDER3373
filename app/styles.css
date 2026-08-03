@@ -969,6 +969,14 @@ a:hover { text-decoration: underline; }
 .overlay-part-operator span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .overlay-part-operator strong { color: #fff7e2; font-size: 11px; }
 .overlay-part-operator span { color: var(--muted); font-size: 9px; }
+.operator-promotion-badge {
+  display: inline-block !important;
+  margin-left: 4px;
+  color: #ffd36a !important;
+  font-size: 0.9em !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
 .overlay-part-effect-scroll .effect-list { gap: 5px; }
 .overlay-part-effect-list .effect-row { grid-template-columns: 52px minmax(110px, 0.7fr) minmax(0, 1fr); padding: 6px 7px; }
 .overlay-part-effect-list .effect-type { font-size: 10px; }

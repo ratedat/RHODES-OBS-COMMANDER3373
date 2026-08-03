@@ -198,6 +198,8 @@ public static class RhodesRunCatalog
                     ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")));
                 choice.IsSelected = state.SelectedOperatorIds.Contains(id);
                 choice.SelectionCount = state.OperatorCounts.TryGetValue(id, out var count) ? count : 1;
+                choice.IsEliteTwo = state.OperatorPromotionLevels.TryGetValue(id, out var promotionLevel)
+                    && promotionLevel == 2;
                 choice.IsExcluded = state.ExcludedOperatorIds.Contains(id);
                 return choice;
             })
@@ -320,6 +322,7 @@ public static class RhodesRunCatalog
         {
             UsedRelicIds = ReadStringSet(root, "usedRelicIds"),
             OperatorCounts = ReadPositiveIntMap(root, "operatorCounts", selectedOperatorIds),
+            OperatorPromotionLevels = ReadOperatorPromotionLevels(root, selectedOperatorIds),
         };
     }
 
@@ -1169,6 +1172,32 @@ public static class RhodesRunCatalog
                 continue;
             }
             result[entry.Name] = Math.Clamp(count, 2, SukiChoiceItem.MaximumSelectionCount);
+        }
+        return result;
+    }
+
+    private static IReadOnlyDictionary<string, int> ReadOperatorPromotionLevels(
+        JsonElement element,
+        IReadOnlySet<string> selectedOperatorIds)
+    {
+        var result = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (element.ValueKind != JsonValueKind.Object
+            || !element.TryGetProperty("operatorPromotionLevels", out var property)
+            || property.ValueKind != JsonValueKind.Object)
+        {
+            return result;
+        }
+
+        foreach (var entry in property.EnumerateObject())
+        {
+            if (!selectedOperatorIds.Contains(entry.Name)
+                || entry.Value.ValueKind != JsonValueKind.Number
+                || !entry.Value.TryGetInt32(out var promotionLevel)
+                || promotionLevel < 2)
+            {
+                continue;
+            }
+            result[entry.Name] = 2;
         }
         return result;
     }

@@ -408,6 +408,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SetCurrentCampaignCommand = new AsyncRelayCommand(SetCurrentCampaignAsync);
         ToggleBossOptionCommand = new AsyncRelayCommand(ToggleBossOptionAsync);
         ToggleChoiceSelectedCommand = new AsyncRelayCommand(ToggleChoiceSelectedAsync);
+        ToggleOperatorPromotionCommand = new AsyncRelayCommand(ToggleOperatorPromotionAsync);
         ToggleRelicUsedCommand = new AsyncRelayCommand(ToggleRelicUsedAsync);
         ToggleChoiceExcludedCommand = new AsyncRelayCommand(ToggleChoiceExcludedAsync);
         ClearVisibleChoicesCommand = new AsyncRelayCommand(ClearVisibleChoicesAsync);
@@ -2213,6 +2214,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand ToggleChoiceSelectedCommand { get; }
 
+    public ICommand ToggleOperatorPromotionCommand { get; }
+
     public ICommand ToggleRelicUsedCommand { get; }
 
     public ICommand ToggleChoiceExcludedCommand { get; }
@@ -2920,9 +2923,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 var isSelected = state.SelectedOperatorIds.Contains(item.Id);
                 var selectionCount = state.OperatorCounts.TryGetValue(item.Id, out var count) ? count : 1;
-                choicesChanged |= item.IsSelected != isSelected || item.SelectionCount != selectionCount;
+                var isEliteTwo = isSelected
+                    && state.OperatorPromotionLevels.TryGetValue(item.Id, out var promotionLevel)
+                    && promotionLevel == 2;
+                choicesChanged |= item.IsSelected != isSelected
+                    || item.SelectionCount != selectionCount
+                    || item.IsEliteTwo != isEliteTwo;
                 item.IsSelected = isSelected;
                 item.SelectionCount = selectionCount;
+                item.IsEliteTwo = isEliteTwo;
             }
             foreach (var item in _allRelics)
             {
@@ -3490,6 +3499,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshRelicSummaries();
         PersistChoiceStateInBackground();
         StatusMessage = $"{item.Name}: {(item.IsUsed ? "使用済みにしました。" : "未使用に戻しました。")}";
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleOperatorPromotionAsync(object? parameter)
+    {
+        if (parameter is not SukiChoiceItem { Kind: "operator", SupportsEliteTwo: true } item)
+            return Task.CompletedTask;
+
+        if (!item.IsSelected)
+        {
+            StatusMessage = $"{item.Name}: 招集済みオペレーターだけ昇進状態を変更できます。";
+            return Task.CompletedTask;
+        }
+
+        item.IsEliteTwo = !item.IsEliteTwo;
+        RefreshChoiceAfterSelectionMutation(item.Kind);
+        PersistChoiceStateInBackground();
+        StatusMessage = $"{item.Name}: {item.PromotionButtonLabel}に変更しました。";
         return Task.CompletedTask;
     }
 
@@ -7023,6 +7050,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         workItem.TrackingId,
                         resolved,
                         resolvedOperators.FirstOrDefault()?.OperatorId ?? "");
+                    if (resolvedOperators.Length == 1)
+                    {
+                        var promotionDetection = RhodesOperatorPromotionCardDetector.Detect(encodedImage, request);
+                        if (promotionDetection.IsEliteTwo)
+                        {
+                            ResourceTaskResults.Add(RhodesOperatorPromotionCardDetector.CreateTaskResult(
+                                request,
+                                resolvedOperators[0],
+                                promotionDetection,
+                                operatorInstance));
+                        }
+                    }
                     if (IsMizukiCampaignSelected && resolvedOperators.Length == 1)
                     {
                         var rejectionDetection = RhodesMizukiRejectionCardDetector.Detect(encodedImage, request);

@@ -778,6 +778,7 @@ function catalogToolbar(kind, placeholder, view, rerender) {
 function renderOperatorEditor() {
   const { state, master } = snapshot();
   const selected = new Set(state.operators || []);
+  const promotionLevels = state.operatorPromotionLevels || {};
   const view = buildOperatorCatalogView(
     master.operators || [],
     state.operators || [],
@@ -816,6 +817,9 @@ function renderOperatorEditor() {
   const countEditors = (state.operators || [])
     .map((id) => findById(master.operators, id))
     .filter((item) => item && Math.max(1, Number(state.operatorCounts?.[item.id]) || 1) > 1);
+  const promotionEditors = (state.operators || [])
+    .map((id) => findById(master.operators, id))
+    .filter((item) => item && Number(item.rarity) >= 4);
   elements.editor.replaceChildren(
     catalogToolbar("operators", "名前・職業・職分で検索", view, renderOperatorEditor),
     countEditors.length
@@ -828,6 +832,34 @@ function renderOperatorEditor() {
           return field(labelOf(item), input, submitButton("反映", () => sendOperation({
             type: "operator.set", operatorId: item.id, selected: true, count: input.value,
           })));
+        })),
+      ])
+      : null,
+    promotionEditors.length
+      ? node("section", { className: "editor-section" }, [
+        node("h3", { text: "昇進状態" }),
+        node("p", { className: "field-help", text: "星4以上の選択済みオペレーターだけ変更できます。星3以下は昇進1固定です。" }),
+        node("div", { className: "promotion-grid" }, promotionEditors.map((item) => {
+          const isEliteTwo = Number(promotionLevels[item.id]) >= 2;
+          const count = Math.max(1, Number(state.operatorCounts?.[item.id]) || 1);
+          return node("div", { className: "promotion-row" }, [
+            node("span", {}, [
+              node("strong", { text: labelOf(item) }),
+              node("small", { text: isEliteTwo ? "昇進2" : "昇進1" }),
+            ]),
+            node("button", {
+              type: "button",
+              className: isEliteTwo ? "promotion-toggle active" : "promotion-toggle",
+              text: isEliteTwo ? "昇進2" : "昇進1",
+              onclick: () => sendOperation({
+                type: "operator.set",
+                operatorId: item.id,
+                selected: true,
+                count,
+                promotionLevel: isEliteTwo ? 1 : 2,
+              }),
+            }),
+          ]);
         })),
       ])
       : null,

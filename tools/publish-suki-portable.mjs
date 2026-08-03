@@ -134,10 +134,10 @@ async function copyWebOverlayRuntime() {
   await fs.rm(relayTarget, { recursive: true, force: true });
   await fs.mkdir(path.dirname(relayTarget), { recursive: true });
   await fs.cp(relaySource, relayTarget, { recursive: true });
-  await fs.mkdir(path.join(outputDir, "docs"), { recursive: true });
+  await fs.mkdir(path.join(outputDir, "docs", "guides"), { recursive: true });
   await fs.copyFile(
-    path.join(repoRoot, "docs", "tournament-remote-input.md"),
-    path.join(outputDir, "docs", "tournament-remote-input.md"),
+    path.join(repoRoot, "docs", "guides", "tournament-remote-input.md"),
+    path.join(outputDir, "docs", "guides", "tournament-remote-input.md"),
   );
   await fs.copyFile(path.join(repoRoot, "package.json"), path.join(outputDir, "package.json"));
   await fs.access(path.join(target, "server.mjs"));

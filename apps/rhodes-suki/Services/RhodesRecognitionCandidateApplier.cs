@@ -540,10 +540,29 @@ public static class RhodesRecognitionCandidateApplier
         {
             var operatorChanged = ApplyStringSetCandidate(state, "operators", operatorId, string.Empty, applied, "operator");
             var countChanged = ApplyReserveOperatorCount(state, operatorId, candidate.Count, applied);
-            return operatorChanged || countChanged;
+            var ordinaryPromotionChanged = ApplyOperatorPromotion(state, operatorId, candidate.PromotionLevel, applied);
+            return operatorChanged || countChanged || ordinaryPromotionChanged;
         }
 
         var changed = false;
+        var inheritedPromotionLevel = candidate.PromotionLevel;
+        var promotions = EnsureObject(state, "operatorPromotionLevels");
+        foreach (var property in promotions.ToArray())
+        {
+            if (!RhodesMaaAmiyaRoleResolver.IsAmiyaOperatorId(property.Key)
+                || property.Key.Equals(operatorId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (property.Value is JsonValue value
+                && value.TryGetValue<int>(out var previousPromotionLevel))
+            {
+                inheritedPromotionLevel = Math.Max(inheritedPromotionLevel, previousPromotionLevel);
+            }
+            promotions.Remove(property.Key);
+            changed = true;
+        }
         var values = new HashSet<string>(StringComparer.Ordinal);
         var array = new JsonArray();
         if (state["operators"] is JsonArray existing)
@@ -577,11 +596,39 @@ public static class RhodesRecognitionCandidateApplier
             changed = true;
         }
 
-        if (!changed)
+        if (changed)
+        {
+            state["operators"] = array;
+            applied.Add($"operator:{operatorId}");
+        }
+
+        var promotionChanged = ApplyOperatorPromotion(
+            state,
+            operatorId,
+            inheritedPromotionLevel,
+            applied);
+        return changed || promotionChanged;
+    }
+
+    private static bool ApplyOperatorPromotion(
+        JsonObject state,
+        string operatorId,
+        int promotionLevel,
+        ICollection<string> applied)
+    {
+        if (promotionLevel < 2)
             return false;
 
-        state["operators"] = array;
-        applied.Add($"operator:{operatorId}");
+        var promotions = EnsureObject(state, "operatorPromotionLevels");
+        if (promotions[operatorId] is JsonValue existing
+            && existing.TryGetValue<int>(out var currentLevel)
+            && currentLevel >= 2)
+        {
+            return false;
+        }
+
+        promotions[operatorId] = 2;
+        applied.Add($"operator-promotion:{operatorId}:2");
         return true;
     }
 

@@ -972,6 +972,9 @@ public sealed record SukiRunStateSnapshot(
 
     public IReadOnlyDictionary<string, int> OperatorCounts { get; init; } =
         new Dictionary<string, int>(StringComparer.Ordinal);
+
+    public IReadOnlyDictionary<string, int> OperatorPromotionLevels { get; init; } =
+        new Dictionary<string, int>(StringComparer.Ordinal);
 }
 
 public sealed record RhodesRunCatalogSnapshot(
@@ -1035,6 +1038,7 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
     private bool _isRejectionReactionTarget;
     private bool _isEvolutionTarget;
     private bool _isCandleBearerTarget;
+    private bool _isEliteTwo;
     private int _selectionCount = 1;
 
     public SukiChoiceItem(
@@ -1146,6 +1150,29 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
         && (Id.StartsWith("reserve_", StringComparison.OrdinalIgnoreCase)
             || Name.StartsWith("予備隊員", StringComparison.Ordinal));
 
+    public bool SupportsEliteTwo =>
+        string.Equals(Kind, "operator", StringComparison.Ordinal)
+        && Rarity >= 4;
+
+    public bool IsEliteTwo
+    {
+        get => SupportsEliteTwo && _isEliteTwo;
+        set
+        {
+            var normalized = SupportsEliteTwo && value;
+            if (_isEliteTwo == normalized)
+                return;
+            _isEliteTwo = normalized;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PromotionButtonLabel));
+            OnPropertyChanged(nameof(StateLabel));
+        }
+    }
+
+    public bool IsPromotionToggleVisible => SupportsEliteTwo && IsSelected;
+
+    public string PromotionButtonLabel => IsEliteTwo ? "昇進2" : "昇進1";
+
     public int SelectionCount
     {
         get => SupportsMultipleCount ? _selectionCount : 1;
@@ -1177,7 +1204,10 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
             var resetSelectionCount = !value && _selectionCount != 1;
             _isSelected = value;
             if (!value)
+            {
                 _selectionCount = 1;
+                _isEliteTwo = false;
+            }
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectionButtonLabel));
             OnPropertyChanged(nameof(StateLabel));
@@ -1186,6 +1216,9 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
                 OnPropertyChanged(nameof(SelectionCount));
             OnPropertyChanged(nameof(EffectiveSelectionCount));
             OnPropertyChanged(nameof(IsSelectionCountVisible));
+            OnPropertyChanged(nameof(IsEliteTwo));
+            OnPropertyChanged(nameof(IsPromotionToggleVisible));
+            OnPropertyChanged(nameof(PromotionButtonLabel));
         }
     }
 
@@ -1234,9 +1267,10 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
                 return "選択 / 除外";
             if (IsSelected)
             {
+                var promotion = SupportsEliteTwo && IsEliteTwo ? " / 昇進2" : "";
                 if (SupportsMultipleCount && SelectionCount > 1)
-                    return $"選択中 / {SelectionCount}名";
-                return IsUsed ? "選択中 / 使用済" : "選択中";
+                    return $"選択中 / {SelectionCount}名{promotion}";
+                return IsUsed ? $"選択中 / 使用済{promotion}" : $"選択中{promotion}";
             }
             if (IsExcluded)
                 return "除外";

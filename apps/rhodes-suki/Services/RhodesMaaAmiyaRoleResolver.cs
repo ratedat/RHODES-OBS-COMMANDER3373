@@ -10,9 +10,10 @@ public static class RhodesMaaAmiyaRoleResolver
     private const string NameEntryPrefix = "operator.card.name.";
     private const string RoleEntryPrefix = "operator.card.amiya-role.";
     private const string RoleRecognitionKeyPrefix = "maa-local:operator-role:";
-    private const int RoleOffsetX = -235;
-    private const int RoleOffsetY = -90;
-    private const int RoleRoiSize = 64;
+    private const int RoleOffsetX = -260;
+    private const int RoleOffsetY = -96;
+    private const int RoleRoiWidth = 144;
+    private const int RoleRoiHeight = 80;
 
     private static readonly string LiteralAmiya = RhodesOperatorOcrNormalizer.Normalize("アーミヤ");
     private static readonly string[] OperatorIds = ["amiya", "amiya3", "amiya2"];
@@ -39,13 +40,13 @@ public static class RhodesMaaAmiyaRoleResolver
 
         var x = nameRequest.X + RoleOffsetX;
         var y = nameRequest.Y + RoleOffsetY;
-        if (x < 0 || y < 0 || x + RoleRoiSize > 1280 || y + RoleRoiSize > 720)
+        if (x < 0 || y < 0 || x + RoleRoiWidth > 1280 || y + RoleRoiHeight > 720)
             return null;
 
         var alternatives = Templates.Select(template => new
         {
             recognition = "TemplateMatch",
-            roi = new[] { x, y, RoleRoiSize, RoleRoiSize },
+            roi = new[] { x, y, RoleRoiWidth, RoleRoiHeight },
             template,
             threshold = 0.72,
             method = 5,
@@ -97,7 +98,11 @@ public static class RhodesMaaAmiyaRoleResolver
         result.Succeeded
         && result.Hit
         && RhodesMaaOcrDetailRows.FromTaskResults([result])
-            .Any(row => RhodesOperatorOcrNormalizer.Normalize(row.Text).Equals(LiteralAmiya, StringComparison.Ordinal));
+            .Any(row => IsLiteralAmiyaText(row.Text));
+
+    public static bool IsLiteralAmiyaText(string? text) =>
+        !string.IsNullOrWhiteSpace(text)
+        && RhodesOperatorOcrNormalizer.Normalize(text).Equals(LiteralAmiya, StringComparison.Ordinal);
 
     public static bool IsAmiyaOperatorId(string? operatorId) =>
         !string.IsNullOrWhiteSpace(operatorId)

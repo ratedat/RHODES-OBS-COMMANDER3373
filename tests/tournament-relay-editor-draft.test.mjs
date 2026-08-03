@@ -17,6 +17,7 @@ function baseState() {
     },
     operators: [],
     operatorCounts: {},
+    operatorPromotionLevels: {},
     relics: [],
     usedRelicIds: [],
     bossSelections: {},
@@ -54,6 +55,26 @@ test("editor draft combines run, operator, and relic changes without mutating li
   assert.deepEqual(draft.usedRelicIds, ["relic-a"]);
   assert.equal(live.run.ingot, 1);
   assert.deepEqual(live.operators, []);
+});
+
+test("editor draft keeps explicit operator promotion changes and removes them with selection", () => {
+  const live = baseState();
+  let draft = buildDraftState(live, [{
+    type: "operator.set",
+    operatorId: "operator-a",
+    selected: true,
+    count: 1,
+    promotionLevel: 2,
+  }]);
+
+  assert.equal(draft.operatorPromotionLevels["operator-a"], 2);
+
+  draft = buildDraftState(draft, [{
+    type: "operator.set",
+    operatorId: "operator-a",
+    selected: false,
+  }]);
+  assert.deepEqual(draft.operatorPromotionLevels, {});
 });
 
 test("editor draft replaces a repeated item operation instead of duplicating it", () => {

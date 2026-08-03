@@ -238,6 +238,7 @@ public static class RhodesStateApiClient
         root["bossFlags"] = new JsonArray();
         root["operators"] = new JsonArray();
         root["operatorCounts"] = new JsonObject();
+        root["operatorPromotionLevels"] = new JsonObject();
         root["relics"] = new JsonArray();
         root["usedRelicIds"] = new JsonArray();
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");

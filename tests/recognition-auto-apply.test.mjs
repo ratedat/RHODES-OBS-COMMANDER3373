@@ -128,6 +128,7 @@ test("operator full scan auto-apply keeps reserve counts and clears stale counts
     run: { campaignId: "is5_sarkaz" },
     operators: ["old_operator"],
     operatorCounts: { reserve_caster: 5, reserve_sniper: 3 },
+    operatorPromotionLevels: { old_operator: 2, reserve_caster: 2, gummy: 2 },
   };
   const suggestions = [
     {
@@ -138,7 +139,7 @@ test("operator full scan auto-apply keeps reserve counts and clears stale counts
     {
       profileId: "operatorsFull",
       recognitionKey: "operator:gummy",
-      candidate: { kind: "operator", operatorId: "gummy", count: 7 },
+      candidate: { kind: "operator", operatorId: "gummy", count: 7, promotionLevel: 2 },
     },
     {
       profileId: "operatorsFull",
@@ -151,6 +152,7 @@ test("operator full scan auto-apply keeps reserve counts and clears stale counts
 
   assert.deepEqual(result.state.operators, ["reserve_caster", "gummy", "reserve_sniper"]);
   assert.deepEqual(result.state.operatorCounts, { reserve_caster: 2 });
+  assert.deepEqual(result.state.operatorPromotionLevels, { reserve_caster: 2, gummy: 2 });
   assert.equal(result.autoApplied.length, 3);
 });
 

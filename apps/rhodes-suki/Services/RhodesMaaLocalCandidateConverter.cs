@@ -71,6 +71,7 @@ public static class RhodesMaaLocalCandidateConverter
         {
             var results = taskResults.ToArray();
             candidates = OperatorCandidates(results)
+                .Concat(OperatorPromotionCardCandidates(results))
                 .Concat(activeCampaignId == "is3_mizuki"
                     ? MizukiRejectionCardCandidates(results)
                         .Concat(MizukiEvolutionCardCandidates(results))
@@ -135,6 +136,7 @@ public static class RhodesMaaLocalCandidateConverter
         var results = taskResults.ToArray();
         var candidates = BestRunStatusCandidates(RunStatusCandidates(results, activeCampaignId))
             .Concat(OperatorCandidates(results))
+            .Concat(OperatorPromotionCardCandidates(results))
             .Concat(RelicCandidates(results, activeCampaignId))
             .Concat(ThoughtCandidates(results))
             .Concat(AgeCandidates(results))
@@ -614,14 +616,14 @@ public static class RhodesMaaLocalCandidateConverter
                     var normalized = RhodesOperatorOcrNormalizer.Normalize(token.Raw);
                     var officialId = RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId(token.Raw);
                     var roleResolved = false;
-                    if (RhodesMaaAmiyaRoleResolver.ContainsLiteralAmiya(taskResult))
+                    if (RhodesMaaAmiyaRoleResolver.IsLiteralAmiyaText(token.Raw))
                     {
                         var roleOperatorId = RhodesMaaAmiyaRoleResolver.ResolveOperatorId(results, taskResultIndex);
-                        if (!string.IsNullOrWhiteSpace(roleOperatorId))
-                        {
-                            officialId = roleOperatorId;
-                            roleResolved = true;
-                        }
+                        if (string.IsNullOrWhiteSpace(roleOperatorId))
+                            continue;
+
+                        officialId = roleOperatorId;
+                        roleResolved = true;
                     }
                     var op = officialId is not null && byId.TryGetValue(officialId, out var official)
                         ? official
@@ -690,6 +692,49 @@ public static class RhodesMaaLocalCandidateConverter
     {
         return entry.Equals("RhodesTemplate_operatorsFull_operator_card_name", StringComparison.Ordinal)
             || entry.EndsWith("_operatorsFull_operator_card_name", StringComparison.Ordinal);
+    }
+
+    private static IEnumerable<MaaCandidatePreview> OperatorPromotionCardCandidates(
+        IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var operators = RhodesRunCatalog.LoadDefault().Operators.ToDictionary(item => item.Id, StringComparer.Ordinal);
+        foreach (var taskResult in taskResults)
+        {
+            if (!RhodesOperatorPromotionCardDetector.TryRead(
+                    taskResult,
+                    out var operatorId,
+                    out var label,
+                    out var promotionLevel,
+                    out var score,
+                    out var operatorInstance))
+            {
+                continue;
+            }
+
+            if (operators.TryGetValue(operatorId, out var choice))
+            {
+                if (!choice.SupportsEliteTwo)
+                    continue;
+                label = choice.Name;
+            }
+            else
+            {
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(label))
+                label = operatorId;
+
+            yield return new MaaCandidatePreview(
+                "operator",
+                label,
+                operatorId,
+                "elite-two-marker",
+                score,
+                OperatorId: operatorId,
+                RecognitionKey: $"maa-local:operator:promotion:{operatorId}:{operatorInstance}",
+                OperatorInstance: operatorInstance,
+                PromotionLevel: promotionLevel);
+        }
     }
 
     private static SukiChoiceItem? ResolveOperator(

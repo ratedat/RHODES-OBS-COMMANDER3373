@@ -1,6 +1,7 @@
 import { getBossManualSections, normalizeBossSelections } from "./boss-flags.js";
 import { applyDifficultyTier } from "./difficulty.js";
 import { normalizeOperatorCounts } from "./operator-counts.js";
+import { normalizeOperatorPromotionLevels } from "./operator-promotions.js";
 import {
   normalizeCoinLoadoutEntries,
   normalizeEffectStackEntries,
@@ -77,6 +78,11 @@ function normalizeRankedMultiSelect(master, campaignId, field, value) {
 
 function operatorIdSet(master) {
   return new Set((master?.operators || []).map((item) => item.id));
+}
+
+function supportsEliteTwo(master, operatorId) {
+  const operator = (master?.operators || []).find((item) => item.id === operatorId);
+  return Number(operator?.rarity) >= 4;
 }
 
 function normalizeOperatorTargets(master, value) {
@@ -225,6 +231,7 @@ function clearEditableRunState(state) {
   };
   next.operators = [];
   next.operatorCounts = {};
+  next.operatorPromotionLevels = {};
   next.relics = [];
   next.usedRelicIds = [];
   next.bossFlags = [];
@@ -292,6 +299,13 @@ export function applyTournamentRemoteOperation(state, master, operation) {
       if (selected) counts[id] = Math.max(1, Math.min(99, Math.trunc(Number(operation.count) || 1)));
       else delete counts[id];
       next.operatorCounts = normalizeOperatorCounts(counts, next.operators);
+      const promotions = normalizeOperatorPromotionLevels(next.operatorPromotionLevels, next.operators);
+      if (!selected || Number(operation.promotionLevel) < 2) {
+        if (!selected || operation.promotionLevel !== undefined) delete promotions[id];
+      } else if (supportsEliteTwo(master, id)) {
+        promotions[id] = 2;
+      }
+      next.operatorPromotionLevels = promotions;
       break;
     }
     case "relic.set": {
@@ -343,6 +357,7 @@ export function buildTournamentRemoteSnapshot(state, master) {
       run: structuredClone(run),
       operators: [...(state?.operators || [])],
       operatorCounts: structuredClone(state?.operatorCounts || {}),
+      operatorPromotionLevels: structuredClone(state?.operatorPromotionLevels || {}),
       relics: [...(state?.relics || [])],
       usedRelicIds: [...(state?.usedRelicIds || [])],
       bossFlags: [...(state?.bossFlags || [])],

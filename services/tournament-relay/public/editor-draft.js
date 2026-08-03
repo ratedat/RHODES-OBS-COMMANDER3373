@@ -51,6 +51,7 @@ function clearRunState(state) {
   };
   next.operators = [];
   next.operatorCounts = {};
+  next.operatorPromotionLevels = {};
   next.relics = [];
   next.usedRelicIds = [];
   next.bossFlags = [];
@@ -118,15 +119,24 @@ export function applyDraftOperation(state, operation, master) {
     case "operator.set": {
       const selected = new Set(next.operators || []);
       const counts = { ...(next.operatorCounts || {}) };
+      const promotions = { ...(next.operatorPromotionLevels || {}) };
       if (operation.selected) {
         selected.add(operation.operatorId);
         counts[operation.operatorId] = Math.max(1, Math.min(99, Math.trunc(Number(operation.count) || 1)));
+        if (operation.promotionLevel !== undefined) {
+          if (Number(operation.promotionLevel) >= 2) promotions[operation.operatorId] = 2;
+          else delete promotions[operation.operatorId];
+        }
       } else {
         selected.delete(operation.operatorId);
         delete counts[operation.operatorId];
+        delete promotions[operation.operatorId];
       }
       next.operators = [...selected];
       next.operatorCounts = counts;
+      next.operatorPromotionLevels = Object.fromEntries(
+        Object.entries(promotions).filter(([id, level]) => selected.has(id) && Number(level) >= 2),
+      );
       break;
     }
     case "relic.set": {

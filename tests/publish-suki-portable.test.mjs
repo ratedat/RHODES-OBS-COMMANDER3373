@@ -12,4 +12,12 @@ test("portable publisher includes local-image master data and assets", () => {
   assert.match(source, /"data\/performances\.json"/);
   assert.match(source, /"data\/selectable-effects\.json"/);
   assert.match(source, /const assetDirectories = \["bosses", "performances", "selectable-effects"\]/);
+  assert.match(
+    source,
+    /path\.join\(repoRoot, "docs", "guides", "tournament-remote-input\.md"\)/,
+  );
+  assert.match(
+    source,
+    /path\.join\(outputDir, "docs", "guides", "tournament-remote-input\.md"\)/,
+  );
 });

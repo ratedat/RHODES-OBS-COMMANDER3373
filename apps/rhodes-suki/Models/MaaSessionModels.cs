@@ -1020,7 +1020,8 @@ public sealed record MaaCandidatePreview(
     string StatusId = "",
     string Face = "",
     int Count = 0,
-    int OperatorInstance = 0)
+    int OperatorInstance = 0,
+    int PromotionLevel = 0)
 {
     public string Identity => FirstNonEmpty(Field, OperatorId, RelicId, ThoughtId, AgeId, EffectId, CoinId, RecognitionKey, CampaignId);
 
@@ -1033,6 +1034,7 @@ public sealed record MaaCandidatePreview(
                 Part("field", Field),
                 Part("operator", OperatorId),
                 OperatorInstance > 0 ? $"operatorInstance:{OperatorInstance}" : "",
+                PromotionLevel > 0 ? $"promotion:{PromotionLevel}" : "",
                 Part("relic", RelicId),
                 Part("thought", ThoughtId),
                 Part("age", AgeId),

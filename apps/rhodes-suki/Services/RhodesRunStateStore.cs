@@ -142,6 +142,7 @@ public static class RhodesRunStateStore
             state["bossFlags"] = new JsonArray();
             state["operators"] = new JsonArray();
             state["operatorCounts"] = new JsonObject();
+            state["operatorPromotionLevels"] = new JsonObject();
             state["relics"] = new JsonArray();
             state["usedRelicIds"] = new JsonArray();
             state["updatedAt"] = (now ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("O");
@@ -188,6 +189,7 @@ public static class RhodesRunStateStore
         };
         state["operators"] = new JsonArray();
         state["operatorCounts"] = new JsonObject();
+        state["operatorPromotionLevels"] = new JsonObject();
         state["relics"] = new JsonArray();
         state["usedRelicIds"] = new JsonArray();
         state["bossFlags"] = new JsonArray();
@@ -224,6 +226,10 @@ public static class RhodesRunStateStore
         foreach (var item in operatorItems.Where(item => item.IsSelected && item.SupportsMultipleCount && item.SelectionCount > 1))
             operatorCounts[item.Id] = item.SelectionCount;
         state["operatorCounts"] = operatorCounts;
+        var operatorPromotionLevels = new JsonObject();
+        foreach (var item in operatorItems.Where(item => item.IsSelected && item.SupportsEliteTwo && item.IsEliteTwo))
+            operatorPromotionLevels[item.Id] = 2;
+        state["operatorPromotionLevels"] = operatorPromotionLevels;
         state["relics"] = ToJsonArray(relicItems.Where(item => item.IsSelected).Select(item => item.Id));
         state["usedRelicIds"] = ToJsonArray(relicItems
             .Where(item => item.IsSelected && item.SupportsUsedFlag && item.IsUsed)

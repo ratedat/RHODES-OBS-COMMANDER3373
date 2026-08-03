@@ -96,6 +96,22 @@ test("operator names expose the Sui candle bearer target class", () => {
   assert.match(output, /class="candle-bearer-operator-name">レイディアン/);
 });
 
+test("operator cards expose elite-two state in overlay output", () => {
+  const output = renderOverlayDense({
+    ...args,
+    operators: [{
+      id: "amiya",
+      name: "アーミヤ",
+      rarity: 5,
+      class: "術師",
+      promotionLevel: 2,
+    }],
+    orientation: "horizontal",
+  }, context);
+
+  assert.match(output, /class="operator-promotion-badge">昇進2<\/span>/);
+});
+
 test("horizontal overlay renders selected Sarkaz thoughts with image and count", () => {
   const thought = {
     id: "thought-a",

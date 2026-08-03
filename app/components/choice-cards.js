@@ -32,6 +32,7 @@ export function renderRelicControlRow(item, active, effectText, meta = {}) {
 
 export function renderOperatorControlRow(item, active, meta = {}) {
   const excluded = Boolean(meta.excluded);
+  const promotionText = active && Number(meta.promotionLevel) >= 2 ? " / 昇進2" : "";
   const countBadge = active && Number(meta.count) > 1
     ? `<span class="operator-count-badge">×${html(Math.trunc(Number(meta.count)))}</span>`
     : "";
@@ -42,7 +43,7 @@ export function renderOperatorControlRow(item, active, meta = {}) {
         <img class="item-thumb" src="${html(assetUrl(item.image?.localPath))}" alt="" loading="lazy" />
         <span class="item-choice-main">
           <span class="item-title">${html(item.name)} ${countBadge} <span class="stars">${stars(item.rarity)}</span></span>
-          <span class="item-meta">${html(item.class)} / ${html(item.branch)}${item.hiddenByDefault ? " / 日本未実装" : ""}</span>
+          <span class="item-meta">${html(item.class)} / ${html(item.branch)}${promotionText}${item.hiddenByDefault ? " / 日本未実装" : ""}</span>
         </span>
       </button>
       ${excluded ? '<div class="item-badges"><span class="item-badge excluded">除外</span></div>' : '<div class="item-badges"></div>'}

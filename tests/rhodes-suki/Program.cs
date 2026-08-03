@@ -155,6 +155,7 @@ var tests = new (string Name, Action Run)[]
     ("Operator scan tracker keeps moving cards stable and duplicate reserves distinct", OperatorScanTrackerTracksMovingDuplicateReserves),
     ("Mizuki rejection card detector identifies the purple operator name", MizukiRejectionCardDetectorIdentifiesPurpleBand),
     ("Sui candle bearer detector adds a left-edge marker without dropping operator OCR", SuiCandleBearerCardDetectorPreservesOperatorCandidate),
+    ("Operator promotion detector adds elite-two evidence without dropping operator OCR", OperatorPromotionDetectorPreservesOperatorCandidate),
     ("Mizuki rejection targets expand reserve operator recruit instances", MizukiRejectionTargetsExpandReserveInstances),
     ("MAA recognition probe payloads target retained fields", RecognitionProbePayloadsTargetRetainedFields),
     ("MAA recognition invocation separates algorithm from parameters", MaaRecognitionInvocationSeparatesAlgorithm),
@@ -207,6 +208,8 @@ var tests = new (string Name, Action Run)[]
     ("Run-saving relics stay first and persist their used flag", RelicUsagePriorityAndPersistence),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
+    ("Operator promotion rules hide the toggle for three-star operators", OperatorPromotionRules),
+    ("Run state store persists and restores operator promotions", OperatorPromotionPersistence),
     ("Reserve operators alone persist multiple recruited counts", ReserveOperatorCounts),
     ("Run state store can replace state from API JSON", StateApiReplacement),
     ("State API client can apply Suki ADB settings into current state JSON", StateApiAdbSettingsApply),
@@ -229,6 +232,7 @@ var tests = new (string Name, Action Run)[]
     ("Recognition candidate applier applies campaign before dependent run fields", CandidateCampaignApplyFirst),
     ("Recognition candidate applier keeps the best duplicate run status candidate", CandidateRunStatusApplyBestDuplicate),
     ("Recognition candidate applier can select operator and relic candidates", CandidateChoiceApply),
+    ("Recognition candidate applier preserves and upgrades operator promotions", CandidateOperatorPromotionApply),
     ("Recognition candidate applier persists reserve operator counts", CandidateReserveOperatorCountApply),
     ("Recognition candidate applier updates run-saving relic usage", CandidateRelicUsageApply),
     ("Recognition candidate applier replaces stale Amiya forms", CandidateAmiyaRoleReplacementApply),
@@ -1426,9 +1430,9 @@ static void MaaAmiyaRoleResolverTargetsProfessionIcon()
     Equal("run/AmiyaRoleMedic.png", alternatives[1].GetProperty("template").GetString(), "medic template second");
     Equal("run/AmiyaRoleWarrior.png", alternatives[2].GetProperty("template").GetString(), "warrior template third");
     Equal(
-        "426|219|64|64",
+        "401|213|144|80",
         string.Join("|", alternatives[0].GetProperty("roi").EnumerateArray().Select(item => item.GetInt32())),
-        "profession ROI is anchored to the measured operator card offset");
+        "profession ROI covers the measured horizontal card variants");
     Equal(
         null,
         RhodesMaaAmiyaRoleResolver.BuildRequest(nameRequest, M("operator.card.name.0", "クォーツ", 0.99)),
@@ -1453,7 +1457,7 @@ static void LocalCandidateConverterDisambiguatesAmiyaForms()
     var fallback = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "operatorsFull",
         [Name("operator.card.name.0", "アーミヤ")]);
-    Equal("amiya", fallback.Single().OperatorId, "missing profession evidence preserves caster fallback");
+    Equal(0, fallback.Count, "missing profession evidence does not guess caster Amiya");
 
     var mixedEvidence = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "operatorsFull",
@@ -6030,7 +6034,7 @@ static void MaaOfflineSessionInitializesWithoutAdb()
     using var amiyaFrame = new SKBitmap(1280, 720);
     amiyaFrame.Erase(SKColors.Black);
     using (var canvas = new SKCanvas(amiyaFrame))
-        canvas.DrawBitmap(amiyaRoleTemplate!, 438, 229);
+        canvas.DrawBitmap(amiyaRoleTemplate!, 499, 229);
     var amiyaNameResult = new MaaTaskRunResult(
         "operator.card.name.0",
         "Succeeded",
@@ -7030,6 +7034,53 @@ static void SuiCandleBearerCardDetectorPreservesOperatorCandidate()
         [operatorResult],
         "is6_sui");
     Equal(1, normalCandidates.Count, "missing marker never removes the operator OCR candidate");
+}
+
+static void OperatorPromotionDetectorPreservesOperatorCandidate()
+{
+    var request = new MaaDynamicOcrRequest("operator.card.name.0", 661, 172, 180, 23, 1, 0.99);
+    using var promotedFrame = new SKBitmap(1280, 720);
+    promotedFrame.Erase(new SKColor(35, 35, 35));
+    using (var canvas = new SKCanvas(promotedFrame))
+    {
+        canvas.DrawRect(
+            new SKRect(478, 108, 531, 161),
+            new SKPaint { Color = new SKColor(252, 145, 25) });
+    }
+
+    var promoted = RhodesOperatorPromotionCardDetector.Detect(EncodePng(promotedFrame), request);
+    Equal(true, promoted.IsEliteTwo, "bright elite-two marker is detected");
+
+    var operatorResult = new MaaTaskRunResult(
+        request.Entry,
+        "Succeeded",
+        true,
+        "detail",
+        """{"filtered_results":[{"text":"レイディアン","score":0.99}]}""",
+        "OCR",
+        true);
+    var operatorCandidate = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "operatorsFull",
+        [operatorResult],
+        "is6_sui").Single();
+    var markerResult = RhodesOperatorPromotionCardDetector.CreateTaskResult(
+        request,
+        operatorCandidate,
+        promoted);
+    var candidates = RhodesMaaCandidateMerger.Merge(
+        [],
+        RhodesMaaLocalCandidateConverter.FromTaskResults(
+            "operatorsFull",
+            [operatorResult, markerResult],
+            "is6_sui"));
+
+    Equal(1, candidates.Count, "promotion evidence merges into the operator OCR candidate");
+    Equal(2, candidates.Single().PromotionLevel, "elite-two promotion evidence is retained");
+
+    using var normalFrame = new SKBitmap(1280, 720);
+    normalFrame.Erase(new SKColor(35, 35, 35));
+    var normal = RhodesOperatorPromotionCardDetector.Detect(EncodePng(normalFrame), request);
+    Equal(false, normal.IsEliteTwo, "gray card edge is not an elite-two marker");
 }
 
 static void RecognitionProbePayloadsTargetRetainedFields()
@@ -9742,6 +9793,73 @@ static void ChoicePersistence()
     Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "abandoned run value pruned");
 }
 
+static void OperatorPromotionRules()
+{
+    var reserve = new SukiChoiceItem(
+        "operator", "reserve_sniper", "予備隊員-狙撃", "★3 狙撃 / 速射手", "狙撃", "速射手", "", "", 3, 1, false)
+    {
+        IsSelected = true,
+    };
+    var gummy = new SukiChoiceItem(
+        "operator", "gummy", "グム", "★4 重装 / 庇護衛士", "重装", "庇護衛士", "", "", 4, 2, false)
+    {
+        IsSelected = true,
+    };
+
+    Equal(false, reserve.SupportsEliteTwo, "three-star operator cannot be promoted to elite two");
+    Equal(false, reserve.IsPromotionToggleVisible, "three-star operator has no promotion toggle");
+    reserve.IsEliteTwo = true;
+    Equal(false, reserve.IsEliteTwo, "three-star operator stays at elite one");
+
+    Equal(true, gummy.SupportsEliteTwo, "four-star operator can be promoted to elite two");
+    Equal(true, gummy.IsPromotionToggleVisible, "selected four-star operator shows promotion toggle");
+    Equal("昇進1", gummy.PromotionButtonLabel, "default promotion label");
+    gummy.IsEliteTwo = true;
+    Equal("昇進2", gummy.PromotionButtonLabel, "elite-two promotion label");
+    Equal(true, gummy.StateLabel.Contains("昇進2", StringComparison.Ordinal), "choice state includes elite-two");
+    gummy.IsSelected = false;
+    Equal(false, gummy.IsEliteTwo, "deselection clears promotion state");
+}
+
+static void OperatorPromotionPersistence()
+{
+    var operators = new[]
+    {
+        new SukiChoiceItem("operator", "gummy", "グム", "★4 重装 / 庇護衛士", "重装", "庇護衛士", "", "", 4, 1, false)
+        {
+            IsSelected = true,
+            IsEliteTwo = true,
+        },
+        new SukiChoiceItem("operator", "reserve_sniper", "予備隊員-狙撃", "★3 狙撃 / 速射手", "狙撃", "速射手", "", "", 3, 2, false)
+        {
+            IsSelected = true,
+        },
+    };
+    var state = JsonNode.Parse(
+        """
+        {
+          "version": 1,
+          "run": { "campaignId": "is5_sarkaz" },
+          "operators": [],
+          "relics": []
+        }
+        """)!.AsObject();
+
+    var updated = RhodesRunStateStore.ApplyChoices(
+        state,
+        operators,
+        [],
+        new SukiChoicePersistenceOptions(false, false, false, false, false, false, 2, 2),
+        DateTimeOffset.Parse("2026-08-03T00:00:00Z"));
+    var promotions = updated["operatorPromotionLevels"]!.AsObject();
+    Equal(2, promotions["gummy"]!.GetValue<int>(), "elite-two promotion persisted");
+    Equal(false, promotions.ContainsKey("reserve_sniper"), "three-star promotion is omitted");
+
+    var restored = RhodesRunCatalog.LoadFromStateJson(updated.ToJsonString());
+    Equal(true, restored.Operators.Single(item => item.Id == "gummy").IsEliteTwo, "elite-two promotion restored");
+    Equal(false, restored.Operators.Single(item => item.Id == "reserve_sniper").IsEliteTwo, "three-star stays elite one after restore");
+}
+
 static void ReserveOperatorCounts()
 {
     var reserve = new SukiChoiceItem(
@@ -10570,6 +10688,33 @@ static void CandidateChoiceApply()
     Equal("gummy|rain", string.Join("|", state["operators"]!.AsArray().Select(item => item!.GetValue<string>())), "operators");
     Equal("is5_sarkaz_relic_001|is5_sarkaz_relic_002", string.Join("|", state["relics"]!.AsArray().Select(item => item!.GetValue<string>())), "relics");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "choice updatedAt");
+}
+
+static void CandidateOperatorPromotionApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": { "campaignId": "is5_sarkaz" },
+          "operators": ["gummy"],
+          "operatorPromotionLevels": { "gummy": 2 },
+          "relics": []
+        }
+        """)!.AsObject();
+
+    RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [new MaaCandidatePreview("operator", "レイン", "rain", "レイン", 0.95, OperatorId: "rain", PromotionLevel: 2)],
+        DateTimeOffset.Parse("2026-08-03T00:00:00Z"));
+    var promotions = state["operatorPromotionLevels"]!.AsObject();
+    Equal(2, promotions["gummy"]!.GetValue<int>(), "existing elite-two state is preserved");
+    Equal(2, promotions["rain"]!.GetValue<int>(), "positive elite-two evidence is applied");
+
+    RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [new MaaCandidatePreview("operator", "レイン", "rain", "レイン", 0.95, OperatorId: "rain")],
+        DateTimeOffset.Parse("2026-08-03T00:01:00Z"));
+    Equal(2, state["operatorPromotionLevels"]!.AsObject()["rain"]!.GetValue<int>(), "missing blink evidence never downgrades elite two");
 }
 
 static void CandidateReserveOperatorCountApply()

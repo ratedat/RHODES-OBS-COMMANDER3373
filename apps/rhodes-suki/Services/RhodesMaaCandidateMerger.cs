@@ -98,7 +98,8 @@ public static class RhodesMaaCandidateMerger
         IList<MaaCandidatePreview> existing,
         MaaCandidatePreview candidate)
     {
-        if (!IsKind(candidate, "operator") || candidate.Count <= 0)
+        if (!IsKind(candidate, "operator")
+            || (candidate.Count <= 0 && candidate.PromotionLevel <= 0))
             return false;
 
         var id = CandidateId(candidate.OperatorId, candidate.Value);
@@ -114,7 +115,11 @@ public static class RhodesMaaCandidateMerger
                 continue;
             }
 
-            existing[index] = current with { Count = Math.Max(current.Count, candidate.Count) };
+            existing[index] = current with
+            {
+                Count = Math.Max(current.Count, candidate.Count),
+                PromotionLevel = Math.Max(current.PromotionLevel, candidate.PromotionLevel),
+            };
             return true;
         }
 

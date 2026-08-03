@@ -12,6 +12,7 @@ import { normalizeRunStats } from "./domain/run-stats.js";
 import { normalizeAdbSettings } from "./domain/adb-settings.js";
 import { preserveLocalConfigOnReset } from "./domain/local-config.js";
 import { normalizeOperatorCounts, operatorCountFor } from "./domain/operator-counts.js";
+import { normalizeOperatorPromotionLevels } from "./domain/operator-promotions.js";
 import { extractRunStatusCandidates } from "./domain/recognition/run-status-extractor.js";
 import { createRelicCandidateExtractor } from "./domain/recognition/relic-candidate-extractor.js";
 import { createOperatorCandidateExtractor } from "./domain/recognition/operator-candidate-extractor.js";
@@ -100,6 +101,7 @@ function initialStateFromExample(example) {
     : [];
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.operatorCounts = normalizeOperatorCounts(state.operatorCounts, state.operators);
+  state.operatorPromotionLevels = normalizeOperatorPromotionLevels(state.operatorPromotionLevels, state.operators);
   state.bossFlags = Array.isArray(state.bossFlags) ? state.bossFlags : [];
   state.bossSelections = state.bossSelections && typeof state.bossSelections === "object" && !Array.isArray(state.bossSelections) ? state.bossSelections : {};
   state.pendingSuggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
@@ -130,6 +132,7 @@ function normalizeState(state) {
     : [];
   next.operators = Array.isArray(next.operators) ? [...new Set(next.operators.filter(Boolean))] : [];
   next.operatorCounts = normalizeOperatorCounts(next.operatorCounts, next.operators);
+  next.operatorPromotionLevels = normalizeOperatorPromotionLevels(next.operatorPromotionLevels, next.operators);
   next.bossFlags = Array.isArray(next.bossFlags) ? next.bossFlags.filter(Boolean) : [];
   next.bossSelections = next.bossSelections && typeof next.bossSelections === "object" && !Array.isArray(next.bossSelections) ? next.bossSelections : {};
   next.pendingSuggestions = Array.isArray(next.pendingSuggestions) ? next.pendingSuggestions : [];

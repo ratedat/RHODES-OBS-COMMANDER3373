@@ -38,6 +38,7 @@
   "relics": [],
   "operators": [],
   "operatorCounts": {},
+  "operatorPromotionLevels": {},
   "bossFlags": [],
   "pendingSuggestions": [],
   "effectCalculation": {

@@ -1,4 +1,5 @@
 import { normalizeRunStatValue } from "../run-stats.js";
+import { normalizeOperatorPromotionLevels } from "../operator-promotions.js";
 import { clampCoinCount, mergeCoinEntries } from "../special-values.js";
 
 export const IS4_AUTO_APPLY_CAMPAIGN_ID = "is4_sami";
@@ -163,6 +164,7 @@ function syncOperatorFullScanCandidates(state, suggestions = []) {
   const operatorSuggestions = [];
   const operatorIds = [];
   const operatorCounts = new Map();
+  const detectedPromotionLevels = new Map();
   const seen = new Set();
   for (const suggestion of suggestions || []) {
     const candidate = candidateFromSuggestion(suggestion);
@@ -179,11 +181,15 @@ function syncOperatorFullScanCandidates(state, suggestions = []) {
       const count = Math.max(1, Math.min(99, Math.trunc(Number(candidate.count) || 1)));
       operatorCounts.set(operatorId, Math.max(operatorCounts.get(operatorId) || 1, count));
     }
+    if (Number(candidate.promotionLevel) >= 2) detectedPromotionLevels.set(operatorId, 2);
   }
   if (!operatorSuggestions.length) return { applied: [], keys: new Set() };
 
   state.operators = operatorIds;
   state.operatorCounts = Object.fromEntries([...operatorCounts].filter(([, count]) => count > 1));
+  const promotions = normalizeOperatorPromotionLevels(state.operatorPromotionLevels, operatorIds);
+  for (const [operatorId, level] of detectedPromotionLevels) promotions[operatorId] = level;
+  state.operatorPromotionLevels = promotions;
   return {
     applied: operatorSuggestions,
     keys: new Set(operatorSuggestions.map(suggestionKey).filter(Boolean)),
