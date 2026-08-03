@@ -16,6 +16,7 @@ See:
 
 - `docs/README.md` for the categorized documentation index
 - `docs/guides/startup-guide.md` for app startup, OBS URL, port, and ADB setup notes
+- `出力CSSカスタマイズガイド.html` for an interactive, browser-openable Overlay CSS guide with concrete display examples
 - `docs/guides/adb-setup.md` for supported ADB presets, emulator setup, Google Play Games developer emulator notes, Hyper-V diagnostics, and troubleshooting
 - `docs/legal/licenses.md` for license, source availability, and third-party notices
 - `docs/reference/architecture.md` for state and overlay architecture

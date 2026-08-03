@@ -11,6 +11,7 @@ Do not place Codex/Stitch working notes, prompt handoff files, generated design 
 - [Debugger ADB/OCR report guide](guides/debugger-adb-report-guide.md)
 - [Public-debug Discord guide](guides/discord-public-debug-guide.md)
 - [Tournament remote input](guides/tournament-remote-input.md)
+- [Output CSS customization](guides/output-css-customization.md)
 - [Sarkaz recognition test guide](guides/sarkaz-test-guide.md)
 - [GLM-OCR optional verification setup](guides/glm-ocr-setup.md)
 - [PaddleOCR legacy notes](guides/paddle-ocr-setup.md)

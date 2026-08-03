@@ -5,12 +5,35 @@ import fs from "node:fs/promises";
 import { normalizeOcrEngine, normalizePreferences, ocrEngineOptions } from "../app/lib/preferences.js";
 import {
   isTournamentOverlay,
+  normalizeOverlayAppearance,
   resolveOverlayAppearance,
   resolveOverlayBackgroundAlpha,
   resolveOverlayBackgroundEnabled,
   resolveOverlayScrollSpeed,
   shouldShowOverlayPartTitles,
 } from "../app/lib/overlay-config.js";
+
+test("overlay custom CSS permits external styles, fonts, and images", () => {
+  const customCss = `
+    @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap");
+    @font-face {
+      font-family: "Tournament Sans";
+      src: url("https://cdn.example.com/tournament-sans.woff2") format("woff2");
+    }
+    .overlay-app {
+      font-family: "Noto Sans JP", sans-serif;
+      background-image: url("https://cdn.example.com/overlay/background.png");
+    }
+  `;
+
+  assert.equal(normalizeOverlayAppearance({ customCss }).customCss, customCss);
+});
+
+test("overlay custom CSS still rejects javascript URL schemes", () => {
+  assert.equal(normalizeOverlayAppearance({
+    customCss: ".overlay-app { background-image: url(javascript:alert(1)); }",
+  }).customCss, "");
+});
 
 test("OCR engine preference defaults to MAA-OCR", () => {
   assert.equal(normalizeOcrEngine(""), "maa-ocr");

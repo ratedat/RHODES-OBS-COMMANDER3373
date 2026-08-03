@@ -33,7 +33,9 @@ export const defaultOverlayAppearance = Object.freeze({
 });
 
 const cssHexColorPattern = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i;
-const blockedCustomCssPattern = /@import\b|javascript\s*:|url\s*\(\s*['"]?https?:/i;
+// Overlay CSS may load remote fonts and images because it only affects the
+// broadcast rendering surface. Script-like URL schemes remain invalid.
+const blockedCustomCssPattern = /javascript\s*:/i;
 
 const overlayLayouts = new Set(["compact", "vertical", "horizontal", "full", "custom"]);
 const overlayParts = new Set(["status", "relics", "operators", "effects", "bosses", "special"]);

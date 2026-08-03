@@ -139,6 +139,14 @@ async function copyWebOverlayRuntime() {
     path.join(repoRoot, "docs", "guides", "tournament-remote-input.md"),
     path.join(outputDir, "docs", "guides", "tournament-remote-input.md"),
   );
+  await fs.copyFile(
+    path.join(repoRoot, "docs", "guides", "output-css-customization.md"),
+    path.join(outputDir, "docs", "guides", "output-css-customization.md"),
+  );
+  await fs.copyFile(
+    path.join(repoRoot, "出力CSSカスタマイズガイド.html"),
+    path.join(outputDir, "出力CSSカスタマイズガイド.html"),
+  );
   await fs.copyFile(path.join(repoRoot, "package.json"), path.join(outputDir, "package.json"));
   await fs.access(path.join(target, "server.mjs"));
   await fs.access(path.join(relayTarget, "server.mjs"));

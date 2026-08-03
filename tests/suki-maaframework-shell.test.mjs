@@ -9,6 +9,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   const portablePublisher = await fs.readFile("tools/publish-suki-portable.mjs", "utf8");
   const publicDebugPackager = await fs.readFile("tools/package-suki-public-debug.mjs", "utf8");
   const discordGuide = await fs.readFile("docs/guides/discord-public-debug-guide.md", "utf8");
+  const outputCssGuide = await fs.readFile("docs/guides/output-css-customization.md", "utf8");
   const server = await fs.readFile("app/server.mjs", "utf8");
   const outputWorkspace = await fs.readFile(
     "apps/rhodes-suki/Views/Workspaces/OutputWorkspaceView.axaml",
@@ -81,6 +82,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(publicDebugPackager, /README_PUBLIC_DEBUG\.md/);
   assert.match(publicDebugPackager, /DISCORD_USAGE\.md/);
   assert.match(publicDebugPackager, /docs\/guides\/discord-public-debug-guide\.md/);
+  assert.match(publicDebugPackager, /docs\/guides\/output-css-customization\.md/);
   assert.match(publicDebugPackager, /path\.join\(repoRoot, "app"\)/);
   assert.match(publicDebugPackager, /copyPortablePayload\(packageRoot\)/);
   assert.match(publicDebugPackager, /overlay-state\.example\.json/);
@@ -96,6 +98,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(discordGuide, /ADB取得・認識・反映/u);
   assert.match(discordGuide, /Node\.js導入/u);
   assert.match(discordGuide, /報告ZIP/u);
+  assert.match(outputCssGuide, /統合Overlayと個別ウィンドウでは、CSSを別々に保存します/u);
+  assert.match(outputCssGuide, /背景を表示/u);
   assert.match(server, /state\.run\.campaignId = "is2_phantom"/);
   assert.match(server, /next\.run\.campaignId = next\.run\.campaignId \|\| "is2_phantom"/);
 });

@@ -100,6 +100,8 @@ http://127.0.0.1:5173/overlay/part/bosses
 http://127.0.0.1:5173/overlay/part/special
 ```
 
+フォント色、背景色、枠色、文字サイズ、ユーザーCSS、出力プロファイルの保存方法は、[出力CSSカスタマイズガイド](output-css-customization.md)を参照してください。
+
 ## ADB連携作業時の起動
 
 ADB連携の確認も、基本はSuki/Avaloniaアプリを起動して行います。
