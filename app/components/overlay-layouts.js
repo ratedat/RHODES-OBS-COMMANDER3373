@@ -1,6 +1,6 @@
 import { assetUrl, html, stars } from "../lib/format.js";
 import { renderRelicUsedBadge } from "./relic-used-badge.js";
-import { renderOperatorPromotionBadge } from "./operator-promotion-badge.js";
+import { renderOperatorPortrait } from "./operator-promotion-badge.js";
 import { operatorRosterCount } from "../domain/operator-counts.js";
 
 function operatorNameClass(item) {
@@ -53,7 +53,7 @@ export function renderOverlayCompact({ campaign, squad, option, performance, act
       <section class="compact-section">
         <div class="compact-section-head"><span>Operators</span><span>${operatorCount}</span></div>
         <div class="compact-operator-strip">
-          ${operators.length ? operators.slice(0, 8).map((item) => `<div class="compact-operator"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}${renderOperatorPromotionBadge(item)}</span><strong>${stars(item.rarity)}</strong></div>`).join("") : `<span class="compact-empty">なし</span>`}
+          ${operators.length ? operators.slice(0, 8).map((item) => `<div class="compact-operator">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<span class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</span><strong>${stars(item.rarity)}</strong></div>`).join("") : `<span class="compact-empty">なし</span>`}
           ${operators.length > 8 ? `<span class="compact-more">+${operators.length - 8}</span>` : ""}
         </div>
       </section>
@@ -118,7 +118,7 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
         <div class="stream-section-head"><span>Operators</span><strong>${operatorCount}</strong></div>
         <div class="stream-scroll stream-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}OperatorScrollSpeed`)}">
           <div class="stream-operator-grid">
-            ${operators.length ? operators.map((item) => `<div class="stream-operator-tile"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${stars(item.rarity)} / ${html(item.class || "-")} ${renderOperatorPromotionBadge(item)}</span></div></div>`).join("") : `<div class="stream-empty">未招集</div>`}
+            ${operators.length ? operators.map((item) => `<div class="stream-operator-tile">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${stars(item.rarity)} / ${html(item.class || "-")}</span></div></div>`).join("") : `<div class="stream-empty">未招集</div>`}
           </div>
         </div>
       </section>`;
@@ -213,7 +213,7 @@ export function renderOverlayDefault({ campaign, squad, option, performance, act
         <section class="overlay-card">
           <div class="overlay-card-header"><span>Operators</span><span>${operatorCount}</span></div>
           <div class="overlay-card-body operator-list">
-            ${operators.length ? operators.slice(0, 14).map((item) => `<div class="operator-row"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div><div class="operator-name ${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</div><div class="operator-meta">${html(item.class)} / ${html(item.branch)} ${renderOperatorPromotionBadge(item)}</div></div><div class="stars">${stars(item.rarity)}</div></div>`).join("") : `<div class="empty-state">未招集</div>`}
+            ${operators.length ? operators.slice(0, 14).map((item) => `<div class="operator-row">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><div class="operator-name ${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</div><div class="operator-meta">${html(item.class)} / ${html(item.branch)}</div></div><div class="stars">${stars(item.rarity)}</div></div>`).join("") : `<div class="empty-state">未招集</div>`}
           </div>
         </section>
         <div class="footer-note">Manual state / OCR suggestions require confirmation</div>

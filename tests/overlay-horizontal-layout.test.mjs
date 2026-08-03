@@ -73,11 +73,14 @@ test("operator names expose the Mizuki rejection target class", () => {
       rarity: 3,
       class: "狙撃",
       isRejectionReactionTarget: true,
+      promotionLevel: 2,
     }],
     orientation: "horizontal",
   }, context);
 
   assert.match(output, /class="rejection-reaction-operator-name">クルース/);
+  assert.match(output, /class="operator-portrait is-elite-two"/);
+  assert.match(output, /class="operator-promotion-badge" title="昇進2"/);
 });
 
 test("operator names expose the Sui candle bearer target class", () => {
@@ -89,11 +92,14 @@ test("operator names expose the Sui candle bearer target class", () => {
       rarity: 6,
       class: "特殊",
       isCandleBearerTarget: true,
+      promotionLevel: 2,
     }],
     orientation: "horizontal",
   }, context);
 
   assert.match(output, /class="candle-bearer-operator-name">レイディアン/);
+  assert.match(output, /class="operator-portrait is-elite-two"/);
+  assert.match(output, /class="operator-promotion-badge" title="昇進2"/);
 });
 
 test("operator cards expose elite-two state in overlay output", () => {
@@ -109,7 +115,28 @@ test("operator cards expose elite-two state in overlay output", () => {
     orientation: "horizontal",
   }, context);
 
-  assert.match(output, /class="operator-promotion-badge">昇進2<\/span>/);
+  assert.match(output, /class="operator-portrait is-elite-two"><img class="operator-portrait-image"[^>]*><span class="operator-promotion-badge"/);
+  assert.match(output, /class="operator-promotion-badge" title="昇進2" aria-label="昇進2">/);
+  assert.match(output, /src="\/assets\/ui\/operator-promotions\/elite-2\.png"/);
+  assert.doesNotMatch(output, />昇進2<\/span>/);
+});
+
+test("operator cards omit the promotion overlay below elite two", () => {
+  const output = renderOverlayDense({
+    ...args,
+    operators: [{
+      id: "kroos",
+      name: "クルース",
+      rarity: 3,
+      class: "狙撃",
+      promotionLevel: 1,
+    }],
+    orientation: "horizontal",
+  }, context);
+
+  assert.match(output, /class="operator-portrait"><img class="operator-portrait-image"/);
+  assert.doesNotMatch(output, /is-elite-two/);
+  assert.doesNotMatch(output, /operator-promotion-badge/);
 });
 
 test("horizontal overlay renders selected Sarkaz thoughts with image and count", () => {

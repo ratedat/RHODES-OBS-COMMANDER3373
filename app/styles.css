@@ -849,7 +849,7 @@ a:hover { text-decoration: underline; }
   gap: 4px;
   padding: 3px;
 }
-.overlay-tournament-mode .overlay-part-operator img {
+.overlay-tournament-mode .overlay-part-operator > .operator-portrait {
   width: 28px;
   height: 28px;
 }
@@ -964,18 +964,64 @@ a:hover { text-decoration: underline; }
   background: rgba(0,0,0,0.2);
   border: 1px solid rgba(255,255,255,0.1);
 }
-.overlay-part-operator img { width: 32px; height: 32px; object-fit: cover; }
+.overlay-part-operator > .operator-portrait { width: 32px; height: 32px; }
 .overlay-part-operator strong,
 .overlay-part-operator span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .overlay-part-operator strong { color: #fff7e2; font-size: 11px; }
 .overlay-part-operator span { color: var(--muted); font-size: 9px; }
-.operator-promotion-badge {
-  display: inline-block !important;
-  margin-left: 4px;
-  color: #ffd36a !important;
-  font-size: 0.9em !important;
-  font-weight: 800;
-  white-space: nowrap;
+.operator-portrait {
+  position: relative;
+  display: block;
+  flex: none;
+  min-width: 0;
+  border-radius: 4px;
+  overflow: visible;
+}
+.operator-portrait > .operator-portrait-image {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: inherit;
+}
+.operator-portrait.is-elite-two::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border: 1px solid rgba(232, 244, 248, 0.92);
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.72);
+  pointer-events: none;
+}
+.operator-portrait .operator-promotion-badge {
+  position: absolute;
+  z-index: 3;
+  left: 1px;
+  bottom: 1px;
+  display: grid !important;
+  place-items: center;
+  width: 56%;
+  min-width: 12px;
+  max-width: 18px;
+  aspect-ratio: 1;
+  margin: 0;
+  padding: 1px;
+  overflow: hidden !important;
+  border: 1px solid rgba(232, 244, 248, 0.92);
+  border-radius: 3px;
+  background: rgba(7, 10, 11, 0.92);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  box-sizing: border-box;
+  white-space: normal;
+  pointer-events: none;
+}
+.operator-portrait .operator-promotion-badge img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  filter: brightness(1.25) contrast(1.2) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
 }
 .overlay-part-effect-scroll .effect-list { gap: 5px; }
 .overlay-part-effect-list .effect-row { grid-template-columns: 52px minmax(110px, 0.7fr) minmax(0, 1fr); padding: 6px 7px; }
@@ -1058,7 +1104,7 @@ a:hover { text-decoration: underline; }
 .compact-relic-tile img { width: 30px; height: 30px; object-fit: contain; border-radius: 5px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
 .compact-operator-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; align-items: start; }
 .compact-operator { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 4px; align-items: center; min-width: 0; padding: 3px; border-radius: 5px; background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.1); }
-.compact-operator img { width: 24px; height: 24px; object-fit: cover; border-radius: 4px; }
+.compact-operator > .operator-portrait { width: 24px; height: 24px; }
 .compact-operator span { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .compact-operator strong { color: var(--accent-2); font-size: 9px; white-space: nowrap; }
 .compact-empty { color: var(--muted); font-size: 11px; }
@@ -1316,7 +1362,7 @@ a:hover { text-decoration: underline; }
 .stream-horizontal .stream-relic-tile img { width: var(--stream-horizontal-relic-icon, 30px); margin: 0 auto; }
 .stream-horizontal .stream-relic-tile strong { display: none; }
 .stream-horizontal .stream-operator-tile { grid-template-columns: var(--stream-horizontal-operator-icon, 22px) minmax(0, 1fr); gap: 4px; padding: 3px; }
-.stream-horizontal .stream-operator-tile img { width: var(--stream-horizontal-operator-icon, 22px); height: var(--stream-horizontal-operator-icon, 22px); }
+.stream-horizontal .stream-operator-tile > .operator-portrait { width: var(--stream-horizontal-operator-icon, 22px); height: var(--stream-horizontal-operator-icon, 22px); }
 .stream-horizontal .stream-operator-tile strong { font-size: 11px; }
 .stream-horizontal .stream-operator-tile span { font-size: 9px; }
 .overlay-app.overlay-horizontal.overlay-size-small .stream-overlay-shell { gap: 6px; padding: 7px; }
@@ -1346,7 +1392,7 @@ a:hover { text-decoration: underline; }
 .stream-relic-tile span { margin-top: 2px; color: var(--muted); font-size: 9px; }
 .stream-relic-tile strong { color: #eee7da; font-size: 10px; font-weight: 700; }
 .stream-operator-tile { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 5px; align-items: center; padding: 4px; }
-.stream-operator-tile img { width: 28px; height: 28px; object-fit: cover; display: block; }
+.stream-operator-tile > .operator-portrait { width: 28px; height: 28px; }
 .stream-operator-tile strong,
 .stream-operator-tile span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stream-operator-tile strong { color: #fff7e2; font-size: 10px; }
@@ -1361,7 +1407,7 @@ a:hover { text-decoration: underline; }
 .stream-vertical .stream-relic-tile strong { display: none; }
 .stream-vertical .stream-operator-grid { gap: 3px; }
 .stream-vertical .stream-operator-tile { grid-template-columns: var(--stream-vertical-operator-icon, 22px) minmax(0, 1fr); gap: 4px; padding: 3px; }
-.stream-vertical .stream-operator-tile img { width: var(--stream-vertical-operator-icon, 22px); height: var(--stream-vertical-operator-icon, 22px); }
+.stream-vertical .stream-operator-tile > .operator-portrait { width: var(--stream-vertical-operator-icon, 22px); height: var(--stream-vertical-operator-icon, 22px); }
 .stream-vertical .stream-operator-tile strong { font-size: 9px; }
 .stream-vertical .stream-operator-tile span { font-size: 8px; }
 .overlay-top {
@@ -1434,7 +1480,7 @@ a:hover { text-decoration: underline; }
   background: rgba(255,255,255,0.055);
   border: 1px solid rgba(255,255,255,0.11);
 }
-.operator-row img { width: 38px; height: 38px; object-fit: cover; border-radius: 6px; }
+.operator-row > .operator-portrait { width: 38px; height: 38px; border-radius: 6px; }
 .operator-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .operator-meta { color: var(--muted); font-size: 11px; }
 .stars { color: var(--accent-2); letter-spacing: 0; white-space: nowrap; }

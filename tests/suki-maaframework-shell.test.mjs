@@ -51,7 +51,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(portablePublisher, /copyWebOverlayRuntime/);
   assert.match(portablePublisher, /path\.join\(repoRoot, "app"\)/);
   assert.match(portablePublisher, /copyWebOverlayAssets/);
-  assert.match(portablePublisher, /const assetDirectories = \["bosses", "performances", "selectable-effects"\]/);
+  assert.match(portablePublisher, /const assetDirectories = \["bosses", "performances", "selectable-effects", "ui"\]/);
   assert.match(portablePublisher, /preservedTopLevelEntries/);
   assert.match(portablePublisher, /"user-data"/);
   assert.match(portablePublisher, /"RHODES OBS COMMANDER3373 Debug Logs"/);

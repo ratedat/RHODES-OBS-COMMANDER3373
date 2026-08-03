@@ -20,7 +20,8 @@ public static class RhodesOperatorPromotionCardDetector
     private const int MarkerOffsetY = -64;
     private const int MarkerWidth = 53;
     private const int MarkerHeight = 53;
-    private const double MarkerRatioThreshold = 0.08;
+    // Real 1280x720 operator cards expose only about 5.3-5.7% warm glow in this ROI.
+    private const double MarkerRatioThreshold = 0.045;
     private const int MinimumMarkerPixels = 80;
 
     public static RhodesOperatorPromotionCardDetection Detect(

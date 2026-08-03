@@ -7044,12 +7044,12 @@ static void OperatorPromotionDetectorPreservesOperatorCandidate()
     using (var canvas = new SKCanvas(promotedFrame))
     {
         canvas.DrawRect(
-            new SKRect(478, 108, 531, 161),
+            new SKRect(478, 108, 494, 118),
             new SKPaint { Color = new SKColor(252, 145, 25) });
     }
 
     var promoted = RhodesOperatorPromotionCardDetector.Detect(EncodePng(promotedFrame), request);
-    Equal(true, promoted.IsEliteTwo, "bright elite-two marker is detected");
+    Equal(true, promoted.IsEliteTwo, "sparse elite-two glow matching a real operator card is detected");
 
     var operatorResult = new MaaTaskRunResult(
         request.Entry,
@@ -7081,6 +7081,18 @@ static void OperatorPromotionDetectorPreservesOperatorCandidate()
     normalFrame.Erase(new SKColor(35, 35, 35));
     var normal = RhodesOperatorPromotionCardDetector.Detect(EncodePng(normalFrame), request);
     Equal(false, normal.IsEliteTwo, "gray card edge is not an elite-two marker");
+
+    using var weakWarmFrame = new SKBitmap(1280, 720);
+    weakWarmFrame.Erase(new SKColor(35, 35, 35));
+    using (var canvas = new SKCanvas(weakWarmFrame))
+    {
+        canvas.DrawRect(
+            new SKRect(478, 108, 488, 118),
+            new SKPaint { Color = new SKColor(252, 145, 25) });
+    }
+
+    var weakWarm = RhodesOperatorPromotionCardDetector.Detect(EncodePng(weakWarmFrame), request);
+    Equal(false, weakWarm.IsEliteTwo, "small warm decoration below the measured card ratio is rejected");
 }
 
 static void RecognitionProbePayloadsTargetRetainedFields()

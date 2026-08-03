@@ -145,7 +145,7 @@ async function copyWebOverlayRuntime() {
 }
 
 async function copyWebOverlayAssets() {
-  const assetDirectories = ["bosses", "performances", "selectable-effects"];
+  const assetDirectories = ["bosses", "performances", "selectable-effects", "ui"];
   for (const directory of assetDirectories) {
     const source = path.join(repoRoot, "assets", directory);
     const target = path.join(outputDir, "assets", directory);
