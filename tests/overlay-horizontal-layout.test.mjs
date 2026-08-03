@@ -153,6 +153,15 @@ test("elite-two badge keeps the full transparent icon visible", async () => {
   );
 });
 
+test("elite-two badge uses the transparent IconDecotter asset", async () => {
+  const png = await readFile(new URL("../assets/ui/operator-promotions/elite-2.png", import.meta.url));
+
+  assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.equal(png.readUInt32BE(16), 262);
+  assert.equal(png.readUInt32BE(20), 256);
+  assert.equal(png[25], 6, "promotion icon must remain RGBA PNG");
+});
+
 test("horizontal overlay renders selected Sarkaz thoughts with image and count", () => {
   const thought = {
     id: "thought-a",
