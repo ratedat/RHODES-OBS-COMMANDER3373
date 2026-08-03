@@ -158,6 +158,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private int _outputBackgroundOpacity = 100;
     private bool _outputShowPartTitles = true;
     private int _outputScrollSpeed = 13;
+    private string _outputFontColor = "#F2EFE6";
+    private string _outputBackgroundColor = "#080B0C";
+    private string _outputBorderColor = "#2B3638";
+    private string _outputAccentColor = "#55D6BE";
+    private int _outputFontSizePercent = 100;
+    private string _outputCustomCss = "";
+    private bool _individualOutputTournamentMode;
+    private bool _individualOutputBackgroundEnabled;
+    private int _individualOutputBackgroundOpacity = 100;
+    private bool _individualOutputShowPartTitles = true;
+    private int _individualOutputScrollSpeed = 13;
+    private string _individualOutputFontColor = "#F2EFE6";
+    private string _individualOutputBackgroundColor = "#080B0C";
+    private string _individualOutputBorderColor = "#2B3638";
+    private string _individualOutputAccentColor = "#55D6BE";
+    private int _individualOutputFontSizePercent = 100;
+    private string _individualOutputCustomCss = "";
+    private string _outputProfileStatus = "未エクスポート";
     private SukiOverlayLayoutPreview? _selectedOverlayLayoutItem;
     private bool _showRoiOverlay = true;
     private int _roiSnapStep = 1;
@@ -1358,8 +1376,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _outputTournamentMode, value))
                 return;
-            foreach (var part in OutputParts)
-                part.TournamentMode = value;
             RefreshInspectorRows();
         }
     }
@@ -1371,8 +1387,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _outputBackgroundEnabled, value))
                 return;
-            foreach (var part in OutputParts)
-                part.BackgroundEnabled = value;
             RefreshInspectorRows();
         }
     }
@@ -1385,8 +1399,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var normalized = Math.Clamp(value, 0, 100);
             if (!SetProperty(ref _outputBackgroundOpacity, normalized))
                 return;
-            foreach (var part in OutputParts)
-                part.BackgroundOpacity = normalized;
             RefreshInspectorRows();
         }
     }
@@ -1398,8 +1410,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _outputShowPartTitles, value))
                 return;
-            foreach (var part in OutputParts)
-                part.ShowTitle = value;
             RefreshInspectorRows();
         }
     }
@@ -1414,6 +1424,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RefreshInspectorRows();
         }
     }
+
+    public string OutputFontColor { get => _outputFontColor; set => SetProperty(ref _outputFontColor, value); }
+    public string OutputBackgroundColor { get => _outputBackgroundColor; set => SetProperty(ref _outputBackgroundColor, value); }
+    public string OutputBorderColor { get => _outputBorderColor; set => SetProperty(ref _outputBorderColor, value); }
+    public string OutputAccentColor { get => _outputAccentColor; set => SetProperty(ref _outputAccentColor, value); }
+    public int OutputFontSizePercent { get => _outputFontSizePercent; set => SetProperty(ref _outputFontSizePercent, Math.Clamp(value, 60, 200)); }
+    public string OutputCustomCss { get => _outputCustomCss; set => SetProperty(ref _outputCustomCss, value); }
+
+    public bool IndividualOutputTournamentMode { get => _individualOutputTournamentMode; set => SetProperty(ref _individualOutputTournamentMode, value); }
+    public bool IndividualOutputBackgroundEnabled { get => _individualOutputBackgroundEnabled; set => SetProperty(ref _individualOutputBackgroundEnabled, value); }
+    public int IndividualOutputBackgroundOpacity { get => _individualOutputBackgroundOpacity; set => SetProperty(ref _individualOutputBackgroundOpacity, Math.Clamp(value, 0, 100)); }
+    public bool IndividualOutputShowPartTitles { get => _individualOutputShowPartTitles; set => SetProperty(ref _individualOutputShowPartTitles, value); }
+    public int IndividualOutputScrollSpeed { get => _individualOutputScrollSpeed; set => SetProperty(ref _individualOutputScrollSpeed, Math.Clamp(value, 0, 30)); }
+    public string IndividualOutputFontColor { get => _individualOutputFontColor; set => SetProperty(ref _individualOutputFontColor, value); }
+    public string IndividualOutputBackgroundColor { get => _individualOutputBackgroundColor; set => SetProperty(ref _individualOutputBackgroundColor, value); }
+    public string IndividualOutputBorderColor { get => _individualOutputBorderColor; set => SetProperty(ref _individualOutputBorderColor, value); }
+    public string IndividualOutputAccentColor { get => _individualOutputAccentColor; set => SetProperty(ref _individualOutputAccentColor, value); }
+    public int IndividualOutputFontSizePercent { get => _individualOutputFontSizePercent; set => SetProperty(ref _individualOutputFontSizePercent, Math.Clamp(value, 60, 200)); }
+    public string IndividualOutputCustomCss { get => _individualOutputCustomCss; set => SetProperty(ref _individualOutputCustomCss, value); }
+    public string OutputProfileStatus { get => _outputProfileStatus; private set => SetProperty(ref _outputProfileStatus, value); }
 
     public SukiOverlayLayoutPreview? SelectedOverlayLayoutItem
     {
@@ -3279,6 +3309,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    public async Task ExportOutputProfileAsync(string path)
+    {
+        await RunBusyAsync(async () =>
+        {
+            await RhodesOutputProfileService.ExportAsync(path, BuildOutputPreferences());
+            OutputProfileStatus = $"エクスポート済み: {path}";
+            StatusMessage = "出力プロファイルをエクスポートしました。";
+        });
+    }
+
+    public async Task ImportOutputProfileAsync(string path)
+    {
+        await RunBusyAsync(async () =>
+        {
+            var preferences = await RhodesOutputProfileService.ImportAsync(path);
+            ApplyOutputPreferences(preferences);
+            var adbConfigJson = SukiAdbConfigJson.Normalize(AdbConfigJson);
+            await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings(adbConfigJson));
+            var apiError = await SaveAdbSettingsToApiStateAsync();
+            OutputProfileStatus = $"インポート済み: {path}";
+            StatusMessage = string.IsNullOrWhiteSpace(apiError)
+                ? "出力プロファイルを読み込み、Overlayへ反映しました。"
+                : $"出力プロファイルを保存しました。Overlayへの反映は失敗: {apiError}";
+        });
+    }
+
     private RhodesSukiSettings BuildCurrentSettings(string? adbConfigJson = null)
     {
         return new RhodesSukiSettings(
@@ -3306,11 +3362,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (preferences is null)
             return;
 
+        preferences = RhodesOutputProfileService.Normalize(preferences);
+
         OutputTournamentMode = preferences.TournamentMode;
         OutputBackgroundEnabled = preferences.BackgroundEnabled;
         OutputBackgroundOpacity = preferences.BackgroundOpacity;
         OutputShowPartTitles = preferences.ShowPartTitles;
         OutputScrollSpeed = preferences.ScrollSpeed;
+        var integratedAppearance = preferences.IntegratedAppearance ?? new SukiOutputAppearance();
+        OutputFontColor = integratedAppearance.FontColor;
+        OutputBackgroundColor = integratedAppearance.BackgroundColor;
+        OutputBorderColor = integratedAppearance.BorderColor;
+        OutputAccentColor = integratedAppearance.AccentColor;
+        OutputFontSizePercent = integratedAppearance.FontSizePercent;
+        OutputCustomCss = integratedAppearance.CustomCss;
+
+        IndividualOutputTournamentMode = preferences.IndividualTournamentMode ?? preferences.TournamentMode;
+        IndividualOutputBackgroundEnabled = preferences.IndividualBackgroundEnabled ?? preferences.BackgroundEnabled;
+        IndividualOutputBackgroundOpacity = preferences.IndividualBackgroundOpacity ?? preferences.BackgroundOpacity;
+        IndividualOutputShowPartTitles = preferences.IndividualShowPartTitles ?? preferences.ShowPartTitles;
+        IndividualOutputScrollSpeed = preferences.IndividualScrollSpeed ?? preferences.ScrollSpeed;
+        var individualAppearance = preferences.IndividualAppearance ?? new SukiOutputAppearance();
+        IndividualOutputFontColor = individualAppearance.FontColor;
+        IndividualOutputBackgroundColor = individualAppearance.BackgroundColor;
+        IndividualOutputBorderColor = individualAppearance.BorderColor;
+        IndividualOutputAccentColor = individualAppearance.AccentColor;
+        IndividualOutputFontSizePercent = individualAppearance.FontSizePercent;
+        IndividualOutputCustomCss = individualAppearance.CustomCss;
 
         foreach (var savedPart in preferences.Parts)
         {
@@ -8094,7 +8172,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private SukiOutputPreferences BuildOutputPreferences()
     {
-        return new SukiOutputPreferences(
+        return RhodesOutputProfileService.Normalize(new SukiOutputPreferences(
             TournamentMode: OutputTournamentMode,
             BackgroundEnabled: OutputBackgroundEnabled,
             BackgroundOpacity: OutputBackgroundOpacity,
@@ -8111,7 +8189,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 part.BackgroundEnabled,
                 part.BackgroundOpacity,
                 part.ShowTitle)).ToArray(),
-            OverlayLayout: OverlayLayoutItems.Select(item => item.ToState()).ToArray());
+            OverlayLayout: OverlayLayoutItems.Select(item => item.ToState()).ToArray(),
+            SchemaVersion: RhodesOutputProfileService.OutputSchemaVersion,
+            IntegratedAppearance: new SukiOutputAppearance(
+                OutputFontColor,
+                OutputBackgroundColor,
+                OutputBorderColor,
+                OutputAccentColor,
+                OutputFontSizePercent,
+                OutputCustomCss),
+            IndividualAppearance: new SukiOutputAppearance(
+                IndividualOutputFontColor,
+                IndividualOutputBackgroundColor,
+                IndividualOutputBorderColor,
+                IndividualOutputAccentColor,
+                IndividualOutputFontSizePercent,
+                IndividualOutputCustomCss),
+            IndividualTournamentMode: IndividualOutputTournamentMode,
+            IndividualBackgroundEnabled: IndividualOutputBackgroundEnabled,
+            IndividualBackgroundOpacity: IndividualOutputBackgroundOpacity,
+            IndividualShowPartTitles: IndividualOutputShowPartTitles,
+            IndividualScrollSpeed: IndividualOutputScrollSpeed));
     }
 
     private SukiChoiceCatalogFilterState OperatorChoiceFilterState()

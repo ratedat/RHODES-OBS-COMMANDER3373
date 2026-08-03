@@ -26,7 +26,7 @@ import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
 import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
-import { clampOverlayScrollSpeed, isOverlayScrollSpeedField, isTournamentOverlay, overlayScrollSpeedDefaults, overlayScrollSpeedLabels, resolveOverlayBackgroundAlpha, resolveOverlayBackgroundEnabled, resolveOverlayLayout, resolveOverlayPart, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
+import { isOverlayScrollSpeedField, isTournamentOverlay, overlayScrollSpeedLabels, resolveOverlayAppearance, resolveOverlayBackgroundAlpha, resolveOverlayBackgroundEnabled, resolveOverlayLayout, resolveOverlayPart, resolveOverlayScrollSpeed, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
 import { normalizePreferences } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
@@ -603,7 +603,35 @@ function renderDifficultyFields(grade, mode = "default") {
 
 
 function getOverlayScrollSpeed(key) {
-  return clampOverlayScrollSpeed(state?.preferences?.[key], overlayScrollSpeedDefaults[key] ?? 12);
+  return resolveOverlayScrollSpeed(state?.preferences, key, overlayPart);
+}
+
+function overlayRgbChannels(color, fallback = "8 11 12") {
+  const hex = String(color || "").replace(/^#/, "").slice(0, 6);
+  if (!/^[0-9a-f]{6}$/i.test(hex)) return fallback;
+  return [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)).join(" ");
+}
+
+function applyOverlayAppearance(preferences) {
+  const appearance = resolveOverlayAppearance(preferences, overlayPart);
+  const root = document.documentElement;
+  root.style.setProperty("--overlay-font-color", appearance.fontColor);
+  root.style.setProperty("--overlay-background-rgb", overlayRgbChannels(appearance.backgroundColor));
+  root.style.setProperty("--overlay-border-color", appearance.borderColor);
+  root.style.setProperty("--overlay-accent-color", appearance.accentColor);
+  root.style.setProperty("--overlay-font-scale", String(appearance.fontSizePercent / 100));
+  root.style.setProperty("--text", appearance.fontColor);
+  root.style.setProperty("--accent", appearance.accentColor);
+  root.style.setProperty("--accent-2", appearance.accentColor);
+  root.style.setProperty("--line", appearance.borderColor);
+
+  let customStyle = document.querySelector("#suki-user-output-css");
+  if (!customStyle) {
+    customStyle = document.createElement("style");
+    customStyle.id = "suki-user-output-css";
+    document.head.append(customStyle);
+  }
+  customStyle.textContent = appearance.customCss || "";
 }
 
 function renderScrollSpeedControl(key) {
@@ -1032,6 +1060,7 @@ function renderOverlay() {
   disposeOverlayLayoutEditor?.();
   disposeOverlayLayoutEditor = null;
   app.dataset.loading = "false";
+  applyOverlayAppearance(state.preferences);
   document.documentElement.style.setProperty(
     "--overlay-background-alpha",
     String(resolveOverlayBackgroundAlpha(state.preferences, overlayPart)),

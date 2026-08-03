@@ -5,8 +5,10 @@ import fs from "node:fs/promises";
 import { normalizeOcrEngine, normalizePreferences, ocrEngineOptions } from "../app/lib/preferences.js";
 import {
   isTournamentOverlay,
+  resolveOverlayAppearance,
   resolveOverlayBackgroundAlpha,
   resolveOverlayBackgroundEnabled,
+  resolveOverlayScrollSpeed,
   shouldShowOverlayPartTitles,
 } from "../app/lib/overlay-config.js";
 
@@ -146,4 +148,71 @@ test("individual overlay titles default to visible and can be hidden", () => {
   assert.equal(shouldShowOverlayPartTitles(normalizePreferences({
     sukiOutputShowPartTitles: false,
   })), false);
+});
+
+test("legacy output settings migrate to schema 2 without coupling integrated and individual appearance", () => {
+  const preferences = normalizePreferences({
+    sukiOutputTournamentMode: false,
+    sukiOutputBackgroundEnabled: true,
+    sukiOutputBackgroundOpacity: 72,
+    sukiOutputIntegratedAppearance: {
+      fontColor: "#112233",
+      backgroundColor: "#223344",
+      borderColor: "#334455",
+      accentColor: "#445566",
+      fontSizePercent: 125,
+      customCss: ".integrated { color: red; }",
+    },
+    sukiOutputParts: [{
+      id: "operators",
+      tournamentMode: true,
+      backgroundEnabled: false,
+      backgroundOpacity: 20,
+      showTitle: false,
+    }],
+  });
+
+  assert.equal(preferences.sukiOutputSchemaVersion, 2);
+  assert.equal(preferences.sukiOutputIndividualTournamentMode, false);
+  assert.equal(preferences.sukiOutputIndividualBackgroundEnabled, true);
+  assert.equal(preferences.sukiOutputIndividualBackgroundOpacity, 72);
+  assert.equal(preferences.sukiOutputIndividualShowPartTitles, true);
+  assert.equal(preferences.sukiOutputParts[0].tournamentMode, true);
+  assert.equal(preferences.sukiOutputParts[0].backgroundEnabled, false);
+  assert.equal(preferences.sukiOutputParts[0].backgroundOpacity, 20);
+  assert.equal(preferences.sukiOutputParts[0].showTitle, false);
+  assert.deepEqual(preferences.sukiOutputIndividualAppearance, preferences.sukiOutputIntegratedAppearance);
+
+  preferences.sukiOutputIndividualAppearance.fontColor = "#AABBCC";
+  assert.equal(preferences.sukiOutputIntegratedAppearance.fontColor, "#112233");
+});
+
+test("integrated and individual overlays resolve independent appearance and scroll speed", () => {
+  const preferences = normalizePreferences({
+    horizontalOperatorScrollSpeed: 7,
+    sukiOutputIndividualScrollSpeed: 19,
+    sukiOutputIntegratedAppearance: {
+      fontColor: "#123456",
+      backgroundColor: "#234567",
+      borderColor: "#345678",
+      accentColor: "#456789",
+      fontSizePercent: 115,
+      customCss: ".integrated-only {}",
+    },
+    sukiOutputIndividualAppearance: {
+      fontColor: "#ABCDEF",
+      backgroundColor: "#BCDEF0",
+      borderColor: "#CDEF01",
+      accentColor: "#DEF012",
+      fontSizePercent: 85,
+      customCss: ".individual-only {}",
+    },
+  });
+
+  assert.equal(resolveOverlayAppearance(preferences).fontColor, "#123456");
+  assert.equal(resolveOverlayAppearance(preferences, "operators").fontColor, "#ABCDEF");
+  assert.equal(resolveOverlayAppearance(preferences).customCss, ".integrated-only {}");
+  assert.equal(resolveOverlayAppearance(preferences, "operators").customCss, ".individual-only {}");
+  assert.equal(resolveOverlayScrollSpeed(preferences, "horizontalOperatorScrollSpeed"), 7);
+  assert.equal(resolveOverlayScrollSpeed(preferences, "horizontalOperatorScrollSpeed", "operators"), 19);
 });

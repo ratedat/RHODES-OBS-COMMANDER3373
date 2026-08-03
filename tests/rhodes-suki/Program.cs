@@ -111,6 +111,8 @@ var tests = new (string Name, Action Run)[]
     ("Managed Node runtime rejects archive path traversal", ManagedNodeRuntimeRejectsArchiveTraversal),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("Suki settings store migrates unusable manual PATH adb settings", SukiSettingsStoreMigratesBareManualAdb),
+    ("Output profile JSON round-trips integrated and individual settings", OutputProfileRoundTrip),
+    ("Output profile import rejects future output schemas", OutputProfileRejectsFutureSchema),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Tournament remote API status parses invitation metadata", TournamentRemoteApiStatusParsing),
     ("Tournament remote state tracker imports only new relay cursors", TournamentRemoteStateTrackerImportsNewCursors),
@@ -5119,6 +5121,119 @@ static void SukiSettingsStoreMigratesBareManualAdb()
         AdbSerial: "127.0.0.1:16384",
         SelectedAdbPresetId: "custom"));
     Equal("custom", explicitManual.SelectedAdbPresetId, "explicit manual adb preset is preserved");
+}
+
+static void OutputProfileRoundTrip()
+{
+    var directory = Path.Combine(Path.GetTempPath(), "rhodes-output-profile-tests", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    var path = Path.Combine(directory, "broadcast-profile.json");
+    try
+    {
+        var preferences = new SukiOutputPreferences(
+            TournamentMode: true,
+            BackgroundEnabled: true,
+            BackgroundOpacity: 74,
+            ShowPartTitles: true,
+            ScrollSpeed: 11,
+            Parts:
+            [
+                new SukiOutputPartState("operators", true, true, true, 420, 620),
+            ],
+            OverlayLayout:
+            [
+                new SukiOverlayLayoutState("status", true, 40, 30, 1200, 120, 2),
+                new SukiOverlayLayoutState("operators", true, 1460, 300, 420, 620, 5),
+            ],
+            SchemaVersion: RhodesOutputProfileService.OutputSchemaVersion,
+            IntegratedAppearance: new SukiOutputAppearance(
+                "#112233",
+                "#223344",
+                "#334455",
+                "#445566",
+                125,
+                ".integrated-only { letter-spacing: 0; }"),
+            IndividualAppearance: new SukiOutputAppearance(
+                "#AABBCC",
+                "#BBCCDD",
+                "#CCDDEE",
+                "#DDEEFF",
+                85,
+                ".individual-only { box-shadow: none; }"),
+            IndividualTournamentMode: false,
+            IndividualBackgroundEnabled: false,
+            IndividualBackgroundOpacity: 21,
+            IndividualShowPartTitles: false,
+            IndividualScrollSpeed: 19);
+
+        RhodesOutputProfileService.ExportAsync(path, preferences).GetAwaiter().GetResult();
+        var json = File.ReadAllText(path);
+        Equal(true, json.Contains("\"kind\": \"rhodes-output-profile\"", StringComparison.Ordinal), "profile kind is camelCase");
+
+        var imported = RhodesOutputProfileService.ImportAsync(path).GetAwaiter().GetResult();
+        Equal(2, imported.SchemaVersion, "output schema version");
+        Equal("#112233", imported.IntegratedAppearance?.FontColor ?? "", "integrated font color");
+        Equal(125, imported.IntegratedAppearance?.FontSizePercent ?? 0, "integrated font scale");
+        Equal(".integrated-only { letter-spacing: 0; }", imported.IntegratedAppearance?.CustomCss ?? "", "integrated CSS");
+        Equal("#AABBCC", imported.IndividualAppearance?.FontColor ?? "", "individual font color");
+        Equal(85, imported.IndividualAppearance?.FontSizePercent ?? 0, "individual font scale");
+        Equal(".individual-only { box-shadow: none; }", imported.IndividualAppearance?.CustomCss ?? "", "individual CSS");
+        Equal(false, imported.IndividualTournamentMode ?? true, "individual tournament mode");
+        Equal(false, imported.IndividualBackgroundEnabled ?? true, "individual background enabled");
+        Equal(21, imported.IndividualBackgroundOpacity ?? -1, "individual background opacity");
+        Equal(false, imported.IndividualShowPartTitles ?? true, "individual title visibility");
+        Equal(19, imported.IndividualScrollSpeed ?? -1, "individual scroll speed");
+        Equal(2, imported.OverlayLayout?.Count ?? 0, "layout count");
+        Equal(1460, imported.OverlayLayout?[1].X ?? -1, "layout position");
+        Equal(420, imported.Parts[0].Width, "part width");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+}
+
+static void OutputProfileRejectsFutureSchema()
+{
+    var directory = Path.Combine(Path.GetTempPath(), "rhodes-output-profile-tests", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    var path = Path.Combine(directory, "future-profile.json");
+    try
+    {
+        File.WriteAllText(
+            path,
+            """
+            {
+              "kind": "rhodes-output-profile",
+              "schemaVersion": 1,
+              "exportedAt": "2026-08-04T00:00:00Z",
+              "outputPreferences": {
+                "tournamentMode": false,
+                "backgroundEnabled": false,
+                "backgroundOpacity": 100,
+                "showPartTitles": true,
+                "scrollSpeed": 12,
+                "parts": [],
+                "schemaVersion": 99
+              }
+            }
+            """);
+
+        try
+        {
+            _ = RhodesOutputProfileService.ImportAsync(path).GetAwaiter().GetResult();
+        }
+        catch (InvalidDataException)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("future output profile schema: expected InvalidDataException");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
 }
 
 static void OptionalRuntimeStatusParsing()
@@ -10234,7 +10349,15 @@ static void StateApiSukiPreferencesApply()
             [
                 new SukiOverlayLayoutState("status", true, 40, 30, 1200, 120, 2),
                 new SukiOverlayLayoutState("operators", true, 1460, 300, 420, 620, 5),
-            ]),
+            ],
+            SchemaVersion: 2,
+            IntegratedAppearance: new SukiOutputAppearance("#112233", "#223344", "#334455", "#445566", 120, ".integrated {}"),
+            IndividualAppearance: new SukiOutputAppearance("#AABBCC", "#BBCCDD", "#CCDDEE", "#DDEEFF", 90, ".individual {}"),
+            IndividualTournamentMode: false,
+            IndividualBackgroundEnabled: false,
+            IndividualBackgroundOpacity: 24,
+            IndividualShowPartTitles: true,
+            IndividualScrollSpeed: 17),
         "maa-ocr"))!.AsObject();
 
     Equal("casual", updated["mode"]!.GetValue<string>(), "output mode keeps run mode");
@@ -10252,6 +10375,15 @@ static void StateApiSukiPreferencesApply()
     Equal(false, preferences["sukiOutputShowPartTitles"]!.GetValue<bool>(), "part title visibility");
     Equal(false, preferences.ContainsKey("sukiOutputSeparateWindow"), "separate window removed");
     Equal(false, preferences.ContainsKey("sukiOutputTransparentBackground"), "legacy transparent background removed");
+    Equal(2, preferences["sukiOutputSchemaVersion"]!.GetValue<int>(), "output schema version");
+    Equal("#112233", preferences["sukiOutputIntegratedAppearance"]!.AsObject()["fontColor"]!.GetValue<string>(), "integrated font color");
+    Equal(120, preferences["sukiOutputIntegratedAppearance"]!.AsObject()["fontSizePercent"]!.GetValue<int>(), "integrated font scale");
+    Equal(".integrated {}", preferences["sukiOutputIntegratedAppearance"]!.AsObject()["customCss"]!.GetValue<string>(), "integrated CSS");
+    Equal("#AABBCC", preferences["sukiOutputIndividualAppearance"]!.AsObject()["fontColor"]!.GetValue<string>(), "individual font color");
+    Equal(false, preferences["sukiOutputIndividualTournamentMode"]!.GetValue<bool>(), "individual tournament mode");
+    Equal(false, preferences["sukiOutputIndividualBackgroundEnabled"]!.GetValue<bool>(), "individual background");
+    Equal(24, preferences["sukiOutputIndividualBackgroundOpacity"]!.GetValue<int>(), "individual background opacity");
+    Equal(17, preferences["sukiOutputIndividualScrollSpeed"]!.GetValue<int>(), "individual scroll speed");
     Equal(3, preferences["sukiOutputParts"]!.AsArray().Count, "output parts count");
     var firstOutputPart = preferences["sukiOutputParts"]!.AsArray()[0]!.AsObject();
     Equal("operators", firstOutputPart["id"]!.GetValue<string>(), "first output part");

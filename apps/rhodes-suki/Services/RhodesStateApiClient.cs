@@ -146,6 +146,7 @@ public static class RhodesStateApiClient
         string ocrEngine = SukiOcrEngineCatalog.DefaultId)
     {
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson)?.AsObject() ?? [];
+        outputPreferences = RhodesOutputProfileService.Normalize(outputPreferences);
         var preferences = root["preferences"] as JsonObject;
         if (preferences is null)
         {
@@ -180,6 +181,14 @@ public static class RhodesStateApiClient
         preferences["sukiOutputBackgroundEnabled"] = outputPreferences.BackgroundEnabled;
         preferences["sukiOutputBackgroundOpacity"] = Math.Clamp(outputPreferences.BackgroundOpacity, 0, 100);
         preferences["sukiOutputShowPartTitles"] = outputPreferences.ShowPartTitles;
+        preferences["sukiOutputSchemaVersion"] = outputPreferences.SchemaVersion;
+        preferences["sukiOutputIntegratedAppearance"] = ToOutputAppearanceJson(outputPreferences.IntegratedAppearance);
+        preferences["sukiOutputIndividualTournamentMode"] = outputPreferences.IndividualTournamentMode;
+        preferences["sukiOutputIndividualBackgroundEnabled"] = outputPreferences.IndividualBackgroundEnabled;
+        preferences["sukiOutputIndividualBackgroundOpacity"] = outputPreferences.IndividualBackgroundOpacity;
+        preferences["sukiOutputIndividualShowPartTitles"] = outputPreferences.IndividualShowPartTitles;
+        preferences["sukiOutputIndividualScrollSpeed"] = outputPreferences.IndividualScrollSpeed;
+        preferences["sukiOutputIndividualAppearance"] = ToOutputAppearanceJson(outputPreferences.IndividualAppearance);
         preferences["sukiOutputParts"] = ToOutputPartsJson(outputPreferences.Parts);
         preferences["sukiOverlayLayout"] = ToOverlayLayoutJson(
             RhodesOverlayLayoutCatalog.Normalize(outputPreferences.OverlayLayout));
@@ -297,6 +306,20 @@ public static class RhodesStateApiClient
         }
 
         return array;
+    }
+
+    private static JsonObject ToOutputAppearanceJson(SukiOutputAppearance? appearance)
+    {
+        var normalized = RhodesOutputProfileService.NormalizeAppearance(appearance);
+        return new JsonObject
+        {
+            ["fontColor"] = normalized.FontColor,
+            ["backgroundColor"] = normalized.BackgroundColor,
+            ["borderColor"] = normalized.BorderColor,
+            ["accentColor"] = normalized.AccentColor,
+            ["fontSizePercent"] = normalized.FontSizePercent,
+            ["customCss"] = normalized.CustomCss,
+        };
     }
 
     private static JsonArray ToOverlayLayoutJson(IEnumerable<SukiOverlayLayoutState> parts)

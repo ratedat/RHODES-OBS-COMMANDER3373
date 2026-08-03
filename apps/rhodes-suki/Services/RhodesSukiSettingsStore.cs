@@ -58,27 +58,7 @@ public static class RhodesSukiSettingsStore
     {
         var outputPreferences = settings.OutputPreferences;
         if (outputPreferences is not null)
-        {
-            var parts = (outputPreferences.Parts ?? [])
-                .Where(part => !string.IsNullOrWhiteSpace(part.Id))
-                .Select(part => part with
-                {
-                    Id = part.Id.Trim(),
-                    Width = Math.Max(1, part.Width),
-                    Height = Math.Max(1, part.Height),
-                    BackgroundOpacity = Math.Clamp(part.BackgroundOpacity, 0, 100),
-                })
-                .GroupBy(part => part.Id, StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.Last())
-                .ToArray();
-
-            outputPreferences = outputPreferences with
-            {
-                BackgroundOpacity = Math.Clamp(outputPreferences.BackgroundOpacity, 0, 100),
-                ScrollSpeed = Math.Clamp(outputPreferences.ScrollSpeed, 0, 30),
-                Parts = parts,
-            };
-        }
+            outputPreferences = RhodesOutputProfileService.Normalize(outputPreferences);
 
         var normalized = settings with
         {

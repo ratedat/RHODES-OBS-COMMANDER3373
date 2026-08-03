@@ -603,7 +603,7 @@ a:hover { text-decoration: underline; }
 }
 .overlay-mode,
 .overlay-mode body {
-  background: rgb(8 11 12 / var(--overlay-background-alpha, 1));
+  background: rgb(var(--overlay-background-rgb, 8 11 12) / var(--overlay-background-alpha, 1));
 }
 :root.overlay-background-disabled,
 .overlay-background-disabled body,
@@ -621,7 +621,8 @@ a:hover { text-decoration: underline; }
   gap: 12px;
   padding: 18px;
   background: transparent;
-  color: var(--text);
+  color: var(--overlay-font-color, var(--text));
+  font-size: calc(14px * var(--overlay-font-scale, 1));
   overflow: hidden;
 }
 .overlay-app.overlay-part {
@@ -813,9 +814,9 @@ a:hover { text-decoration: underline; }
   grid-template-rows: auto minmax(0, 1fr);
   gap: 7px;
   padding: 9px;
-  color: var(--text);
-  background: rgb(15 15 14 / var(--overlay-background-alpha, 1));
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--overlay-font-color, var(--text));
+  background: rgb(var(--overlay-background-rgb, 8 11 12) / var(--overlay-background-alpha, 1));
+  border: 1px solid var(--overlay-border-color, rgba(255, 255, 255, 0.16));
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(3px);
   overflow: hidden;
@@ -1062,8 +1063,9 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
   padding: 9px;
   border-radius: 8px;
-  background: rgba(15, 15, 14, 0.68);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--overlay-font-color, var(--text));
+  background: rgb(var(--overlay-background-rgb, 8 11 12) / var(--overlay-background-alpha, 1));
+  border: 1px solid var(--overlay-border-color, rgba(255, 255, 255, 0.18));
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(3px);
 }
@@ -1175,9 +1177,9 @@ a:hover { text-decoration: underline; }
   display: grid;
   gap: 8px;
   padding: 9px;
-  color: var(--text);
-  background: linear-gradient(135deg, rgba(21, 24, 30, 0.86), rgba(8, 10, 14, 0.78));
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--overlay-font-color, var(--text));
+  background: rgb(var(--overlay-background-rgb, 8 11 12) / var(--overlay-background-alpha, 1));
+  border: 1px solid var(--overlay-border-color, rgba(255, 255, 255, 0.18));
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(3px);
 }
@@ -1416,8 +1418,9 @@ a:hover { text-decoration: underline; }
   gap: 12px;
 }
 .overlay-card {
-  background: rgba(15, 15, 14, 0.74);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--overlay-font-color, var(--text));
+  background: rgb(var(--overlay-background-rgb, 8 11 12) / var(--overlay-background-alpha, 1));
+  border: 1px solid var(--overlay-border-color, rgba(255, 255, 255, 0.16));
   border-radius: 8px;
   box-shadow: 0 12px 42px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(4px);
@@ -1569,6 +1572,66 @@ a:hover { text-decoration: underline; }
 .compact-boss-list { display: grid; gap: 5px; min-width: 0; }
 .special-stack { display: flex; gap: 8px; flex-wrap: wrap; }
 .footer-note { color: var(--muted); font-size: 11px; padding: 6px 2px; text-align: right; }
+
+/* Output profile typography. Keep each layout's relative hierarchy while scaling all text together. */
+.overlay-app .overlay-part-head,
+.overlay-app .overlay-card-header { font-size: calc(11px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-head strong { font-size: calc(13px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-empty,
+.overlay-app .compact-empty,
+.overlay-app .stream-empty { font-size: calc(11px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-status-main span,
+.overlay-app .overlay-part-status-cell span,
+.overlay-app .kpi-label { font-size: calc(10px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-status-main strong,
+.overlay-app .kpi-value { font-size: calc(18px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-status-cell strong { font-size: calc(15px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-chip-row .tag,
+.overlay-app .compact-chip-row .tag,
+.overlay-app .stream-chip-row .tag { font-size: calc(10px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-relic span,
+.overlay-app .overlay-part-operator span,
+.overlay-app .compact-operator span,
+.overlay-app .stream-relic-tile span,
+.overlay-app .stream-operator-tile span,
+.overlay-app .operator-meta,
+.overlay-app .relic-tile div { font-size: calc(9px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-operator strong,
+.overlay-app .compact-operator strong,
+.overlay-app .stream-relic-tile strong,
+.overlay-app .stream-operator-tile strong,
+.overlay-app .operator-name { font-size: calc(10px * var(--overlay-font-scale, 1)); }
+.overlay-app .compact-kicker,
+.overlay-app .compact-section-head,
+.overlay-app .stream-kicker,
+.overlay-app .stream-section-head { font-size: calc(10px * var(--overlay-font-scale, 1)); }
+.overlay-app .compact-title { font-size: calc(15px * var(--overlay-font-scale, 1)); }
+.overlay-app .stream-title { font-size: calc(16px * var(--overlay-font-scale, 1)); }
+.overlay-app .compact-counts span,
+.overlay-app .compact-more,
+.overlay-app .stream-counts span { font-size: calc(10px * var(--overlay-font-scale, 1)); }
+.overlay-app .compact-row { font-size: calc(11px * var(--overlay-font-scale, 1)); }
+.overlay-app .compact-row strong { font-size: calc(12px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-effect-list .effect-type,
+.overlay-app .compact-effect-list .effect-type,
+.overlay-app .stream-effect-list .effect-type { font-size: calc(9px * var(--overlay-font-scale, 1)); }
+.overlay-app .overlay-part-effect-list .effect-title,
+.overlay-app .overlay-part-effect-list .effect-text,
+.overlay-app .compact-effect-list .effect-title,
+.overlay-app .compact-effect-list .effect-text,
+.overlay-app .stream-effect-list .effect-title,
+.overlay-app .stream-effect-list .effect-text { font-size: calc(10px * var(--overlay-font-scale, 1)); }
+.overlay-app .special-overlay-group > header strong,
+.overlay-app .special-overlay-chip strong { font-size: calc(10px * var(--overlay-font-scale, 1)); }
+.overlay-app .special-overlay-group > header span,
+.overlay-app .special-overlay-chip span,
+.overlay-app .special-overlay-chip small { font-size: calc(8px * var(--overlay-font-scale, 1)); }
+.overlay-app .campaign-title { font-size: calc(20px * var(--overlay-font-scale, 1)); }
+.overlay-app .campaign-sub,
+.overlay-app .squad-effect { font-size: calc(13px * var(--overlay-font-scale, 1)); }
+.overlay-app .squad-name { font-size: calc(18px * var(--overlay-font-scale, 1)); }
+.overlay-app .squad-option-effect,
+.overlay-app .boss-card-title { font-size: calc(12px * var(--overlay-font-scale, 1)); }
 
 /* Background OFF removes every neutral overlay surface while preserving content and state colors. */
 .overlay-background-disabled .compact-overlay-shell,

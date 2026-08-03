@@ -1,6 +1,7 @@
 import {
   clampOverlayBackgroundOpacity,
   clampOverlayScrollSpeed,
+  normalizeOverlayAppearance,
   overlayScrollSpeedDefaults,
 } from "./overlay-config.js";
 import { normalizeChoiceFilterIds } from "../domain/choice-filters.js";
@@ -125,14 +126,39 @@ export function normalizePreferences(value) {
   preferences.sukiOutputShowPartTitles = preferences.sukiOutputShowPartTitles == null
     ? true
     : normalizeBoolean(preferences.sukiOutputShowPartTitles);
+  const integratedAppearance = normalizeOverlayAppearance(preferences.sukiOutputIntegratedAppearance);
+  const individualAppearance = normalizeOverlayAppearance(
+    preferences.sukiOutputIndividualAppearance,
+    integratedAppearance,
+  );
+  preferences.sukiOutputIntegratedAppearance = integratedAppearance;
+  preferences.sukiOutputIndividualAppearance = individualAppearance;
+  preferences.sukiOutputIndividualTournamentMode = preferences.sukiOutputIndividualTournamentMode == null
+    ? preferences.sukiOutputTournamentMode
+    : normalizeBoolean(preferences.sukiOutputIndividualTournamentMode);
+  preferences.sukiOutputIndividualBackgroundEnabled = preferences.sukiOutputIndividualBackgroundEnabled == null
+    ? preferences.sukiOutputBackgroundEnabled
+    : normalizeBoolean(preferences.sukiOutputIndividualBackgroundEnabled);
+  preferences.sukiOutputIndividualBackgroundOpacity = clampOverlayBackgroundOpacity(
+    preferences.sukiOutputIndividualBackgroundOpacity,
+    preferences.sukiOutputBackgroundOpacity,
+  );
+  preferences.sukiOutputIndividualShowPartTitles = preferences.sukiOutputIndividualShowPartTitles == null
+    ? preferences.sukiOutputShowPartTitles
+    : normalizeBoolean(preferences.sukiOutputIndividualShowPartTitles);
+  preferences.sukiOutputIndividualScrollSpeed = clampOverlayScrollSpeed(
+    preferences.sukiOutputIndividualScrollSpeed,
+    13,
+  );
   preferences.sukiOutputParts = normalizeOutputParts(preferences.sukiOutputParts, {
-    tournamentMode: preferences.sukiOutputTournamentMode,
-    backgroundEnabled: preferences.sukiOutputBackgroundEnabled,
-    backgroundOpacity: preferences.sukiOutputBackgroundOpacity,
-    showTitle: preferences.sukiOutputShowPartTitles,
+    tournamentMode: preferences.sukiOutputIndividualTournamentMode,
+    backgroundEnabled: preferences.sukiOutputIndividualBackgroundEnabled,
+    backgroundOpacity: preferences.sukiOutputIndividualBackgroundOpacity,
+    showTitle: preferences.sukiOutputIndividualShowPartTitles,
   });
   for (const [key, fallback] of Object.entries(overlayScrollSpeedDefaults)) {
     preferences[key] = clampOverlayScrollSpeed(preferences[key], fallback);
   }
+  preferences.sukiOutputSchemaVersion = 2;
   return preferences;
 }

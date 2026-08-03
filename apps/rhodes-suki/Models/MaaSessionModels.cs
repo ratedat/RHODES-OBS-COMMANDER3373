@@ -295,7 +295,29 @@ public sealed record SukiOutputPreferences(
     bool ShowPartTitles,
     int ScrollSpeed,
     IReadOnlyList<SukiOutputPartState> Parts,
-    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null);
+    IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null,
+    int SchemaVersion = 1,
+    SukiOutputAppearance? IntegratedAppearance = null,
+    SukiOutputAppearance? IndividualAppearance = null,
+    bool? IndividualTournamentMode = null,
+    bool? IndividualBackgroundEnabled = null,
+    int? IndividualBackgroundOpacity = null,
+    bool? IndividualShowPartTitles = null,
+    int? IndividualScrollSpeed = null);
+
+public sealed record SukiOutputAppearance(
+    string FontColor = "#F2EFE6",
+    string BackgroundColor = "#080B0C",
+    string BorderColor = "#2B3638",
+    string AccentColor = "#55D6BE",
+    int FontSizePercent = 100,
+    string CustomCss = "");
+
+public sealed record SukiOutputProfile(
+    string Kind,
+    int SchemaVersion,
+    DateTimeOffset ExportedAt,
+    SukiOutputPreferences OutputPreferences);
 
 public sealed record SukiOutputPartState(
     string Id,
