@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { renderOverlayDense } from "../app/components/overlay-layouts.js";
@@ -137,6 +138,19 @@ test("operator cards omit the promotion overlay below elite two", () => {
   assert.match(output, /class="operator-portrait"><img class="operator-portrait-image"/);
   assert.doesNotMatch(output, /is-elite-two/);
   assert.doesNotMatch(output, /operator-promotion-badge/);
+});
+
+test("elite-two badge keeps the full transparent icon visible", async () => {
+  const styles = await readFile(new URL("../app/styles.css", import.meta.url), "utf8");
+
+  assert.match(
+    styles,
+    /\.operator-portrait \.operator-promotion-badge\s*\{[^}]*left:\s*0;[^}]*bottom:\s*0;[^}]*overflow:\s*visible\s*!important;[^}]*background:\s*transparent;/s,
+  );
+  assert.match(
+    styles,
+    /\.operator-portrait \.operator-promotion-badge img\s*\{[^}]*object-fit:\s*contain\s*!important;[^}]*object-position:\s*left bottom;/s,
+  );
 });
 
 test("horizontal overlay renders selected Sarkaz thoughts with image and count", () => {

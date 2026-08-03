@@ -997,21 +997,20 @@ a:hover { text-decoration: underline; }
 .operator-portrait .operator-promotion-badge {
   position: absolute;
   z-index: 3;
-  left: 1px;
-  bottom: 1px;
-  display: grid !important;
-  place-items: center;
-  width: 56%;
-  min-width: 12px;
-  max-width: 18px;
+  left: 0;
+  bottom: 0;
+  display: block !important;
+  width: 70%;
+  min-width: 14px;
+  max-width: 24px;
   aspect-ratio: 1;
   margin: 0;
-  padding: 1px;
-  overflow: hidden !important;
-  border: 1px solid rgba(232, 244, 248, 0.92);
-  border-radius: 3px;
-  background: rgba(7, 10, 11, 0.92);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  padding: 0;
+  overflow: visible !important;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   box-sizing: border-box;
   white-space: normal;
   pointer-events: none;
@@ -1021,7 +1020,8 @@ a:hover { text-decoration: underline; }
   width: 100% !important;
   height: 100% !important;
   object-fit: contain !important;
-  filter: brightness(1.25) contrast(1.2) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
+  object-position: left bottom;
+  filter: brightness(1.2) contrast(1.15) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.95));
 }
 .overlay-part-effect-scroll .effect-list { gap: 5px; }
 .overlay-part-effect-list .effect-row { grid-template-columns: 52px minmax(110px, 0.7fr) minmax(0, 1fr); padding: 6px 7px; }
