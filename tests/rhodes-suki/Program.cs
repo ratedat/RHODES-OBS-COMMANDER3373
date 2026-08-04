@@ -112,6 +112,7 @@ var tests = new (string Name, Action Run)[]
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("Suki settings store migrates unusable manual PATH adb settings", SukiSettingsStoreMigratesBareManualAdb),
     ("Output profile JSON round-trips integrated and individual settings", OutputProfileRoundTrip),
+    ("Output profile accepts external CSS and rejects javascript URLs", OutputProfileCssPolicy),
     ("Output profile import rejects future output schemas", OutputProfileRejectsFutureSchema),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Tournament remote API status parses invitation metadata", TournamentRemoteApiStatusParsing),
@@ -5186,6 +5187,53 @@ static void OutputProfileRoundTrip()
         Equal(2, imported.OverlayLayout?.Count ?? 0, "layout count");
         Equal(1460, imported.OverlayLayout?[1].X ?? -1, "layout position");
         Equal(420, imported.Parts[0].Width, "part width");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+}
+
+static void OutputProfileCssPolicy()
+{
+    var directory = Path.Combine(Path.GetTempPath(), "rhodes-output-profile-tests", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    var path = Path.Combine(directory, "external-css-profile.json");
+    try
+    {
+        const string externalCss =
+            "@import url(\"https://fonts.googleapis.com/css2?family=Noto+Sans+JP\"); "
+            + ".overlay-shell { background-image: url(\"https://example.com/background.png\"); }";
+        var preferences = new SukiOutputPreferences(
+            TournamentMode: false,
+            BackgroundEnabled: true,
+            BackgroundOpacity: 100,
+            ShowPartTitles: true,
+            ScrollSpeed: 13,
+            Parts: [],
+            IntegratedAppearance: new SukiOutputAppearance(CustomCss: externalCss),
+            IndividualAppearance: new SukiOutputAppearance(CustomCss: externalCss));
+
+        RhodesOutputProfileService.ExportAsync(path, preferences).GetAwaiter().GetResult();
+        var imported = RhodesOutputProfileService.ImportAsync(path).GetAwaiter().GetResult();
+        Equal(externalCss, imported.IntegratedAppearance?.CustomCss ?? "", "integrated external CSS");
+        Equal(externalCss, imported.IndividualAppearance?.CustomCss ?? "", "individual external CSS");
+
+        var unsafePreferences = preferences with
+        {
+            IntegratedAppearance = new SukiOutputAppearance(
+                CustomCss: ".overlay-shell { background-image: url(javascript:alert(1)); }"),
+        };
+        try
+        {
+            RhodesOutputProfileService.ExportAsync(path, unsafePreferences).GetAwaiter().GetResult();
+        }
+        catch (InvalidDataException)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("javascript CSS URL: expected InvalidDataException");
     }
     finally
     {

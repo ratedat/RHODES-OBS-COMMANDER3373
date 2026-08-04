@@ -175,6 +175,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _individualOutputAccentColor = "#55D6BE";
     private int _individualOutputFontSizePercent = 100;
     private string _individualOutputCustomCss = "";
+    private string _liveCssScope = "integrated";
     private string _outputProfileStatus = "未エクスポート";
     private SukiOverlayLayoutPreview? _selectedOverlayLayoutItem;
     private bool _showRoiOverlay = true;
@@ -348,6 +349,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OpenPreviewUrlCommand = new AsyncRelayCommand(OpenPreviewUrlAsync);
         ResetOverlayLayoutCommand = new AsyncRelayCommand(ResetOverlayLayoutAsync);
         AdjustSelectedOverlayLayoutCommand = new AsyncRelayCommand(AdjustSelectedOverlayLayoutAsync);
+        ClearLiveCssCommand = new AsyncRelayCommand(ClearLiveCssAsync);
         RefreshNodeRuntimeCommand = new AsyncRelayCommand(RefreshNodeRuntimeAsync);
         InstallNodeRuntimeCommand = new AsyncRelayCommand(InstallNodeRuntimeAsync);
         UninstallNodeRuntimeCommand = new AsyncRelayCommand(UninstallNodeRuntimeAsync);
@@ -1430,7 +1432,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string OutputBorderColor { get => _outputBorderColor; set => SetProperty(ref _outputBorderColor, value); }
     public string OutputAccentColor { get => _outputAccentColor; set => SetProperty(ref _outputAccentColor, value); }
     public int OutputFontSizePercent { get => _outputFontSizePercent; set => SetProperty(ref _outputFontSizePercent, Math.Clamp(value, 60, 200)); }
-    public string OutputCustomCss { get => _outputCustomCss; set => SetProperty(ref _outputCustomCss, value); }
+    public string OutputCustomCss
+    {
+        get => _outputCustomCss;
+        set
+        {
+            if (!SetProperty(ref _outputCustomCss, value))
+                return;
+            if (IsLiveCssIntegrated)
+            {
+                OnPropertyChanged(nameof(LiveCssEditorText));
+                OnPropertyChanged(nameof(LiveCssCharacterCount));
+            }
+        }
+    }
 
     public bool IndividualOutputTournamentMode { get => _individualOutputTournamentMode; set => SetProperty(ref _individualOutputTournamentMode, value); }
     public bool IndividualOutputBackgroundEnabled { get => _individualOutputBackgroundEnabled; set => SetProperty(ref _individualOutputBackgroundEnabled, value); }
@@ -1442,7 +1457,60 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string IndividualOutputBorderColor { get => _individualOutputBorderColor; set => SetProperty(ref _individualOutputBorderColor, value); }
     public string IndividualOutputAccentColor { get => _individualOutputAccentColor; set => SetProperty(ref _individualOutputAccentColor, value); }
     public int IndividualOutputFontSizePercent { get => _individualOutputFontSizePercent; set => SetProperty(ref _individualOutputFontSizePercent, Math.Clamp(value, 60, 200)); }
-    public string IndividualOutputCustomCss { get => _individualOutputCustomCss; set => SetProperty(ref _individualOutputCustomCss, value); }
+    public string IndividualOutputCustomCss
+    {
+        get => _individualOutputCustomCss;
+        set
+        {
+            if (!SetProperty(ref _individualOutputCustomCss, value))
+                return;
+            if (IsLiveCssIndividual)
+            {
+                OnPropertyChanged(nameof(LiveCssEditorText));
+                OnPropertyChanged(nameof(LiveCssCharacterCount));
+            }
+        }
+    }
+
+    public bool IsLiveCssIntegrated
+    {
+        get => _liveCssScope == "integrated";
+        set
+        {
+            if (value)
+                SetLiveCssScope("integrated");
+        }
+    }
+
+    public bool IsLiveCssIndividual
+    {
+        get => _liveCssScope == "individual";
+        set
+        {
+            if (value)
+                SetLiveCssScope("individual");
+        }
+    }
+
+    public string LiveCssEditorText
+    {
+        get => IsLiveCssIntegrated ? OutputCustomCss : IndividualOutputCustomCss;
+        set
+        {
+            if (IsLiveCssIntegrated)
+                OutputCustomCss = value;
+            else
+                IndividualOutputCustomCss = value;
+        }
+    }
+
+    public string LiveCssScopeDescription => IsLiveCssIntegrated
+        ? "統合Overlay全体へ適用します。上の「実出力で編集」または「出力のみ確認」で表示を確認できます。"
+        : "すべての個別ウィンドウへ適用します。部品別URLを開いて表示を確認できます。";
+
+    public string LiveCssCharacterCount =>
+        $"{LiveCssEditorText.Length:N0} / {RhodesOutputProfileService.MaxCustomCssLength:N0}";
+
     public string OutputProfileStatus { get => _outputProfileStatus; private set => SetProperty(ref _outputProfileStatus, value); }
 
     public SukiOverlayLayoutPreview? SelectedOverlayLayoutItem
@@ -2128,6 +2196,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ResetOverlayLayoutCommand { get; }
 
     public ICommand AdjustSelectedOverlayLayoutCommand { get; }
+
+    public ICommand ClearLiveCssCommand { get; }
 
     public ICommand RefreshNodeRuntimeCommand { get; }
 
@@ -6731,6 +6801,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         StatusMessage = $"{item.Label}を調整しました。保存して反映するとOBSへ反映されます。";
         return Task.CompletedTask;
+    }
+
+    private Task ClearLiveCssAsync()
+    {
+        var target = IsLiveCssIntegrated ? "統合Overlay" : "個別ウィンドウ";
+        LiveCssEditorText = "";
+        StatusMessage = $"{target}のCSSをクリアしました。保存して反映すると出力へ反映されます。";
+        return Task.CompletedTask;
+    }
+
+    private void SetLiveCssScope(string scope)
+    {
+        if (_liveCssScope == scope)
+            return;
+
+        _liveCssScope = scope;
+        OnPropertyChanged(nameof(IsLiveCssIntegrated));
+        OnPropertyChanged(nameof(IsLiveCssIndividual));
+        OnPropertyChanged(nameof(LiveCssEditorText));
+        OnPropertyChanged(nameof(LiveCssScopeDescription));
+        OnPropertyChanged(nameof(LiveCssCharacterCount));
     }
 
     private void ApplyOverlayLayoutStates(IEnumerable<SukiOverlayLayoutState>? states)

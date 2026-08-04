@@ -10,6 +10,7 @@ import {
 import {
   applyOverlayEditorDelta,
   isOverlayEditorMode,
+  normalizeOverlayEditorCssScope,
 } from "../app/overlay/layout-editor.js";
 
 test("custom overlay layout keeps every known part and clamps persisted geometry", () => {
@@ -70,6 +71,35 @@ test("overlay editor mode is opt-in and never affects the OBS custom overlay URL
   assert.equal(isOverlayEditorMode(new URLSearchParams("layout=custom&edit=1")), true);
   assert.equal(isOverlayEditorMode(new URLSearchParams("layout=custom")), false);
   assert.equal(isOverlayEditorMode(new URLSearchParams("layout=default&edit=1")), false);
+});
+
+test("overlay editor CSS scope stays limited to integrated and individual output", () => {
+  assert.equal(normalizeOverlayEditorCssScope("integrated"), "integrated");
+  assert.equal(normalizeOverlayEditorCssScope("individual"), "individual");
+  assert.equal(normalizeOverlayEditorCssScope("unknown"), "integrated");
+  assert.equal(normalizeOverlayEditorCssScope(null), "integrated");
+});
+
+test("overlay editor exposes a live CSS editor on the browser layout surface", async () => {
+  const editor = await readFile(new URL("../app/overlay/layout-editor.js", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/styles.css", import.meta.url), "utf8");
+
+  assert.match(editor, /data-overlay-editor-css-toggle[^>]*>CSS編集</);
+  assert.match(editor, /data-overlay-editor-css-panel/);
+  assert.match(editor, /data-overlay-editor-css-input/);
+  assert.match(editor, /data-overlay-editor-css-scope="integrated"/);
+  assert.match(editor, /data-overlay-editor-css-scope="individual"/);
+  assert.match(editor, /data-overlay-editor-css-clear/);
+  assert.match(styles, /\.overlay-editor-css-panel\s*\{/);
+  assert.match(styles, /\.overlay-editor-css-input\s*\{/);
+});
+
+test("live user CSS is not blocked by inline overlay appearance variables", async () => {
+  const app = await readFile(new URL("../app/app.js", import.meta.url), "utf8");
+
+  assert.match(app, /suki-output-appearance-css/);
+  assert.doesNotMatch(app, /root\.style\.setProperty\("--overlay-font-color"/);
+  assert.doesNotMatch(app, /document\.documentElement\.style\.setProperty\(\s*"--overlay-background-alpha"/s);
 });
 
 test("overlay editor converts viewport drag deltas to the 1920x1080 canvas", () => {

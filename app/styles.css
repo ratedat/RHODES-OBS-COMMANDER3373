@@ -697,7 +697,8 @@ a:hover { text-decoration: underline; }
 }
 .overlay-editor-drag-handle,
 .overlay-editor-resize-handle,
-.overlay-editor-toolbar button {
+.overlay-editor-toolbar button,
+.overlay-editor-css-panel button {
   appearance: none;
   border: 1px solid rgba(255, 255, 255, 0.36);
   border-radius: 4px;
@@ -790,6 +791,94 @@ a:hover { text-decoration: underline; }
   border-color: #4fd1b5;
   background: #17332e;
 }
+.overlay-editor-css-panel {
+  position: fixed;
+  top: 72px;
+  right: 12px;
+  z-index: 2100;
+  display: grid;
+  gap: 12px;
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100vh - 84px);
+  padding: 14px;
+  overflow: auto;
+  color: #fff;
+  background: rgba(10, 15, 16, 0.98);
+  border: 1px solid rgba(79, 209, 181, 0.72);
+  border-radius: 6px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  user-select: text;
+  touch-action: auto;
+}
+.overlay-editor-css-panel[hidden] {
+  display: none !important;
+}
+.overlay-editor-css-panel-header,
+.overlay-editor-css-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.overlay-editor-css-panel-header > div {
+  display: grid;
+  gap: 2px;
+}
+.overlay-editor-css-panel-header strong {
+  font-size: 15px;
+}
+.overlay-editor-css-panel-header span,
+.overlay-editor-css-hint,
+.overlay-editor-css-panel-footer output {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+}
+.overlay-editor-css-scopes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.overlay-editor-css-panel button {
+  min-height: 34px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+.overlay-editor-css-panel button:hover,
+.overlay-editor-css-panel button[aria-pressed="true"] {
+  border-color: #4fd1b5;
+  background: #17332e;
+}
+.overlay-editor-css-hint {
+  min-height: 1.4em;
+  margin: 0;
+}
+.overlay-editor-css-field {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+  color: #fff;
+  font-size: 12px;
+}
+.overlay-editor-css-input {
+  width: 100%;
+  min-height: 320px;
+  padding: 11px 12px;
+  resize: vertical;
+  color: #ecfffa;
+  background: #06090a;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font: 12px/1.55 Consolas, "Cascadia Mono", monospace;
+  letter-spacing: 0;
+  outline: none;
+  tab-size: 2;
+}
+.overlay-editor-css-input:focus {
+  border-color: #4fd1b5;
+  box-shadow: 0 0 0 2px rgba(79, 209, 181, 0.2);
+}
 @media (max-width: 900px) {
   .overlay-editor-toolbar-title span,
   .overlay-editor-save-status {
@@ -803,6 +892,13 @@ a:hover { text-decoration: underline; }
     max-width: 35vw;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .overlay-editor-css-panel {
+    top: 68px;
+    max-height: calc(100vh - 80px);
+  }
+  .overlay-editor-css-input {
+    min-height: 240px;
   }
 }
 .overlay-part-shell {

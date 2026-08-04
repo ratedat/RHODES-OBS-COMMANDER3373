@@ -1329,6 +1329,15 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ライブレイアウト/);
   assert.match(xaml, /CustomOverlayUrl/);
   assert.match(xaml, /LayoutMoveDragDelta/);
+  assert.match(outputWorkspace, /ライブCSS/);
+  assert.match(outputWorkspace, /LiveCssEditorText/);
+  assert.match(outputWorkspace, /IsLiveCssIntegrated/);
+  assert.match(outputWorkspace, /IsLiveCssIndividual/);
+  assert.match(outputWorkspace, /LiveCssCharacterCount/);
+  assert.match(outputWorkspace, /ClearLiveCssCommand/);
+  assert.match(viewModel, /public string LiveCssEditorText/);
+  assert.match(viewModel, /public string LiveCssScopeDescription/);
+  assert.match(viewModel, /public string LiveCssCharacterCount/);
   assert.match(xaml, /個別ウインドウURL/);
   assert.match(xaml, /実況・解説・大会運営が手動操作に使うページ/);
   assert.match(xaml, /ディスプレイキャプチャでは映り込む場合があります/);

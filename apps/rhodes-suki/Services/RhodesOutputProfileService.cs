@@ -138,7 +138,7 @@ public static partial class RhodesOutputProfileService
     private static void ValidateCustomCss(string? value)
     {
         if (ForbiddenCssRegex().IsMatch(value ?? ""))
-            throw new InvalidDataException("ユーザーCSSでは @import、javascript:、外部URLを使用できません。");
+            throw new InvalidDataException("ユーザーCSSでは javascript: URLを使用できません。");
     }
 
     private static void EnsureDirectory(string path)
@@ -158,6 +158,6 @@ public static partial class RhodesOutputProfileService
     [GeneratedRegex("^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")]
     private static partial Regex CssHexColorRegex();
 
-    [GeneratedRegex("@import|javascript\\s*:|url\\s*\\(\\s*['\"]?https?://", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("javascript\\s*:", RegexOptions.IgnoreCase)]
     private static partial Regex ForbiddenCssRegex();
 }

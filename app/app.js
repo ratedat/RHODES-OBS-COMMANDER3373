@@ -615,17 +615,41 @@ function overlayRgbChannels(color, fallback = "8 11 12") {
 function applyOverlayAppearance(preferences) {
   const appearance = resolveOverlayAppearance(preferences, overlayPart);
   const root = document.documentElement;
-  root.style.setProperty("--overlay-font-color", appearance.fontColor);
-  root.style.setProperty("--overlay-background-rgb", overlayRgbChannels(appearance.backgroundColor));
-  root.style.setProperty("--overlay-border-color", appearance.borderColor);
-  root.style.setProperty("--overlay-accent-color", appearance.accentColor);
-  root.style.setProperty("--overlay-font-scale", String(appearance.fontSizePercent / 100));
-  root.style.setProperty("--text", appearance.fontColor);
-  root.style.setProperty("--accent", appearance.accentColor);
-  root.style.setProperty("--accent-2", appearance.accentColor);
-  root.style.setProperty("--line", appearance.borderColor);
-
   let customStyle = document.querySelector("#suki-user-output-css");
+  let appearanceStyle = document.querySelector("#suki-output-appearance-css");
+  if (!appearanceStyle) {
+    appearanceStyle = document.createElement("style");
+    appearanceStyle.id = "suki-output-appearance-css";
+  }
+  if (customStyle) customStyle.before(appearanceStyle);
+  else if (!appearanceStyle.isConnected) document.head.append(appearanceStyle);
+
+  appearanceStyle.textContent = `:root {
+    --overlay-font-color: ${appearance.fontColor};
+    --overlay-background-rgb: ${overlayRgbChannels(appearance.backgroundColor)};
+    --overlay-background-alpha: ${resolveOverlayBackgroundAlpha(preferences, overlayPart)};
+    --overlay-border-color: ${appearance.borderColor};
+    --overlay-accent-color: ${appearance.accentColor};
+    --overlay-font-scale: ${appearance.fontSizePercent / 100};
+    --text: ${appearance.fontColor};
+    --accent: ${appearance.accentColor};
+    --accent-2: ${appearance.accentColor};
+    --line: ${appearance.borderColor};
+  }`;
+
+  [
+    "--overlay-font-color",
+    "--overlay-background-rgb",
+    "--overlay-background-alpha",
+    "--overlay-border-color",
+    "--overlay-accent-color",
+    "--overlay-font-scale",
+    "--text",
+    "--accent",
+    "--accent-2",
+    "--line",
+  ].forEach((property) => root.style.removeProperty(property));
+
   if (!customStyle) {
     customStyle = document.createElement("style");
     customStyle.id = "suki-user-output-css";
@@ -1061,10 +1085,6 @@ function renderOverlay() {
   disposeOverlayLayoutEditor = null;
   app.dataset.loading = "false";
   applyOverlayAppearance(state.preferences);
-  document.documentElement.style.setProperty(
-    "--overlay-background-alpha",
-    String(resolveOverlayBackgroundAlpha(state.preferences, overlayPart)),
-  );
   document.documentElement.classList.toggle(
     "overlay-background-disabled",
     !resolveOverlayBackgroundEnabled(state.preferences, overlayPart),
@@ -1122,6 +1142,27 @@ function renderOverlay() {
         },
         onLayoutCommit: (layout) => {
           state.preferences.sukiOverlayLayout = layout;
+          scheduleSave();
+        },
+        getCss: (scope) => {
+          const key = scope === "individual"
+            ? "sukiOutputIndividualAppearance"
+            : "sukiOutputIntegratedAppearance";
+          return state.preferences[key]?.customCss || "";
+        },
+        onCssInput: (scope, customCss) => {
+          const key = scope === "individual"
+            ? "sukiOutputIndividualAppearance"
+            : "sukiOutputIntegratedAppearance";
+          state.preferences[key].customCss = customCss;
+          if (scope === "integrated") applyOverlayAppearance(state.preferences);
+        },
+        onCssCommit: (scope, customCss) => {
+          const key = scope === "individual"
+            ? "sukiOutputIndividualAppearance"
+            : "sukiOutputIntegratedAppearance";
+          state.preferences[key].customCss = customCss;
+          if (scope === "integrated") applyOverlayAppearance(state.preferences);
           scheduleSave();
         },
         onInteractionChange: (active) => {
