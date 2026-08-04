@@ -606,12 +606,63 @@ static void CandidateMergerPrefersResolvedAmiyaForm()
                 0.99,
                 OperatorId: "amiya2",
                 RecognitionKey: "maa-local:operator-role:amiya2"),
+            new MaaCandidatePreview(
+                "operator",
+                "アーミヤ(前衛)",
+                "amiya2",
+                "elite-two-marker",
+                0.98,
+                OperatorId: "amiya2",
+                RecognitionKey: "maa-local:operator:promotion:amiya2:1",
+                PromotionLevel: 2),
         ]);
 
     Equal(
         "amiya2",
         string.Join("|", merged.Where(item => item.Kind == "operator").Select(item => item.OperatorId)),
         "profession-resolved Amiya replaces ambiguous API forms");
+    Equal(2, merged.Single().PromotionLevel, "promotion evidence for the resolved Amiya form is retained");
+
+    var mergedMedic = RhodesMaaCandidateMerger.Merge(
+        [
+            new MaaCandidatePreview("operator", "アーミヤ", "amiya", "アーミヤ", 0.92, OperatorId: "amiya"),
+            new MaaCandidatePreview("operator", "アーミヤ(前衛)", "amiya2", "アーミヤ", 0.92, OperatorId: "amiya2"),
+            new MaaCandidatePreview("operator", "アーミヤ(医療)", "amiya3", "アーミヤ", 0.92, OperatorId: "amiya3"),
+        ],
+        [
+            new MaaCandidatePreview(
+                "operator",
+                "アーミヤ(医療)",
+                "amiya3",
+                "アーミヤ",
+                0.99,
+                OperatorId: "amiya3",
+                RecognitionKey: "maa-local:operator-role:amiya3"),
+            new MaaCandidatePreview(
+                "operator",
+                "アーミヤ(医療)",
+                "amiya3",
+                "elite-two-marker",
+                0.98,
+                OperatorId: "amiya3",
+                RecognitionKey: "maa-local:operator:promotion:amiya3:1",
+                PromotionLevel: 2),
+            new MaaCandidatePreview(
+                "operator",
+                "アーミヤ(前衛)",
+                "amiya2",
+                "elite-two-marker",
+                0.98,
+                OperatorId: "amiya2",
+                RecognitionKey: "maa-local:operator:promotion:amiya2:1",
+                PromotionLevel: 2),
+        ]);
+
+    Equal(
+        "amiya3",
+        string.Join("|", mergedMedic.Where(item => item.Kind == "operator").Select(item => item.OperatorId)),
+        "medic Amiya from the bug report replaces ambiguous and guard forms");
+    Equal(2, mergedMedic.Single().PromotionLevel, "medic Amiya keeps its elite-two evidence");
 }
 
 static void CandidateMergerPrefersLocalThoughtCounts()
@@ -1613,6 +1664,23 @@ static void LocalCandidateConverterRelics()
         "支援補給所|奥義の手|折戟・鋒刃|赤い蝶リボン|「門」と「救難」|破壊協議・制圧|理想の時代への未練",
         string.Join("|", publicDebugReport.Select(item => item.Label)),
         "public debug relic report converts recognized names");
+
+    var descriptionQuotedRelic = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "長居の手\n「錆刃・長居」を所", 0.996918)]);
+    Equal(
+        "長居の手",
+        string.Join("|", descriptionQuotedRelic.Select(item => item.Label)),
+        "relic names quoted inside descriptions are ignored");
+
+    var predationDescriptionRelic = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "relicsFull",
+        [M("RhodesOcrRegion_relic_list_text", "捕食の手\n[鈍爪：捕食」を所持している場", 0.996918)],
+        "is5_sarkaz");
+    Equal(
+        "捕食の手",
+        string.Join("|", predationDescriptionRelic.Select(item => item.Label)),
+        "predation relic quoted inside its description is ignored");
 
     var usedRunSavingRelic = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",

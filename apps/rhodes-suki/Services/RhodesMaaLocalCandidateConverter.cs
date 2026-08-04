@@ -835,6 +835,9 @@ public static class RhodesMaaLocalCandidateConverter
             {
                 foreach (var token in ChoiceNameTokens(textResult.Text))
                 {
+                    if (!LooksLikeStandaloneRelicNameToken(token.Raw))
+                        continue;
+
                     var relic = ResolveRelic(NormalizeRelicName(token.Raw), byNormalizedName);
                     if (relic is null)
                         continue;
@@ -880,6 +883,20 @@ public static class RhodesMaaLocalCandidateConverter
                 RecognitionKey: $"maa-local:relic:{item.Relic.Id}",
                 StateId: item.StateId);
         }
+    }
+
+    private static bool LooksLikeStandaloneRelicNameToken(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length == 0)
+            return false;
+
+        var closingIndex = trimmed.LastIndexOfAny(new[] { '」', '』', '】', ']', '）', ')' });
+        if (closingIndex < 0)
+            return true;
+
+        return trimmed[(closingIndex + 1)..]
+            .All(character => char.IsWhiteSpace(character) || char.IsPunctuation(character) || char.IsSymbol(character));
     }
 
     private static string RelicUsageState(

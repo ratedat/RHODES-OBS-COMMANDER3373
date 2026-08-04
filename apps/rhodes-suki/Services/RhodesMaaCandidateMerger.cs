@@ -23,8 +23,8 @@ public static class RhodesMaaCandidateMerger
                 .Where(candidate =>
                     !IsKind(candidate, "operator")
                     || !RhodesMaaAmiyaRoleResolver.IsAmiyaOperatorId(CandidateId(candidate.OperatorId, candidate.Value))
-                    || RhodesMaaAmiyaRoleResolver.IsRoleResolvedCandidate(candidate)
-                        && CandidateId(candidate.OperatorId, candidate.Value).Equals(resolvedAmiya.OperatorId, StringComparison.Ordinal))
+                    || CandidateId(candidate.OperatorId, candidate.Value)
+                        .Equals(resolvedAmiya.OperatorId, StringComparison.Ordinal))
                 .ToArray();
         }
         var localRelics = supplemental
