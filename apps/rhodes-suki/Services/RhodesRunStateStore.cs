@@ -24,25 +24,49 @@ public static class RhodesRunStateStore
         return RhodesRunCatalog.ResolveStatePath(dataRoot);
     }
 
-    public static async Task SaveChoicesAsync(
+    public static Task SaveChoicesAsync(
         IEnumerable<SukiChoiceItem> operators,
         IEnumerable<SukiChoiceItem> relics,
         SukiChoicePersistenceOptions options,
         string? statePath = null,
         DateTimeOffset? now = null)
     {
+        return SaveChoicesAsync(CreateChoiceSnapshot(operators, relics, options), statePath, now);
+    }
+
+    public static async Task SaveChoicesAsync(
+        SukiChoicePersistenceSnapshot snapshot,
+        string? statePath = null,
+        DateTimeOffset? now = null)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
         var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
-        await WriteLock.WaitAsync();
+        await WriteLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            var state = await LoadStateNodeAsync(path);
-            ApplyChoices(state, operators, relics, options, now ?? DateTimeOffset.UtcNow);
-            await WriteJsonAtomicAsync(path, state);
+            var state = await LoadStateNodeAsync(path).ConfigureAwait(false);
+            ApplyChoices(state, snapshot, now ?? DateTimeOffset.UtcNow);
+            await WriteJsonAtomicAsync(path, state).ConfigureAwait(false);
         }
         finally
         {
             WriteLock.Release();
         }
+    }
+
+    public static SukiChoicePersistenceSnapshot CreateChoiceSnapshot(
+        IEnumerable<SukiChoiceItem> operators,
+        IEnumerable<SukiChoiceItem> relics,
+        SukiChoicePersistenceOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(operators);
+        ArgumentNullException.ThrowIfNull(relics);
+        ArgumentNullException.ThrowIfNull(options);
+
+        return new SukiChoicePersistenceSnapshot(
+            operators.Select(CreateChoiceSnapshotItem).ToArray(),
+            relics.Select(CreateChoiceSnapshotItem).ToArray(),
+            options);
     }
 
     public static async Task SaveRunContextAsync(
@@ -216,11 +240,20 @@ public static class RhodesRunStateStore
         SukiChoicePersistenceOptions options,
         DateTimeOffset now)
     {
+        return ApplyChoices(state, CreateChoiceSnapshot(operators, relics, options), now);
+    }
+
+    public static JsonObject ApplyChoices(
+        JsonObject state,
+        SukiChoicePersistenceSnapshot snapshot,
+        DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
         state["version"] ??= 1;
         PruneAbandonedRunValues(state);
         NormalizeOcrEnginePreference(state);
-        var operatorItems = operators as IReadOnlyList<SukiChoiceItem> ?? operators.ToArray();
-        var relicItems = relics as IReadOnlyList<SukiChoiceItem> ?? relics.ToArray();
+        var operatorItems = snapshot.Operators;
+        var relicItems = snapshot.Relics;
         state["operators"] = ToJsonArray(operatorItems.Where(item => item.IsSelected).Select(item => item.Id));
         var operatorCounts = new JsonObject();
         foreach (var item in operatorItems.Where(item => item.IsSelected && item.SupportsMultipleCount && item.SelectionCount > 1))
@@ -239,14 +272,14 @@ public static class RhodesRunStateStore
         var preferences = EnsureObject(state, "preferences");
         preferences["operatorExcludedIds"] = ToJsonArray(operatorItems.Where(item => item.IsExcluded).Select(item => item.Id));
         preferences["relicExcludedIds"] = ToJsonArray(relicItems.Where(item => item.IsExcluded).Select(item => item.Id));
-        preferences["operatorShowSelectedFirst"] = options.OperatorShowSelectedFirst;
-        preferences["operatorHideExcluded"] = options.OperatorHideExcluded;
-        preferences["operatorSelectedOnly"] = options.OperatorSelectedOnly;
-        preferences["relicShowSelectedFirst"] = options.RelicShowSelectedFirst;
-        preferences["relicHideExcluded"] = options.RelicHideExcluded;
-        preferences["relicSelectedOnly"] = options.RelicSelectedOnly;
-        preferences["operatorGridColumns"] = Math.Clamp(options.OperatorGridColumns, 1, 4);
-        preferences["relicGridColumns"] = Math.Clamp(options.RelicGridColumns, 1, 4);
+        preferences["operatorShowSelectedFirst"] = snapshot.Options.OperatorShowSelectedFirst;
+        preferences["operatorHideExcluded"] = snapshot.Options.OperatorHideExcluded;
+        preferences["operatorSelectedOnly"] = snapshot.Options.OperatorSelectedOnly;
+        preferences["relicShowSelectedFirst"] = snapshot.Options.RelicShowSelectedFirst;
+        preferences["relicHideExcluded"] = snapshot.Options.RelicHideExcluded;
+        preferences["relicSelectedOnly"] = snapshot.Options.RelicSelectedOnly;
+        preferences["operatorGridColumns"] = Math.Clamp(snapshot.Options.OperatorGridColumns, 1, 4);
+        preferences["relicGridColumns"] = Math.Clamp(snapshot.Options.RelicGridColumns, 1, 4);
 
         return state;
     }
@@ -352,7 +385,7 @@ public static class RhodesRunStateStore
             return new JsonObject { ["version"] = 1 };
 
         await using var stream = File.OpenRead(path);
-        var node = await JsonNode.ParseAsync(stream);
+        var node = await JsonNode.ParseAsync(stream).ConfigureAwait(false);
         return node as JsonObject ?? new JsonObject { ["version"] = 1 };
     }
 
@@ -363,8 +396,22 @@ public static class RhodesRunStateStore
             Directory.CreateDirectory(directory);
 
         var tempPath = $"{path}.{Environment.ProcessId}.tmp";
-        await File.WriteAllTextAsync(tempPath, $"{state.ToJsonString(WriteOptions)}{Environment.NewLine}");
+        await File.WriteAllTextAsync(tempPath, $"{state.ToJsonString(WriteOptions)}{Environment.NewLine}").ConfigureAwait(false);
         File.Move(tempPath, path, true);
+    }
+
+    private static SukiChoicePersistenceItem CreateChoiceSnapshotItem(SukiChoiceItem item)
+    {
+        return new SukiChoicePersistenceItem(
+            item.Id,
+            item.IsSelected,
+            item.IsExcluded,
+            item.SupportsMultipleCount,
+            item.SelectionCount,
+            item.SupportsEliteTwo,
+            item.IsEliteTwo,
+            item.SupportsUsedFlag,
+            item.IsUsed);
     }
 
     private static JsonObject EnsureObject(JsonObject parent, string propertyName)
@@ -434,3 +481,19 @@ public sealed record SukiChoicePersistenceOptions(
     bool RelicSelectedOnly,
     int OperatorGridColumns,
     int RelicGridColumns);
+
+public sealed record SukiChoicePersistenceItem(
+    string Id,
+    bool IsSelected,
+    bool IsExcluded,
+    bool SupportsMultipleCount,
+    int SelectionCount,
+    bool SupportsEliteTwo,
+    bool IsEliteTwo,
+    bool SupportsUsedFlag,
+    bool IsUsed);
+
+public sealed record SukiChoicePersistenceSnapshot(
+    IReadOnlyList<SukiChoicePersistenceItem> Operators,
+    IReadOnlyList<SukiChoicePersistenceItem> Relics,
+    SukiChoicePersistenceOptions Options);

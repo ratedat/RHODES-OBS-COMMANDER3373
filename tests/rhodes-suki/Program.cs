@@ -51,6 +51,7 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter disambiguates Amiya forms by profession", LocalCandidateConverterDisambiguatesAmiyaForms),
     ("Local MAA candidate converter extracts current campaign relic candidates", LocalCandidateConverterRelics),
     ("Local MAA relic matching keeps modified Phantom variants distinct", LocalCandidateConverterPrefersModifiedPhantomRelic),
+    ("Local MAA relic matching rejects ambiguous near-name OCR drift", LocalCandidateConverterRejectsAmbiguousRelicNameDrift),
     ("Local MAA candidate converter preserves duplicate IS5 thought candidates", LocalCandidateConverterThoughts),
     ("Local MAA candidate converter extracts IS5 age candidates", LocalCandidateConverterAge),
     ("Local MAA candidate converter combines multiple IS2 hallucinations", LocalCandidateConverterPhantomHallucinations),
@@ -211,6 +212,8 @@ var tests = new (string Name, Action Run)[]
     ("Run-saving relics stay first and persist their used flag", RelicUsagePriorityAndPersistence),
     ("Operator taxonomy keeps Integrated Strategies class and branch order", OperatorTaxonomyOrder),
     ("Run state store persists selected choices and display preferences", ChoicePersistence),
+    ("Choice persistence snapshots detach UI state before async writes", ChoicePersistenceSnapshotDetachesUiState),
+    ("Latest async operation queue coalesces rapid choice updates", LatestAsyncOperationQueueCoalescesRapidUpdates),
     ("Operator promotion rules hide the toggle for three-star operators", OperatorPromotionRules),
     ("Run state store persists and restores operator promotions", OperatorPromotionPersistence),
     ("Reserve operators alone persist multiple recruited counts", ReserveOperatorCounts),
@@ -254,6 +257,14 @@ var tests = new (string Name, Action Run)[]
     ("Recognition candidate applier replaces manual Sui coins with statuses", CandidateManualSuiValuesApply),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
+
+var testFilter = Environment.GetEnvironmentVariable("RHODES_SUKI_TEST_FILTER");
+if (!string.IsNullOrWhiteSpace(testFilter))
+{
+    tests = tests
+        .Where(test => test.Name.Contains(testFilter, StringComparison.OrdinalIgnoreCase))
+        .ToArray();
+}
 
 var failures = new List<string>();
 foreach (var test in tests)
@@ -1773,6 +1784,92 @@ static void LocalCandidateConverterPrefersModifiedPhantomRelic()
     var resolved = resolve.Invoke(null, [normalizedOcr, byNormalizedName]) as SukiChoiceItem;
 
     Equal("is2_phantom_relic_182", resolved?.Id, "modified suffix removes base relic ambiguity");
+}
+
+static void LocalCandidateConverterRejectsAmbiguousRelicNameDrift()
+{
+    var catalog = RhodesRunCatalog.LoadDefault();
+    var converterType = typeof(RhodesMaaLocalCandidateConverter);
+    var normalize = converterType.GetMethod("NormalizeRelicName", BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("NormalizeRelicName was not found.");
+    var resolve = converterType.GetMethod("ResolveRelic", BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("ResolveRelic was not found.");
+
+    foreach (var campaign in catalog.Campaigns)
+    {
+        var normalizedNames = catalog.Relics
+            .Where(item => string.Equals(item.CampaignId, campaign.Id, StringComparison.Ordinal))
+            .Select(item => (string)(normalize.Invoke(null, [item.Name]) ?? ""))
+            .Where(item => item.Length > 0)
+            .ToArray();
+        Equal(
+            normalizedNames.Length,
+            normalizedNames.Distinct(StringComparer.Ordinal).Count(),
+            $"normalized relic names stay unique within {campaign.Id}");
+    }
+
+    SukiChoiceItem? Resolve(string campaignId, string ocr)
+    {
+        var byNormalizedName = catalog.Relics
+            .Where(item => string.Equals(item.CampaignId, campaignId, StringComparison.Ordinal))
+            .ToDictionary(
+                item => (string)(normalize.Invoke(null, [item.Name]) ?? ""),
+                item => item,
+                StringComparer.Ordinal);
+        var normalizedOcr = (string)(normalize.Invoke(null, [ocr]) ?? "");
+        return resolve.Invoke(null, [normalizedOcr, byNormalizedName]) as SukiChoiceItem;
+    }
+
+    Equal(
+        "is2_phantom_relic_193",
+        Resolve("is2_phantom", "フレリーベめ右目")?.Id,
+        "shared-stem OCR drift remains safe when the right-eye discriminator survives");
+    Equal(
+        "is2_phantom_relic_194",
+        Resolve("is2_phantom", "フレリーベの左目")?.Id,
+        "exact left-eye relic remains selectable");
+    Equal(
+        "is3_mizuki_relic_221",
+        Resolve("is3_mizuki", "紺碧め心")?.Id,
+        "shared-stem OCR drift remains safe when the heart discriminator survives");
+    Equal(
+        null,
+        Resolve("is3_mizuki", "紺碧の木")?.Id,
+        "equally near heart and tree OCR does not guess between relics");
+    Equal(
+        "is5_sarkaz_relic_215",
+        Resolve("is5_sarkaz", "魔王め御旗")?.Id,
+        "shared-stem OCR drift remains safe when the banner discriminator survives");
+    Equal(
+        null,
+        Resolve("is5_sarkaz", "魔王の御旅")?.Id,
+        "OCR drift inside the banner discriminator does not guess among demon king relics");
+    Equal(
+        null,
+        Resolve("is5_sarkaz", "終結の肉休")?.Id,
+        "OCR drift inside a near-name discriminator is rejected instead of guessing");
+    Equal(
+        "is5_sarkaz_relic_257",
+        Resolve("is5_sarkaz", "終結の実相")?.Id,
+        "exact shared-stem relic names remain selectable");
+    Equal(
+        "is5_sarkaz_relic_065",
+        Resolve("is5_sarkaz", "破壊協議命消除")?.Id,
+        "known OCR insertion remains correct when the removal suffix survives");
+    Equal(
+        "is5_sarkaz_relic_066",
+        Resolve("is5_sarkaz", "破壊協議命制圧")?.Id,
+        "known OCR insertion remains correct when the distinguishing suffix survives");
+    Equal(
+        "is5_sarkaz_relic_181",
+        Resolve("is5_sarkaz", "捕食の手")?.Id,
+        "predation hand remains distinct from similarly themed relic text");
+    Equal(
+        "is5_sarkaz_relic_175",
+        Resolve("is5_sarkaz", "鈍爪捕食")?.Id,
+        "predation claw remains distinct from predation hand");
+    Equal("is6_sui_relic_221", Resolve("is6_sui", "不赦")?.Id, "short exact relic names remain selectable");
+    Equal(null, Resolve("is6_sui", "不設")?.Id, "short near-name OCR remains exact-only");
 }
 
 static void LocalCandidateConverterThoughts()
@@ -10034,6 +10131,97 @@ static void ChoicePersistence()
     Equal("maa-ocr", preferences["ocrEngine"]!.GetValue<string>(), "legacy ocr preference normalized");
     Equal("2026-07-01T00:00:00.0000000Z", updated["updatedAt"]!.GetValue<string>(), "updatedAt");
     Equal(false, updated["run"]!.AsObject().ContainsKey("hope"), "abandoned run value pruned");
+}
+
+static void ChoicePersistenceSnapshotDetachesUiState()
+{
+    var root = Path.Combine(Path.GetTempPath(), $"rhodes-suki-choice-snapshot-{Guid.NewGuid():N}");
+    var path = Path.Combine(root, "state.json");
+    try
+    {
+        var operators = new[]
+        {
+            new SukiChoiceItem("operator", "gummy", "グム", "★4 重装 / 庇護衛士", "重装", "庇護衛士", "", "", 4, 1, false)
+            {
+                IsSelected = true,
+            },
+        };
+        var relics = new[]
+        {
+            new SukiChoiceItem("relic", "is5_sarkaz_relic_001", "秘宝A", "No.001", "", "", "is5_sarkaz", "食品", 0, 1, false)
+            {
+                IsSelected = true,
+            },
+        };
+        var snapshot = RhodesRunStateStore.CreateChoiceSnapshot(
+            operators,
+            relics,
+            new SukiChoicePersistenceOptions(false, false, false, false, false, false, 4, 4));
+
+        operators[0].IsSelected = false;
+        relics[0].IsSelected = false;
+
+        RhodesRunStateStore.SaveChoicesAsync(
+                snapshot,
+                path,
+                DateTimeOffset.Parse("2026-08-05T00:00:00Z"))
+            .GetAwaiter()
+            .GetResult();
+
+        var state = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        Equal("gummy", state["operators"]!.AsArray()[0]!.GetValue<string>(), "operator snapshot is detached");
+        Equal("is5_sarkaz_relic_001", state["relics"]!.AsArray()[0]!.GetValue<string>(), "relic snapshot is detached");
+    }
+    finally
+    {
+        if (Directory.Exists(root))
+            Directory.Delete(root, true);
+    }
+}
+
+static void LatestAsyncOperationQueueCoalescesRapidUpdates()
+{
+    var runs = 0;
+    using (var queue = new LatestAsyncOperationQueue(
+               () =>
+               {
+                   Interlocked.Increment(ref runs);
+                   return Task.CompletedTask;
+               },
+               TimeSpan.FromMilliseconds(40)))
+    {
+        for (var index = 0; index < 20; index++)
+            queue.Request();
+
+        Equal(true, queue.FlushAsync().GetAwaiter().GetResult(), "rapid update flush succeeds");
+        Equal(1, runs, "rapid updates collapse into one operation");
+    }
+
+    var followUpRuns = 0;
+    var firstStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var releaseFirst = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+    using (var queue = new LatestAsyncOperationQueue(
+               async () =>
+               {
+                   var run = Interlocked.Increment(ref followUpRuns);
+                   if (run == 1)
+                   {
+                       firstStarted.TrySetResult(true);
+                       await releaseFirst.Task;
+                   }
+               },
+               TimeSpan.Zero))
+    {
+        queue.Request();
+        Equal(true, firstStarted.Task.Wait(TimeSpan.FromSeconds(2)), "first operation starts");
+        queue.Request();
+        queue.Request();
+        var flush = queue.FlushAsync();
+        releaseFirst.TrySetResult(true);
+
+        Equal(true, flush.GetAwaiter().GetResult(), "follow-up flush succeeds");
+        Equal(2, followUpRuns, "updates during a write collapse into one follow-up operation");
+    }
 }
 
 static void OperatorPromotionRules()

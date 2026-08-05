@@ -1023,21 +1023,18 @@ public static class RhodesMaaLocalCandidateConverter
             .Where(item => item.Key.Length >= 4)
             .Select(item => new
             {
+                item.Key,
                 item.Value,
                 CandidateLength = item.Key.Length,
                 Distance = EditDistance(normalized, item.Key),
             })
             .Select(item => new
             {
+                item.Key,
                 item.Value,
                 item.CandidateLength,
                 item.Distance,
-                MaximumDistance = Math.Min(normalized.Length, item.CandidateLength) switch
-                {
-                    <= 4 => 1,
-                    <= 9 => 2,
-                    _ => 3,
-                },
+                MaximumDistance = MaximumRelicEditDistance(normalized.Length, item.CandidateLength),
             })
             .Where(item => Math.Abs(item.CandidateLength - normalized.Length) <= item.MaximumDistance
                 && item.Distance <= item.MaximumDistance)
@@ -1045,15 +1042,79 @@ public static class RhodesMaaLocalCandidateConverter
             .ThenBy(item => Math.Abs(item.CandidateLength - normalized.Length))
             .Take(2)
             .ToArray();
-        if (fuzzy.Length == 1 || (fuzzy.Length > 1 && fuzzy[0].Distance < fuzzy[1].Distance))
+        if ((fuzzy.Length == 1 || (fuzzy.Length > 1 && fuzzy[0].Distance < fuzzy[1].Distance))
+            && PreservesRelicDiscriminators(normalized, fuzzy[0].Key, candidates))
+        {
             return fuzzy[0].Value;
+        }
 
         var prefix = candidates
             .Where(item => normalized.StartsWith(item.Key, StringComparison.Ordinal)
                 && normalized.Length - item.Key.Length <= 2)
             .Take(2)
             .ToArray();
-        return prefix.Length == 1 ? prefix[0].Value : null;
+        return prefix.Length == 1
+            && PreservesRelicDiscriminators(normalized, prefix[0].Key, candidates)
+                ? prefix[0].Value
+                : null;
+    }
+
+    private static int MaximumRelicEditDistance(int leftLength, int rightLength)
+    {
+        return Math.Min(leftLength, rightLength) switch
+        {
+            <= 4 => 1,
+            <= 9 => 2,
+            _ => 3,
+        };
+    }
+
+    private static bool PreservesRelicDiscriminators(
+        string normalized,
+        string candidate,
+        IReadOnlyCollection<KeyValuePair<string, SukiChoiceItem>> catalog)
+    {
+        foreach (var neighbor in catalog)
+        {
+            if (neighbor.Key.Equals(candidate, StringComparison.Ordinal))
+                continue;
+
+            var maximumDistance = MaximumRelicEditDistance(candidate.Length, neighbor.Key.Length);
+            if (Math.Abs(candidate.Length - neighbor.Key.Length) > maximumDistance
+                || EditDistance(candidate, neighbor.Key) > maximumDistance)
+            {
+                continue;
+            }
+
+            var discriminator = RelicDiscriminator(candidate, neighbor.Key);
+            if (discriminator.Length == 0
+                || !normalized.Contains(discriminator, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string RelicDiscriminator(string candidate, string neighbor)
+    {
+        var sharedLength = Math.Min(candidate.Length, neighbor.Length);
+        var prefixLength = 0;
+        while (prefixLength < sharedLength
+            && candidate[prefixLength] == neighbor[prefixLength])
+        {
+            prefixLength++;
+        }
+
+        var suffixLength = 0;
+        while (suffixLength < sharedLength - prefixLength
+            && candidate[candidate.Length - suffixLength - 1] == neighbor[neighbor.Length - suffixLength - 1])
+        {
+            suffixLength++;
+        }
+
+        return candidate[prefixLength..(candidate.Length - suffixLength)];
     }
 
     private static IEnumerable<MaaCandidatePreview> AgeCandidates(IEnumerable<MaaTaskRunResult> taskResults)

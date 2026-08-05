@@ -22,6 +22,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private readonly IReadOnlyList<SukiChoiceItem> _allOperators = [];
     private readonly IReadOnlyList<SukiChoiceItem> _allRelics = [];
+    private readonly LatestAsyncOperationQueue _choicePersistence;
     private readonly IntegrationStatus _maaFrameworkStatus;
     private SukiRunStateSnapshot _runState;
     private byte[] _lastCapture = [];
@@ -183,6 +184,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isBusy;
     private string _adbDetectionSummary = "未検出";
     private string _adbDetectionDetail = "自動検出を実行するとADB候補と接続端末を表示します。";
+    private static readonly object StateSaveLogLock = new();
 
     public MainWindowViewModel(
         IntegrationStatus maaStatus,
@@ -274,6 +276,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         foreach (var item in _allOperators)
             item.PropertyChanged += OnOperatorChoicePropertyChanged;
         _allRelics = runCatalog.Relics;
+        _choicePersistence = new LatestAsyncOperationQueue(
+            SaveChoiceStateSnapshotAsync,
+            TimeSpan.FromMilliseconds(200),
+            OnChoicePersistenceError);
         FilteredOperators = [];
         FilteredRelics = [];
         FilteredOperatorRows = [];
@@ -2331,6 +2337,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         foreach (var item in _allOperators)
             item.PropertyChanged -= OnOperatorChoicePropertyChanged;
+        _choicePersistence.Dispose();
         _lastCaptureImage?.Dispose();
         _sidecarServer.Dispose();
         _session.Dispose();
@@ -3371,8 +3378,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             var adbConfigJson = SukiAdbConfigJson.Normalize(AdbConfigJson);
             AdbConfigJson = adbConfigJson;
+            var localSaveTimer = Stopwatch.StartNew();
             await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings(adbConfigJson));
+            localSaveTimer.Stop();
+            TryWriteStateSavePerformanceLog("settings-local", localSaveTimer.Elapsed);
+
+            var apiSyncTimer = Stopwatch.StartNew();
             var apiError = await SaveAdbSettingsToApiStateAsync();
+            apiSyncTimer.Stop();
+            TryWriteStateSavePerformanceLog(
+                "settings-api-sync",
+                apiSyncTimer.Elapsed,
+                string.IsNullOrWhiteSpace(apiError) ? "success" : apiError);
             StatusMessage = string.IsNullOrWhiteSpace(apiError)
                 ? $"Suki設定とADB API設定を保存しました: {RhodesSukiSettingsStore.DefaultPath}"
                 : $"Suki設定を保存しました。ADB API設定の反映は失敗: {apiError}";
@@ -8215,22 +8232,35 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void PersistChoiceStateInBackground()
     {
-        _ = PersistChoiceStateAsync();
+        _choicePersistence.Request();
     }
 
-    private async Task<bool> PersistChoiceStateAsync()
+    private Task<bool> PersistChoiceStateAsync()
     {
-        try
-        {
-            await RhodesRunStateStore.SaveChoicesAsync(_allOperators, _allRelics, BuildChoicePersistenceOptions());
-            return true;
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"状態保存に失敗しました: {ex.Message}";
-            TryWriteStateSaveErrorLog(ex);
-            return false;
-        }
+        return _choicePersistence.FlushAsync();
+    }
+
+    private async Task SaveChoiceStateSnapshotAsync()
+    {
+        var timer = Stopwatch.StartNew();
+        var snapshot = await Dispatcher.UIThread.InvokeAsync(() =>
+            RhodesRunStateStore.CreateChoiceSnapshot(
+                _allOperators,
+                _allRelics,
+                BuildChoicePersistenceOptions()));
+        await RhodesRunStateStore.SaveChoicesAsync(snapshot).ConfigureAwait(false);
+        timer.Stop();
+
+        TryWriteStateSavePerformanceLog(
+            "choice-state",
+            timer.Elapsed,
+            $"operators={snapshot.Operators.Count(item => item.IsSelected)};relics={snapshot.Relics.Count(item => item.IsSelected)}");
+    }
+
+    private void OnChoicePersistenceError(Exception ex)
+    {
+        TryWriteStateSaveErrorLog(ex);
+        Dispatcher.UIThread.Post(() => StatusMessage = $"状態保存に失敗しました: {ex.Message}");
     }
 
     /// <summary>保存失敗はStatusMessageだけだと原因調査ができないため、スタック付きでデバッグログへ残す。</summary>
@@ -8245,6 +8275,34 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch
         {
             // ログ書き込み自体の失敗で保存経路を壊さない。
+        }
+    }
+
+    private static void TryWriteStateSavePerformanceLog(
+        string operation,
+        TimeSpan elapsed,
+        string? detail = null)
+    {
+        if (elapsed < TimeSpan.FromMilliseconds(250))
+            return;
+
+        try
+        {
+            Directory.CreateDirectory(RhodesSukiDebugPaths.DebugLogDirectory);
+            var path = Path.Combine(RhodesSukiDebugPaths.DebugLogDirectory, "state-save-performance.jsonl");
+            var line = JsonSerializer.Serialize(new
+            {
+                at = DateTimeOffset.UtcNow,
+                operation,
+                durationMs = Math.Round(elapsed.TotalMilliseconds, 1),
+                detail,
+            });
+            lock (StateSaveLogLock)
+                File.AppendAllText(path, $"{line}{Environment.NewLine}");
+        }
+        catch
+        {
+            // 計測ログの失敗で保存経路を壊さない。
         }
     }
 
