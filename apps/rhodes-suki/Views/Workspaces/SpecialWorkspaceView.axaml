@@ -392,14 +392,23 @@
 
           <StackPanel Spacing="8">
             <TextBlock Text="銭匣" Classes="h3" />
-            <TextBlock Text="有効銭はマップ、保有銭は銭匣画面から取得します。" Classes="caption" />
+            <TextBlock Text="有効銭はマップ、保有銭は銭匣画面から取得します。"
+                       Classes="caption"
+                       IsVisible="{Binding IsSuiCoinRecognitionAvailable}" />
+            <TextBlock Text="公開デバッグ版では歳の銭OCRは停止中です。有効銭と保有銭は下の欄から手動入力してください。"
+                       Classes="caption"
+                       Foreground="#F4BE73"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding IsSuiCoinRecognitionRestricted}" />
             <WrapPanel Orientation="Horizontal">
             <Button Content="有効銭を取得（マップ）"
                     Margin="0,0,8,8"
+                    IsVisible="{Binding IsSuiCoinRecognitionAvailable}"
                     Command="{Binding RunProfileRecognitionAndApplyCommand}"
                     CommandParameter="is6ActiveCoinsFull" />
             <Button Content="保有銭を取得（銭匣画面）"
                     Margin="0,0,8,8"
+                    IsVisible="{Binding IsSuiCoinRecognitionAvailable}"
                     Command="{Binding RunProfileRecognitionAndApplyCommand}"
                     CommandParameter="is6CoinsFull" />
             <Button Classes="primary"

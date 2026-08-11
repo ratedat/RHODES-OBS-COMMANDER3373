@@ -42,13 +42,13 @@ internal sealed class RhodesOfflineMaaControllerApi : IMaaCustomController
 
     public bool TouchUp(int contact) => true;
 
-    public bool ClickKey(int keycode) => true;
+    public bool ClickKey(int keycode) => false;
 
     public bool InputText(string text) => true;
 
-    public bool KeyDown(int keycode) => true;
+    public bool KeyDown(int keycode) => false;
 
-    public bool KeyUp(int keycode) => true;
+    public bool KeyUp(int keycode) => false;
 
     public bool Scroll(int dx, int dy) => true;
 

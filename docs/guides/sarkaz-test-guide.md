@@ -1,6 +1,6 @@
-# RHODES OBS COMMANDER3373 サルカズMAAFramework取得テスト手順
+# RHODES OBS COMMANDER3373 サルカズ個別MAAFramework取得テスト手順
 
-この配布版は、統合戦略#5「サルカズの炉辺奇談」のMAAFramework/OCR取得を優先して確認するテスト版です。他の統合戦略の表示や手入力機能は残っていますが、今回のテスト対象はサルカズのみです。
+この文書は、統合戦略#5「サルカズの炉辺奇談」を重点確認するための個別手順です。公開デバッグ版自体はIS#2からIS#6の専用認識を利用できます。歳の銭OCR（有効銭・保有銭）だけは安定化まで停止しているため、「特殊値」の銭欄から手動入力してください。
 
 ## 必要なもの
 
@@ -20,7 +20,7 @@
 
 1. 上部メニューまたは画面内ボタンから `OBS設定` を開きます。
 2. ADB設定で `自動検出` を押します。
-3. MuMuが見つからない場合は、ADBパスにMuMuの `adb.exe` を指定します。MuMu 5/15系は例として `C:\Program Files\Netease\MuMuPlayer\nx_main\adb.exe`、旧MuMu 12系は `M:\Program Files\Netease\MuMu Player 12\shell\adb.exe` です。
+3. MuMuが見つからない場合は、ADBパスにMuMuの `adb.exe` を指定します。例として `C:\Program Files\Netease\MuMu Player 12\nx_main\adb.exe` または、バージョン別の `nx_device\12.0\shell\adb.exe` / `nx_device\15.0\shell\adb.exe` を指定します。
 4. `接続テスト` を押し、接続先デバイスが表示されることを確認します。
 5. `スクリーンショットテスト` を押し、現在のMuMu画面が取れることを確認します。
 
@@ -52,7 +52,8 @@
 
 ## 既知の注意
 
-- このテスト版はサルカズ優先です。他ISのMAAFramework取得精度は保証しません。
+- 他テーマの専用認識も利用できますが、公開デバッグ中のため取得精度は画面ごとに確認してください。
+- 歳の銭OCRは停止中です。有効銭と保有銭は手動入力してください。
 - 取得結果はOCRに依存するため、画面演出や重なりで誤認識する場合があります。
 - ADB操作はタップ/スワイプ位置を矩形内でランダム化しています。
 - Android Backキーは使わず、基本的にタップで開閉します。

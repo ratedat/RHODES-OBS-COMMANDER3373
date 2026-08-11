@@ -17,6 +17,7 @@ namespace RhodesSuki.ViewModels;
 public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly RhodesMaaSession _session;
+    private readonly RhodesManagedAdbInstaller _managedAdbInstaller;
     private readonly RhodesDistributionProfile _distributionProfile;
     private readonly SemaphoreSlim _bossSelectionSaveLock = new(1, 1);
     private IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
@@ -29,6 +30,39 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _adbPath = "adb";
     private string _adbSerial = "";
     private string _adbConfigJson = "{}";
+    private bool _adbAutoDetect = true;
+    private bool _adbAlwaysAutoDetect;
+    private string _emulatorRoot = "";
+    private string _emulatorExecutablePath = "";
+    private bool _muMuScreenshotEnhancementEnabled;
+    private bool _muMuTouchEnhancementEnabled;
+    private bool _muMuBridgeConnectionEnabled;
+    private int _muMuInstanceIndex;
+    private string _adbGamePackage = "com.YoStarJP.Arknights";
+    private int _adbGameCloneIndex;
+    private SukiAdbInputMethodOption? _selectedAdbInputFallbackMethod;
+    private SukiAdbScreencapMethodOption? _selectedAdbScreencapFallbackMethod;
+    private int _adbReconnectAttempts = 3;
+    private int _adbReconnectDelayMs = 1000;
+    private bool _restartAdbServerOnFailure;
+    private bool _hardRestartAdbProcessOnFailure;
+    private bool _restartEmulatorOnFailure;
+    private bool _killAdbOnExit;
+    private bool _useManagedAdb;
+    private bool _allowDestructiveAdbActionsThisSession;
+    private RhodesMuMuCapabilitySnapshot _muMuCapability = RhodesMuMuCapabilitySnapshot.NotDetected("MuMu能力は未確認です。");
+    private string _adbEnhancementStatus = "MuMu能力は未確認です。";
+    private string _adbRecoveryStatus = "段階回復は未実行です。";
+    private string _adbBenchmarkStatus = "スクリーンショットベンチマークは未実行です。";
+    private int _touchTestX;
+    private int _touchTestY;
+    private int _touchTestWidth;
+    private int _touchTestHeight;
+    private SukiTouchTestConfirmation? _pendingTouchTestConfirmation;
+    private bool _isTouchTestConfirmationVisible;
+    private string _touchTestStatus = "矩形を入力して準備してください。Android Back/keyeventは実行しません。";
+    private bool _isManagedAdbInstallConfirmationVisible;
+    private string _managedAdbStatus = "管理ADBは未確認です。エミュレーター同梱ADBは上書きしません。";
     private string _workspaceTab = "run";
     private string _choiceTab = "operators";
     private string _operatorSearch = "";
@@ -192,6 +226,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         MaaSessionSnapshot sessionSnapshot)
     {
         _session = session;
+        _managedAdbInstaller = new RhodesManagedAdbInstaller();
         _maaFrameworkStatus = maaStatus;
         _nodeRuntime = new RhodesNodeRuntimeManager();
         _sidecarServer = new RhodesSidecarServerLauncher(_nodeRuntime);
@@ -267,9 +302,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OcrEngineOptions = new ObservableCollection<SukiOcrEngineOption>(SukiOcrEngineCatalog.Options);
         AdbInputMethodOptions = new ObservableCollection<SukiAdbInputMethodOption>(SukiAdbMethodCatalog.InputOptions);
         AdbScreencapMethodOptions = new ObservableCollection<SukiAdbScreencapMethodOption>(SukiAdbMethodCatalog.ScreencapOptions);
+        AdbInputFallbackMethodOptions = new ObservableCollection<SukiAdbInputMethodOption>(
+            SukiAdbMethodCatalog.InputOptions.Where(option => option.Id != SukiAdbMethodCatalog.FastEmulatorMethodId));
+        AdbScreencapFallbackMethodOptions = new ObservableCollection<SukiAdbScreencapMethodOption>(
+            SukiAdbMethodCatalog.ScreencapOptions.Where(option => option.Id != SukiAdbMethodCatalog.FastEmulatorMethodId));
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "auto") ?? AdbPresets.FirstOrDefault();
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodId);
+        SelectedAdbInputFallbackMethod = SukiAdbMethodCatalog.FindInput("minitouch");
+        SelectedAdbScreencapFallbackMethod = SukiAdbMethodCatalog.FindScreencap("raw-gzip");
         Campaigns = new ObservableCollection<SukiCampaignPreview>(
             RhodesPublicDebugPolicy.FilterCampaigns(runCatalog.Campaigns, _distributionProfile));
         _allOperators = runCatalog.Operators;
@@ -333,6 +374,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshAdbDevicesCommand = new AsyncRelayCommand(RefreshAdbDevicesAsync);
         ApplyAdbDeviceCommand = new AsyncRelayCommand(parameter => ApplyAdbDeviceAsync(parameter as MaaAdbDevicePreview));
         RunAdbConnectionTestCommand = new AsyncRelayCommand(RunAdbConnectionTestAsync);
+        RefreshMuMuCapabilityCommand = new AsyncRelayCommand(() => RunBusyAsync(RefreshMuMuCapabilityAsync));
+        RunAdbScreenshotBenchmarkCommand = new AsyncRelayCommand(RunAdbScreenshotBenchmarkAsync);
+        PrepareAdbTouchTestCommand = new AsyncRelayCommand(PrepareAdbTouchTestAsync);
+        CancelAdbTouchTestCommand = new AsyncRelayCommand(CancelAdbTouchTestAsync);
+        ConfirmAdbTouchTestCommand = new AsyncRelayCommand(ConfirmAdbTouchTestAsync);
+        PrepareManagedAdbInstallCommand = new AsyncRelayCommand(PrepareManagedAdbInstallAsync);
+        CancelManagedAdbInstallCommand = new AsyncRelayCommand(CancelManagedAdbInstallAsync);
+        ConfirmManagedAdbInstallCommand = new AsyncRelayCommand(ConfirmManagedAdbInstallAsync);
         RefreshOptionalRuntimesCommand = new AsyncRelayCommand(RefreshOptionalRuntimesAsync);
         InstallGlmOcrCommand = new AsyncRelayCommand(() => RunOptionalRuntimeActionAsync("GLM-OCR導入", RhodesOptionalRuntimeProbe.InstallGlmAsync, status => _glmRuntimeStatus = status));
         UninstallGlmOcrCommand = new AsyncRelayCommand(() => RunOptionalRuntimeActionAsync("GLM-OCR削除", RhodesOptionalRuntimeProbe.UninstallGlmAsync, status => _glmRuntimeStatus = status));
@@ -537,6 +586,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiAdbScreencapMethodOption> AdbScreencapMethodOptions { get; }
 
+    public ObservableCollection<SukiAdbInputMethodOption> AdbInputFallbackMethodOptions { get; }
+
+    public ObservableCollection<SukiAdbScreencapMethodOption> AdbScreencapFallbackMethodOptions { get; }
+
     public ObservableCollection<SukiCampaignPreview> Campaigns { get; }
 
     public ObservableCollection<SukiChoiceItem> FilteredOperators { get; }
@@ -660,6 +713,219 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 OnPropertyChanged(nameof(AdbDiagnosticCopyText));
         }
     }
+
+    public bool AdbAutoDetect
+    {
+        get => _adbAutoDetect;
+        set => SetProperty(ref _adbAutoDetect, value);
+    }
+
+    public bool AdbAlwaysAutoDetect
+    {
+        get => _adbAlwaysAutoDetect;
+        set => SetProperty(ref _adbAlwaysAutoDetect, value);
+    }
+
+    public string EmulatorRoot
+    {
+        get => _emulatorRoot;
+        set => SetProperty(ref _emulatorRoot, value?.Trim() ?? "");
+    }
+
+    public string EmulatorExecutablePath
+    {
+        get => _emulatorExecutablePath;
+        set => SetProperty(ref _emulatorExecutablePath, value?.Trim() ?? "");
+    }
+
+    public bool MuMuScreenshotEnhancementEnabled
+    {
+        get => _muMuScreenshotEnhancementEnabled;
+        set => SetProperty(ref _muMuScreenshotEnhancementEnabled, value);
+    }
+
+    public bool MuMuTouchEnhancementEnabled
+    {
+        get => _muMuTouchEnhancementEnabled;
+        set => SetProperty(ref _muMuTouchEnhancementEnabled, value);
+    }
+
+    public bool MuMuBridgeConnectionEnabled
+    {
+        get => _muMuBridgeConnectionEnabled;
+        set => SetProperty(ref _muMuBridgeConnectionEnabled, value);
+    }
+
+    public int MuMuInstanceIndex
+    {
+        get => _muMuInstanceIndex;
+        set => SetProperty(ref _muMuInstanceIndex, Math.Clamp(value, 0, 127));
+    }
+
+    public string AdbGamePackage
+    {
+        get => _adbGamePackage;
+        set => SetProperty(ref _adbGamePackage, string.IsNullOrWhiteSpace(value) ? "com.YoStarJP.Arknights" : value.Trim());
+    }
+
+    public int AdbGameCloneIndex
+    {
+        get => _adbGameCloneIndex;
+        set => SetProperty(ref _adbGameCloneIndex, Math.Clamp(value, 0, 99));
+    }
+
+    public SukiAdbInputMethodOption? SelectedAdbInputFallbackMethod
+    {
+        get => _selectedAdbInputFallbackMethod;
+        set => SetProperty(ref _selectedAdbInputFallbackMethod, value);
+    }
+
+    public SukiAdbScreencapMethodOption? SelectedAdbScreencapFallbackMethod
+    {
+        get => _selectedAdbScreencapFallbackMethod;
+        set => SetProperty(ref _selectedAdbScreencapFallbackMethod, value);
+    }
+
+    public int AdbReconnectAttempts
+    {
+        get => _adbReconnectAttempts;
+        set => SetProperty(ref _adbReconnectAttempts, Math.Clamp(value, 1, 5));
+    }
+
+    public int AdbReconnectDelayMs
+    {
+        get => _adbReconnectDelayMs;
+        set => SetProperty(ref _adbReconnectDelayMs, Math.Clamp(value, 0, 10_000));
+    }
+
+    public bool RestartAdbServerOnFailure
+    {
+        get => _restartAdbServerOnFailure;
+        set => SetProperty(ref _restartAdbServerOnFailure, value);
+    }
+
+    public bool HardRestartAdbProcessOnFailure
+    {
+        get => _hardRestartAdbProcessOnFailure;
+        set => SetProperty(ref _hardRestartAdbProcessOnFailure, value);
+    }
+
+    public bool RestartEmulatorOnFailure
+    {
+        get => _restartEmulatorOnFailure;
+        set => SetProperty(ref _restartEmulatorOnFailure, value);
+    }
+
+    public bool KillAdbOnExit
+    {
+        get => _killAdbOnExit;
+        set => SetProperty(ref _killAdbOnExit, value);
+    }
+
+    public bool UseManagedAdb
+    {
+        get => _useManagedAdb;
+        set
+        {
+            if (!SetProperty(ref _useManagedAdb, value))
+                return;
+            if (value && File.Exists(_managedAdbInstaller.ManagedAdbExecutablePath))
+            {
+                AdbPath = _managedAdbInstaller.ManagedAdbExecutablePath;
+                ManagedAdbStatus = $"管理ADBを使用します: {AdbPath}";
+            }
+        }
+    }
+
+    public bool AllowDestructiveAdbActionsThisSession
+    {
+        get => _allowDestructiveAdbActionsThisSession;
+        set => SetProperty(ref _allowDestructiveAdbActionsThisSession, value);
+    }
+
+    public bool LightweightAdbSupported => false;
+
+    public string LightweightAdbDetail => "MaaFramework 5.12.3の公開APIに1対1の軽量ADB機能がないため、この検証ビルドでは有効化できません。";
+
+    public string MuMuCapabilitySummary =>
+        string.IsNullOrWhiteSpace(_muMuCapability.EmulatorRoot)
+            ? _adbEnhancementStatus
+            : $"MuMu {(string.IsNullOrWhiteSpace(_muMuCapability.ManagerVersion) ? "version未確認" : _muMuCapability.ManagerVersion)} · instance={_muMuCapability.InstanceIndex} · 撮影={(_muMuCapability.ScreenshotEnhancementAvailable ? "可" : "不可")} · タッチ={(_muMuCapability.TouchEnhancementAvailable ? "可" : "不可")}";
+
+    public string AdbEnhancementStatus
+    {
+        get => _adbEnhancementStatus;
+        private set
+        {
+            if (SetProperty(ref _adbEnhancementStatus, value))
+                OnPropertyChanged(nameof(MuMuCapabilitySummary));
+        }
+    }
+
+    public string AdbRecoveryStatus
+    {
+        get => _adbRecoveryStatus;
+        private set => SetProperty(ref _adbRecoveryStatus, value);
+    }
+
+    public string AdbBenchmarkStatus
+    {
+        get => _adbBenchmarkStatus;
+        private set => SetProperty(ref _adbBenchmarkStatus, value);
+    }
+
+    public int TouchTestX
+    {
+        get => _touchTestX;
+        set => SetProperty(ref _touchTestX, Math.Clamp(value, 0, 1279));
+    }
+
+    public int TouchTestY
+    {
+        get => _touchTestY;
+        set => SetProperty(ref _touchTestY, Math.Clamp(value, 0, 719));
+    }
+
+    public int TouchTestWidth
+    {
+        get => _touchTestWidth;
+        set => SetProperty(ref _touchTestWidth, Math.Clamp(value, 0, 1280));
+    }
+
+    public int TouchTestHeight
+    {
+        get => _touchTestHeight;
+        set => SetProperty(ref _touchTestHeight, Math.Clamp(value, 0, 720));
+    }
+
+    public bool IsTouchTestConfirmationVisible
+    {
+        get => _isTouchTestConfirmationVisible;
+        private set => SetProperty(ref _isTouchTestConfirmationVisible, value);
+    }
+
+    public string TouchTestStatus
+    {
+        get => _touchTestStatus;
+        private set => SetProperty(ref _touchTestStatus, value);
+    }
+
+    public string TouchTestConfirmationDetail => _pendingTouchTestConfirmation?.Detail ?? "";
+
+    public bool IsManagedAdbInstallConfirmationVisible
+    {
+        get => _isManagedAdbInstallConfirmationVisible;
+        private set => SetProperty(ref _isManagedAdbInstallConfirmationVisible, value);
+    }
+
+    public string ManagedAdbStatus
+    {
+        get => _managedAdbStatus;
+        private set => SetProperty(ref _managedAdbStatus, value);
+    }
+
+    public string ManagedAdbConfirmationDetail =>
+        $"Google公式 Platform Tools {RhodesManagedAdbInstaller.PlatformToolsVersion}をAndroid SDKライセンスの下でRHODES管理領域へダウンロードし、固定SHA-256検証後に使用します。MuMu同梱ADBは変更しません。";
 
     public string WorkspaceTab
     {
@@ -987,6 +1253,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SelectedCampaign?.Id ?? _runState.CampaignId,
         "is6_sui",
         StringComparison.Ordinal);
+
+    public bool IsSuiCoinRecognitionAvailable => !_distributionProfile.IsPublicDebug;
+
+    public bool IsSuiCoinRecognitionRestricted => _distributionProfile.IsPublicDebug;
 
     public string RunCommonRecognitionLabel => IsSarkazCampaignSelected
         ? "共通値・時代をADB取得・認識・反映"
@@ -2060,12 +2330,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _selectedAdbPreset, value))
                 return;
+            OnPropertyChanged(nameof(IsMuMuPresetSelected));
             OnPropertyChanged(nameof(AdbHeaderDetail));
             OnPropertyChanged(nameof(AdbDiagnosticCopyText));
             RefreshRuntimeCapabilities();
             RefreshInspectorRows();
         }
     }
+
+    public bool IsMuMuPresetSelected => SelectedAdbPreset?.Id.Equals("mumu", StringComparison.OrdinalIgnoreCase) == true;
 
     public MaaAdbPathCandidatePreview? SelectedAdbPathCandidate
     {
@@ -2156,6 +2429,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ApplyAdbDeviceCommand { get; }
 
     public ICommand RunAdbConnectionTestCommand { get; }
+
+    public ICommand RefreshMuMuCapabilityCommand { get; }
+
+    public ICommand RunAdbScreenshotBenchmarkCommand { get; }
+
+    public ICommand PrepareAdbTouchTestCommand { get; }
+
+    public ICommand CancelAdbTouchTestCommand { get; }
+
+    public ICommand ConfirmAdbTouchTestCommand { get; }
+
+    public ICommand PrepareManagedAdbInstallCommand { get; }
+
+    public ICommand CancelManagedAdbInstallCommand { get; }
+
+    public ICommand ConfirmManagedAdbInstallCommand { get; }
 
     public ICommand RefreshOptionalRuntimesCommand { get; }
 
@@ -2341,6 +2630,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _lastCaptureImage?.Dispose();
         _sidecarServer.Dispose();
         _session.Dispose();
+        if (KillAdbOnExit && AllowDestructiveAdbActionsThisSession)
+        {
+            try
+            {
+                _ = RhodesAdbProcessService.KillMatchingAsync(AdbPath).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // 終了処理を妨げない。対象パスと一致しないプロセスはサービス側で除外される。
+            }
+        }
     }
 
     /// <summary>
@@ -3351,6 +3651,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void LoadSettings()
     {
         var settings = RhodesSukiSettingsStore.Load();
+        var adbConnection = RhodesSukiSettingsStore.NormalizeAdbConnection(
+            settings.AdbConnection ?? new SukiAdbConnectionSettings());
         AdbPath = string.IsNullOrWhiteSpace(settings.AdbPath) ? "adb" : settings.AdbPath;
         AdbSerial = settings.AdbSerial;
         AdbConfigJson = string.IsNullOrWhiteSpace(settings.AdbConfigJson) ? "{}" : settings.AdbConfigJson;
@@ -3363,6 +3665,34 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             && profile.Id == settings.SelectedResourceProfileId) ?? SelectedResourceProfile;
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(settings.AdbInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(settings.AdbScreencapMethodId);
+        AdbAutoDetect = adbConnection.AutoDetect;
+        AdbAlwaysAutoDetect = adbConnection.AlwaysAutoDetect;
+        EmulatorRoot = adbConnection.EmulatorRoot;
+        EmulatorExecutablePath = adbConnection.EmulatorExecutablePath;
+        MuMuScreenshotEnhancementEnabled = adbConnection.MuMuScreenshotEnhancementEnabled;
+        MuMuTouchEnhancementEnabled = adbConnection.MuMuTouchEnhancementEnabled;
+        MuMuBridgeConnectionEnabled = adbConnection.MuMuBridgeConnectionEnabled;
+        MuMuInstanceIndex = adbConnection.MuMuInstanceIndex;
+        AdbGamePackage = adbConnection.GamePackage;
+        AdbGameCloneIndex = adbConnection.GameCloneIndex;
+        SelectedAdbInputFallbackMethod = SukiAdbMethodCatalog.FindInput(adbConnection.InputFallbackMethodId);
+        SelectedAdbScreencapFallbackMethod = SukiAdbMethodCatalog.FindScreencap(adbConnection.ScreencapFallbackMethodId);
+        AdbReconnectAttempts = adbConnection.ReconnectAttempts;
+        AdbReconnectDelayMs = adbConnection.ReconnectDelayMs;
+        RestartAdbServerOnFailure = adbConnection.RestartAdbServerOnFailure;
+        HardRestartAdbProcessOnFailure = adbConnection.HardRestartAdbProcessOnFailure;
+        RestartEmulatorOnFailure = adbConnection.RestartEmulatorOnFailure;
+        KillAdbOnExit = adbConnection.KillAdbOnExit;
+        UseManagedAdb = adbConnection.UseManagedAdb;
+        if (UseManagedAdb && File.Exists(_managedAdbInstaller.ManagedAdbExecutablePath))
+        {
+            AdbPath = _managedAdbInstaller.ManagedAdbExecutablePath;
+            ManagedAdbStatus = $"管理ADBを使用します: {AdbPath}";
+        }
+        else if (UseManagedAdb)
+        {
+            ManagedAdbStatus = "管理ADBの使用設定がありますが、adb.exeが未導入です。導入確認から実行してください。";
+        }
         HudX = settings.HudX;
         HudY = settings.HudY;
         InitializeHudPartOptions(settings.HudVisibleParts);
@@ -3425,23 +3755,50 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private RhodesSukiSettings BuildCurrentSettings(string? adbConfigJson = null)
     {
         return new RhodesSukiSettings(
-            AdbPath,
-            AdbSerial,
-            string.IsNullOrWhiteSpace(adbConfigJson) ? SukiAdbConfigJson.Normalize(AdbConfigJson) : adbConfigJson,
-            RhodesApiUrl,
-            SelectedAdbPreset?.Id ?? "auto",
-            SelectedResourceProfile?.Id ?? "runStatusFull",
-            SelectedAdbInputMethod?.Id ?? SukiAdbMethodCatalog.DefaultInputMethodId,
-            SelectedAdbScreencapMethod?.Id ?? SukiAdbMethodCatalog.DefaultScreencapMethodId,
-            IsHudVisible,
-            HudX,
-            HudY,
-            RhodesHudPartCatalog.SerializeEnabledIds(HudPartOptions),
-            _adbConnectionValidated,
-            OverlayLayoutItems.Select(item => item.ToState()).ToArray(),
-            BuildOutputPreferences(),
-            TournamentRelayUrl,
-            TournamentPlayerLabel);
+            AdbPath: AdbPath,
+            AdbSerial: AdbSerial,
+            AdbConfigJson: string.IsNullOrWhiteSpace(adbConfigJson) ? SukiAdbConfigJson.Normalize(AdbConfigJson) : adbConfigJson,
+            RhodesApiUrl: RhodesApiUrl,
+            SelectedAdbPresetId: SelectedAdbPreset?.Id ?? "auto",
+            SelectedResourceProfileId: SelectedResourceProfile?.Id ?? "runStatusFull",
+            AdbInputMethodId: SelectedAdbInputMethod?.Id ?? SukiAdbMethodCatalog.DefaultInputMethodId,
+            AdbScreencapMethodId: SelectedAdbScreencapMethod?.Id ?? SukiAdbMethodCatalog.DefaultScreencapMethodId,
+            HudVisible: IsHudVisible,
+            HudX: HudX,
+            HudY: HudY,
+            HudVisibleParts: RhodesHudPartCatalog.SerializeEnabledIds(HudPartOptions),
+            AdbConnectionValidated: _adbConnectionValidated,
+            OverlayLayout: OverlayLayoutItems.Select(item => item.ToState()).ToArray(),
+            OutputPreferences: BuildOutputPreferences(),
+            TournamentRelayUrl: TournamentRelayUrl,
+            TournamentPlayerLabel: TournamentPlayerLabel,
+            SchemaVersion: RhodesSukiSettingsStore.CurrentSchemaVersion,
+            AdbConnection: BuildAdbConnectionSettings());
+    }
+
+    private SukiAdbConnectionSettings BuildAdbConnectionSettings()
+    {
+        return RhodesSukiSettingsStore.NormalizeAdbConnection(new SukiAdbConnectionSettings(
+            AutoDetect: AdbAutoDetect,
+            AlwaysAutoDetect: AdbAlwaysAutoDetect,
+            EmulatorRoot: EmulatorRoot,
+            EmulatorExecutablePath: EmulatorExecutablePath,
+            MuMuScreenshotEnhancementEnabled: MuMuScreenshotEnhancementEnabled,
+            MuMuTouchEnhancementEnabled: MuMuTouchEnhancementEnabled,
+            MuMuBridgeConnectionEnabled: MuMuBridgeConnectionEnabled,
+            MuMuInstanceIndex: MuMuInstanceIndex,
+            GamePackage: AdbGamePackage,
+            GameCloneIndex: AdbGameCloneIndex,
+            InputFallbackMethodId: SelectedAdbInputFallbackMethod?.Id ?? "minitouch",
+            ScreencapFallbackMethodId: SelectedAdbScreencapFallbackMethod?.Id ?? "raw-gzip",
+            ReconnectAttempts: AdbReconnectAttempts,
+            ReconnectDelayMs: AdbReconnectDelayMs,
+            RestartAdbServerOnFailure: RestartAdbServerOnFailure,
+            HardRestartAdbProcessOnFailure: HardRestartAdbProcessOnFailure,
+            RestartEmulatorOnFailure: RestartEmulatorOnFailure,
+            KillAdbOnExit: KillAdbOnExit,
+            UseManagedAdb: UseManagedAdb,
+            LightweightAdb: false));
     }
 
     private void ApplyOutputPreferences(SukiOutputPreferences? preferences)
@@ -3505,7 +3862,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 _allRelics,
                 choiceOptions,
                 new RhodesAdbApiSettings(
-                    true,
+                    AdbAutoDetect,
                     SelectedAdbPreset?.Id ?? "auto",
                     AdbPath,
                     AdbSerial),
@@ -3795,6 +4152,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StatusMessage = $"ADBパスを手動選択しました: {AdbPath}";
     }
 
+    public void SetEmulatorRoot(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+        EmulatorRoot = path;
+        StatusMessage = $"エミュレータールートを設定しました: {EmulatorRoot}";
+    }
+
+    public void SetEmulatorExecutablePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+        EmulatorExecutablePath = path;
+        StatusMessage = $"回復時に起動するエミュレーターを設定しました: {EmulatorExecutablePath}";
+    }
+
     private async Task RefreshAdbDevicesAsync()
     {
         await RunBusyAsync(DetectAdbLocallyCoreAsync);
@@ -3807,7 +4180,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         AdbDetectionDetail = $"{SelectedAdbPreset?.Label ?? "手動"} / {AdbPath}";
         var snapshot = await RhodesSukiAdbDetectionWorkflow.DetectAsync(
             new RhodesAdbApiSettings(
-                true,
+                AdbAutoDetect,
                 SelectedAdbPreset?.Id ?? "auto",
                 AdbPath,
                 AdbSerial));
@@ -3917,8 +4290,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task ConnectAndCaptureCoreAsync()
     {
+        if (AdbAlwaysAutoDetect
+            || (AdbAutoDetect && (string.IsNullOrWhiteSpace(AdbSerial) || string.IsNullOrWhiteSpace(AdbPath))))
+            await DetectAdbLocallyCoreAsync();
         StatusMessage = "MAA Controller でADBへ接続しています。";
-        var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
+        var recovery = await ConnectWithRecoveryAsync();
+        var snapshot = recovery.Snapshot;
         _adbDiagnosticsMaaReady = snapshot.IsReady;
         ApplyAdbConnectionTestSnapshot(RhodesSukiAdbConnectionTestWorkflow.FromController(snapshot));
         if (!snapshot.IsReady)
@@ -3928,6 +4305,145 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var capture = await CaptureCoreAsync();
         ApplyAdbConnectionTestSnapshot(
             RhodesSukiAdbConnectionTestWorkflow.FromCapture(capture, AdbSerial, CapturePixelSizeLabel, snapshot.Detail));
+    }
+
+    private async Task RefreshMuMuCapabilityAsync()
+    {
+        if (!IsMuMuPresetSelected)
+        {
+            _muMuCapability = RhodesMuMuCapabilitySnapshot.NotDetected("MuMuプロファイル選択時だけ能力判定を行います。");
+            AdbEnhancementStatus = _muMuCapability.ScreenshotDetail;
+            OnPropertyChanged(nameof(MuMuCapabilitySummary));
+            return;
+        }
+
+        AdbEnhancementStatus = "MuMu Manager、IPC DLL、対応versionを確認しています。";
+        _muMuCapability = await RhodesMuMuCapabilityDetector.DetectAsync(
+            BuildAdbConnectionSettings(),
+            AdbPath,
+            AdbSerial);
+        var resolution = RhodesMaaAdbOptionPolicy.Resolve(
+            BuildBaseSessionOptions(),
+            BuildAdbConnectionSettings(),
+            _muMuCapability);
+        AdbEnhancementStatus = $"{resolution.ScreenshotDetail} / {resolution.TouchDetail}";
+        OnPropertyChanged(nameof(MuMuCapabilitySummary));
+    }
+
+    private async Task<RhodesAdbRecoveryResult> ConnectWithRecoveryAsync()
+    {
+        await RefreshMuMuCapabilityAsync();
+        var settings = BuildAdbConnectionSettings();
+        var recovery = await RhodesAdbRecoveryService.ConnectAsync(
+            settings,
+            AdbPath,
+            _ => _session.InitializeAdbAsync(BuildSessionOptions()),
+            destructiveActionsConfirmed: AllowDestructiveAdbActionsThisSession);
+        AdbRecoveryStatus = string.Join(
+            " → ",
+            recovery.Stages.Select(stage => $"{stage.Id}:{(stage.Succeeded ? "OK" : "NG")}"));
+        return recovery;
+    }
+
+    private async Task RunAdbScreenshotBenchmarkAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (!await EnsureMaaControllerReadyAsync())
+            {
+                AdbBenchmarkStatus = "接続できないためベンチマークを実行しませんでした。";
+                return;
+            }
+            AdbBenchmarkStatus = "スクリーンショットを10回取得しています。";
+            var result = await RhodesAdbBenchmarkService.RunAsync(10, _session.CaptureEncodedAsync);
+            AdbBenchmarkStatus = result.Errors.Count == 0
+                ? result.Summary
+                : $"{result.Summary} · {string.Join(" / ", result.Errors.Take(3))}";
+            StatusMessage = result.Succeeded
+                ? "スクリーンショットベンチマークが完了しました。"
+                : "スクリーンショットベンチマークは全回失敗しました。";
+        });
+    }
+
+    private Task PrepareAdbTouchTestAsync()
+    {
+        _pendingTouchTestConfirmation = RhodesSafeTouchTestService.CreateConfirmation(
+            new SukiTouchRectangle(TouchTestX, TouchTestY, TouchTestWidth, TouchTestHeight));
+        TouchTestStatus = _pendingTouchTestConfirmation.Detail;
+        IsTouchTestConfirmationVisible = _pendingTouchTestConfirmation.IsValid;
+        OnPropertyChanged(nameof(TouchTestConfirmationDetail));
+        return Task.CompletedTask;
+    }
+
+    private Task CancelAdbTouchTestAsync()
+    {
+        _pendingTouchTestConfirmation = null;
+        IsTouchTestConfirmationVisible = false;
+        TouchTestStatus = "タッチテストを取り消しました。端末へ入力は送っていません。";
+        OnPropertyChanged(nameof(TouchTestConfirmationDetail));
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmAdbTouchTestAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var confirmation = _pendingTouchTestConfirmation;
+            _pendingTouchTestConfirmation = null;
+            IsTouchTestConfirmationVisible = false;
+            OnPropertyChanged(nameof(TouchTestConfirmationDetail));
+            if (confirmation is null)
+            {
+                TouchTestStatus = "確認対象がありません。矩形から再度準備してください。";
+                return;
+            }
+            if (!await EnsureMaaControllerReadyAsync())
+            {
+                TouchTestStatus = "接続できないためタップを送信しませんでした。";
+                return;
+            }
+            var result = await RhodesSafeTouchTestService.ExecuteAsync(
+                confirmation,
+                confirmed: true,
+                _session.TapAsync);
+            TouchTestStatus = result.Detail;
+            StatusMessage = result.Detail;
+        });
+    }
+
+    private Task PrepareManagedAdbInstallAsync()
+    {
+        IsManagedAdbInstallConfirmationVisible = true;
+        ManagedAdbStatus = "管理ADBの導入は未実行です。内容を確認して実行してください。";
+        return Task.CompletedTask;
+    }
+
+    private Task CancelManagedAdbInstallAsync()
+    {
+        IsManagedAdbInstallConfirmationVisible = false;
+        ManagedAdbStatus = "管理ADBの導入を取り消しました。ファイルは変更していません。";
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmManagedAdbInstallAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            IsManagedAdbInstallConfirmationVisible = false;
+            ManagedAdbStatus = "Google公式Platform Toolsをダウンロードし、SHA-256を検証しています。";
+            var result = await _managedAdbInstaller.InstallAsync();
+            ManagedAdbStatus = result.Detail;
+            if (!result.Succeeded)
+            {
+                StatusMessage = result.Detail;
+                return;
+            }
+            UseManagedAdb = true;
+            AdbPath = result.AdbPath;
+            SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "custom") ?? SelectedAdbPreset;
+            await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings());
+            StatusMessage = "SHA-256検証済みの管理ADBへ切り替えました。";
+        });
     }
 
     private void ApplyAdbConnectionTestSnapshot(RhodesSukiAdbConnectionTestSnapshot snapshot)
@@ -6321,9 +6837,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RunProfilesAndApplyAsync(IReadOnlyList<string> profileIds, string completionMessage)
     {
+        var executableProfileIds = RhodesPublicDebugPolicy.FilterProfileIds(profileIds, _distributionProfile);
+        if (executableProfileIds.Count == 0)
+        {
+            StatusMessage = "現在の配布設定で実行できる認識プロファイルがありません。";
+            return;
+        }
+
         await RunBusyAsync(async () =>
         {
-            foreach (var profileId in profileIds)
+            foreach (var profileId in executableProfileIds)
             {
                 if (!TrySelectRecognitionProfile(profileId))
                     return;
@@ -6958,7 +7481,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     _lastCapture);
             }
 
-            if (!RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(plan.ProfileId, ResourceTaskResults))
+            if (!RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+                    plan.ProfileId,
+                    ResourceTaskResults,
+                    CurrentCampaignId))
             {
                 if (ResourceTaskResults.Any())
                 {
@@ -8983,11 +9509,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!forceReconnect && _session.IsControllerReady)
             return true;
 
-        if (string.IsNullOrWhiteSpace(AdbSerial) || string.IsNullOrWhiteSpace(AdbPath))
+        if (AdbAlwaysAutoDetect
+            || (AdbAutoDetect && (string.IsNullOrWhiteSpace(AdbSerial) || string.IsNullOrWhiteSpace(AdbPath))))
             await DetectAdbLocallyCoreAsync();
 
         StatusMessage = "MAA Controller に接続しています。";
-        var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
+        var recovery = await ConnectWithRecoveryAsync();
+        var snapshot = recovery.Snapshot;
         ApplyMaaSessionSnapshot(
             snapshot,
             snapshot.IsReady
@@ -9079,6 +9607,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private MaaSessionOptions BuildSessionOptions()
+    {
+        var requested = BuildBaseSessionOptions();
+        return RhodesMaaAdbOptionPolicy.Resolve(
+            requested,
+            BuildAdbConnectionSettings(),
+            _muMuCapability).Options;
+    }
+
+    private MaaSessionOptions BuildBaseSessionOptions()
     {
         return RhodesMaaSession.DefaultAdbOptions(
             string.IsNullOrWhiteSpace(AdbPath) ? "adb" : AdbPath.Trim(),

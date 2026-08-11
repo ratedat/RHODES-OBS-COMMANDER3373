@@ -411,9 +411,6 @@ export function createAdbAdapter({ adbPath = null, serial = null, settings = {},
         String(Math.round(commandSwipe.durationMs ?? 350)),
       ]);
     },
-    async back() {
-      await run(["shell", "input", "keyevent", "KEYCODE_BACK"]);
-    },
     async wait(ms) {
       await new Promise((resolve) => setTimeout(resolve, ms));
     },

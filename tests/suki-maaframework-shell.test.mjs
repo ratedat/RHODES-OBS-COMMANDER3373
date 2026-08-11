@@ -9,6 +9,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   const portablePublisher = await fs.readFile("tools/publish-suki-portable.mjs", "utf8");
   const publicDebugPackager = await fs.readFile("tools/package-suki-public-debug.mjs", "utf8");
   const discordGuide = await fs.readFile("docs/guides/discord-public-debug-guide.md", "utf8");
+  const sarkazGuide = await fs.readFile("docs/guides/sarkaz-test-guide.md", "utf8");
   const outputCssGuide = await fs.readFile("docs/guides/output-css-customization.md", "utf8");
   const server = await fs.readFile("app/server.mjs", "utf8");
   const outputWorkspace = await fs.readFile(
@@ -43,6 +44,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(packageJson, /"suki:test": "dotnet run --project tests\/rhodes-suki\/RhodesSuki\.ServiceTests\.csproj"/);
   assert.match(packageJson, /"suki:publish:portable": "node tools\/publish-suki-portable\.mjs"/);
   assert.match(packageJson, /"suki:package:public-debug": "node tools\/package-suki-public-debug\.mjs"/);
+  assert.match(packageJson, /"suki:package:public-debug:folder": "node tools\/package-suki-public-debug\.mjs --folder-only"/);
   assert.match(portablePublisher, /--self-contained/);
   assert.match(portablePublisher, /PublishSingleFile=true/);
   assert.match(portablePublisher, /IncludeNativeLibrariesForSelfExtract=true/);
@@ -89,6 +91,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(publicDebugPackager, /current-state\.json/);
   assert.match(publicDebugPackager, /distribution-profile\.json/);
   assert.match(publicDebugPackager, /public-debug/);
+  assert.match(publicDebugPackager, /const folderOnly = process\.argv\.includes\("--folder-only"\)/);
+  assert.match(publicDebugPackager, /if \(!folderOnly\) \{[\s\S]*?run\("tar\.exe"/);
   assert.match(outputWorkspace, /大会入力（簡易公開）/u);
   assert.match(outputWorkspace, /簡易公開を開始/u);
   assert.match(outputWorkspace, /OCRモデル、インストーラー、管理者権限は不要/u);
@@ -98,6 +102,12 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(discordGuide, /ADB取得・認識・反映/u);
   assert.match(discordGuide, /Node\.js導入/u);
   assert.match(discordGuide, /報告ZIP/u);
+  assert.match(discordGuide, /IS#2からIS#6/u);
+  assert.match(discordGuide, /歳の銭.*手動入力/u);
+  assert.match(publicDebugPackager, /IS#2からIS#6/u);
+  assert.match(publicDebugPackager, /歳の銭OCR.*手動入力/u);
+  assert.match(sarkazGuide, /公開デバッグ版自体はIS#2からIS#6/u);
+  assert.match(sarkazGuide, /歳の銭OCR.*手動入力/u);
   assert.match(outputCssGuide, /統合Overlayと個別ウィンドウでは、CSSを別々に保存します/u);
   assert.match(outputCssGuide, /背景を表示/u);
   assert.match(server, /state\.run\.campaignId = "is2_phantom"/);
@@ -135,6 +145,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const adbCandidateRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbCandidateRegistry.cs", "utf8");
   const adbDetectionWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiAdbDetectionWorkflow.cs", "utf8");
   const adbConnectionTestWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiAdbConnectionTestWorkflow.cs", "utf8");
+  const adbRecoveryService = await fs.readFile("apps/rhodes-suki/Services/RhodesAdbRecoveryService.cs", "utf8");
   const settingsStore = await fs.readFile("apps/rhodes-suki/Services/RhodesSukiSettingsStore.cs", "utf8");
   const diagnostics = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaTaskDiagnostics.cs", "utf8");
   const ocrDetailRows = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaOcrDetailRows.cs", "utf8");
@@ -486,7 +497,12 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   const ensureControllerBody = viewModel.slice(ensureControllerStart, ensureControllerEnd);
   assert.match(ensureControllerBody, /_session\.IsControllerReady/);
   assert.match(ensureControllerBody, /await DetectAdbLocallyCoreAsync\(\)/);
-  assert.match(ensureControllerBody, /_session\.InitializeAdbAsync\(BuildSessionOptions\(\)\)/);
+  assert.match(ensureControllerBody, /await ConnectWithRecoveryAsync\(\)/);
+  assert.match(
+    viewModel,
+    /RhodesAdbRecoveryService\.ConnectAsync\([\s\S]*_session\.InitializeAdbAsync\(BuildSessionOptions\(\)\)/,
+  );
+  assert.match(adbRecoveryService, /public static async Task<RhodesAdbRecoveryResult> ConnectAsync/);
   assert.match(ensureControllerBody, /ApplyMaaSessionSnapshot\(\s*snapshot/);
   const ensureCaptureStart = viewModel.indexOf("private async Task<bool> EnsureCaptureAsync()");
   const ensureCaptureEnd = viewModel.indexOf("private async Task<bool> ForceCaptureAsync()", ensureCaptureStart);
@@ -1178,8 +1194,21 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(publicDebugPolicy, /relicsFull/);
   assert.match(publicDebugPolicy, /is5ThoughtFull/);
   assert.match(publicDebugPolicy, /is5AgeFull/);
-  assert.doesNotMatch(publicDebugPolicy, /is4RevelationFull/);
+  assert.match(publicDebugPolicy, /is4RevelationFull/);
+  assert.match(publicDebugPolicy, /is4ParadigmLost/);
+  assert.match(publicDebugPolicy, /is2HallucinationsFull/);
+  assert.match(publicDebugPolicy, /is2PerformanceFull/);
+  assert.match(publicDebugPolicy, /is3KeyFull/);
+  assert.match(publicDebugPolicy, /is3LightHordeFull/);
+  assert.match(publicDebugPolicy, /is3RejectionFull/);
+  assert.match(publicDebugPolicy, /is6BaseFull/);
+  assert.match(publicDebugPolicy, /is6SeasonalHours/);
+  assert.doesNotMatch(publicDebugPolicy, /is6ActiveCoinsFull/);
   assert.doesNotMatch(publicDebugPolicy, /is6CoinsFull/);
+  assert.match(viewModel, /IsSuiCoinRecognitionAvailable => !_distributionProfile\.IsPublicDebug/);
+  assert.match(viewModel, /FilterProfileIds\(profileIds, _distributionProfile\)/);
+  assert.match(xaml, /IsVisible="{Binding IsSuiCoinRecognitionAvailable}"/);
+  assert.match(xaml, /歳の銭OCRは停止中/u);
   assert.match(viewModel, /RhodesPublicDebugPolicy\.ApplyCampaign/);
   assert.match(viewModel, /RhodesPublicDebugPolicy\.FilterProfiles/);
   assert.match(viewModel, /RhodesPublicDebugPolicy\.FilterCampaigns/);
@@ -1385,6 +1414,17 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(specialWorkspace, /持燭人（複数選択）/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbPresetSelectionTemplate\}"/);
   assert.match(xaml, /SelectionBoxItemTemplate="\{StaticResource AdbMethodSelectionTemplate\}"/);
+  assert.match(xaml, /画面取得だけをMuMuのIPCへ切り替えます/u);
+  assert.match(xaml, /タップとスワイプだけをMuMuのIPCへ切り替えます/u);
+  assert.match(xaml, /ONでは下のinstance番号を明示的に使用/u);
+  assert.match(xaml, /nx_main.*nx_device/u);
+  assert.match(xaml, /接続回復でのみ起動/u);
+  assert.match(xaml, /OFFではADB serialから自動推定/u);
+  assert.match(xaml, /通常版は0/u);
+  assert.match(xaml, /日本版はcom\.YoStarJP\.Arknights/u);
+  assert.match(xaml, /ADB接続やタップは行いません/u);
+  assert.match(xaml, /SelectedAdbInputFallbackMethod\.Detail/);
+  assert.match(xaml, /SelectedAdbScreencapFallbackMethod\.Detail/);
   assert.match(xaml, /Selector="ComboBoxItem"/);
   assert.match(xaml, /Text="\{Binding Name\}"/);
   assert.match(xaml, /Text="\{Binding Heading\}"/);

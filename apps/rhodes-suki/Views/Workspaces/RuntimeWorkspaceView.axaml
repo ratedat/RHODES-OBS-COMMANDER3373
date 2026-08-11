@@ -125,6 +125,187 @@
         </Grid>
       </Border>
 
+      <Expander Header="MuMu 12 接続強化" IsExpanded="True">
+        <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+          <StackPanel Spacing="12">
+            <StackPanel Spacing="2">
+              <TextBlock Text="高速撮影と高速タッチを個別に有効化" FontSize="15" FontWeight="SemiBold" />
+              <TextBlock Text="各機能は個別に判定され、利用できない機能だけ下で選んだ方式へ戻ります。設定を有効にしても、能力確認だけではADB接続や端末入力を行いません。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+              <Border CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                <StackPanel Spacing="5">
+                  <CheckBox Content="MuMu高速スクリーンショット"
+                            IsChecked="{Binding MuMuScreenshotEnhancementEnabled, Mode=TwoWay}"
+                            ToolTip.Tip="MuMu IPCで画面を取得し、失敗時は選択した撮影方式へ戻します。" />
+                  <TextBlock Text="画面取得だけをMuMuのIPCへ切り替えます。ADB撮影より低遅延・ロスレスです。使用できない場合は「高速撮影失敗時」の方式へ自動で戻ります。"
+                             FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="1" CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                <StackPanel Spacing="5">
+                  <CheckBox Content="MuMu高速タッチ（6.3.2.0以上）"
+                            IsChecked="{Binding MuMuTouchEnhancementEnabled, Mode=TwoWay}"
+                            ToolTip.Tip="MuMu IPCでタップとスワイプを送り、失敗時は選択した入力方式へ戻します。" />
+                  <TextBlock Text="タップとスワイプだけをMuMuのIPCへ切り替えます。RHODESの明示操作以外に入力は送らず、Android Back/keyeventも使用しません。"
+                             FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="2" CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                <StackPanel Spacing="5">
+                  <CheckBox Content="MuMuネットワークブリッジ"
+                            IsChecked="{Binding MuMuBridgeConnectionEnabled, Mode=TwoWay}"
+                            ToolTip.Tip="MuMu IPCの接続先を下のinstance番号で固定します。" />
+                  <TextBlock Text="複数起動・バックグラウンド常駐時の表示先を固定します。ONでは下のinstance番号を明示的に使用し、OFFではADB serialから自動推定します。"
+                             FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+              <TextBlock Text="MuMuルート" FontSize="12" Opacity="0.68" />
+              <TextBlock Grid.Column="2" Text="回復時に起動するエミュレーター本体" FontSize="12" Opacity="0.68" />
+              <TextBox Grid.Row="1" Text="{Binding EmulatorRoot, Mode=TwoWay}" PlaceholderText="例: C:\Program Files\Netease\MuMu Player 12"
+                       ToolTip.Tip="nx_mainとnx_deviceを含むMuMuのインストールフォルダーです。空欄なら自動判定します。" />
+              <Button Grid.Row="1" Grid.Column="1" Content="参照" Click="BrowseEmulatorRootClick" />
+              <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding EmulatorExecutablePath, Mode=TwoWay}" PlaceholderText="MuMuNxMain.exeなど（ゲームは起動しません）"
+                       ToolTip.Tip="接続回復でMuMu本体を起動する場合だけ使用します。" />
+              <Button Grid.Row="1" Grid.Column="3" Content="参照" Click="BrowseEmulatorExecutableClick" />
+              <TextBlock Grid.Row="2" Grid.ColumnSpan="2"
+                         Text="MuMuのインストール先です。nx_mainとnx_deviceを含むフォルダーを指定します。通常はADBパスから自動判定されます。"
+                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+              <TextBlock Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"
+                         Text="「失敗時にエミュレーター本体を起動」がONのとき、接続回復でのみ起動します。ゲームアプリは起動しません。"
+                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+            </Grid>
+
+            <Grid ColumnDefinitions="160,160,*,180" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+              <TextBlock Text="instance番号" FontSize="12" Opacity="0.68" />
+              <TextBlock Grid.Column="1" Text="clone番号" FontSize="12" Opacity="0.68" />
+              <TextBlock Grid.Column="2" Text="ゲームpackage" FontSize="12" Opacity="0.68" />
+              <TextBlock Grid.Column="3" Text="能力確認" FontSize="12" Opacity="0.68" />
+              <NumericUpDown Grid.Row="1" Minimum="0" Maximum="127" Increment="1" FormatString="0" Value="{Binding MuMuInstanceIndex, Mode=TwoWay}"
+                             ToolTip.Tip="MuMu IPCが接続する仮想端末番号です。通常は0です。" />
+              <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding AdbGameCloneIndex, Mode=TwoWay}"
+                             ToolTip.Tip="同じ仮想端末内で複製したゲームアプリの番号です。通常は0です。" />
+              <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding AdbGamePackage, Mode=TwoWay}"
+                       ToolTip.Tip="表示先のゲームを特定するAndroid package名です。" />
+              <Button Grid.Row="1" Grid.Column="3" Content="MuMu能力を再確認" Command="{Binding RefreshMuMuCapabilityCommand}"
+                      ToolTip.Tip="ルート、IPC DLL、Manager versionを確認します。ADB接続や入力は行いません。" />
+              <TextBlock Grid.Row="2" Text="MuMu本体の仮想端末番号です。ブリッジONではこの値を使用し、OFFではADB serialから自動推定します。通常は0です。"
+                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="同じ仮想端末内で複製したゲームの番号です。通常版は0です。instance番号とは別物です。"
+                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+              <TextBlock Grid.Row="2" Grid.Column="2" Text="表示先を特定するAndroid package名です。日本版はcom.YoStarJP.Arknightsです。別リージョン使用時だけ変更します。"
+                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+              <TextBlock Grid.Row="2" Grid.Column="3" Text="MuMuルート、IPC DLL、Manager versionを再確認します。ADB接続やタップは行いません。"
+                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+              <TextBlock Text="高速タッチ失敗時" FontSize="12" Opacity="0.68" />
+              <TextBlock Grid.Column="1" Text="高速撮影失敗時" FontSize="12" Opacity="0.68" />
+              <ComboBox Grid.Row="1" ItemsSource="{Binding AdbInputFallbackMethodOptions}" SelectedItem="{Binding SelectedAdbInputFallbackMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
+              <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AdbScreencapFallbackMethodOptions}" SelectedItem="{Binding SelectedAdbScreencapFallbackMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
+              <TextBlock Grid.Row="2" Text="{Binding SelectedAdbInputFallbackMethod.Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedAdbScreencapFallbackMethod.Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+            </Grid>
+
+            <TextBlock Text="{Binding MuMuCapabilitySummary}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding AdbEnhancementStatus}" FontSize="11" TextWrapping="Wrap" Opacity="0.68" />
+          </StackPanel>
+        </Border>
+      </Expander>
+
+      <Expander Header="接続検証（撮影ベンチマーク／確認付きタッチ）" IsExpanded="False">
+        <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+          <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <Button Content="スクリーンショット10回計測" Command="{Binding RunAdbScreenshotBenchmarkCommand}" />
+              <TextBlock Grid.Column="1" Text="{Binding AdbBenchmarkStatus}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" Opacity="0.72" />
+            </Grid>
+
+            <Border CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+              <StackPanel Spacing="9">
+                <TextBlock Text="安全タッチテスト" FontSize="14" FontWeight="SemiBold" />
+                <TextBlock Text="1280x720内の指定矩形から1点をランダム化し、次の確認操作を行った場合だけ1回タップします。Back/keyeventは使用しません。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                <Grid ColumnDefinitions="*,*,*,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+                  <TextBlock Text="X" FontSize="11" Opacity="0.68" />
+                  <TextBlock Grid.Column="1" Text="Y" FontSize="11" Opacity="0.68" />
+                  <TextBlock Grid.Column="2" Text="幅" FontSize="11" Opacity="0.68" />
+                  <TextBlock Grid.Column="3" Text="高さ" FontSize="11" Opacity="0.68" />
+                  <NumericUpDown Grid.Row="1" Minimum="0" Maximum="1279" Increment="1" FormatString="0" Value="{Binding TouchTestX, Mode=TwoWay}" />
+                  <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="719" Increment="1" FormatString="0" Value="{Binding TouchTestY, Mode=TwoWay}" />
+                  <NumericUpDown Grid.Row="1" Grid.Column="2" Minimum="0" Maximum="1280" Increment="1" FormatString="0" Value="{Binding TouchTestWidth, Mode=TwoWay}" />
+                  <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="0" Maximum="720" Increment="1" FormatString="0" Value="{Binding TouchTestHeight, Mode=TwoWay}" />
+                  <Button Grid.Row="1" Grid.Column="4" Content="タップ点を準備" Command="{Binding PrepareAdbTouchTestCommand}" />
+                </Grid>
+                <TextBlock Text="{Binding TouchTestStatus}" FontSize="11" TextWrapping="Wrap" Opacity="0.72" />
+                <Border IsVisible="{Binding IsTouchTestConfirmationVisible}" CornerRadius="6" Padding="10" Background="#2A2111" BorderBrush="#F0D06A" BorderThickness="1">
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{Binding TouchTestConfirmationDetail}" TextWrapping="Wrap" FontSize="11" Foreground="#F0D06A" />
+                    <Button Grid.Column="1" Content="取消" Command="{Binding CancelAdbTouchTestCommand}" />
+                    <Button Grid.Column="2" Classes="primary" Content="確認して1回タップ" Command="{Binding ConfirmAdbTouchTestCommand}" />
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+      </Expander>
+
+      <Expander Header="接続回復・高度なADB設定" IsExpanded="False">
+        <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+          <StackPanel Spacing="12">
+            <WrapPanel>
+              <CheckBox Content="接続自動認識" IsChecked="{Binding AdbAutoDetect, Mode=TwoWay}" Margin="0,0,14,6" />
+              <CheckBox Content="接続前に毎回自動認識" IsChecked="{Binding AdbAlwaysAutoDetect, Mode=TwoWay}" Margin="0,0,14,6" />
+              <CheckBox Content="失敗時にADB server再起動" IsChecked="{Binding RestartAdbServerOnFailure, Mode=TwoWay}" Margin="0,0,14,6" />
+              <CheckBox Content="失敗時にエミュレーター本体を起動" IsChecked="{Binding RestartEmulatorOnFailure, Mode=TwoWay}" Margin="0,0,14,6" />
+            </WrapPanel>
+
+            <Grid ColumnDefinitions="180,180,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+              <TextBlock Text="再接続回数" FontSize="12" Opacity="0.68" />
+              <TextBlock Grid.Column="1" Text="再接続待機 (ms)" FontSize="12" Opacity="0.68" />
+              <TextBlock Grid.Column="2" Text="直近の回復結果" FontSize="12" Opacity="0.68" />
+              <NumericUpDown Grid.Row="1" Minimum="1" Maximum="5" Increment="1" FormatString="0" Value="{Binding AdbReconnectAttempts, Mode=TwoWay}" />
+              <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="10000" Increment="250" FormatString="0" Value="{Binding AdbReconnectDelayMs, Mode=TwoWay}" />
+              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AdbRecoveryStatus}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </Grid>
+
+            <Border CornerRadius="7" Padding="10" Background="#241619" BorderBrush="#7A3F48" BorderThickness="1">
+              <StackPanel Spacing="8">
+                <TextBlock Text="プロセス終了を伴う高度な操作" FontSize="14" FontWeight="SemiBold" Foreground="#F0A6AF" />
+                <CheckBox Content="接続失敗時に選択中ADBプロセスを終了して再起動" IsChecked="{Binding HardRestartAdbProcessOnFailure, Mode=TwoWay}" />
+                <CheckBox Content="アプリ終了時に選択中ADBプロセスを終了" IsChecked="{Binding KillAdbOnExit, Mode=TwoWay}" />
+                <CheckBox Content="この起動中だけ、上記のプロセス終了を許可する" IsChecked="{Binding AllowDestructiveAdbActionsThisSession, Mode=TwoWay}" />
+                <TextBlock Text="実行ファイルの正規化済み絶対パスが選択中ADBと完全一致するプロセスだけが対象です。この起動中の許可は保存されません。" FontSize="11" TextWrapping="Wrap" Foreground="#F0A6AF" Opacity="0.82" />
+              </StackPanel>
+            </Border>
+
+            <Border CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+              <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                  <Button Content="Google公式 管理ADBを導入" Command="{Binding PrepareManagedAdbInstallCommand}" />
+                  <TextBlock Grid.Column="1" Text="{Binding ManagedAdbStatus}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" Opacity="0.72" />
+                </Grid>
+                <CheckBox Content="導入済み管理ADBを使用" IsChecked="{Binding UseManagedAdb, Mode=TwoWay}" />
+                <Border IsVisible="{Binding IsManagedAdbInstallConfirmationVisible}" CornerRadius="6" Padding="10" Background="#2A2111" BorderBrush="#F0D06A" BorderThickness="1">
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{Binding ManagedAdbConfirmationDetail}" TextWrapping="Wrap" FontSize="11" Foreground="#F0D06A" />
+                    <Button Grid.Column="1" Content="取消" Command="{Binding CancelManagedAdbInstallCommand}" />
+                    <Button Grid.Column="2" Classes="primary" Content="確認して導入" Command="{Binding ConfirmManagedAdbInstallCommand}" />
+                  </Grid>
+                </Border>
+                <CheckBox Content="軽量ADB（未対応）" IsChecked="False" IsEnabled="{Binding LightweightAdbSupported}" />
+                <TextBlock Text="{Binding LightweightAdbDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+      </Expander>
+
       <Border CornerRadius="8" Padding="10" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
         <StackPanel Spacing="2">
           <TextBlock Text="{Binding RuntimeLayout.Detection.Title}" FontSize="15" FontWeight="SemiBold" />

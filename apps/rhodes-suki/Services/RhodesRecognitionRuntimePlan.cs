@@ -104,7 +104,8 @@ public static class RhodesRecognitionRuntimePlan
 
     public static bool IsTargetScreenConfirmed(
         string profileId,
-        IEnumerable<MaaTaskRunResult> taskResults)
+        IEnumerable<MaaTaskRunResult> taskResults,
+        string? activeCampaignId = null)
     {
         var results = taskResults as MaaTaskRunResult[] ?? taskResults.ToArray();
         if (profileId == "relicsFull")
@@ -126,7 +127,10 @@ public static class RhodesRecognitionRuntimePlan
                     && result.Algorithm.Equals("OCR", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
             return relicOcrResults.Length > 0
-                && RhodesMaaLocalCandidateConverter.FromTaskResults(profileId, relicOcrResults).Count > 0;
+                && RhodesMaaLocalCandidateConverter.FromTaskResults(
+                    profileId,
+                    relicOcrResults,
+                    activeCampaignId).Count > 0;
         }
 
         if (profileId == "is6CoinsFull")

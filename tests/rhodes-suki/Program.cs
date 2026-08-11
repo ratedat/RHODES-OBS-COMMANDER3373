@@ -104,6 +104,18 @@ var tests = new (string Name, Action Run)[]
     ("Suki local ADB detector prefers explicit MuMu adb path", SukiLocalAdbDetectExplicitMumu),
     ("Suki local ADB detector uses an existing MuMu device without stale TCP probes", SukiLocalAdbDetectExistingMumuDevice),
     ("Suki ADB connection test workflow reports controller and capture outcomes", SukiAdbConnectionTestWorkflow),
+    ("MuMu capability detector validates manager version and IPC library", MuMuCapabilityDetectorValidatesRuntime),
+    ("MuMu capability detector climbs from versioned ADB folders to the install root", MuMuCapabilityDetectorResolvesVersionedAdbRoot),
+    ("MuMu capability detector skips process enumeration when configured paths resolve", MuMuCapabilityDetectorSkipsProcessEnumeration),
+    ("MuMu capability detector disables touch below the supported version", MuMuCapabilityDetectorRejectsOldTouch),
+    ("Typed ADB policy activates MuMu screenshot and touch independently", TypedAdbPolicyBuildsIndependentMethods),
+    ("ADB screenshot benchmark aggregates mixed capture results", AdbScreenshotBenchmarkAggregatesResults),
+    ("ADB touch test requires confirmation and stays inside 1280x720", AdbTouchTestRequiresSafeRectangle),
+    ("Suki ADB runtime never invokes Android key input", SukiAdbRuntimeNeverInvokesAndroidKeys),
+    ("ADB recovery runs enabled stages once and in order", AdbRecoveryRunsEnabledStagesInOrder),
+    ("ADB process cleanup targets only the selected executable", AdbProcessCleanupMatchesExactPath),
+    ("Managed ADB installs only a checksum verified archive", ManagedAdbInstallsVerifiedArchive),
+    ("Managed ADB rejects archive path traversal", ManagedAdbRejectsArchiveTraversal),
     ("ADB diagnostics checklist explains setup failures and capture readiness", AdbDiagnosticsChecklist),
     ("ADB diagnostics copy text includes report-ready runtime details", AdbDiagnosticsCopyText),
     ("Preview URL builder normalizes RHODES app routes", PreviewUrlBuilder),
@@ -112,6 +124,9 @@ var tests = new (string Name, Action Run)[]
     ("Managed Node runtime rejects archive path traversal", ManagedNodeRuntimeRejectsArchiveTraversal),
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("Suki settings store migrates unusable manual PATH adb settings", SukiSettingsStoreMigratesBareManualAdb),
+    ("Suki settings store migrates legacy fast emulator options", SukiSettingsStoreMigratesLegacyFastEmulatorOptions),
+    ("Suki ADB connection settings normalize safe ranges and defaults", SukiAdbConnectionSettingsNormalizeSafeRanges),
+    ("Suki ADB connection settings reject future schemas", SukiAdbConnectionSettingsRejectFutureSchema),
     ("Output profile JSON round-trips integrated and individual settings", OutputProfileRoundTrip),
     ("Output profile accepts external CSS and rejects javascript URLs", OutputProfileCssPolicy),
     ("Output profile import rejects future output schemas", OutputProfileRejectsFutureSchema),
@@ -187,7 +202,7 @@ var tests = new (string Name, Action Run)[]
     ("Resource profile groups keep operational recognition order", ResourceProfileOrder),
     ("Resource profiles use interface groups", ResourceProfilesUseInterfaceGroups),
     ("Resource profile task filtering follows interface presets", ResourceProfileTaskFilteringFollowsInterfacePresets),
-    ("Distribution policy keeps campaign themes selectable in every build", PublicDebugPolicyRestrictsSarkazScope),
+    ("Distribution policy keeps campaign themes selectable in every build", PublicDebugPolicyAllowsStableRecognitionProfiles),
     ("Run field registry exposes retained base and campaign-specific fields", RunFieldRegistryRetainedFields),
     ("Run catalog loads campaigns, operators, relics, and current selections", RunCatalogLoadsChoices),
     ("Run catalog preserves Sui coin status and count entries", RunCatalogPreservesSuiCoinEntries),
@@ -773,7 +788,11 @@ static void RecognitionWorkflowConvertsCandidates()
         OcrTask("RhodesOcrRegion_run_difficulty_grade", "18", 0.93),
     };
 
-    var conversion = RhodesRecognitionWorkflow.ConvertCandidates("runStatusFull", taskResults, apiResult);
+    var conversion = RhodesRecognitionWorkflow.ConvertCandidates(
+        "runStatusFull",
+        taskResults,
+        apiResult,
+        "is5_sarkaz");
 
     Equal("api+local", conversion.Source, "workflow conversion source");
     Equal(1, conversion.ApiCandidateCount, "workflow api candidate count");
@@ -1034,7 +1053,8 @@ static void LocalCandidateConverterNormalizesNumericDrift()
         [
             M("RhodesOcrRegion_run_ingot", "2u", 0.91),
             M("RhodesOcrRegion_run_difficulty_grade", "I8", 0.82),
-        ]);
+        ],
+        "is5_sarkaz");
 
     Equal("20", candidates.Single(item => item.Field == "ingot").Value, "lowercase u normalized to zero");
     Equal("18", candidates.Single(item => item.Field == "difficulty").Value, "uppercase i normalized to one");
@@ -1059,7 +1079,10 @@ static void LocalCandidateConverterNormalizesSquadDrift()
         """{"best":{"text":"c破悪成金分隊","score":0.88}}""",
         "OCR",
         true);
-    var candidate = RhodesMaaLocalCandidateConverter.FromTaskResults("runStatusFull", [result]).Single();
+    var candidate = RhodesMaaLocalCandidateConverter.FromTaskResults(
+        "runStatusFull",
+        [result],
+        "is5_sarkaz").Single();
 
     Equal("squadId", candidate.Field, "squad drift field");
     Equal("破棘成金分隊", candidate.Label, "squad drift label");
@@ -1075,7 +1098,8 @@ static void LocalCandidateConverterNormalizesSquadDrift()
         true);
     var measuredRoiCandidate = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "runStatusFull",
-        [measuredRoiResult]).Single();
+        [measuredRoiResult],
+        "is5_sarkaz").Single();
     Equal("破棘成金分隊", measuredRoiCandidate.Label, "measured squad ROI drift label");
 }
 
@@ -1600,7 +1624,8 @@ static void LocalCandidateConverterRelics()
 
     var kanaDriftCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",
-        [M("RhodesOcrRegion_relic_list_text", "イレーシユのうわ言\n探索者のリユツク", 0.96)]);
+        [M("RhodesOcrRegion_relic_list_text", "イレーシユのうわ言\n探索者のリユツク", 0.96)],
+        "is5_sarkaz");
     Equal(
         "イレーシュのうわ言|探索者のリュック",
         string.Join("|", kanaDriftCandidates.Select(item => item.Label)),
@@ -1608,12 +1633,14 @@ static void LocalCandidateConverterRelics()
 
     var measuredAnchorDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",
-        [M("RhodesOcrRegion_relic_list_text", "五秒前のための錯", 0.996)]);
+        [M("RhodesOcrRegion_relic_list_text", "五秒前のための錯", 0.996)],
+        "is5_sarkaz");
     Equal("is5_sarkaz_relic_223", measuredAnchorDrift.Single().RelicId, "long relic name tolerates one measured kanji drift");
 
     var liveRelicDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",
-        [M("RhodesOcrRegion_relic_list_text", "幸運のコイン導き\n奇妙なくるくるお面", 0.97)]);
+        [M("RhodesOcrRegion_relic_list_text", "幸運のコイン導き\n奇妙なくるくるお面", 0.97)],
+        "is5_sarkaz");
     Equal(
         "幸運のコイン|奇妙なぐるぐるお面",
         string.Join("|", liveRelicDrift.Select(item => item.Label)),
@@ -1621,7 +1648,8 @@ static void LocalCandidateConverterRelics()
 
     var middleDotDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",
-        [M("RhodesOcrRegion_relic_list_text", "リーダーモーガン…ラム", 0.95)]);
+        [M("RhodesOcrRegion_relic_list_text", "リーダーモーガン…ラム", 0.95)],
+        "is5_sarkaz");
     Equal("リーダーモーガン・ラム", middleDotDrift.Single().Label, "relic middle dot ellipsis drift");
 
     var latinCaseDrift = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -1653,7 +1681,8 @@ static void LocalCandidateConverterRelics()
 
     var singleRelicDetail = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",
-        [M("RhodesOcrRegion_relic_detail_name", "意欲の天秤", 0.93)]);
+        [M("RhodesOcrRegion_relic_detail_name", "意欲の天秤", 0.93)],
+        "is5_sarkaz");
     Equal("is5_sarkaz_relic_225", singleRelicDetail.Single().RelicId, "single relic detail screen name");
 
     var publicDebugReport = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -1670,7 +1699,8 @@ static void LocalCandidateConverterRelics()
                     ("破壊協議命制圧", 0.866392),
                     ("理想の時代への未練.5", 0.916961),
                 ])
-        ]);
+        ],
+        "is5_sarkaz");
     Equal(
         "支援補給所|奥義の手|折戟・鋒刃|赤い蝶リボン|「門」と「救難」|破壊協議・制圧|理想の時代への未練",
         string.Join("|", publicDebugReport.Select(item => item.Label)),
@@ -1678,7 +1708,8 @@ static void LocalCandidateConverterRelics()
 
     var descriptionQuotedRelic = RhodesMaaLocalCandidateConverter.FromTaskResults(
         "relicsFull",
-        [M("RhodesOcrRegion_relic_list_text", "長居の手\n「錆刃・長居」を所", 0.996918)]);
+        [M("RhodesOcrRegion_relic_list_text", "長居の手\n「錆刃・長居」を所", 0.996918)],
+        "is5_sarkaz");
     Equal(
         "長居の手",
         string.Join("|", descriptionQuotedRelic.Select(item => item.Label)),
@@ -5289,6 +5320,512 @@ static void SukiSettingsStoreMigratesBareManualAdb()
     Equal("custom", explicitManual.SelectedAdbPresetId, "explicit manual adb preset is preserved");
 }
 
+static void SukiSettingsStoreMigratesLegacyFastEmulatorOptions()
+{
+    var normalized = RhodesSukiSettingsStore.Normalize(new RhodesSukiSettings(
+        AdbPath: @"C:\Program Files\Netease\MuMu Player 12\nx_main\adb.exe",
+        AdbSerial: "127.0.0.1:16416",
+        SelectedAdbPresetId: "mumu",
+        AdbInputMethodId: SukiAdbMethodCatalog.FastEmulatorMethodId,
+        AdbScreencapMethodId: SukiAdbMethodCatalog.FastEmulatorMethodId));
+
+    Equal(RhodesSukiSettingsStore.CurrentSchemaVersion, normalized.SchemaVersion, "settings schema migrated");
+    Equal(true, normalized.AdbConnection is not null, "typed adb settings created");
+    Equal(true, normalized.AdbConnection!.MuMuScreenshotEnhancementEnabled, "legacy fast screencap migrated");
+    Equal(true, normalized.AdbConnection.MuMuTouchEnhancementEnabled, "legacy fast input migrated");
+    Equal("minitouch", normalized.AdbConnection.InputFallbackMethodId, "safe touch fallback migrated");
+    Equal("raw-gzip", normalized.AdbConnection.ScreencapFallbackMethodId, "lossless capture fallback migrated");
+    Equal(false, normalized.AdbConnection.HardRestartAdbProcessOnFailure, "hard restart remains opt-in");
+    Equal(false, normalized.AdbConnection.KillAdbOnExit, "kill on exit remains opt-in");
+}
+
+static void SukiAdbConnectionSettingsNormalizeSafeRanges()
+{
+    var normalized = RhodesSukiSettingsStore.NormalizeAdbConnection(new SukiAdbConnectionSettings(
+        SchemaVersion: SukiAdbConnectionSettings.CurrentSchemaVersion,
+        EmulatorRoot: "  M:/MuMu  ",
+        EmulatorExecutablePath: "  M:/MuMu/MuMuPlayer.exe  ",
+        MuMuInstanceIndex: -4,
+        GamePackage: "  com.YoStarJP.Arknights  ",
+        GameCloneIndex: -2,
+        InputFallbackMethodId: "unknown",
+        ScreencapFallbackMethodId: "unknown",
+        ReconnectAttempts: 99,
+        ReconnectDelayMs: -10,
+        RestartAdbServerOnFailure: true,
+        HardRestartAdbProcessOnFailure: true,
+        RestartEmulatorOnFailure: true,
+        KillAdbOnExit: true));
+
+    Equal("M:/MuMu", normalized.EmulatorRoot, "emulator root trimmed");
+    Equal("M:/MuMu/MuMuPlayer.exe", normalized.EmulatorExecutablePath, "emulator executable trimmed");
+    Equal(0, normalized.MuMuInstanceIndex, "instance index clamped");
+    Equal("com.YoStarJP.Arknights", normalized.GamePackage, "game package trimmed");
+    Equal(0, normalized.GameCloneIndex, "clone index clamped");
+    Equal("minitouch", normalized.InputFallbackMethodId, "input fallback normalized");
+    Equal("raw-gzip", normalized.ScreencapFallbackMethodId, "screencap fallback normalized");
+    Equal(5, normalized.ReconnectAttempts, "reconnect attempts clamped");
+    Equal(0, normalized.ReconnectDelayMs, "reconnect delay clamped");
+    Equal(true, normalized.RestartAdbServerOnFailure, "explicit server restart preserved");
+    Equal(true, normalized.HardRestartAdbProcessOnFailure, "explicit hard restart preserved");
+    Equal(true, normalized.RestartEmulatorOnFailure, "explicit emulator restart preserved");
+    Equal(true, normalized.KillAdbOnExit, "explicit kill on exit preserved");
+}
+
+static void SukiAdbConnectionSettingsRejectFutureSchema()
+{
+    try
+    {
+        _ = RhodesSukiSettingsStore.NormalizeAdbConnection(new SukiAdbConnectionSettings(
+            SchemaVersion: SukiAdbConnectionSettings.CurrentSchemaVersion + 1));
+    }
+    catch (InvalidDataException)
+    {
+        return;
+    }
+
+    throw new InvalidOperationException("future ADB settings schema: expected InvalidDataException");
+}
+
+static void MuMuCapabilityDetectorValidatesRuntime()
+{
+    var root = Path.GetFullPath(@"C:\MuMu Player 12");
+    var manager = Path.Combine(root, "nx_main", "MuMuManager.exe");
+    var ipc = Path.Combine(root, "nx_device", "15.0", "shell", "sdk", "external_renderer_ipc.dll");
+    var existing = new HashSet<string>([manager, ipc], StringComparer.OrdinalIgnoreCase);
+    var snapshot = RhodesMuMuCapabilityDetector.DetectAsync(
+        new SukiAdbConnectionSettings(
+            EmulatorRoot: root,
+            MuMuBridgeConnectionEnabled: true,
+            MuMuInstanceIndex: 7),
+        Path.Combine(root, "nx_device", "15.0", "shell", "adb.exe"),
+        "127.0.0.1:16412",
+        fileExists: existing.Contains,
+        runCommandAsync: (_, args, _) => Task.FromResult(
+            new RhodesAdbCommandResult(0, args.SequenceEqual(["version"]) ? "{\"version\":\"6.3.2.0\"}" : "", "")))
+        .GetAwaiter().GetResult();
+
+    Equal(root, snapshot.EmulatorRoot, "MuMu root");
+    Equal(manager, snapshot.ManagerPath, "MuMu manager path");
+    Equal(ipc, snapshot.IpcLibraryPath, "MuMu IPC path");
+    Equal("6.3.2.0", snapshot.ManagerVersion, "MuMu manager version");
+    Equal(true, snapshot.ScreenshotEnhancementAvailable, "MuMu screenshot available");
+    Equal(true, snapshot.TouchEnhancementAvailable, "MuMu touch available");
+    Equal(7, snapshot.InstanceIndex, "explicit MuMu bridge index");
+}
+
+static void MuMuCapabilityDetectorResolvesVersionedAdbRoot()
+{
+    var root = Path.GetFullPath(@"C:\Program Files\Netease\MuMu Player 12");
+    var manager = Path.Combine(root, "nx_main", "MuMuManager.exe");
+    var ipc = Path.Combine(root, "nx_device", "12.0", "shell", "sdk", "external_renderer_ipc.dll");
+    var existing = new HashSet<string>([manager, ipc], StringComparer.OrdinalIgnoreCase);
+    var snapshot = RhodesMuMuCapabilityDetector.DetectAsync(
+        new SukiAdbConnectionSettings(),
+        Path.Combine(root, "nx_device", "12.0", "shell", "adb.exe"),
+        "127.0.0.1:16416",
+        processExecutablePaths: [],
+        fileExists: existing.Contains,
+        runCommandAsync: (_, _, _) => Task.FromResult(new RhodesAdbCommandResult(0, "{\"version\":\"6.4.6.0\"}", "")))
+        .GetAwaiter().GetResult();
+
+    Equal(root, snapshot.EmulatorRoot, "versioned ADB MuMu root");
+    Equal(manager, snapshot.ManagerPath, "versioned ADB MuMu manager path");
+    Equal(ipc, snapshot.IpcLibraryPath, "versioned ADB MuMu IPC path");
+    Equal("6.4.6.0", snapshot.ManagerVersion, "current MuMu manager version");
+    Equal(true, snapshot.TouchEnhancementAvailable, "current MuMu touch available");
+    Equal(1, snapshot.InstanceIndex, "MuMu index inferred from 16416 serial");
+}
+
+static void MuMuCapabilityDetectorSkipsProcessEnumeration()
+{
+    var root = Path.GetFullPath(@"C:\Program Files\Netease\MuMu Player 12");
+    var manager = Path.Combine(root, "nx_main", "MuMuManager.exe");
+    var ipc = Path.Combine(root, "nx_main", "sdk", "external_renderer_ipc.dll");
+    var existing = new HashSet<string>([manager, ipc], StringComparer.OrdinalIgnoreCase);
+    var processEnumerationCalls = 0;
+    var snapshot = RhodesMuMuCapabilityDetector.DetectAsync(
+        new SukiAdbConnectionSettings(),
+        Path.Combine(root, "nx_device", "15.0", "shell", "adb.exe"),
+        "127.0.0.1:16416",
+        processExecutablePathProvider: () =>
+        {
+            processEnumerationCalls++;
+            return [];
+        },
+        fileExists: existing.Contains,
+        runCommandAsync: (_, _, _) => Task.FromResult(new RhodesAdbCommandResult(0, "{\"version\":\"6.4.6.0\"}", "")))
+        .GetAwaiter().GetResult();
+
+    Equal(root, snapshot.EmulatorRoot, "configured path MuMu root");
+    Equal(0, processEnumerationCalls, "process enumeration calls when ADB resolves MuMu root");
+}
+
+static void MuMuCapabilityDetectorRejectsOldTouch()
+{
+    var root = Path.GetFullPath(@"C:\MuMu Player 12");
+    var manager = Path.Combine(root, "nx_main", "MuMuManager.exe");
+    var ipc = Path.Combine(root, "nx_main", "sdk", "external_renderer_ipc.dll");
+    var existing = new HashSet<string>([manager, ipc], StringComparer.OrdinalIgnoreCase);
+    var snapshot = RhodesMuMuCapabilityDetector.DetectAsync(
+        new SukiAdbConnectionSettings(EmulatorRoot: root),
+        Path.Combine(root, "nx_main", "adb.exe"),
+        "127.0.0.1:16384",
+        fileExists: existing.Contains,
+        runCommandAsync: (_, _, _) => Task.FromResult(new RhodesAdbCommandResult(0, "{\"version\":\"6.3.1.9\"}", "")))
+        .GetAwaiter().GetResult();
+
+    Equal(true, snapshot.ScreenshotEnhancementAvailable, "old MuMu screenshot available");
+    Equal(false, snapshot.TouchEnhancementAvailable, "old MuMu touch unavailable");
+    Equal(true, snapshot.TouchDetail.Contains("6.3.2.0", StringComparison.Ordinal), "old MuMu version reason");
+    Equal(0, snapshot.InstanceIndex, "MuMu index inferred from serial");
+}
+
+static void TypedAdbPolicyBuildsIndependentMethods()
+{
+    var root = Path.GetFullPath(@"C:\MuMu Player 12");
+    var requested = RhodesMaaSession.DefaultAdbOptions(
+        Path.Combine(root, "nx_main", "adb.exe"),
+        "127.0.0.1:16416",
+        "{\"extras\":{\"mumu\":{\"path\":\"stale\",\"index\":99}}}",
+        connectionPreset: "mumu");
+    var settings = new SukiAdbConnectionSettings(
+        EmulatorRoot: root,
+        MuMuScreenshotEnhancementEnabled: true,
+        MuMuTouchEnhancementEnabled: true,
+        MuMuBridgeConnectionEnabled: true,
+        MuMuInstanceIndex: 8,
+        GamePackage: "com.YoStarJP.Arknights",
+        GameCloneIndex: 2,
+        InputFallbackMethodId: "minitouch",
+        ScreencapFallbackMethodId: "raw-gzip");
+    var capability = new RhodesMuMuCapabilitySnapshot(
+        root,
+        Path.Combine(root, "nx_main", "MuMuManager.exe"),
+        Path.Combine(root, "nx_main", "sdk", "external_renderer_ipc.dll"),
+        "6.3.2.0",
+        true,
+        false,
+        8,
+        "撮影可",
+        "タッチ不可");
+
+    var resolved = RhodesMaaAdbOptionPolicy.Resolve(requested, settings, capability);
+    Equal(true, resolved.ScreenshotEnhancementActive, "independent screenshot active");
+    Equal(false, resolved.TouchEnhancementActive, "independent touch fallback");
+    Equal(true, resolved.Options.ScreencapMethod.HasFlag(AdbScreencapMethods.EmulatorExtras), "screenshot extras flag");
+    Equal(false, resolved.Options.InputMethod.HasFlag(AdbInputMethods.EmulatorExtras), "touch extras omitted");
+    Equal(true, resolved.Options.InputMethod.HasFlag(AdbInputMethods.MinitouchAndAdbKey), "touch minitouch fallback");
+    var mumu = JsonNode.Parse(resolved.Options.AdbConfigJson)!["extras"]!["mumu"]!;
+    Equal(root, mumu["path"]!.GetValue<string>(), "typed MuMu root overrides raw JSON");
+    Equal(8, mumu["index"]!.GetValue<int>(), "typed MuMu index");
+    Equal("com.YoStarJP.Arknights", mumu["app_package"]!.GetValue<string>(), "typed game package");
+    Equal(2, mumu["app_cloned_index"]!.GetValue<int>(), "typed clone index");
+}
+
+static void AdbScreenshotBenchmarkAggregatesResults()
+{
+    var clockValues = new Queue<long>([0, 12, 20, 50, 60, 68]);
+    var captures = new Queue<MaaCaptureResult>(
+    [
+        new("Succeeded", true, "100 bytes", new byte[100]),
+        new("Failed", false, "capture failed", []),
+        new("Succeeded", true, "120 bytes", new byte[120]),
+    ]);
+    var result = RhodesAdbBenchmarkService.RunAsync(
+        3,
+        _ => Task.FromResult(captures.Dequeue()),
+        getTimestampMilliseconds: () => clockValues.Dequeue())
+        .GetAwaiter().GetResult();
+
+    Equal(3, result.AttemptCount, "benchmark attempts");
+    Equal(2, result.SuccessCount, "benchmark successes");
+    Equal(8L, result.MinimumMilliseconds, "benchmark minimum");
+    Equal(16.7, Math.Round(result.AverageMilliseconds, 1), "benchmark average");
+    Equal(30L, result.MaximumMilliseconds, "benchmark maximum");
+    Equal(120, result.LastImageBytes, "benchmark image bytes");
+}
+
+static void AdbTouchTestRequiresSafeRectangle()
+{
+    var now = new DateTimeOffset(2026, 8, 11, 12, 0, 0, TimeSpan.Zero);
+    var invalid = RhodesSafeTouchTestService.CreateConfirmation(
+        new SukiTouchRectangle(1275, 710, 10, 20),
+        now,
+        (_, maxExclusive) => maxExclusive - 1);
+    Equal(false, invalid.IsValid, "out of bounds rectangle rejected");
+
+    var confirmation = RhodesSafeTouchTestService.CreateConfirmation(
+        new SukiTouchRectangle(100, 200, 20, 30),
+        now,
+        (_, maxExclusive) => maxExclusive - 1);
+    Equal(true, confirmation.IsValid, "safe rectangle accepted");
+    Equal(119, confirmation.Point.X, "randomized x inside rectangle");
+    Equal(229, confirmation.Point.Y, "randomized y inside rectangle");
+    var tapCount = 0;
+    var cancelled = RhodesSafeTouchTestService.ExecuteAsync(
+        confirmation,
+        confirmed: false,
+        (_, _, _) => { tapCount++; return Task.FromResult(MaaJobStatus.Succeeded); },
+        now).GetAwaiter().GetResult();
+    Equal(false, cancelled.Succeeded, "unconfirmed touch rejected");
+    Equal(0, tapCount, "unconfirmed touch not sent");
+
+    var executed = RhodesSafeTouchTestService.ExecuteAsync(
+        confirmation,
+        confirmed: true,
+        (_, _, _) => { tapCount++; return Task.FromResult(MaaJobStatus.Succeeded); },
+        now).GetAwaiter().GetResult();
+    Equal(true, executed.Succeeded, "confirmed touch executed");
+    Equal(1, tapCount, "confirmed touch sent once");
+
+    var forgedOutOfBounds = confirmation with
+    {
+        Rectangle = new SukiTouchRectangle(1275, 710, 10, 20),
+        Point = new SukiTouchPoint(1282, 725),
+    };
+    var forgedResult = RhodesSafeTouchTestService.ExecuteAsync(
+        forgedOutOfBounds,
+        confirmed: true,
+        (_, _, _) => { tapCount++; return Task.FromResult(MaaJobStatus.Succeeded); },
+        now).GetAwaiter().GetResult();
+    Equal(false, forgedResult.Succeeded, "forged out-of-bounds confirmation rejected at execution");
+    Equal(1, tapCount, "forged out-of-bounds touch not sent");
+}
+
+static void SukiAdbRuntimeNeverInvokesAndroidKeys()
+{
+    var root = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory }
+        .SelectMany(origin =>
+        {
+            var directories = new List<string>();
+            for (var current = new DirectoryInfo(origin); current is not null; current = current.Parent)
+                directories.Add(current.FullName);
+            return directories;
+        })
+        .First(directory => File.Exists(Path.Combine(directory, "apps", "rhodes-suki", "Services", "RhodesMaaSession.cs")));
+    var appRoot = Path.Combine(root, "apps", "rhodes-suki");
+    var runtimeSource = string.Join(
+        '\n',
+        Directory.EnumerateFiles(appRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Select(File.ReadAllText));
+    var offlineSource = File.ReadAllText(Path.Combine(root, "apps", "rhodes-suki", "Services", "RhodesOfflineMaaControllerApi.cs"));
+
+    Equal(false, runtimeSource.Contains(".ClickKey(", StringComparison.Ordinal), "no ClickKey invocation in Suki runtime");
+    Equal(false, runtimeSource.Contains(".KeyDown(", StringComparison.Ordinal), "no KeyDown invocation in Suki runtime");
+    Equal(false, runtimeSource.Contains(".KeyUp(", StringComparison.Ordinal), "no KeyUp invocation in Suki runtime");
+    Equal(true, offlineSource.Contains("ClickKey(int keycode) => false", StringComparison.Ordinal), "offline key input fails closed");
+    Equal(true, offlineSource.Contains("KeyDown(int keycode) => false", StringComparison.Ordinal), "offline key down fails closed");
+    Equal(true, offlineSource.Contains("KeyUp(int keycode) => false", StringComparison.Ordinal), "offline key up fails closed");
+}
+
+static void AdbRecoveryRunsEnabledStagesInOrder()
+{
+    var executableRoot = Path.Combine(Path.GetTempPath(), $"rhodes-emulator-exe-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(executableRoot);
+    try
+    {
+        var executablePath = Path.Combine(executableRoot, "MuMuNxMain.exe");
+        File.WriteAllBytes(executablePath, []);
+        Equal(true, RhodesAdbRecoveryService.IsSupportedEmulatorExecutable(executablePath), "absolute exe is accepted");
+        Equal(false, RhodesAdbRecoveryService.IsSupportedEmulatorExecutable(Path.Combine(executableRoot, "start.bat")), "batch launcher is rejected");
+        Equal(false, RhodesAdbRecoveryService.IsSupportedEmulatorExecutable("MuMuNxMain.exe"), "relative executable is rejected");
+    }
+    finally
+    {
+        Directory.Delete(executableRoot, recursive: true);
+    }
+
+    var connectCount = 0;
+    var commands = new List<string>();
+    var settings = new SukiAdbConnectionSettings(
+        ReconnectAttempts: 2,
+        ReconnectDelayMs: 1,
+        RestartAdbServerOnFailure: true,
+        HardRestartAdbProcessOnFailure: true,
+        RestartEmulatorOnFailure: true,
+        EmulatorExecutablePath: @"C:\MuMu\nx_main\MuMuNxMain.exe");
+    var result = RhodesAdbRecoveryService.ConnectAsync(
+        settings,
+        @"C:\MuMu\nx_main\adb.exe",
+        _ =>
+        {
+            connectCount++;
+            var ready = connectCount == 4;
+            return Task.FromResult(new MaaSessionSnapshot(
+                ready ? "接続済み" : "接続失敗",
+                $"attempt={connectCount}",
+                "resource",
+                "agent",
+                true,
+                true,
+                ready));
+        },
+        (_, args, _) =>
+        {
+            commands.Add(string.Join(" ", args));
+            return Task.FromResult(new RhodesAdbCommandResult(0, "ok", ""));
+        },
+        (_, _) => Task.FromResult(new RhodesAdbProcessActionResult(true, 1, "killed")),
+        (_, _) => Task.FromResult(true),
+        destructiveActionsConfirmed: false,
+        delayAsync: (_, _) => Task.CompletedTask)
+        .GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "recovery succeeded");
+    Equal(4, connectCount, "initial, retries, and server recovery connect count");
+    Equal("kill-server", commands[0], "server recovery kill command");
+    Equal("start-server", commands[1], "server recovery start command");
+    Equal(false, result.Stages.Any(stage => stage.Id == "hard-restart"), "unconfirmed hard restart omitted");
+    Equal(false, result.Stages.Any(stage => stage.Id == "emulator-start"), "later stage stops after success");
+
+    var confirmedConnectCount = 0;
+    var hardRestartCount = 0;
+    var emulatorStartCount = 0;
+    var confirmedCommands = new List<string>();
+    var confirmedResult = RhodesAdbRecoveryService.ConnectAsync(
+        settings with
+        {
+            ReconnectAttempts = 1,
+            RestartAdbServerOnFailure = false,
+        },
+        @"C:\MuMu\nx_main\adb.exe",
+        _ =>
+        {
+            confirmedConnectCount++;
+            var ready = confirmedConnectCount == 4;
+            return Task.FromResult(new MaaSessionSnapshot(
+                ready ? "接続済み" : "接続失敗",
+                $"attempt={confirmedConnectCount}",
+                "resource",
+                "agent",
+                true,
+                true,
+                ready));
+        },
+        (_, args, _) =>
+        {
+            confirmedCommands.Add(string.Join(" ", args));
+            return Task.FromResult(new RhodesAdbCommandResult(0, "ok", ""));
+        },
+        (_, _) =>
+        {
+            hardRestartCount++;
+            return Task.FromResult(new RhodesAdbProcessActionResult(true, 1, "killed"));
+        },
+        (_, _) =>
+        {
+            emulatorStartCount++;
+            return Task.FromResult(true);
+        },
+        destructiveActionsConfirmed: true,
+        delayAsync: (_, _) => Task.CompletedTask)
+        .GetAwaiter().GetResult();
+
+    Equal(true, confirmedResult.Succeeded, "confirmed recovery succeeded after emulator start");
+    Equal(1, hardRestartCount, "hard restart runs once after confirmation");
+    Equal(1, emulatorStartCount, "emulator start runs once");
+    Equal("start-server", string.Join('|', confirmedCommands), "hard restart starts only the selected ADB server");
+    Equal(
+        "initial|reconnect-1|hard-restart|after-hard-restart|emulator-start|after-emulator-start",
+        string.Join('|', confirmedResult.Stages.Select(stage => stage.Id)),
+        "confirmed recovery stage order");
+}
+
+static void AdbProcessCleanupMatchesExactPath()
+{
+    var selected = Path.GetFullPath(@"C:\Tools\platform-tools\adb.exe");
+    var killed = new List<int>();
+    var result = RhodesAdbProcessService.KillMatchingAsync(
+        selected,
+        [
+            new RhodesAdbProcessInfo(101, selected),
+            new RhodesAdbProcessInfo(102, Path.GetFullPath(@"C:\MuMu\adb.exe")),
+            new RhodesAdbProcessInfo(103, selected.ToUpperInvariant()),
+        ],
+        processId => { killed.Add(processId); return Task.FromResult(true); })
+        .GetAwaiter().GetResult();
+
+    Equal(true, result.Succeeded, "exact process cleanup result");
+    Equal("101,103", string.Join(',', killed), "only exact executable paths killed");
+
+    killed.Clear();
+    var relativeResult = RhodesAdbProcessService.KillMatchingAsync(
+        "adb.exe",
+        [new RhodesAdbProcessInfo(104, selected)],
+        processId => { killed.Add(processId); return Task.FromResult(true); })
+        .GetAwaiter().GetResult();
+    Equal(false, relativeResult.Succeeded, "relative selected ADB path rejected");
+    Equal(0, killed.Count, "relative selected ADB path kills nothing");
+}
+
+static void ManagedAdbInstallsVerifiedArchive()
+{
+    var baseDirectory = Directory.CreateTempSubdirectory("rhodes-adb-install-").FullName;
+    try
+    {
+        using var archiveStream = new MemoryStream();
+        using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry("platform-tools/adb.exe");
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write("adb");
+        }
+
+        var bytes = archiveStream.ToArray();
+        var expectedHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        var installer = new RhodesManagedAdbInstaller(baseDirectory);
+
+        using (var rejectedStream = new MemoryStream(bytes))
+        {
+            var rejected = installer.InstallArchiveAsync(rejectedStream, new string('0', 64)).GetAwaiter().GetResult();
+            Equal(false, rejected.Succeeded, "checksum mismatch rejected");
+            Equal(false, File.Exists(installer.ManagedAdbExecutablePath), "checksum mismatch installs nothing");
+        }
+
+        using var installStream = new MemoryStream(bytes);
+        var result = installer.InstallArchiveAsync(installStream, expectedHash).GetAwaiter().GetResult();
+
+        Equal(true, result.Succeeded, "verified managed ADB install");
+        Equal(true, File.Exists(installer.ManagedAdbExecutablePath), "managed adb executable");
+        Equal(installer.ManagedAdbExecutablePath, result.AdbPath, "managed adb selected path");
+    }
+    finally
+    {
+        Directory.Delete(baseDirectory, recursive: true);
+    }
+}
+
+static void ManagedAdbRejectsArchiveTraversal()
+{
+    var baseDirectory = Directory.CreateTempSubdirectory("rhodes-adb-traversal-").FullName;
+    try
+    {
+        using var archiveStream = new MemoryStream();
+        using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry("../outside.exe");
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write("blocked");
+        }
+
+        var bytes = archiveStream.ToArray();
+        var expectedHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        using var installStream = new MemoryStream(bytes);
+        var installer = new RhodesManagedAdbInstaller(baseDirectory);
+        var result = installer.InstallArchiveAsync(installStream, expectedHash).GetAwaiter().GetResult();
+
+        Equal(false, result.Succeeded, "managed ADB traversal rejected");
+        Equal(false, File.Exists(Path.Combine(baseDirectory, "outside.exe")), "managed ADB traversal output absent");
+    }
+    finally
+    {
+        Directory.Delete(baseDirectory, recursive: true);
+    }
+}
+
 static void OutputProfileRoundTrip()
 {
     var directory = Path.Combine(Path.GetTempPath(), "rhodes-output-profile-tests", Guid.NewGuid().ToString("N"));
@@ -6574,7 +7111,8 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
                 "",
                 "{\"filtered\":[{\"text\":\"支援補給所\",\"score\":0.99}]}",
                 "OCR",
-                true)]),
+                true)],
+            "is5_sarkaz"),
         "relic name OCR confirms the list when close-button OCR drifts");
     Equal(
         true,
@@ -6587,7 +7125,8 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
                 "",
                 "{\"filtered\":[{\"text\":\"意欲の天秤\",\"score\":0.93}]}",
                 "OCR",
-                true)]),
+                true)],
+            "is5_sarkaz"),
         "single relic detail name confirms the opened relic screen");
     Equal(
         false,
@@ -8493,7 +9032,10 @@ static void BugReportBundleCollectsDebugArtifacts()
         var publicDebugProfiles = manifest["publicDebugProfiles"]!.AsArray()
             .Select(node => node!.GetValue<string>())
             .ToArray();
-        Equal("runStatusFull|operatorsFull|relicsFull|is5ThoughtFull|is5AgeFull", string.Join("|", publicDebugProfiles), "public debug profiles");
+        Equal(
+            "runStatusFull|operatorsFull|relicsFull|is4RevelationFull|is4ParadigmLost|is5ThoughtFull|is5AgeFull|is2HallucinationsFull|is2PerformanceFull|is3KeyFull|is3LightHordeFull|is3RejectionFull|is6BaseFull|is6SeasonalHours",
+            string.Join("|", publicDebugProfiles),
+            "public debug profiles include every stable profile except Sui coin OCR");
         Equal("MuMu Player", manifest["context.adbPreset"]!.GetValue<string>(), "manifest adb preset");
         Equal("127.0.0.1:16384", manifest["context.adbSerial"]!.GetValue<string>(), "manifest adb serial");
         var retainedTargets = manifest["retainedRecognitionTargets"]!.AsArray()
@@ -9006,7 +9548,7 @@ static void ResourceProfileTaskFilteringFollowsInterfacePresets()
     Equal(MaaResourceExecutionPlan.EmptyState, emptyPlan.State, "empty profile state");
 }
 
-static void PublicDebugPolicyRestrictsSarkazScope()
+static void PublicDebugPolicyAllowsStableRecognitionProfiles()
 {
     var state = new SukiRunStateSnapshot(
         CampaignId: "is6_sui",
@@ -9037,32 +9579,59 @@ static void PublicDebugPolicyRestrictsSarkazScope()
     var profiles = RhodesPublicDebugPolicy.FilterProfiles([
         new MaaResourceProfilePreview("all", "すべて", 9),
         new MaaResourceProfilePreview("is6CoinsFull", "通宝", 1),
+        new MaaResourceProfilePreview("is6ActiveCoinsFull", "有効銭", 1),
+        new MaaResourceProfilePreview("is6SeasonalHours", "歳時", 1),
+        new MaaResourceProfilePreview("is6BaseFull", "源石錐・遊覧券", 1),
         new MaaResourceProfilePreview("relicsFull", "秘宝", 1),
         new MaaResourceProfilePreview("operatorsFull", "オペレーター", 1),
         new MaaResourceProfilePreview("is5AgeFull", "時代", 1),
+        new MaaResourceProfilePreview("is4ParadigmLost", "パラダイムロスト", 1),
         new MaaResourceProfilePreview("is4RevelationFull", "啓示", 1),
+        new MaaResourceProfilePreview("is3RejectionFull", "拒絶反応", 1),
+        new MaaResourceProfilePreview("is3LightHordeFull", "灯火・大群", 1),
+        new MaaResourceProfilePreview("is3KeyFull", "鍵", 1),
         new MaaResourceProfilePreview("runStatusFull", "基礎情報", 1),
         new MaaResourceProfilePreview("is5ThoughtFull", "思案", 1),
         new MaaResourceProfilePreview("is2HallucinationsFull", "幻覚", 1),
         new MaaResourceProfilePreview("is2PerformanceFull", "演目", 1),
     ]);
     Equal(
-        "runStatusFull|operatorsFull|relicsFull|is5ThoughtFull|is5AgeFull",
+        "runStatusFull|operatorsFull|relicsFull|is4RevelationFull|is4ParadigmLost|is5ThoughtFull|is5AgeFull|is2HallucinationsFull|is2PerformanceFull|is3KeyFull|is3LightHordeFull|is3RejectionFull|is6BaseFull|is6SeasonalHours",
         string.Join("|", profiles.Select(item => item.Id)),
-        "public debug profiles are Sarkaz-only and executable");
+        "public debug profiles include every stable profile except Sui coin OCR");
     Equal(false, profiles.Any(item => item.Id == "all"), "all profile is hidden from public debug runtime");
-    Equal(false, profiles.Any(item => item.Id is "is4RevelationFull" or "is6CoinsFull"), "other IS special profiles are hidden");
-    Equal(false, profiles.Any(item => item.Id == "is2HallucinationsFull"), "Phantom profile stays hidden from public debug runtime");
-    Equal(false, profiles.Any(item => item.Id == "is2PerformanceFull"), "Phantom performance stays hidden from public debug runtime");
+    Equal(true, profiles.Any(item => item.Id == "is4RevelationFull"), "Sami profiles are available in public debug runtime");
+    Equal(true, profiles.Any(item => item.Id == "is2HallucinationsFull"), "Phantom profiles are available in public debug runtime");
+    Equal(true, profiles.Any(item => item.Id == "is3KeyFull"), "Mizuki profiles are available in public debug runtime");
+    Equal(true, profiles.Any(item => item.Id == "is6BaseFull"), "stable Sui base values are available in public debug runtime");
+    Equal(true, profiles.Any(item => item.Id == "is6SeasonalHours"), "stable Sui seasonal hours are available in public debug runtime");
+    Equal(false, profiles.Any(item => item.Id == "is6ActiveCoinsFull"), "active Sui coin OCR stays hidden from public debug runtime");
+    Equal(false, profiles.Any(item => item.Id == "is6CoinsFull"), "owned Sui coin OCR stays hidden from public debug runtime");
 
     var validationState = RhodesPublicDebugPolicy.ApplyCampaign(state, RhodesDistributionProfile.Validation);
     Equal("is6_sui", validationState.CampaignId, "validation build preserves selected campaign");
     Equal(true, RhodesPublicDebugPolicy.IsCampaignAllowed("is4_sami", RhodesDistributionProfile.Validation), "validation build allows another campaign");
     Equal(true, RhodesPublicDebugPolicy.IsCampaignAllowed("is4_sami", RhodesDistributionProfile.PublicDebug), "public debug allows theme selection");
     Equal(true, RhodesPublicDebugPolicy.IsProfileAllowed("is2HallucinationsFull", RhodesDistributionProfile.Validation), "validation build allows Phantom recognition");
-    Equal(false, RhodesPublicDebugPolicy.IsProfileAllowed("is2HallucinationsFull", RhodesDistributionProfile.PublicDebug), "public debug rejects Phantom recognition");
+    Equal(true, RhodesPublicDebugPolicy.IsProfileAllowed("is2HallucinationsFull", RhodesDistributionProfile.PublicDebug), "public debug allows Phantom recognition");
     Equal(true, RhodesPublicDebugPolicy.IsProfileAllowed("is2PerformanceFull", RhodesDistributionProfile.Validation), "validation build allows Phantom performance recognition");
-    Equal(false, RhodesPublicDebugPolicy.IsProfileAllowed("is2PerformanceFull", RhodesDistributionProfile.PublicDebug), "public debug rejects Phantom performance recognition");
+    Equal(true, RhodesPublicDebugPolicy.IsProfileAllowed("is2PerformanceFull", RhodesDistributionProfile.PublicDebug), "public debug allows Phantom performance recognition");
+    Equal(true, RhodesPublicDebugPolicy.IsProfileAllowed("is6SeasonalHours", RhodesDistributionProfile.PublicDebug), "public debug allows Sui seasonal-hour recognition");
+    Equal(false, RhodesPublicDebugPolicy.IsProfileAllowed("is6ActiveCoinsFull", RhodesDistributionProfile.PublicDebug), "public debug rejects active Sui coin recognition");
+    Equal(false, RhodesPublicDebugPolicy.IsProfileAllowed("is6CoinsFull", RhodesDistributionProfile.PublicDebug), "public debug rejects owned Sui coin recognition");
+    Equal(true, RhodesPublicDebugPolicy.IsProfileAllowed("is6CoinsFull", RhodesDistributionProfile.Validation), "validation build retains Sui coin OCR for development");
+    Equal(
+        "is6BaseFull|is6SeasonalHours",
+        string.Join("|", RhodesPublicDebugPolicy.FilterProfileIds(
+            ["is6BaseFull", "is6ActiveCoinsFull", "is6SeasonalHours", "is6CoinsFull"],
+            RhodesDistributionProfile.PublicDebug)),
+        "public debug batches skip only Sui coin OCR profiles");
+    Equal(
+        "is6BaseFull|is6ActiveCoinsFull|is6SeasonalHours|is6CoinsFull",
+        string.Join("|", RhodesPublicDebugPolicy.FilterProfileIds(
+            ["is6BaseFull", "is6ActiveCoinsFull", "is6SeasonalHours", "is6CoinsFull"],
+            RhodesDistributionProfile.Validation)),
+        "validation batches retain Sui coin OCR profiles for development");
 
     var validationCampaigns = RhodesPublicDebugPolicy.FilterCampaigns([
         new SukiCampaignPreview("is4_sami", 4, "IS#4", "サーミ", []),

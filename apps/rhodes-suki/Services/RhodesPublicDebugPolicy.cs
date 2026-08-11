@@ -11,8 +11,17 @@ public static class RhodesPublicDebugPolicy
         "runStatusFull",
         "operatorsFull",
         "relicsFull",
+        "is4RevelationFull",
+        "is4ParadigmLost",
         "is5ThoughtFull",
         "is5AgeFull",
+        "is2HallucinationsFull",
+        "is2PerformanceFull",
+        "is3KeyFull",
+        "is3LightHordeFull",
+        "is3RejectionFull",
+        "is6BaseFull",
+        "is6SeasonalHours",
     ];
 
     private static readonly HashSet<string> AllowedProfileIds = new(ProfileOrder, StringComparer.Ordinal);
@@ -82,5 +91,17 @@ public static class RhodesPublicDebugPolicy
     {
         var available = profiles.ToArray();
         return distributionProfile.IsPublicDebug ? FilterProfiles(available) : available;
+    }
+
+    public static IReadOnlyList<string> FilterProfileIds(
+        IEnumerable<string> profileIds,
+        RhodesDistributionProfile distributionProfile)
+    {
+        var available = profileIds
+            .Where(static profileId => !string.IsNullOrWhiteSpace(profileId))
+            .ToArray();
+        return distributionProfile.IsPublicDebug
+            ? available.Where(IsProfileAllowed).ToArray()
+            : available;
     }
 }

@@ -66,16 +66,9 @@ MAAの `OcrDetect` タスクで本プロジェクトに参考になる項目:
 
 ## 分隊選択画面への適用実験
 
-対象スクリーンショット:
-
-- `O:\Arknights_Rogue_OBSTool\experiments\adb\sarkaz-squad-select-20260622-224312\screenshot.png`
+対象スクリーンショット、ROI切り出し、OCRの生結果は、`experiments/adb` 以下のローカル限定研究資料として保管する。これらは公開Gitや配布物へ含めず、現行runtimeからも参照しない。
 
 MAAの `RoguelikeCustom-HijackSquad` ROI `[0,383,1280,142]` を2560x1440へ2倍スケールし、`[0,766,2560,284]` として切り出した。さらに分隊カード別に切り出した。
-
-保存先:
-
-- `O:\Arknights_Rogue_OBSTool\experiments\adb\sarkaz-squad-select-20260622-224312\maa_style_roi_crops`
-- `O:\Arknights_Rogue_OBSTool\experiments\adb\sarkaz-squad-select-20260622-224312\maa_style_roi_ocr.json`
 
 Windows OCR結果:
 

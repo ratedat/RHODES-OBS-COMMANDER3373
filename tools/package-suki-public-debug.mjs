@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const portableRoot = path.join(repoRoot, "outputs", "suki-portable");
 const releaseRoot = path.join(repoRoot, "outputs", "release");
+const folderOnly = process.argv.includes("--folder-only");
 const nodeRuntime = {
   version: "24.18.0",
   distributionDirectory: "node-v24.18.0-win-x64",
@@ -200,14 +201,14 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
 
   const readme = `# RHODES OBS COMMANDER3373 公開デバッグ版
 
-この配布はIS#5「サルカズの炉辺奇談」を優先したAvalonia/SukiUI公開デバッグ版です。
+この配布はIS#2からIS#6の専用認識を利用できるAvalonia/SukiUI公開デバッグ版です。歳の銭OCR（有効銭・保有銭）は安定化まで停止しているため、銭は手動入力してください。
 
 ## 起動
 
 1. ZIPをすべて展開します。ZIP内から直接起動しないでください。
 2. \`RhodesSuki.exe\` を実行します。
 3. 「ランタイム」でADBを自動検出し、「接続・撮影」で1280x720の画像が取得できることを確認します。
-4. 「ラン」または「選択」画面の認識ボタンを実行します。
+4. 「ラン」「特殊値」または「選択」画面の認識ボタンを実行します。
 
 ## 不具合報告
 
@@ -222,14 +223,15 @@ OBS出力と大会入力の簡易公開に必要なNode.jsとcloudflaredは検�
 
 ## 対象と制約
 
-- 公開デバッグの認識対象はIS#5サルカズを優先します。
+- 公開デバッグではIS#2からIS#6の専用認識profileを利用できます。
+- 歳の銭OCR（有効銭・保有銭）は停止中です。「特殊値」の銭欄から手動入力してください。
 - 基準解像度は1280x720 (16:9) です。
 - OCRはMAA-OCRが既定です。GLM/Ollamaは任意導入で、このZIPには含まれません。
 - Android Back keyeventは使いません。タップとスワイプは指定矩形内でランダム化されます。
 
 Discordへ貼り付ける短い手順は \`DISCORD_USAGE.md\` にあります。
 出力CSSの具体的な表示見本は、EXEと同じ場所の \`出力CSSカスタマイズガイド.html\` をブラウザで開いてください。
-詳細は \`docs/guides/sarkaz-test-guide.md\`、\`docs/guides/debugger-adb-report-guide.md\`、\`docs/guides/adb-setup.md\`、\`docs/guides/output-css-customization.md\` を参照してください。
+詳細は \`docs/guides/discord-public-debug-guide.md\`、\`docs/guides/debugger-adb-report-guide.md\`、\`docs/guides/adb-setup.md\`、\`docs/guides/output-css-customization.md\` を参照してください。サルカズの個別確認項目は \`docs/guides/sarkaz-test-guide.md\` にあります。
 
 Source: https://github.com/ratedat/RHODES-OBS-COMMANDER3373
 Revision: ${sourceRevision}${sourceStatus ? ` (${sourceStatus})` : ""}
@@ -322,7 +324,7 @@ const zipPath = path.join(releaseRoot, `${packageName}.zip`);
 
 await fs.mkdir(releaseRoot, { recursive: true });
 await fs.rm(packageRoot, { recursive: true, force: true });
-await fs.rm(zipPath, { force: true });
+if (!folderOnly) await fs.rm(zipPath, { force: true });
 await copyPortablePayload(packageRoot);
 await ensureBundledPublicRuntime(packageRoot);
 await addWebOverlayRuntime(packageRoot);
@@ -330,9 +332,12 @@ await resetPublicState(packageRoot);
 await writeDistributionProfile(packageRoot);
 await addPublicDocuments(packageRoot, revision, sourceStatus);
 
-run("tar.exe", ["-a", "-c", "-f", zipPath, "-C", releaseRoot, packageName]);
-const archiveHash = await sha256(zipPath);
-const archiveSizeMb = Math.round(((await fs.stat(zipPath)).size / 1024 / 1024) * 10) / 10;
 console.log(`Public debug folder: ${path.relative(repoRoot, packageRoot)}`);
-console.log(`Public debug ZIP: ${path.relative(repoRoot, zipPath)} (${archiveSizeMb} MB)`);
-console.log(`SHA256: ${archiveHash}`);
+console.log(`Public debug EXE: ${path.relative(repoRoot, path.join(packageRoot, "RhodesSuki.exe"))}`);
+if (!folderOnly) {
+  run("tar.exe", ["-a", "-c", "-f", zipPath, "-C", releaseRoot, packageName]);
+  const archiveHash = await sha256(zipPath);
+  const archiveSizeMb = Math.round(((await fs.stat(zipPath)).size / 1024 / 1024) * 10) / 10;
+  console.log(`Public debug ZIP: ${path.relative(repoRoot, zipPath)} (${archiveSizeMb} MB)`);
+  console.log(`SHA256: ${archiveHash}`);
+}

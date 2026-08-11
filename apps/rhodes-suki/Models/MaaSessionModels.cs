@@ -177,10 +177,22 @@ public static class SukiAdbMethodCatalog
         new(
             FastEmulatorMethodId,
             "MuMu高速入力",
-            "MuMu 12向け。EmulatorExtrasを優先し、失敗時はMaaTouch/MiniTouch/ADB shellへ戻します。",
+            "MuMu 12向け。EmulatorExtrasを優先し、失敗時はMiniTouch/ADB shellへ戻します。",
             AdbInputMethods.EmulatorExtras
-                | AdbInputMethods.Maatouch
                 | AdbInputMethods.MinitouchAndAdbKey
+                | AdbInputMethods.AdbShell),
+        new(
+            "maatouch",
+            "MaaTouch優先",
+            "MaaTouchを優先し、失敗時はMiniTouch/ADB shellへ戻します。",
+            AdbInputMethods.Maatouch
+                | AdbInputMethods.MinitouchAndAdbKey
+                | AdbInputMethods.AdbShell),
+        new(
+            "minitouch",
+            "MiniTouch優先",
+            "MiniTouchを優先し、失敗時はADB shellへ戻します。Android Back/keyeventはRHODESから呼び出しません。",
+            AdbInputMethods.MinitouchAndAdbKey
                 | AdbInputMethods.AdbShell),
         new(
             "adb-shell",
@@ -249,6 +261,8 @@ public static class SukiAdbMethodCatalog
         normalized = normalized switch
         {
             "mumu" or "mumu-fast" or "ldplayer" or "ld-fast" or "emulator" or "emulator-extras" => FastEmulatorMethodId,
+            "maa-touch" => "maatouch",
+            "mini-touch" => "minitouch",
             "shell" or "adb" => "adb-shell",
             _ => normalized,
         };
@@ -357,7 +371,9 @@ public sealed record RhodesSukiSettings(
     IReadOnlyList<SukiOverlayLayoutState>? OverlayLayout = null,
     SukiOutputPreferences? OutputPreferences = null,
     string TournamentRelayUrl = "",
-    string TournamentPlayerLabel = "Player");
+    string TournamentPlayerLabel = "Player",
+    int SchemaVersion = 2,
+    SukiAdbConnectionSettings? AdbConnection = null);
 
 public sealed record MaaSessionSnapshot(
     string State,

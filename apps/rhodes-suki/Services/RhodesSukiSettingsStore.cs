@@ -5,6 +5,8 @@ namespace RhodesSuki.Services;
 
 public static class RhodesSukiSettingsStore
 {
+    public const int CurrentSchemaVersion = 2;
+
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static string DefaultPath => Path.Combine(AppContext.BaseDirectory, "user-data", "suki-settings.json");
@@ -30,7 +32,7 @@ public static class RhodesSukiSettingsStore
     {
         var settingsPath = ResolvePath(path);
         EnsureDirectory(settingsPath);
-        var json = JsonSerializer.Serialize(settings, JsonOptions);
+        var json = JsonSerializer.Serialize(Normalize(settings), JsonOptions);
         File.WriteAllText(settingsPath, $"{json}{Environment.NewLine}");
     }
 
@@ -38,7 +40,7 @@ public static class RhodesSukiSettingsStore
     {
         var settingsPath = ResolvePath(path);
         EnsureDirectory(settingsPath);
-        var json = JsonSerializer.Serialize(settings, JsonOptions);
+        var json = JsonSerializer.Serialize(Normalize(settings), JsonOptions);
         await File.WriteAllTextAsync(settingsPath, $"{json}{Environment.NewLine}", cancellationToken);
     }
 
@@ -56,12 +58,22 @@ public static class RhodesSukiSettingsStore
 
     internal static RhodesSukiSettings Normalize(RhodesSukiSettings settings)
     {
+        if (settings.SchemaVersion > CurrentSchemaVersion)
+        {
+            throw new InvalidDataException(
+                $"未対応のSuki設定schemaVersionです: {settings.SchemaVersion} > {CurrentSchemaVersion}");
+        }
+
         var outputPreferences = settings.OutputPreferences;
         if (outputPreferences is not null)
             outputPreferences = RhodesOutputProfileService.Normalize(outputPreferences);
 
+        var adbConnection = settings.AdbConnection ?? CreateAdbConnectionFromLegacySettings(settings);
+
         var normalized = settings with
         {
+            SchemaVersion = CurrentSchemaVersion,
+            AdbConnection = NormalizeAdbConnection(adbConnection),
             OutputPreferences = outputPreferences,
             TournamentRelayUrl = settings.TournamentRelayUrl?.Trim() ?? "",
             TournamentPlayerLabel = string.IsNullOrWhiteSpace(settings.TournamentPlayerLabel)
@@ -79,5 +91,64 @@ public static class RhodesSukiSettingsStore
         }
 
         return normalized;
+    }
+
+    internal static SukiAdbConnectionSettings NormalizeAdbConnection(SukiAdbConnectionSettings settings)
+    {
+        if (settings.SchemaVersion > SukiAdbConnectionSettings.CurrentSchemaVersion)
+        {
+            throw new InvalidDataException(
+                $"未対応のADB接続設定schemaVersionです: {settings.SchemaVersion} > {SukiAdbConnectionSettings.CurrentSchemaVersion}");
+        }
+
+        var inputFallback = settings.InputFallbackMethodId?.Trim() switch
+        {
+            "default" => "default",
+            "maatouch" => "maatouch",
+            "minitouch" => "minitouch",
+            "adb-shell" => "adb-shell",
+            _ => "minitouch",
+        };
+        var screencapFallback = settings.ScreencapFallbackMethodId?.Trim() switch
+        {
+            "default" => "default",
+            "raw-gzip" => "raw-gzip",
+            "compat" => "compat",
+            _ => "raw-gzip",
+        };
+
+        return settings with
+        {
+            SchemaVersion = SukiAdbConnectionSettings.CurrentSchemaVersion,
+            EmulatorRoot = settings.EmulatorRoot?.Trim() ?? "",
+            EmulatorExecutablePath = settings.EmulatorExecutablePath?.Trim() ?? "",
+            MuMuInstanceIndex = Math.Clamp(settings.MuMuInstanceIndex, 0, 127),
+            GamePackage = string.IsNullOrWhiteSpace(settings.GamePackage)
+                ? "com.YoStarJP.Arknights"
+                : settings.GamePackage.Trim(),
+            GameCloneIndex = Math.Clamp(settings.GameCloneIndex, 0, 99),
+            InputFallbackMethodId = inputFallback,
+            ScreencapFallbackMethodId = screencapFallback,
+            ReconnectAttempts = Math.Clamp(settings.ReconnectAttempts, 1, 5),
+            ReconnectDelayMs = Math.Clamp(settings.ReconnectDelayMs, 0, 10_000),
+            LightweightAdb = false,
+        };
+    }
+
+    private static SukiAdbConnectionSettings CreateAdbConnectionFromLegacySettings(RhodesSukiSettings settings)
+    {
+        var usesFastInput = settings.AdbInputMethodId.Equals(
+            SukiAdbMethodCatalog.FastEmulatorMethodId,
+            StringComparison.OrdinalIgnoreCase);
+        var usesFastScreencap = settings.AdbScreencapMethodId.Equals(
+            SukiAdbMethodCatalog.FastEmulatorMethodId,
+            StringComparison.OrdinalIgnoreCase);
+
+        return new SukiAdbConnectionSettings(
+            AutoDetect: !settings.SelectedAdbPresetId.Equals("custom", StringComparison.OrdinalIgnoreCase),
+            MuMuScreenshotEnhancementEnabled: usesFastScreencap,
+            MuMuTouchEnhancementEnabled: usesFastInput,
+            InputFallbackMethodId: "minitouch",
+            ScreencapFallbackMethodId: "raw-gzip");
     }
 }

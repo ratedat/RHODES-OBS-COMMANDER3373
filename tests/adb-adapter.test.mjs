@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { adbExecOptions, createAdbAdapter, detectAdbConnections, normalizeAdbScreenshotBytes, parseAdbDisplayResolution } from "../app/recognition/adapters/adb-adapter.js";
 
 test("parseAdbDisplayResolution prefers active app bounds over portrait wm size", () => {
@@ -234,6 +235,18 @@ test("createAdbAdapter randomizes direct tap and swipe commands unless already r
   assert.deepEqual(calls[0], ["shell", "input", "tap", "92", "208"]);
   assert.deepEqual(calls[1], ["shell", "input", "swipe", "312", "388", "488", "612", "450"]);
   assert.deepEqual(calls[2], ["shell", "input", "tap", "100", "200"]);
+});
+
+test("ADB runtime never exposes or issues Android Back keyevents", async () => {
+  const adapter = createAdbAdapter({
+    adbPath: "adb",
+    env: {},
+    execFileImpl: (_file, _args, _options, callback) => callback(null, "", ""),
+  });
+  const source = await readFile(new URL("../app/recognition/adapters/adb-adapter.js", import.meta.url), "utf8");
+
+  assert.equal("back" in adapter, false);
+  assert.doesNotMatch(source, /\b(?:keyevent|KEYCODE_BACK)\b/i);
 });
 
 test("createAdbAdapter retries commands after adb server restart for TCP serials", async () => {
