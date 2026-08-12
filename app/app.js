@@ -17,6 +17,7 @@ import { decorateMizukiRejectionTargets, sortOperators as sortOperatorsByPrefere
 import { normalizeOperatorCounts, operatorCountFor, operatorRosterCount } from "./domain/operator-counts.js";
 import { normalizeOperatorPromotionLevels, operatorPromotionLevelFor } from "./domain/operator-promotions.js";
 import { prioritizeOwnedRelics, supportsRelicUsedFlag } from "./domain/relic-usage.js";
+import { normalizeRelicStackCounts, relicStackCountFor, relicStackMaximum, relicSupportsStackCount } from "./domain/relic-stacks.js";
 import { buildStartTemplateSummary, getEffectiveRelicIds, mergeEffectiveSpecial, phaseLabel } from "./domain/start-templates.js";
 import { controlModeOptions, getControlMode, normalizeControlMode } from "./domain/ui-modes.js";
 import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
@@ -464,7 +465,13 @@ function getTemplateRelicIds() {
 }
 
 function getOwnedRelics() {
-  const relics = getEffectiveRelicIdList().map((id) => maps.relic.get(id)).filter(Boolean);
+  const relics = getEffectiveRelicIdList()
+    .map((id) => maps.relic.get(id))
+    .filter(Boolean)
+    .map((item) => ({
+      ...item,
+      stackCount: relicStackCountFor(item.id, state.relicStackCounts),
+    }));
   return prioritizeOwnedRelics(relics, state.usedRelicIds);
 }
 
@@ -730,6 +737,7 @@ function ensureStateShape() {
   state.usedRelicIds = Array.isArray(state.usedRelicIds)
     ? state.usedRelicIds.filter((id) => state.relics.includes(id))
     : [];
+  state.relicStackCounts = normalizeRelicStackCounts(state.relicStackCounts, state.relics, master.relicStackRules);
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.operatorCounts = normalizeOperatorCounts(state.operatorCounts, state.operators);
   state.operatorPromotionLevels = normalizeOperatorPromotionLevels(state.operatorPromotionLevels, state.operators);
@@ -883,11 +891,15 @@ function renderRelicControlRow(item, active, excludedOrOptions = false) {
   const manual = new Set(state.relics || []).has(item.id);
   const template = getTemplateRelicIds().has(item.id);
   const used = new Set(state.usedRelicIds || []).has(item.id);
+  const stackCount = relicStackCountFor(item.id, state.relicStackCounts);
   return renderRelicControlRowComponent(item, active, relicEffectForDisplay(item), {
     manual,
     template,
     used,
     supportsUsedFlag: supportsRelicUsedFlag(item),
+    supportsStackCount: relicSupportsStackCount(item.id, state.relicStackCounts, master.relicStackRules),
+    stackCount,
+    stackMaximum: relicStackMaximum(item.id, master.relicStackRules),
     ...options,
   });
 }

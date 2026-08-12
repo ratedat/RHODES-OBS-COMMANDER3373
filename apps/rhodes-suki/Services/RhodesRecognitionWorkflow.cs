@@ -165,7 +165,7 @@ public static class RhodesRecognitionWorkflow
 
         var fetched = await fetchApiStateAsync(cancellationToken);
         if (!fetched.Succeeded)
-            return await ApplyLocalFallbackAsync(candidates, fetched.Error, saveLocalCandidatesAsync, cancellationToken);
+            return await ApplyLocalFallbackAsync(candidates, fetched, saveLocalCandidatesAsync, cancellationToken);
 
         var applied = RhodesStateApiClient.ApplyCandidatesToStateJson(fetched.StateJson, candidates);
         if (applied.Summary.AppliedCount <= 0)
@@ -173,7 +173,7 @@ public static class RhodesRecognitionWorkflow
 
         var saved = await saveApiStateAsync(applied.StateJson, cancellationToken);
         if (!saved.Succeeded)
-            return await ApplyLocalFallbackAsync(candidates, saved.Error, saveLocalCandidatesAsync, cancellationToken);
+            return await ApplyLocalFallbackAsync(candidates, saved, saveLocalCandidatesAsync, cancellationToken);
 
         await replaceLocalStateJsonAsync(saved.StateJson, cancellationToken);
         return AppliedResult(
@@ -186,15 +186,16 @@ public static class RhodesRecognitionWorkflow
 
     private static async Task<RhodesCandidateApplyWorkflowResult> ApplyLocalFallbackAsync(
         IReadOnlyList<MaaCandidatePreview> candidates,
-        string apiError,
+        RhodesStateApiResult apiFailure,
         Func<IReadOnlyList<MaaCandidatePreview>, CancellationToken, Task<SukiCandidateApplySummary>> saveLocalCandidatesAsync,
         CancellationToken cancellationToken)
     {
         var summary = await saveLocalCandidatesAsync(candidates, cancellationToken);
-        var apiStatus = new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", apiError, false, false);
+        var apiState = apiFailure.IsUnavailable ? "未起動" : "同期失敗";
+        var apiStatus = new SukiOptionalRuntimeStatus("RHODES API", apiState, apiFailure.Error, false, false);
         return summary.AppliedCount <= 0
-            ? NotAppliedResult(summary, apiError, apiStatus, localFallbackUsed: true)
-            : AppliedResult(summary, apiError, localFallbackUsed: true, apiStatus);
+            ? NotAppliedResult(summary, apiFailure.Error, apiStatus, localFallbackUsed: true, failureKind: apiFailure.FailureKind)
+            : AppliedResult(summary, apiFailure.Error, localFallbackUsed: true, apiStatus, failureKind: apiFailure.FailureKind);
     }
 
     private static RhodesCandidateApplyWorkflowResult AppliedResult(
@@ -202,7 +203,8 @@ public static class RhodesRecognitionWorkflow
         string apiError,
         bool localFallbackUsed,
         SukiOptionalRuntimeStatus? apiStatus,
-        string stateJson = "")
+        string stateJson = "",
+        RhodesStateApiFailureKind failureKind = RhodesStateApiFailureKind.None)
     {
         var fields = BuildAppliedFieldsSummary(summary.AppliedFields);
         return new RhodesCandidateApplyWorkflowResult(
@@ -213,7 +215,9 @@ public static class RhodesRecognitionWorkflow
             $"{summary.AppliedCount}件: {fields}",
             string.IsNullOrWhiteSpace(apiError)
                 ? $"状態へ反映し、APIへ同期しました: {summary.AppliedCount}件 ({fields})"
-                : $"状態へ反映しました: {summary.AppliedCount}件 ({fields}) / API同期失敗: {apiError}",
+                : failureKind == RhodesStateApiFailureKind.Unavailable
+                    ? $"ローカル状態へ反映しました: {summary.AppliedCount}件 ({fields}) / 配信サーバーは未起動です。OBS連携時に出力画面から起動してください。"
+                    : $"状態へ反映しました: {summary.AppliedCount}件 ({fields}) / API同期失敗: {apiError}",
             stateJson);
     }
 
@@ -252,7 +256,8 @@ public static class RhodesRecognitionWorkflow
         SukiCandidateApplySummary summary,
         string apiError,
         SukiOptionalRuntimeStatus? apiStatus = null,
-        bool localFallbackUsed = false)
+        bool localFallbackUsed = false,
+        RhodesStateApiFailureKind failureKind = RhodesStateApiFailureKind.None)
     {
         return new RhodesCandidateApplyWorkflowResult(
             summary,
@@ -262,6 +267,8 @@ public static class RhodesRecognitionWorkflow
             $"反映なし: 無視 {summary.IgnoredCount}件",
             string.IsNullOrWhiteSpace(apiError)
                 ? $"状態へ反映できる候補はありませんでした。無視: {summary.IgnoredCount}件"
-                : $"状態へ反映できる候補はありませんでした。API同期は失敗: {apiError}");
+                : failureKind == RhodesStateApiFailureKind.Unavailable
+                    ? $"状態へ反映できる候補はありませんでした。配信サーバーは未起動です。無視: {summary.IgnoredCount}件"
+                    : $"状態へ反映できる候補はありませんでした。API同期は失敗: {apiError}");
     }
 }

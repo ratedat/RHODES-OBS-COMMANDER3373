@@ -9,9 +9,17 @@ public static class RhodesMaaAdbOptionPolicy
     public static RhodesMaaAdbOptionResolution Resolve(
         MaaSessionOptions requested,
         SukiAdbConnectionSettings settings,
-        RhodesMuMuCapabilitySnapshot capability)
+        RhodesMuMuCapabilitySnapshot capability,
+        RhodesLdPlayerCapabilitySnapshot? ldPlayerCapability = null)
     {
         var preset = requested.ConnectionPreset?.Trim() ?? "";
+        if (preset.Equals("ldplayer", StringComparison.OrdinalIgnoreCase))
+        {
+            return ResolveLdPlayer(
+                requested,
+                settings,
+                ldPlayerCapability ?? RhodesLdPlayerCapabilitySnapshot.NotDetected());
+        }
         if (!preset.Equals("mumu", StringComparison.OrdinalIgnoreCase))
         {
             return new RhodesMaaAdbOptionResolution(
@@ -70,6 +78,48 @@ public static class RhodesMaaAdbOptionPolicy
             },
             screenshotActive,
             touchActive,
+            screenshotDetail,
+            touchDetail);
+    }
+
+    private static RhodesMaaAdbOptionResolution ResolveLdPlayer(
+        MaaSessionOptions requested,
+        SukiAdbConnectionSettings settings,
+        RhodesLdPlayerCapabilitySnapshot capability)
+    {
+        var screenshotActive = settings.LdPlayerScreenshotEnhancementEnabled
+            && capability.ScreenshotEnhancementAvailable;
+        var fallbackOption = SukiAdbMethodCatalog.FindScreencap(settings.ScreencapFallbackMethodId);
+        var screencap = screenshotActive
+            ? AdbScreencapMethods.EmulatorExtras | fallbackOption.Value
+            : fallbackOption.Value;
+
+        var config = JsonNode.Parse(SukiAdbConfigJson.Normalize(requested.AdbConfigJson))!.AsObject();
+        var extras = GetOrCreateObject(config, "extras");
+        var ld = GetOrCreateObject(extras, "ld");
+        ld["enable"] = screenshotActive;
+        if (!string.IsNullOrWhiteSpace(capability.EmulatorRoot))
+            ld["path"] = capability.EmulatorRoot;
+        if (!string.IsNullOrWhiteSpace(capability.CaptureLibraryPath))
+            ld["lib"] = capability.CaptureLibraryPath;
+        ld["index"] = capability.InstanceIndex;
+
+        var screenshotDetail = !settings.LdPlayerScreenshotEnhancementEnabled
+            ? $"LDPlayer高速撮影OFF。{fallbackOption.Label}を使用します。"
+            : screenshotActive
+                ? capability.Detail
+                : $"{capability.Detail} フォールバック: {fallbackOption.Label}";
+        var touchDetail = "LDPlayerのMAA EmulatorExtras入力は公式対応範囲外です。選択中の入力方式を変更せず使用します。";
+
+        return new RhodesMaaAdbOptionResolution(
+            requested with
+            {
+                AdbConfigJson = config.ToJsonString(),
+                ScreencapMethod = screencap,
+                InputMethod = requested.InputMethod,
+            },
+            screenshotActive,
+            false,
             screenshotDetail,
             touchDetail);
     }

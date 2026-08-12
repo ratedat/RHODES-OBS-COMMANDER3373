@@ -129,6 +129,21 @@ public static class RhodesMaaLocalCandidateConverter
         return candidates.Where(RhodesMaaRecognitionPolicy.IsRetainedCandidate).ToArray();
     }
 
+    public static SukiChoiceItem? ResolveRelicName(string rawText, string campaignId)
+    {
+        if (string.IsNullOrWhiteSpace(rawText) || string.IsNullOrWhiteSpace(campaignId))
+            return null;
+
+        var relics = RhodesRecognitionCatalogCache.Load().Relics
+            .Where(item => item.CampaignId.Equals(campaignId, StringComparison.Ordinal))
+            .ToArray();
+        var byNormalizedName = relics
+            .GroupBy(item => NormalizeRelicName(item.Name), StringComparer.Ordinal)
+            .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+        return ResolveRelic(NormalizeRelicName(rawText), byNormalizedName);
+    }
+
     private static IReadOnlyList<MaaCandidatePreview> AllProfileCandidates(
         IEnumerable<MaaTaskRunResult> taskResults,
         string? activeCampaignId)
@@ -582,7 +597,7 @@ public static class RhodesMaaLocalCandidateConverter
     private static IEnumerable<MaaCandidatePreview> OperatorCandidates(IEnumerable<MaaTaskRunResult> taskResults)
     {
         var results = taskResults.ToArray();
-        var operators = RhodesRunCatalog.LoadDefault().Operators
+        var operators = RhodesRecognitionCatalogCache.Load().Operators
             .Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
             .ToArray();
         var byNormalizedName = operators
@@ -697,7 +712,7 @@ public static class RhodesMaaLocalCandidateConverter
     private static IEnumerable<MaaCandidatePreview> OperatorPromotionCardCandidates(
         IEnumerable<MaaTaskRunResult> taskResults)
     {
-        var operators = RhodesRunCatalog.LoadDefault().Operators.ToDictionary(item => item.Id, StringComparer.Ordinal);
+        var operators = RhodesRecognitionCatalogCache.Load().Operators.ToDictionary(item => item.Id, StringComparer.Ordinal);
         foreach (var taskResult in taskResults)
         {
             if (!RhodesOperatorPromotionCardDetector.TryRead(
@@ -806,9 +821,10 @@ public static class RhodesMaaLocalCandidateConverter
         IEnumerable<MaaTaskRunResult> taskResults,
         string? activeCampaignId)
     {
-        var catalog = RhodesRunCatalog.LoadDefault();
+        var results = taskResults as MaaTaskRunResult[] ?? taskResults.ToArray();
+        var catalog = RhodesRecognitionCatalogCache.Load();
         var campaignId = string.IsNullOrWhiteSpace(activeCampaignId)
-            ? catalog.Current.CampaignId
+            ? RhodesRunCatalog.LoadDefault().Current.CampaignId
             : activeCampaignId;
         if (string.IsNullOrWhiteSpace(campaignId))
             yield break;
@@ -823,9 +839,10 @@ public static class RhodesMaaLocalCandidateConverter
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
         var matched = new Dictionary<string, (SukiChoiceItem Relic, string RawText, double? Confidence, int Order, string StateId)>(
             StringComparer.Ordinal);
+        var stackCounts = RelicStackCounts(results);
         var order = 0;
 
-        foreach (var taskResult in taskResults)
+        foreach (var taskResult in results)
         {
             if (!taskResult.Succeeded || !IsRelicNameEntry(taskResult.Entry))
                 continue;
@@ -881,8 +898,50 @@ public static class RhodesMaaLocalCandidateConverter
                 RelicId: item.Relic.Id,
                 CampaignId: item.Relic.CampaignId,
                 RecognitionKey: $"maa-local:relic:{item.Relic.Id}",
-                StateId: item.StateId);
+                StateId: item.StateId,
+                Count: stackCounts.GetValueOrDefault(item.Relic.Id));
         }
+    }
+
+    private static IReadOnlyDictionary<string, int> RelicStackCounts(IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var observed = new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
+        foreach (var taskResult in taskResults)
+        {
+            if (!taskResult.Succeeded
+                || !taskResult.Entry.StartsWith(RhodesRelicStackOcrPlanner.EntryPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var relicId = taskResult.Entry[RhodesRelicStackOcrPlanner.EntryPrefix.Length..];
+            if (string.IsNullOrWhiteSpace(relicId))
+                continue;
+
+            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
+            {
+                var numbers = Regex.Matches(textResult.Text, @"\d+", RegexOptions.CultureInvariant)
+                    .Select(match => int.TryParse(match.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)
+                    .Where(value => value > 0)
+                    .Distinct()
+                    .ToArray();
+                if (numbers.Length != 1)
+                    continue;
+
+                if (!observed.TryGetValue(relicId, out var counts))
+                {
+                    counts = [];
+                    observed[relicId] = counts;
+                }
+                counts.Add(numbers[0]);
+            }
+        }
+
+        return observed
+            .Where(item => item.Value.Count == 1)
+            .Select(item => (item.Key, Count: item.Value.Single()))
+            .Where(item => RhodesRelicStackRuleCatalog.IsWithinKnownLimit(item.Key, item.Count))
+            .ToDictionary(item => item.Key, item => item.Count, StringComparer.Ordinal);
     }
 
     private static bool LooksLikeStandaloneRelicNameToken(string value)
@@ -895,8 +954,19 @@ public static class RhodesMaaLocalCandidateConverter
         if (closingIndex < 0)
             return true;
 
-        return trimmed[(closingIndex + 1)..]
-            .All(character => char.IsWhiteSpace(character) || char.IsPunctuation(character) || char.IsSymbol(character));
+        var suffix = trimmed[(closingIndex + 1)..];
+        if (suffix.Length > 2
+            && !suffix.Any(char.IsWhiteSpace)
+            && (suffix.StartsWith("と「", StringComparison.Ordinal)
+                || suffix.StartsWith("と『", StringComparison.Ordinal)))
+        {
+            // A few relics contain two quoted names joined by と. MAA-OCR can drop only the
+            // final closing quote; the unique relic resolver below still guards near-name drift.
+            return true;
+        }
+
+        return suffix.All(character =>
+            char.IsWhiteSpace(character) || char.IsPunctuation(character) || char.IsSymbol(character));
     }
 
     private static string RelicUsageState(
@@ -2195,7 +2265,7 @@ public static class RhodesMaaLocalCandidateConverter
     private static IEnumerable<MaaCandidatePreview> MizukiRejectionCardCandidates(
         IEnumerable<MaaTaskRunResult> taskResults)
     {
-        var byId = RhodesRunCatalog.LoadDefault().Operators
+        var byId = RhodesRecognitionCatalogCache.Load().Operators
             .Where(item => !string.IsNullOrWhiteSpace(item.Id))
             .ToDictionary(item => item.Id, StringComparer.Ordinal);
         var emitted = new HashSet<string>(StringComparer.Ordinal);
@@ -2240,7 +2310,7 @@ public static class RhodesMaaLocalCandidateConverter
     private static IEnumerable<MaaCandidatePreview> MizukiEvolutionCardCandidates(
         IEnumerable<MaaTaskRunResult> taskResults)
     {
-        var byId = RhodesRunCatalog.LoadDefault().Operators
+        var byId = RhodesRecognitionCatalogCache.Load().Operators
             .Where(item => !string.IsNullOrWhiteSpace(item.Id))
             .ToDictionary(item => item.Id, StringComparer.Ordinal);
         var emitted = new HashSet<string>(StringComparer.Ordinal);
@@ -2285,7 +2355,7 @@ public static class RhodesMaaLocalCandidateConverter
     private static IEnumerable<MaaCandidatePreview> SuiCandleBearerCardCandidates(
         IEnumerable<MaaTaskRunResult> taskResults)
     {
-        var byId = RhodesRunCatalog.LoadDefault().Operators
+        var byId = RhodesRecognitionCatalogCache.Load().Operators
             .Where(item => !string.IsNullOrWhiteSpace(item.Id))
             .ToDictionary(item => item.Id, StringComparer.Ordinal);
         var emitted = new HashSet<string>(StringComparer.Ordinal);

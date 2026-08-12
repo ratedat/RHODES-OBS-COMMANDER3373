@@ -140,6 +140,21 @@ test("operator cards omit the promotion overlay below elite two", () => {
   assert.doesNotMatch(output, /operator-promotion-badge/);
 });
 
+test("relic cards expose a recognized stack count in OBS output", () => {
+  const output = renderOverlayDense({
+    ...args,
+    relics: [{
+      id: "is5_sarkaz_relic_287",
+      name: "呪儀の溯獣",
+      stackCount: 9,
+      image: {},
+    }],
+    orientation: "horizontal",
+  }, context);
+
+  assert.match(output, /class="relic-stack-badge"[^>]*>×9<\/span>/);
+});
+
 test("elite-two badge keeps the full transparent icon visible", async () => {
   const styles = await readFile(new URL("../app/styles.css", import.meta.url), "utf8");
 

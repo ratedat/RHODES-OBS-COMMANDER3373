@@ -217,6 +217,9 @@ public static class RhodesRunCatalog
         if (!root.TryGetProperty("relics", out var relics) || relics.ValueKind != JsonValueKind.Array)
             return [];
 
+        var stackRules = RhodesRelicStackRuleCatalog.LoadDefault(dataRoot)
+            .ToDictionary(rule => rule.RelicId, StringComparer.Ordinal);
+
         return relics.EnumerateArray()
             .Select((item, index) =>
             {
@@ -226,6 +229,8 @@ public static class RhodesRunCatalog
                 var category = JsonString(item, "category");
                 var name = JsonString(item, "name");
                 var effect = JsonString(item, "effect");
+                stackRules.TryGetValue(id, out var stackRule);
+                var persistedStackCount = state.RelicStackCounts.GetValueOrDefault(id);
                 var choice = new SukiChoiceItem(
                     "relic",
                     id,
@@ -241,8 +246,11 @@ public static class RhodesRunCatalog
                     effect,
                     $"{id} {number} {name} {category} {effect}",
                     ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")),
-                    supportsUsedFlag: RhodesRelicUsagePolicy.SupportsUsedFlag(name));
+                    supportsUsedFlag: RhodesRelicUsagePolicy.SupportsUsedFlag(name),
+                    supportsRelicStackCount: stackRule is not null || persistedStackCount > 0,
+                    relicStackMaximum: stackRule?.Maximum);
                 choice.IsSelected = state.SelectedRelicIds.Contains(id);
+                choice.RelicStackCount = persistedStackCount;
                 choice.IsExcluded = state.ExcludedRelicIds.Contains(id);
                 choice.IsUsed = state.UsedRelicIds.Contains(id);
                 return choice;
@@ -295,10 +303,11 @@ public static class RhodesRunCatalog
         var campaignId = JsonString(run, "campaignId", RhodesRunStateStore.StartupCampaignId);
         var performanceId = JsonString(run, "performanceId");
         var selectedOperatorIds = ReadStringSet(root, "operators");
+        var selectedRelicIds = ReadStringSet(root, "relics");
         return new SukiRunStateSnapshot(
             campaignId,
             selectedOperatorIds,
-            ReadStringSet(root, "relics"),
+            selectedRelicIds,
             ReadStringSet(preferences, "operatorExcludedIds"),
             ReadStringSet(preferences, "relicExcludedIds"),
             JsonBool(preferences, "operatorShowSelectedFirst"),
@@ -323,6 +332,7 @@ public static class RhodesRunCatalog
             UsedRelicIds = ReadStringSet(root, "usedRelicIds"),
             OperatorCounts = ReadPositiveIntMap(root, "operatorCounts", selectedOperatorIds),
             OperatorPromotionLevels = ReadOperatorPromotionLevels(root, selectedOperatorIds),
+            RelicStackCounts = ReadRelicStackCounts(root, selectedRelicIds, dataRoot),
         };
     }
 
@@ -1198,6 +1208,42 @@ public static class RhodesRunCatalog
                 continue;
             }
             result[entry.Name] = 2;
+        }
+        return result;
+    }
+
+    private static IReadOnlyDictionary<string, int> ReadRelicStackCounts(
+        JsonElement element,
+        IReadOnlySet<string> selectedRelicIds,
+        string dataRoot)
+    {
+        var result = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (element.ValueKind != JsonValueKind.Object
+            || !element.TryGetProperty("relicStackCounts", out var property)
+            || property.ValueKind != JsonValueKind.Object)
+        {
+            return result;
+        }
+
+        var rules = RhodesRelicStackRuleCatalog.LoadDefault(dataRoot)
+            .ToDictionary(rule => rule.RelicId, StringComparer.Ordinal);
+        foreach (var entry in property.EnumerateObject())
+        {
+            if (!selectedRelicIds.Contains(entry.Name)
+                || entry.Value.ValueKind != JsonValueKind.Number
+                || !entry.Value.TryGetInt32(out var count)
+                || count <= 0)
+            {
+                continue;
+            }
+
+            if (rules.TryGetValue(entry.Name, out var rule)
+                && rule.Maximum is int maximum
+                && count > maximum)
+            {
+                continue;
+            }
+            result[entry.Name] = count;
         }
         return result;
     }

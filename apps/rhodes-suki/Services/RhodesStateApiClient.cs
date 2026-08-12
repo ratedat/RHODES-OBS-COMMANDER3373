@@ -6,11 +6,20 @@ using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
 
+public enum RhodesStateApiFailureKind
+{
+    None,
+    Unavailable,
+    Api,
+}
+
 public sealed record RhodesStateApiResult(
     string StateJson,
-    string Error)
+    string Error,
+    RhodesStateApiFailureKind FailureKind = RhodesStateApiFailureKind.None)
 {
     public bool Succeeded => string.IsNullOrWhiteSpace(Error);
+    public bool IsUnavailable => !Succeeded && FailureKind == RhodesStateApiFailureKind.Unavailable;
 }
 
 public sealed record RhodesCandidateStateApplyResult(
@@ -39,13 +48,21 @@ public static class RhodesStateApiClient
             var response = await client.GetAsync($"{baseUrl.TrimEnd('/')}/api/state", cancellationToken);
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
-                return new RhodesStateApiResult("", $"{(int)response.StatusCode} {Shorten(json, 180)}");
+                return new RhodesStateApiResult("", $"{(int)response.StatusCode} {Shorten(json, 180)}", RhodesStateApiFailureKind.Api);
 
             return new RhodesStateApiResult(json, "");
         }
+        catch (HttpRequestException ex)
+        {
+            return new RhodesStateApiResult("", Shorten(ex.Message, 180), RhodesStateApiFailureKind.Unavailable);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            return new RhodesStateApiResult("", Shorten(ex.Message, 180), RhodesStateApiFailureKind.Unavailable);
+        }
         catch (Exception ex)
         {
-            return new RhodesStateApiResult("", Shorten(ex.Message, 180));
+            return new RhodesStateApiResult("", Shorten(ex.Message, 180), RhodesStateApiFailureKind.Api);
         }
         finally
         {
@@ -69,13 +86,21 @@ public static class RhodesStateApiClient
             var response = await client.PutAsync($"{baseUrl.TrimEnd('/')}/api/state", content, cancellationToken);
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
-                return new RhodesStateApiResult("", $"{(int)response.StatusCode} {Shorten(json, 180)}");
+                return new RhodesStateApiResult("", $"{(int)response.StatusCode} {Shorten(json, 180)}", RhodesStateApiFailureKind.Api);
 
             return new RhodesStateApiResult(json, "");
         }
+        catch (HttpRequestException ex)
+        {
+            return new RhodesStateApiResult("", Shorten(ex.Message, 180), RhodesStateApiFailureKind.Unavailable);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            return new RhodesStateApiResult("", Shorten(ex.Message, 180), RhodesStateApiFailureKind.Unavailable);
+        }
         catch (Exception ex)
         {
-            return new RhodesStateApiResult("", Shorten(ex.Message, 180));
+            return new RhodesStateApiResult("", Shorten(ex.Message, 180), RhodesStateApiFailureKind.Api);
         }
         finally
         {
@@ -250,6 +275,7 @@ public static class RhodesStateApiClient
         root["operatorPromotionLevels"] = new JsonObject();
         root["relics"] = new JsonArray();
         root["usedRelicIds"] = new JsonArray();
+        root["relicStackCounts"] = new JsonObject();
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
         return root.ToJsonString(IndentedWriteOptions);
     }

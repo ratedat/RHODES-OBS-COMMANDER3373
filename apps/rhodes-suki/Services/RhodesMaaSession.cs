@@ -121,7 +121,7 @@ public sealed class RhodesMaaSession : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                _resource = new MaaResource(options.ResourceRoot);
+                _resource = CreateResource(options);
                 _controller = new MaaAdbController(
                     options.AdbPath,
                     options.AdbSerial,
@@ -176,7 +176,7 @@ public sealed class RhodesMaaSession : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                _resource = new MaaResource(options.ResourceRoot);
+                _resource = CreateResource(options);
                 _offlineControllerApi = new RhodesOfflineMaaControllerApi();
                 _controller = new MaaCustomController(
                     _offlineControllerApi,
@@ -212,6 +212,74 @@ public sealed class RhodesMaaSession : IDisposable
             {
                 DisposeCurrent();
                 return Snapshot("オフライン初期化失敗", ex.Message, options, false);
+            }
+        }, cancellationToken);
+    }
+
+    public async Task<MaaSessionSnapshot> InitializeWin32Async(
+        MaaSessionOptions options,
+        IntPtr windowHandle,
+        string? screencapMethodId,
+        CancellationToken cancellationToken = default)
+    {
+        DisposeCurrent();
+
+        if (!OperatingSystem.IsWindows())
+            return Snapshot("PC撮影非対応", "Win32 ControllerはWindowsでのみ使用できます。", options, false);
+
+        var runtimeStatus = MaaFrameworkRuntimeProbe.ProbeAppBaseDirectory(AppContext.BaseDirectory);
+        if (!runtimeStatus.IsReady)
+            return Snapshot($"MAAFramework {runtimeStatus.State}", runtimeStatus.Detail, options, false);
+
+        EnsureNativeRuntimeDirectory();
+
+        if (!Directory.Exists(options.ResourceRoot))
+            return Snapshot("Resource未配置", "MAA Resource root が存在しません。", options, false);
+        if (windowHandle == IntPtr.Zero)
+            return Snapshot("PCウィンドウ未選択", "撮影するゲームウィンドウを選択してください。", options, false);
+
+        EffectiveOptions = options;
+        var plan = RhodesMaaPcConnectionPolicy.Resolve(screencapMethodId);
+        return await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                _resource = CreateResource(options);
+                _controller = new MaaWin32Controller(
+                    windowHandle,
+                    plan.ScreencapMethod,
+                    plan.MouseMethod,
+                    plan.KeyboardMethod,
+                    LinkOption.None,
+                    CheckStatusOption.None);
+                if (!_controller.SetOption_ScreenshotTargetLongSide(plan.TargetWidth)
+                    || !_controller.SetOption_ScreenshotTargetShortSide(plan.TargetHeight))
+                {
+                    throw new InvalidOperationException("PC撮影の1280x720正規化設定に失敗しました。");
+                }
+
+                _tasker = new MaaTasker
+                {
+                    Resource = _resource,
+                    Controller = _controller,
+                    DisposeOptions = DisposeOptions.All,
+                };
+                _tasker.Global.SetOption_SaveOnError(false);
+                _tasker.Global.SetOption_DebugMode(true);
+
+                var linkStatus = _tasker.Controller?.LinkStart().Wait();
+                var ok = linkStatus == MaaJobStatus.Succeeded;
+                return Snapshot(
+                    ok ? "PCウィンドウ接続済み" : "PCウィンドウ接続失敗",
+                    $"MAA Win32 Controller LinkStart: {linkStatus} / capture={plan.ScreencapMethod} / 1280x720",
+                    options,
+                    ok);
+            }
+            catch (Exception ex)
+            {
+                DisposeCurrent();
+                return Snapshot("PCウィンドウ初期化失敗", ex.Message, options, false);
             }
         }, cancellationToken);
     }
@@ -424,6 +492,33 @@ public sealed class RhodesMaaSession : IDisposable
             options);
     }
 
+    private static MaaResource CreateResource(MaaSessionOptions options)
+    {
+        var resource = new MaaResource();
+        try
+        {
+            var inferenceConfigured = options.InferenceProvider switch
+            {
+                InferenceExecutionProvider.Auto => true,
+                InferenceExecutionProvider.CPU => resource.SetInference_UseCpu(),
+                InferenceExecutionProvider.DirectML => resource.SetInference_UseDirectML(options.InferenceDeviceId),
+                _ => false,
+            };
+            if (!inferenceConfigured)
+                throw new InvalidOperationException($"MAA推論設定を適用できませんでした: {options.InferenceProvider}");
+
+            var bundleStatus = resource.AppendBundle(options.ResourceRoot).Wait();
+            if (bundleStatus != MaaJobStatus.Succeeded)
+                throw new InvalidOperationException($"MAA Resource bundleの読込に失敗しました: {bundleStatus}");
+            return resource;
+        }
+        catch
+        {
+            resource.Dispose();
+            throw;
+        }
+    }
+
     private void DisposeCurrent()
     {
         _tasker?.Dispose();
@@ -459,6 +554,11 @@ public sealed class RhodesMaaSession : IDisposable
         using var devices = await MaaToolkit.Shared.AdbDevice.FindAsync(adbPath);
         cancellationToken.ThrowIfCancellationRequested();
         return devices.ToArray();
+    }
+
+    public static void PrepareNativeRuntime()
+    {
+        EnsureNativeRuntimeDirectory();
     }
 
     private static void EnsureNativeRuntimeDirectory()
@@ -514,6 +614,7 @@ public sealed class RhodesMaaSession : IDisposable
             "MaaToolkit.dll",
             "MaaFramework.dll",
             "MaaAdbControlUnit.dll",
+            "MaaWin32ControlUnit.dll",
         ];
     }
 

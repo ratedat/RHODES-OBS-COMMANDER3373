@@ -17,7 +17,9 @@ public sealed record MaaSessionOptions(
     string AdbConfigJson,
     AdbInputMethods InputMethod,
     AdbScreencapMethods ScreencapMethod,
-    string ConnectionPreset = "auto");
+    string ConnectionPreset = "auto",
+    InferenceExecutionProvider InferenceProvider = InferenceExecutionProvider.Auto,
+    int InferenceDeviceId = 0);
 
 public static class SukiAdbConfigJson
 {
@@ -191,7 +193,7 @@ public static class SukiAdbMethodCatalog
         new(
             "minitouch",
             "MiniTouch優先",
-            "MiniTouchを優先し、失敗時はADB shellへ戻します。Android Back/keyeventはRHODESから呼び出しません。",
+            "MiniTouchを優先し、失敗時はADB shellへ戻します。",
             AdbInputMethods.MinitouchAndAdbKey
                 | AdbInputMethods.AdbShell),
         new(
@@ -372,8 +374,9 @@ public sealed record RhodesSukiSettings(
     SukiOutputPreferences? OutputPreferences = null,
     string TournamentRelayUrl = "",
     string TournamentPlayerLabel = "Player",
-    int SchemaVersion = 2,
-    SukiAdbConnectionSettings? AdbConnection = null);
+    int SchemaVersion = 3,
+    SukiAdbConnectionSettings? AdbConnection = null,
+    SukiMaaRuntimeSettings? MaaRuntime = null);
 
 public sealed record MaaSessionSnapshot(
     string State,

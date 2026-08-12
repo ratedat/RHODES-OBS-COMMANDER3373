@@ -17,6 +17,19 @@ public sealed record RhodesMuMuCapabilitySnapshot(
         new("", "", "", "", false, false, 0, detail, detail);
 }
 
+public sealed record RhodesLdPlayerCapabilitySnapshot(
+    string EmulatorRoot,
+    string ConsolePath,
+    string CaptureLibraryPath,
+    bool ScreenshotEnhancementAvailable,
+    int InstanceIndex,
+    string Detail)
+{
+    public static RhodesLdPlayerCapabilitySnapshot NotDetected(
+        string detail = "LDPlayerの実行環境を確認できませんでした。") =>
+        new("", "", "", false, 0, detail);
+}
+
 public sealed record RhodesMaaAdbOptionResolution(
     MaaSessionOptions Options,
     bool ScreenshotEnhancementActive,

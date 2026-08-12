@@ -19,14 +19,15 @@ public sealed record MaaDynamicOcrRequest(
     int Height,
     int Scale,
     double TemplateScore,
-    bool OnlyRecognition = true)
+    bool OnlyRecognition = true,
+    double Threshold = 0.3)
 {
     public string PayloadJson => JsonSerializer.Serialize(new
     {
         recognition = "OCR",
         roi = new[] { X, Y, Width, Height },
         only_rec = OnlyRecognition,
-        threshold = 0.3,
+        threshold = Math.Clamp(Threshold, 0, 1),
     });
 }
 

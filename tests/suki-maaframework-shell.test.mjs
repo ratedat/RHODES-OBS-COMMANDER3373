@@ -510,7 +510,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.ok(ensureCaptureEnd > ensureCaptureStart);
   assert.match(viewModel.slice(ensureCaptureStart, ensureCaptureEnd), /if \(!await EnsureMaaControllerReadyAsync\(\)\)/);
   const forceCaptureStart = viewModel.indexOf("private async Task<bool> ForceCaptureAsync()");
-  const forceCaptureEnd = viewModel.indexOf("private async Task<MaaCaptureResult?> CaptureCoreAsync()", forceCaptureStart);
+  const forceCaptureEnd = viewModel.indexOf("private async Task<MaaCaptureResult> CaptureCoreAsync()", forceCaptureStart);
   assert.ok(forceCaptureStart >= 0);
   assert.ok(forceCaptureEnd > forceCaptureStart);
   assert.match(viewModel.slice(forceCaptureStart, forceCaptureEnd), /if \(!await EnsureMaaControllerReadyAsync\(\)\)/);

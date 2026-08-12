@@ -5,7 +5,7 @@ namespace RhodesSuki.Services;
 
 public static class RhodesSukiSettingsStore
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -69,11 +69,13 @@ public static class RhodesSukiSettingsStore
             outputPreferences = RhodesOutputProfileService.Normalize(outputPreferences);
 
         var adbConnection = settings.AdbConnection ?? CreateAdbConnectionFromLegacySettings(settings);
+        var maaRuntime = settings.MaaRuntime ?? new SukiMaaRuntimeSettings();
 
         var normalized = settings with
         {
             SchemaVersion = CurrentSchemaVersion,
             AdbConnection = NormalizeAdbConnection(adbConnection),
+            MaaRuntime = NormalizeMaaRuntime(maaRuntime),
             OutputPreferences = outputPreferences,
             TournamentRelayUrl = settings.TournamentRelayUrl?.Trim() ?? "",
             TournamentPlayerLabel = string.IsNullOrWhiteSpace(settings.TournamentPlayerLabel)
@@ -123,6 +125,7 @@ public static class RhodesSukiSettingsStore
             EmulatorRoot = settings.EmulatorRoot?.Trim() ?? "",
             EmulatorExecutablePath = settings.EmulatorExecutablePath?.Trim() ?? "",
             MuMuInstanceIndex = Math.Clamp(settings.MuMuInstanceIndex, 0, 127),
+            LdPlayerInstanceIndex = Math.Clamp(settings.LdPlayerInstanceIndex, 0, 127),
             GamePackage = string.IsNullOrWhiteSpace(settings.GamePackage)
                 ? "com.YoStarJP.Arknights"
                 : settings.GamePackage.Trim(),
@@ -132,6 +135,27 @@ public static class RhodesSukiSettingsStore
             ReconnectAttempts = Math.Clamp(settings.ReconnectAttempts, 1, 5),
             ReconnectDelayMs = Math.Clamp(settings.ReconnectDelayMs, 0, 10_000),
             LightweightAdb = false,
+        };
+    }
+
+    internal static SukiMaaRuntimeSettings NormalizeMaaRuntime(SukiMaaRuntimeSettings settings)
+    {
+        if (settings.SchemaVersion > SukiMaaRuntimeSettings.CurrentSchemaVersion)
+        {
+            throw new InvalidDataException(
+                $"未対応のMAAランタイム設定schemaVersionです: {settings.SchemaVersion} > {SukiMaaRuntimeSettings.CurrentSchemaVersion}");
+        }
+
+        return settings with
+        {
+            SchemaVersion = SukiMaaRuntimeSettings.CurrentSchemaVersion,
+            InferenceProviderId = SukiMaaInferenceCatalog.Normalize(settings.InferenceProviderId),
+            InferenceDeviceId = Math.Clamp(settings.InferenceDeviceId, 0, 15),
+            PreferredWindowTitle = string.IsNullOrWhiteSpace(settings.PreferredWindowTitle)
+                ? "アークナイツ"
+                : settings.PreferredWindowTitle.Trim(),
+            PreferredWindowClass = settings.PreferredWindowClass?.Trim() ?? "",
+            Win32ScreencapMethodId = SukiWin32ScreencapCatalog.Normalize(settings.Win32ScreencapMethodId),
         };
     }
 

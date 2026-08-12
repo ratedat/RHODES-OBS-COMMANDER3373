@@ -507,6 +507,14 @@ export function registerControlEvents(app, context) {
       context.renderControl();
       return;
     }
+    const relicStackId = target.dataset.relicStackCount;
+    if (relicStackId) {
+      const maximum = target.dataset.relicStackMaximum
+        ? Number(target.dataset.relicStackMaximum)
+        : null;
+      context.mutate((state) => controlActions.updateRelicStackCount(state, relicStackId, Number(target.value), maximum));
+      return;
+    }
     const field = target.dataset.field;
     if (field) {
       context.mutate((state) => controlActions.updateRunField(state, field, target.value, target.checked));

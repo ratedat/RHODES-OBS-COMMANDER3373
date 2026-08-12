@@ -243,6 +243,28 @@
       "numericFallback": true
     }
   },
+  "RhodesOcrRegion_run_operator_count": {
+    "recognition": "OCR",
+    "roi": [
+      994,
+      650,
+      58,
+      58
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "run.operator_count",
+      "profileIds": [
+        "operatorsFull"
+      ],
+      "scale": 6,
+      "numericFallback": true
+    }
+  },
   "RhodesOcrRegion_run_idea": {
     "recognition": "OCR",
     "roi": [

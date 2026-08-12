@@ -1595,7 +1595,34 @@ public static class RhodesRecognitionCandidateApplier
         var relicId = CandidateId(candidate.RelicId, candidate.Value);
         var ownedChanged = ApplyStringSetCandidate(state, "relics", relicId, "", applied, "relic");
         var usageChanged = ApplyRelicUsageState(state, candidate, relicId, applied);
-        return ownedChanged || usageChanged;
+        var stackChanged = ApplyRelicStackCount(state, candidate, relicId, applied);
+        return ownedChanged || usageChanged || stackChanged;
+    }
+
+    private static bool ApplyRelicStackCount(
+        JsonObject state,
+        MaaCandidatePreview candidate,
+        string relicId,
+        ICollection<string> applied)
+    {
+        if (string.IsNullOrWhiteSpace(relicId)
+            || candidate.Count <= 0
+            || !RhodesRelicStackRuleCatalog.IsWithinKnownLimit(relicId, candidate.Count))
+        {
+            return false;
+        }
+
+        var counts = EnsureObject(state, "relicStackCounts");
+        if (counts[relicId] is JsonValue existing
+            && existing.TryGetValue<int>(out var previous)
+            && previous == candidate.Count)
+        {
+            return false;
+        }
+
+        counts[relicId] = candidate.Count;
+        applied.Add($"relic-stack:{relicId}");
+        return true;
     }
 
     private static bool ApplyRelicUsageState(

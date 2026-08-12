@@ -10,6 +10,8 @@ public sealed record SukiAdbConnectionSettings(
     bool MuMuTouchEnhancementEnabled = false,
     bool MuMuBridgeConnectionEnabled = false,
     int MuMuInstanceIndex = 0,
+    bool LdPlayerScreenshotEnhancementEnabled = false,
+    int LdPlayerInstanceIndex = 0,
     string GamePackage = "com.YoStarJP.Arknights",
     int GameCloneIndex = 0,
     string InputFallbackMethodId = "minitouch",
@@ -23,5 +25,5 @@ public sealed record SukiAdbConnectionSettings(
     bool UseManagedAdb = false,
     bool LightweightAdb = false)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 }

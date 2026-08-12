@@ -380,6 +380,21 @@
       ]
     },
     {
+      "name": "rhodes_ocr_region_run_operator_count",
+      "label": "生成: run.operator_count",
+      "entry": "RhodesOcrRegion_run_operator_count",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "OCR / maa-tasks.ocrRegions / run.operator_count / profiles: operatorsFull",
+      "group": [
+        "operatorsFull"
+      ]
+    },
+    {
       "name": "rhodes_ocr_region_run_idea",
       "label": "生成: run.idea",
       "entry": "RhodesOcrRegion_run_idea",
@@ -1517,6 +1532,12 @@
         },
         {
           "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_operator_count",
           "option": {
             "enabled": true
           }

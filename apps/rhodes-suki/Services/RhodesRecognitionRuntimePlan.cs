@@ -10,12 +10,18 @@ public static class RhodesRecognitionRuntimePlan
 
     public static MaaResourceExecutionPlan PreparePreNavigation(MaaResourceExecutionPlan plan)
     {
-        var selectedEntries = plan.ProfileId == "relicsFull"
-            ? plan.TaskEntries
+        var selectedEntries = plan.ProfileId switch
+        {
+            "relicsFull" => plan.TaskEntries
                 .Where(entry => entry.Equals(RhodesRelicOwnedCountReader.Entry, StringComparison.Ordinal))
                 .Distinct(StringComparer.Ordinal)
-                .ToArray()
-            : [];
+                .ToArray(),
+            "operatorsFull" => plan.TaskEntries
+                .Where(entry => entry.Equals(RhodesOperatorOwnedCountReader.Entry, StringComparison.Ordinal))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray(),
+            _ => [],
+        };
         var selected = plan.Tasks
             .Where(task => selectedEntries.Contains(task.Entry, StringComparer.Ordinal))
             .ToArray();
@@ -50,8 +56,13 @@ public static class RhodesRecognitionRuntimePlan
     public static bool ShouldSkipScroll(
         string profileId,
         int initialCandidateCount,
-        int? expectedCandidateCount = null) =>
-        HasReachedExpectedCandidateCount(profileId, initialCandidateCount, expectedCandidateCount);
+        int? expectedCandidateCount = null,
+        int? resolvedOperatorCardCount = null) =>
+        HasReachedExpectedCandidateCount(
+            profileId,
+            initialCandidateCount,
+            expectedCandidateCount,
+            resolvedOperatorCardCount);
 
     public static bool IsKnownNonScrollableRelicList(
         string profileId,
@@ -97,10 +108,29 @@ public static class RhodesRecognitionRuntimePlan
     public static bool HasReachedExpectedCandidateCount(
         string profileId,
         int candidateCount,
-        int? expectedCandidateCount) =>
-        profileId == "relicsFull"
-        && expectedCandidateCount is >= 0
-        && candidateCount == expectedCandidateCount.Value;
+        int? expectedCandidateCount,
+        int? resolvedOperatorCardCount = null)
+    {
+        if (expectedCandidateCount is null or < 0
+            || candidateCount != expectedCandidateCount.Value)
+        {
+            return false;
+        }
+
+        if (profileId == "relicsFull")
+            return true;
+
+        return profileId == "operatorsFull"
+            && resolvedOperatorCardCount >= expectedCandidateCount.Value;
+    }
+
+    public static int CountOperatorRosterCandidates(
+        IEnumerable<MaaCandidatePreview> candidates)
+    {
+        return RhodesMaaCandidateMerger.Merge([], candidates)
+            .Where(candidate => candidate.Kind.Equals("operator", StringComparison.OrdinalIgnoreCase))
+            .Sum(candidate => Math.Max(1, candidate.Count));
+    }
 
     public static bool IsTargetScreenConfirmed(
         string profileId,
@@ -203,8 +233,7 @@ public static class RhodesRecognitionRuntimePlan
     {
         return profileId.Equals("operatorsFull", StringComparison.Ordinal)
             && trackerCanStop
-            && executedScrolls >= minScrolls
-            && stableFrameCount >= Math.Max(1, fingerprintStableCount);
+            && executedScrolls >= minScrolls;
     }
 
     public static bool CanStopResolvedOperatorScan(

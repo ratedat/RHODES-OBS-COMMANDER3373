@@ -1,5 +1,6 @@
 import { assetUrl, html, stars } from "../lib/format.js";
 import { renderRelicUsedBadge } from "./relic-used-badge.js";
+import { renderRelicStackBadge } from "./relic-stack-badge.js";
 import { renderOperatorPortrait } from "./operator-promotion-badge.js";
 import { operatorRosterCount } from "../domain/operator-counts.js";
 
@@ -46,7 +47,7 @@ export function renderOverlayCompact({ campaign, squad, option, performance, act
         <div class="compact-section-head"><span>Relics</span><span>${relics.length}</span></div>
         <div class="stream-scroll compact-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("compactRelicScrollSpeed")}">
           <div class="compact-relic-strip">
-            ${relics.length ? relics.map((item) => `<div class="compact-relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" />${renderRelicUsedBadge(item)}</div>`).join("") : `<span class="compact-empty">なし</span>`}
+            ${relics.length ? relics.map((item) => `<div class="compact-relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" />${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<span class="compact-empty">なし</span>`}
           </div>
         </div>
       </section>
@@ -110,7 +111,7 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
         <div class="stream-section-head"><span>Relics</span><strong>${relics.length}</strong></div>
         <div class="stream-scroll stream-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
           <div class="stream-relic-grid">
-            ${relics.length ? relics.map((item) => `<div class="stream-relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><strong>${html(item.name)}</strong>${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="stream-empty">秘宝なし</div>`}
+            ${relics.length ? relics.map((item) => `<div class="stream-relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><strong>${html(item.name)}</strong>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="stream-empty">秘宝なし</div>`}
           </div>
         </div>
       </section>`;
@@ -199,7 +200,7 @@ export function renderOverlayDefault({ campaign, squad, option, performance, act
         <section class="overlay-card">
           <div class="overlay-card-header"><span>Relics</span><span>${relics.length}</span></div>
           <div class="overlay-card-body relic-grid">
-            ${relics.length ? relics.map((item) => `<div class="relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div>${html(item.name)}</div>${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="empty-state">秘宝なし</div>`}
+            ${relics.length ? relics.map((item) => `<div class="relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div>${html(item.name)}</div>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="empty-state">秘宝なし</div>`}
           </div>
         </section>
       </div>

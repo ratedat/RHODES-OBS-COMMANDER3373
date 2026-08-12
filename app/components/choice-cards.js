@@ -6,6 +6,11 @@ export function renderRelicControlRow(item, active, effectText, meta = {}) {
   const usedButton = meta.supportsUsedFlag && active
     ? `<button type="button" class="choice-used-button ${meta.used ? "active" : ""}" data-action="toggle-relic-used" data-id="${html(item.id)}" aria-pressed="${meta.used ? "true" : "false"}">${meta.used ? "使用済" : "未使用"}</button>`
     : "";
+  const stackMaximum = Number(meta.stackMaximum);
+  const hasStackMaximum = Number.isSafeInteger(stackMaximum) && stackMaximum > 0;
+  const stackControl = meta.supportsStackCount && active
+    ? `<label class="relic-stack-control"><span>スタック数</span><input type="number" min="0" ${hasStackMaximum ? `max="${html(stackMaximum)}"` : ""} value="${html(Number(meta.stackCount) > 0 ? Math.trunc(Number(meta.stackCount)) : 0)}" data-relic-stack-count="${html(item.id)}" data-relic-stack-maximum="${hasStackMaximum ? html(stackMaximum) : ""}" aria-label="${html(item.name)}のスタック数" /><small>${hasStackMaximum ? `上限${html(stackMaximum)}` : "上限なし"}</small></label>`
+    : "";
   const excludeButton = meta.showExclude === false ? "" : `<button type="button" class="choice-exclude-button ${excluded ? "active" : ""}" data-action="toggle-relic-excluded" data-id="${html(item.id)}" aria-pressed="${excluded ? "true" : "false"}">${excluded ? "除外中" : "表示除外"}</button>`;
   const badges = [
     autoOnly ? '<span class="item-badge template">自動</span>' : '',
@@ -24,6 +29,7 @@ export function renderRelicControlRow(item, active, effectText, meta = {}) {
         </span>
       </button>
       <div class="item-badges">${badges}</div>
+      ${stackControl}
       ${usedButton}
       ${excludeButton}
     </div>

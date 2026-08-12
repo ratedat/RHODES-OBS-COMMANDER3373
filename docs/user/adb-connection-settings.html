@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RHODES OBS COMMANDER3373 - ADB接続設定ガイド</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1011; --panel:#121a1b; --line:#2b3a3c; --text:#edf4f2; --muted:#a8b7b4; --accent:#55d6be; --warn:#f0d06a; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.7 "Yu Gothic UI",Meiryo,sans-serif; }
+    main { width:min(1040px,calc(100% - 32px)); margin:32px auto 64px; }
+    header,section { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px 24px; margin:0 0 16px; }
+    h1 { margin:0 0 8px; font-size:clamp(24px,4vw,36px); line-height:1.25; }
+    h2 { margin:0 0 12px; font-size:21px; color:var(--accent); }
+    h3 { margin:20px 0 6px; font-size:17px; }
+    p { margin:8px 0; }
+    ul,ol { margin:8px 0; padding-left:1.5em; }
+    table { width:100%; border-collapse:collapse; margin:12px 0; }
+    th,td { border:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; }
+    th { background:#172223; }
+    code { background:#071011; border:1px solid var(--line); border-radius:4px; padding:.1em .35em; overflow-wrap:anywhere; }
+    a { color:#79e3cf; }
+    .lead { color:var(--muted); font-size:17px; }
+    .note,.warning { border-left:4px solid var(--accent); padding:10px 14px; background:#0d1718; }
+    .warning { border-left-color:var(--warn); }
+    .tag { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 9px; margin-right:6px; color:var(--muted); font-size:13px; }
+    @media (max-width:700px) { main{width:min(100% - 16px,1040px);margin-top:8px} header,section{padding:16px} table{font-size:13px} }
+    @media print { :root{color-scheme:light} body{background:#fff;color:#111} main{width:100%;margin:0} header,section{break-inside:avoid;border-color:#aaa;background:#fff} a{color:#0645ad} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="tag">オフライン同梱</span><span class="tag">Avalonia / SukiUI</span>
+    <h1>ADB接続設定ガイド</h1>
+    <p class="lead">RHODES OBS COMMANDER3373で、エミュレーターを安全に接続し、MAAFrameworkの撮影・入力方式を選ぶための説明です。</p>
+  </header>
+
+  <section>
+    <h2>最初に知っておくこと</h2>
+    <div class="warning"><strong>「選択内容で上書き」</strong>を押すと、選んだプロファイルのADB実行ファイル、serial、推奨撮影方式、推奨入力方式で画面上の値を上書きします。プロファイルを選ぶだけでは上書きしません。</div>
+    <ol>
+      <li>プロファイルを選び、内容を確認してから「選択内容で上書き」を押します。</li>
+      <li>必要ならADBパスとserialを修正し、「接続・撮影」で確認します。</li>
+      <li>次回も使う設定だけ、最後に「保存」を押します。適用と保存は別操作です。</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>基本項目</h2>
+    <table>
+      <thead><tr><th>項目</th><th>意味</th><th>確認の目安</th></tr></thead>
+      <tbody>
+        <tr><td>ADB実行ファイル</td><td>選択したエミュレーターへ接続する<code>adb.exe</code>です。</td><td>原則として、そのエミュレーターに同梱されたADBを使います。</td></tr>
+        <tr><td>接続serial</td><td>ADB端末の接続先です。例: <code>127.0.0.1:16416</code>、<code>emulator-5554</code></td><td><code>adb devices</code>相当の検出結果と一致する値を選びます。</td></tr>
+        <tr><td>ADB Config</td><td>MAAFrameworkへ渡す高度なJSON設定です。</td><td>通常は自動生成に任せ、手編集時はJSON objectのままにします。</td></tr>
+        <tr><td>エミュレータールート</td><td>MuMuまたはLDPlayerのインストールフォルダーです。</td><td>空欄ならADBパスから推定します。能力確認に失敗した場合だけ指定します。</td></tr>
+        <tr><td>instance番号</td><td>複数起動時の仮想端末番号です。</td><td>通常はserialから推定します。MuMuのclone番号とは別です。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>MAAの撮影・入力方式</h2>
+    <p>撮影と入力は独立しています。高速撮影が使えても、高速入力が使えるとは限りません。強化機能が利用できない場合は、指定したフォールバック方式へ戻ります。</p>
+    <table>
+      <thead><tr><th>対象</th><th>高速撮影（EmulatorExtras）</th><th>高速入力（EmulatorExtras）</th><th>推奨運用</th></tr></thead>
+      <tbody>
+        <tr><td>MuMu Player 12</td><td>対応。<code>external_renderer_ipc.dll</code>を確認します。</td><td>対応。MuMu 6.3.2.0以上を確認します。</td><td>撮影とタッチを個別にON/OFFし、それぞれフォールバックを指定します。</td></tr>
+        <tr><td>LDPlayer 9</td><td>対応。<code>ldconsole.exe</code>と<code>ldopengl64.dll</code>を確認します。</td><td><strong>MAA公式のEmulatorExtras入力対象外です。</strong></td><td>高速撮影だけをONにし、入力はMAA Touch、MiniTouch、ADB入力から選びます。</td></tr>
+        <tr><td>その他</td><td>プロファイルとMAA検出結果に従います。</td><td>プロファイルとMAA検出結果に従います。</td><td>標準方式から接続確認し、必要な場合だけ互換方式へ変更します。</td></tr>
+      </tbody>
+    </table>
+    <div class="note">LDPlayerでは高速撮影を有効にしても入力方式を書き換えません。接続時のLDPlayer process IDはMaaToolkitの端末検出結果から取得し、既存の<code>extras.ld.pid</code>を保持します。</div>
+  </section>
+
+  <section>
+    <h2>接続強化の各設定</h2>
+    <h3>MuMu高速スクリーンショット</h3>
+    <p>MuMu IPCによる低遅延・ロスレス撮影を優先します。IPC DLLが見つからない場合は「高速撮影失敗時」の方式へ戻ります。</p>
+    <h3>MuMu高速タッチ</h3>
+    <p>MuMu IPCでタップとスワイプを送ります。Manager versionまたはIPC要件を満たさない場合は「高速タッチ失敗時」の方式へ戻ります。</p>
+    <h3>MuMuネットワークブリッジ</h3>
+    <p>複数instanceやバックグラウンド常駐時に接続先を明示します。OFFではserialからinstance番号を推定します。</p>
+    <h3>LDPlayer高速スクリーンショット</h3>
+    <p>LDPlayerの描画ライブラリによるロスレス撮影を優先します。高速入力は有効にせず、画面上で選択したMAA入力方式を維持します。</p>
+  </section>
+
+  <section>
+    <h2>安全とトラブルシュート</h2>
+    <ul>
+      <li>「能力を再確認」はローカルファイルだけを調べ、ADB接続、撮影、タップを行いません。</li>
+      <li>ADB server再起動、ADB process再起動、エミュレーター再起動は別の回復設定です。必要な項目だけ明示的に有効化してください。</li>
+      <li>LDPlayer高速撮影が不可の場合は、ルートがLDPlayer 9本体のフォルダーか、<code>ldconsole.exe</code>と<code>ldopengl64.dll</code>が存在するか確認します。</li>
+      <li>接続できるのに撮影できない場合は、撮影方式をRaw/GZip優先へ変更して切り分けます。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>公式資料</h2>
+    <ul>
+      <li><a href="https://maafw.com/en/docs/2.4-ControlMethods/">MaaFramework - Control Methods</a>（EmulatorExtrasの対応エミュレーターと撮影・入力方式）</li>
+      <li><a href="https://maafw.com/en/docs/2.2-IntegratedInterfaceOverview/">MaaFramework - Integrated Interface Overview</a>（ADB Controller作成と方式選択）</li>
+    </ul>
+    <p class="lead">このガイドは同梱ビルドの実装範囲を説明します。MAAFramework更新時は公式資料と実装の両方を再確認してください。</p>
+  </section>
+</main>
+</body>
+</html>

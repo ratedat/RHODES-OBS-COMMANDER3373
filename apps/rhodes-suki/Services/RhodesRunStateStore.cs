@@ -169,6 +169,7 @@ public static class RhodesRunStateStore
             state["operatorPromotionLevels"] = new JsonObject();
             state["relics"] = new JsonArray();
             state["usedRelicIds"] = new JsonArray();
+            state["relicStackCounts"] = new JsonObject();
             state["updatedAt"] = (now ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("O");
             await WriteJsonAtomicAsync(path, state);
         }
@@ -216,6 +217,7 @@ public static class RhodesRunStateStore
         state["operatorPromotionLevels"] = new JsonObject();
         state["relics"] = new JsonArray();
         state["usedRelicIds"] = new JsonArray();
+        state["relicStackCounts"] = new JsonObject();
         state["bossFlags"] = new JsonArray();
         state["bossSelections"] = new JsonObject();
         state["pendingSuggestions"] = new JsonArray();
@@ -267,6 +269,16 @@ public static class RhodesRunStateStore
         state["usedRelicIds"] = ToJsonArray(relicItems
             .Where(item => item.IsSelected && item.SupportsUsedFlag && item.IsUsed)
             .Select(item => item.Id));
+        var relicStackCounts = new JsonObject();
+        foreach (var item in relicItems.Where(item =>
+            item.IsSelected
+            && item.SupportsRelicStackCount
+            && item.RelicStackCount > 0
+            && (item.RelicStackMaximum is null || item.RelicStackCount <= item.RelicStackMaximum)))
+        {
+            relicStackCounts[item.Id] = item.RelicStackCount;
+        }
+        state["relicStackCounts"] = relicStackCounts;
         state["updatedAt"] = now.UtcDateTime.ToString("O");
 
         var preferences = EnsureObject(state, "preferences");
@@ -411,7 +423,10 @@ public static class RhodesRunStateStore
             item.SupportsEliteTwo,
             item.IsEliteTwo,
             item.SupportsUsedFlag,
-            item.IsUsed);
+            item.IsUsed,
+            item.SupportsRelicStackCount,
+            item.RelicStackMaximum,
+            item.RelicStackCount);
     }
 
     private static JsonObject EnsureObject(JsonObject parent, string propertyName)
@@ -491,7 +506,10 @@ public sealed record SukiChoicePersistenceItem(
     bool SupportsEliteTwo,
     bool IsEliteTwo,
     bool SupportsUsedFlag,
-    bool IsUsed);
+    bool IsUsed,
+    bool SupportsRelicStackCount,
+    int? RelicStackMaximum,
+    int RelicStackCount);
 
 public sealed record SukiChoicePersistenceSnapshot(
     IReadOnlyList<SukiChoicePersistenceItem> Operators,

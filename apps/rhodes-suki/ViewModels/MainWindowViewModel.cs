@@ -23,6 +23,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private readonly IReadOnlyList<SukiChoiceItem> _allOperators = [];
     private readonly IReadOnlyList<SukiChoiceItem> _allRelics = [];
+    private readonly RhodesDeferredRefreshGate _resourceTaskDiagnosticsGate = new();
     private readonly LatestAsyncOperationQueue _choicePersistence;
     private readonly IntegrationStatus _maaFrameworkStatus;
     private SukiRunStateSnapshot _runState;
@@ -38,6 +39,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _muMuTouchEnhancementEnabled;
     private bool _muMuBridgeConnectionEnabled;
     private int _muMuInstanceIndex;
+    private bool _ldPlayerScreenshotEnhancementEnabled;
+    private int _ldPlayerInstanceIndex;
     private string _adbGamePackage = "com.YoStarJP.Arknights";
     private int _adbGameCloneIndex;
     private SukiAdbInputMethodOption? _selectedAdbInputFallbackMethod;
@@ -51,16 +54,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _useManagedAdb;
     private bool _allowDestructiveAdbActionsThisSession;
     private RhodesMuMuCapabilitySnapshot _muMuCapability = RhodesMuMuCapabilitySnapshot.NotDetected("MuMu能力は未確認です。");
-    private string _adbEnhancementStatus = "MuMu能力は未確認です。";
+    private RhodesLdPlayerCapabilitySnapshot _ldPlayerCapability = RhodesLdPlayerCapabilitySnapshot.NotDetected("LDPlayer能力は未確認です。");
+    private string _adbEnhancementStatus = "エミュレーター能力は未確認です。";
     private string _adbRecoveryStatus = "段階回復は未実行です。";
     private string _adbBenchmarkStatus = "スクリーンショットベンチマークは未実行です。";
+    private SukiMaaInferenceOption? _selectedMaaInferenceProvider;
+    private int _maaInferenceDeviceId;
+    private string _maaInferenceBenchmarkStatus = "保存FrameでCPUとDirectMLを比較できます。";
+    private string _pcPreferredWindowTitle = "アークナイツ";
+    private string _pcPreferredWindowClass = "";
+    private SukiWin32ScreencapOption? _selectedPcScreencapMethod;
+    private SukiDesktopWindowPreview? _selectedPcWindow;
+    private string _pcWindowStatus = "PCクライアント起動後にウィンドウを再検出してください。";
     private int _touchTestX;
     private int _touchTestY;
     private int _touchTestWidth;
     private int _touchTestHeight;
     private SukiTouchTestConfirmation? _pendingTouchTestConfirmation;
     private bool _isTouchTestConfirmationVisible;
-    private string _touchTestStatus = "矩形を入力して準備してください。Android Back/keyeventは実行しません。";
+    private string _touchTestStatus = "矩形を入力して準備してください。";
     private bool _isManagedAdbInstallConfirmationVisible;
     private string _managedAdbStatus = "管理ADBは未確認です。エミュレーター同梱ADBは上書きしません。";
     private string _workspaceTab = "run";
@@ -306,17 +318,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SukiAdbMethodCatalog.InputOptions.Where(option => option.Id != SukiAdbMethodCatalog.FastEmulatorMethodId));
         AdbScreencapFallbackMethodOptions = new ObservableCollection<SukiAdbScreencapMethodOption>(
             SukiAdbMethodCatalog.ScreencapOptions.Where(option => option.Id != SukiAdbMethodCatalog.FastEmulatorMethodId));
+        MaaInferenceProviderOptions = new ObservableCollection<SukiMaaInferenceOption>(SukiMaaInferenceCatalog.Options);
+        PcScreencapMethodOptions = new ObservableCollection<SukiWin32ScreencapOption>(SukiWin32ScreencapCatalog.Options);
+        PcWindows = [];
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "auto") ?? AdbPresets.FirstOrDefault();
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodId);
         SelectedAdbInputFallbackMethod = SukiAdbMethodCatalog.FindInput("minitouch");
         SelectedAdbScreencapFallbackMethod = SukiAdbMethodCatalog.FindScreencap("raw-gzip");
+        SelectedMaaInferenceProvider = SukiMaaInferenceCatalog.Find(SukiMaaInferenceCatalog.DefaultId);
+        SelectedPcScreencapMethod = SukiWin32ScreencapCatalog.Find(SukiWin32ScreencapCatalog.DefaultId);
         Campaigns = new ObservableCollection<SukiCampaignPreview>(
             RhodesPublicDebugPolicy.FilterCampaigns(runCatalog.Campaigns, _distributionProfile));
         _allOperators = runCatalog.Operators;
         foreach (var item in _allOperators)
             item.PropertyChanged += OnOperatorChoicePropertyChanged;
         _allRelics = runCatalog.Relics;
+        foreach (var item in _allRelics)
+            item.PropertyChanged += OnRelicChoicePropertyChanged;
         _choicePersistence = new LatestAsyncOperationQueue(
             SaveChoiceStateSnapshotAsync,
             TimeSpan.FromMilliseconds(200),
@@ -374,8 +393,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RefreshAdbDevicesCommand = new AsyncRelayCommand(RefreshAdbDevicesAsync);
         ApplyAdbDeviceCommand = new AsyncRelayCommand(parameter => ApplyAdbDeviceAsync(parameter as MaaAdbDevicePreview));
         RunAdbConnectionTestCommand = new AsyncRelayCommand(RunAdbConnectionTestAsync);
-        RefreshMuMuCapabilityCommand = new AsyncRelayCommand(() => RunBusyAsync(RefreshMuMuCapabilityAsync));
+        RefreshEmulatorCapabilityCommand = new AsyncRelayCommand(() => RunBusyAsync(RefreshEmulatorCapabilityAsync));
+        OpenAdbConnectionGuideCommand = new AsyncRelayCommand(OpenAdbConnectionGuideAsync);
         RunAdbScreenshotBenchmarkCommand = new AsyncRelayCommand(RunAdbScreenshotBenchmarkAsync);
+        RunMaaInferenceBenchmarkCommand = new AsyncRelayCommand(RunMaaInferenceBenchmarkAsync);
+        RefreshPcWindowsCommand = new AsyncRelayCommand(RefreshPcWindowsAsync);
+        ConnectPcWindowAndCaptureCommand = new AsyncRelayCommand(ConnectPcWindowAndCaptureAsync);
         PrepareAdbTouchTestCommand = new AsyncRelayCommand(PrepareAdbTouchTestAsync);
         CancelAdbTouchTestCommand = new AsyncRelayCommand(CancelAdbTouchTestAsync);
         ConfirmAdbTouchTestCommand = new AsyncRelayCommand(ConfirmAdbTouchTestAsync);
@@ -590,6 +613,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiAdbScreencapMethodOption> AdbScreencapFallbackMethodOptions { get; }
 
+    public ObservableCollection<SukiMaaInferenceOption> MaaInferenceProviderOptions { get; }
+
+    public ObservableCollection<SukiWin32ScreencapOption> PcScreencapMethodOptions { get; }
+
+    public ObservableCollection<SukiDesktopWindowPreview> PcWindows { get; }
+
     public ObservableCollection<SukiCampaignPreview> Campaigns { get; }
 
     public ObservableCollection<SukiChoiceItem> FilteredOperators { get; }
@@ -762,6 +791,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set => SetProperty(ref _muMuInstanceIndex, Math.Clamp(value, 0, 127));
     }
 
+    public bool LdPlayerScreenshotEnhancementEnabled
+    {
+        get => _ldPlayerScreenshotEnhancementEnabled;
+        set => SetProperty(ref _ldPlayerScreenshotEnhancementEnabled, value);
+    }
+
+    public int LdPlayerInstanceIndex
+    {
+        get => _ldPlayerInstanceIndex;
+        set => SetProperty(ref _ldPlayerInstanceIndex, Math.Clamp(value, 0, 127));
+    }
+
     public string AdbGamePackage
     {
         get => _adbGamePackage;
@@ -852,13 +893,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ? _adbEnhancementStatus
             : $"MuMu {(string.IsNullOrWhiteSpace(_muMuCapability.ManagerVersion) ? "version未確認" : _muMuCapability.ManagerVersion)} · instance={_muMuCapability.InstanceIndex} · 撮影={(_muMuCapability.ScreenshotEnhancementAvailable ? "可" : "不可")} · タッチ={(_muMuCapability.TouchEnhancementAvailable ? "可" : "不可")}";
 
+    public string EmulatorCapabilitySummary => IsMuMuPresetSelected
+        ? MuMuCapabilitySummary
+        : IsLdPlayerPresetSelected
+            ? string.IsNullOrWhiteSpace(_ldPlayerCapability.EmulatorRoot)
+                ? _adbEnhancementStatus
+                : $"LDPlayer · instance={_ldPlayerCapability.InstanceIndex} · 高速撮影={(_ldPlayerCapability.ScreenshotEnhancementAvailable ? "可" : "不可")} · 入力=選択中のMAA方式"
+            : _adbEnhancementStatus;
+
     public string AdbEnhancementStatus
     {
         get => _adbEnhancementStatus;
         private set
         {
             if (SetProperty(ref _adbEnhancementStatus, value))
+            {
                 OnPropertyChanged(nameof(MuMuCapabilitySummary));
+                OnPropertyChanged(nameof(EmulatorCapabilitySummary));
+            }
         }
     }
 
@@ -872,6 +924,71 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _adbBenchmarkStatus;
         private set => SetProperty(ref _adbBenchmarkStatus, value);
+    }
+
+    public SukiMaaInferenceOption? SelectedMaaInferenceProvider
+    {
+        get => _selectedMaaInferenceProvider;
+        set
+        {
+            if (!SetProperty(ref _selectedMaaInferenceProvider, value))
+                return;
+            OnPropertyChanged(nameof(IsDirectMlInferenceSelected));
+            OnPropertyChanged(nameof(MaaInferenceSummary));
+        }
+    }
+
+    public bool IsDirectMlInferenceSelected =>
+        SelectedMaaInferenceProvider?.Value == InferenceExecutionProvider.DirectML;
+
+    public int MaaInferenceDeviceId
+    {
+        get => _maaInferenceDeviceId;
+        set
+        {
+            if (SetProperty(ref _maaInferenceDeviceId, Math.Clamp(value, 0, 15)))
+                OnPropertyChanged(nameof(MaaInferenceSummary));
+        }
+    }
+
+    public string MaaInferenceSummary => IsDirectMlInferenceSelected
+        ? $"DirectML / DXGI adapter {MaaInferenceDeviceId}"
+        : SelectedMaaInferenceProvider?.Label ?? "自動（推奨）";
+
+    public string MaaInferenceBenchmarkStatus
+    {
+        get => _maaInferenceBenchmarkStatus;
+        private set => SetProperty(ref _maaInferenceBenchmarkStatus, value);
+    }
+
+    public string PcPreferredWindowTitle
+    {
+        get => _pcPreferredWindowTitle;
+        set => SetProperty(ref _pcPreferredWindowTitle, value?.Trim() ?? "");
+    }
+
+    public string PcPreferredWindowClass
+    {
+        get => _pcPreferredWindowClass;
+        set => SetProperty(ref _pcPreferredWindowClass, value?.Trim() ?? "");
+    }
+
+    public SukiWin32ScreencapOption? SelectedPcScreencapMethod
+    {
+        get => _selectedPcScreencapMethod;
+        set => SetProperty(ref _selectedPcScreencapMethod, value);
+    }
+
+    public SukiDesktopWindowPreview? SelectedPcWindow
+    {
+        get => _selectedPcWindow;
+        set => SetProperty(ref _selectedPcWindow, value);
+    }
+
+    public string PcWindowStatus
+    {
+        get => _pcWindowStatus;
+        private set => SetProperty(ref _pcWindowStatus, value);
     }
 
     public int TouchTestX
@@ -2331,6 +2448,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetProperty(ref _selectedAdbPreset, value))
                 return;
             OnPropertyChanged(nameof(IsMuMuPresetSelected));
+            OnPropertyChanged(nameof(IsLdPlayerPresetSelected));
+            OnPropertyChanged(nameof(EmulatorCapabilitySummary));
             OnPropertyChanged(nameof(AdbHeaderDetail));
             OnPropertyChanged(nameof(AdbDiagnosticCopyText));
             RefreshRuntimeCapabilities();
@@ -2339,6 +2458,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public bool IsMuMuPresetSelected => SelectedAdbPreset?.Id.Equals("mumu", StringComparison.OrdinalIgnoreCase) == true;
+
+    public bool IsLdPlayerPresetSelected => SelectedAdbPreset?.Id.Equals("ldplayer", StringComparison.OrdinalIgnoreCase) == true;
 
     public MaaAdbPathCandidatePreview? SelectedAdbPathCandidate
     {
@@ -2430,9 +2551,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand RunAdbConnectionTestCommand { get; }
 
-    public ICommand RefreshMuMuCapabilityCommand { get; }
+    public ICommand RefreshEmulatorCapabilityCommand { get; }
+
+    public ICommand OpenAdbConnectionGuideCommand { get; }
 
     public ICommand RunAdbScreenshotBenchmarkCommand { get; }
+
+    public ICommand RunMaaInferenceBenchmarkCommand { get; }
+
+    public ICommand RefreshPcWindowsCommand { get; }
+
+    public ICommand ConnectPcWindowAndCaptureCommand { get; }
 
     public ICommand PrepareAdbTouchTestCommand { get; }
 
@@ -2626,6 +2755,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         foreach (var item in _allOperators)
             item.PropertyChanged -= OnOperatorChoicePropertyChanged;
+        foreach (var item in _allRelics)
+            item.PropertyChanged -= OnRelicChoicePropertyChanged;
         _choicePersistence.Dispose();
         _lastCaptureImage?.Dispose();
         _sidecarServer.Dispose();
@@ -3344,8 +3475,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 var isSelected = state.SelectedRelicIds.Contains(item.Id);
                 var isUsed = isSelected && state.UsedRelicIds.Contains(item.Id);
-                choicesChanged |= item.IsSelected != isSelected || item.IsUsed != isUsed;
+                var stackCount = isSelected && state.RelicStackCounts.TryGetValue(item.Id, out var count)
+                    ? count
+                    : 0;
+                if (stackCount > 0 && !item.SupportsRelicStackCount)
+                    item.EnableRelicStackCount();
+                choicesChanged |= item.IsSelected != isSelected
+                    || item.IsUsed != isUsed
+                    || item.RelicStackCount != stackCount;
                 item.IsSelected = isSelected;
+                item.RelicStackCount = stackCount;
                 item.IsUsed = isUsed;
             }
         }
@@ -3653,6 +3792,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var settings = RhodesSukiSettingsStore.Load();
         var adbConnection = RhodesSukiSettingsStore.NormalizeAdbConnection(
             settings.AdbConnection ?? new SukiAdbConnectionSettings());
+        var maaRuntime = RhodesSukiSettingsStore.NormalizeMaaRuntime(
+            settings.MaaRuntime ?? new SukiMaaRuntimeSettings());
         AdbPath = string.IsNullOrWhiteSpace(settings.AdbPath) ? "adb" : settings.AdbPath;
         AdbSerial = settings.AdbSerial;
         AdbConfigJson = string.IsNullOrWhiteSpace(settings.AdbConfigJson) ? "{}" : settings.AdbConfigJson;
@@ -3665,6 +3806,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             && profile.Id == settings.SelectedResourceProfileId) ?? SelectedResourceProfile;
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(settings.AdbInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(settings.AdbScreencapMethodId);
+        SelectedMaaInferenceProvider = SukiMaaInferenceCatalog.Find(maaRuntime.InferenceProviderId);
+        MaaInferenceDeviceId = maaRuntime.InferenceDeviceId;
+        PcPreferredWindowTitle = maaRuntime.PreferredWindowTitle;
+        PcPreferredWindowClass = maaRuntime.PreferredWindowClass;
+        SelectedPcScreencapMethod = SukiWin32ScreencapCatalog.Find(maaRuntime.Win32ScreencapMethodId);
         AdbAutoDetect = adbConnection.AutoDetect;
         AdbAlwaysAutoDetect = adbConnection.AlwaysAutoDetect;
         EmulatorRoot = adbConnection.EmulatorRoot;
@@ -3673,6 +3819,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         MuMuTouchEnhancementEnabled = adbConnection.MuMuTouchEnhancementEnabled;
         MuMuBridgeConnectionEnabled = adbConnection.MuMuBridgeConnectionEnabled;
         MuMuInstanceIndex = adbConnection.MuMuInstanceIndex;
+        LdPlayerScreenshotEnhancementEnabled = adbConnection.LdPlayerScreenshotEnhancementEnabled;
+        LdPlayerInstanceIndex = adbConnection.LdPlayerInstanceIndex;
         AdbGamePackage = adbConnection.GamePackage;
         AdbGameCloneIndex = adbConnection.GameCloneIndex;
         SelectedAdbInputFallbackMethod = SukiAdbMethodCatalog.FindInput(adbConnection.InputFallbackMethodId);
@@ -3773,7 +3921,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             TournamentRelayUrl: TournamentRelayUrl,
             TournamentPlayerLabel: TournamentPlayerLabel,
             SchemaVersion: RhodesSukiSettingsStore.CurrentSchemaVersion,
-            AdbConnection: BuildAdbConnectionSettings());
+            AdbConnection: BuildAdbConnectionSettings(),
+            MaaRuntime: BuildMaaRuntimeSettings());
     }
 
     private SukiAdbConnectionSettings BuildAdbConnectionSettings()
@@ -3787,6 +3936,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             MuMuTouchEnhancementEnabled: MuMuTouchEnhancementEnabled,
             MuMuBridgeConnectionEnabled: MuMuBridgeConnectionEnabled,
             MuMuInstanceIndex: MuMuInstanceIndex,
+            LdPlayerScreenshotEnhancementEnabled: LdPlayerScreenshotEnhancementEnabled,
+            LdPlayerInstanceIndex: LdPlayerInstanceIndex,
             GamePackage: AdbGamePackage,
             GameCloneIndex: AdbGameCloneIndex,
             InputFallbackMethodId: SelectedAdbInputFallbackMethod?.Id ?? "minitouch",
@@ -3799,6 +3950,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             KillAdbOnExit: KillAdbOnExit,
             UseManagedAdb: UseManagedAdb,
             LightweightAdb: false));
+    }
+
+    private SukiMaaRuntimeSettings BuildMaaRuntimeSettings()
+    {
+        return RhodesSukiSettingsStore.NormalizeMaaRuntime(new SukiMaaRuntimeSettings(
+            InferenceProviderId: SelectedMaaInferenceProvider?.Id ?? SukiMaaInferenceCatalog.DefaultId,
+            InferenceDeviceId: MaaInferenceDeviceId,
+            PreferredWindowTitle: PcPreferredWindowTitle,
+            PreferredWindowClass: PcPreferredWindowClass,
+            Win32ScreencapMethodId: SelectedPcScreencapMethod?.Id ?? SukiWin32ScreencapCatalog.DefaultId));
     }
 
     private void ApplyOutputPreferences(SukiOutputPreferences? preferences)
@@ -4102,7 +4263,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ApplyAdbMethodsForPreset(preset.Id);
         RefreshRuntimeCapabilities();
         RefreshInspectorRows();
-        StatusMessage = $"ADBプリセットを適用しました: {preset.DisplayName} / {AdbMethodSummary}";
+        StatusMessage = $"ADBプロファイルで画面上の接続欄を上書きしました（保存は未実行）: {preset.DisplayName} / {AdbMethodSummary}";
         return Task.CompletedTask;
     }
 
@@ -4307,32 +4468,58 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RhodesSukiAdbConnectionTestWorkflow.FromCapture(capture, AdbSerial, CapturePixelSizeLabel, snapshot.Detail));
     }
 
-    private async Task RefreshMuMuCapabilityAsync()
+    private async Task RefreshEmulatorCapabilityAsync()
     {
-        if (!IsMuMuPresetSelected)
+        var settings = BuildAdbConnectionSettings();
+        if (IsMuMuPresetSelected)
         {
-            _muMuCapability = RhodesMuMuCapabilitySnapshot.NotDetected("MuMuプロファイル選択時だけ能力判定を行います。");
-            AdbEnhancementStatus = _muMuCapability.ScreenshotDetail;
+            AdbEnhancementStatus = "MuMu Manager、IPC DLL、対応versionを確認しています。";
+            _muMuCapability = await RhodesMuMuCapabilityDetector.DetectAsync(
+                settings,
+                AdbPath,
+                AdbSerial);
+            _ldPlayerCapability = RhodesLdPlayerCapabilitySnapshot.NotDetected("LDPlayerプロファイル選択時に確認します。");
+        }
+        else if (IsLdPlayerPresetSelected)
+        {
+            AdbEnhancementStatus = "LDPlayerのldconsole.exeと高速撮影DLLを確認しています。";
+            _ldPlayerCapability = RhodesLdPlayerCapabilityDetector.Detect(settings, AdbPath, AdbSerial);
+            _muMuCapability = RhodesMuMuCapabilitySnapshot.NotDetected("MuMuプロファイル選択時に確認します。");
+        }
+        else
+        {
+            _muMuCapability = RhodesMuMuCapabilitySnapshot.NotDetected("MuMuプロファイル選択時に確認します。");
+            _ldPlayerCapability = RhodesLdPlayerCapabilitySnapshot.NotDetected("LDPlayerプロファイル選択時に確認します。");
+            AdbEnhancementStatus = "MuMuまたはLDPlayerプロファイルを選択すると、接続強化の能力を確認できます。";
             OnPropertyChanged(nameof(MuMuCapabilitySummary));
+            OnPropertyChanged(nameof(EmulatorCapabilitySummary));
             return;
         }
 
-        AdbEnhancementStatus = "MuMu Manager、IPC DLL、対応versionを確認しています。";
-        _muMuCapability = await RhodesMuMuCapabilityDetector.DetectAsync(
-            BuildAdbConnectionSettings(),
-            AdbPath,
-            AdbSerial);
         var resolution = RhodesMaaAdbOptionPolicy.Resolve(
             BuildBaseSessionOptions(),
-            BuildAdbConnectionSettings(),
-            _muMuCapability);
+            settings,
+            _muMuCapability,
+            _ldPlayerCapability);
         AdbEnhancementStatus = $"{resolution.ScreenshotDetail} / {resolution.TouchDetail}";
         OnPropertyChanged(nameof(MuMuCapabilitySummary));
+        OnPropertyChanged(nameof(EmulatorCapabilitySummary));
+    }
+
+    private Task OpenAdbConnectionGuideAsync()
+    {
+        var path = RhodesBundledDocumentLocator.FindAdbConnectionGuidePath();
+        if (!File.Exists(path))
+        {
+            StatusMessage = $"ADB接続設定ガイドが見つかりません: {path}";
+            return Task.CompletedTask;
+        }
+        return OpenExternalUrlAsync(path, "ADB接続設定ガイド");
     }
 
     private async Task<RhodesAdbRecoveryResult> ConnectWithRecoveryAsync()
     {
-        await RefreshMuMuCapabilityAsync();
+        await RefreshEmulatorCapabilityAsync();
         var settings = BuildAdbConnectionSettings();
         var recovery = await RhodesAdbRecoveryService.ConnectAsync(
             settings,
@@ -4363,6 +4550,206 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 ? "スクリーンショットベンチマークが完了しました。"
                 : "スクリーンショットベンチマークは全回失敗しました。";
         });
+    }
+
+    private async Task RefreshPcWindowsAsync()
+    {
+        await RunBusyAsync(RefreshPcWindowsCoreAsync);
+    }
+
+    private async Task RefreshPcWindowsCoreAsync()
+    {
+        PcWindowStatus = "MaaToolkitでデスクトップウィンドウを確認しています。";
+        var previousHandle = SelectedPcWindow?.Handle ?? IntPtr.Zero;
+        var windows = await Task.Run(() => RhodesMaaDesktopWindowCatalog.Discover(
+            PcPreferredWindowTitle,
+            PcPreferredWindowClass));
+
+        PcWindows.Clear();
+        foreach (var window in windows)
+            PcWindows.Add(window);
+
+        SelectedPcWindow = PcWindows.FirstOrDefault(window => window.Handle == previousHandle)
+            ?? PcWindows.FirstOrDefault(window => window.IsKnownArknightsTitle)
+            ?? PcWindows.FirstOrDefault();
+        PcWindowStatus = PcWindows.Count == 0
+            ? "選択可能なトップレベルウィンドウが見つかりません。PCクライアントを起動して再検出してください。"
+            : $"{PcWindows.Count}件を検出しました。対象={SelectedPcWindow?.DisplayName ?? "未選択"}";
+    }
+
+    private async Task ConnectPcWindowAndCaptureAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (SelectedPcWindow is null)
+                await RefreshPcWindowsCoreAsync();
+            if (SelectedPcWindow is null)
+            {
+                StatusMessage = "PCクライアントのウィンドウを選択してください。";
+                return;
+            }
+
+            var selectedWindow = SelectedPcWindow!;
+            PcWindowStatus = $"接続中: {selectedWindow.DisplayName}";
+            var snapshot = await _session.InitializeWin32Async(
+                BuildBaseSessionOptions(),
+                selectedWindow.Handle,
+                SelectedPcScreencapMethod?.Id ?? SukiWin32ScreencapCatalog.DefaultId);
+            SessionState = snapshot.State;
+            SessionDetail = snapshot.Detail;
+            if (!snapshot.IsReady)
+            {
+                PcWindowStatus = snapshot.Detail;
+                StatusMessage = $"PCウィンドウへ接続できませんでした: {snapshot.Detail}";
+                return;
+            }
+
+            var capture = await CaptureCoreAsync();
+            PcWindowStatus = capture.Succeeded
+                ? $"撮影OK: {selectedWindow.Title} / {CapturePixelSizeLabel} / {capture.Detail}"
+                : $"撮影失敗: {capture.Detail}";
+            StatusMessage = capture.Succeeded
+                ? "PCクライアントのウィンドウを1280x720座標系で撮影しました。"
+                : $"PCクライアントの撮影に失敗しました: {capture.Detail}";
+        });
+    }
+
+    private async Task RunMaaInferenceBenchmarkAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            if (_lastCapture.Length == 0)
+            {
+                MaaInferenceBenchmarkStatus = "比較する保存Frameがありません。先に撮影するか、履歴Frameを読み込んでください。";
+                return;
+            }
+
+            var entries = MaaInferenceBenchmarkEntries();
+            if (entries.Count == 0)
+            {
+                MaaInferenceBenchmarkStatus = "選択中の認識profileに比較可能なOCR taskがありません。";
+                return;
+            }
+
+            MaaInferenceBenchmarkStatus = $"CPUとDirectMLを比較しています。task={entries.Count} / adapter={MaaInferenceDeviceId}";
+            var cpu = await RunMaaInferenceBenchmarkPassAsync(
+                InferenceExecutionProvider.CPU,
+                0,
+                entries);
+            if (!cpu.Succeeded)
+            {
+                MaaInferenceBenchmarkStatus = $"CPU比較を完了できませんでした: {cpu.Error}";
+                return;
+            }
+
+            var directMl = await RunMaaInferenceBenchmarkPassAsync(
+                InferenceExecutionProvider.DirectML,
+                MaaInferenceDeviceId,
+                entries);
+            if (!directMl.Succeeded)
+            {
+                MaaInferenceBenchmarkStatus = $"DirectMLを使用できません。CPUまたは自動を使用してください: {directMl.Error}";
+                return;
+            }
+
+            var sameResult = cpu.HasEvidence
+                && directMl.HasEvidence
+                && cpu.Fingerprint.Equals(directMl.Fingerprint, StringComparison.Ordinal);
+            var speedRatio = directMl.Elapsed.TotalMilliseconds <= 0
+                ? 0
+                : cpu.Elapsed.TotalMilliseconds / directMl.Elapsed.TotalMilliseconds;
+            var useful = sameResult && speedRatio >= 1.1;
+            var verdict = !sameResult
+                ? "認識結果が一致しないためCPU/自動を推奨"
+                : useful
+                    ? "同一結果で高速化を確認。DirectMLを選択可能"
+                    : "同一結果ですが速度差が小さいため自動を推奨";
+            MaaInferenceBenchmarkStatus =
+                $"{verdict} / CPU {cpu.Elapsed.TotalMilliseconds:0}ms (初期化{cpu.Initialization.TotalMilliseconds:0}ms) / "
+                + $"DirectML {directMl.Elapsed.TotalMilliseconds:0}ms (初期化{directMl.Initialization.TotalMilliseconds:0}ms) / {speedRatio:0.00}x / task={entries.Count}";
+            StatusMessage = "MAA推論比較が完了しました。";
+        });
+    }
+
+    private IReadOnlyList<string> MaaInferenceBenchmarkEntries()
+    {
+        return (SelectedResourceProfile?.TaskEntries ?? [])
+            .Where(entry =>
+            {
+                var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                return RhodesMaaRecognitionInvocation.TryParse(payload, out var invocation, out _)
+                    && invocation.Type.Contains("OCR", StringComparison.OrdinalIgnoreCase);
+            })
+            .Distinct(StringComparer.Ordinal)
+            .Take(4)
+            .ToArray();
+    }
+
+    private async Task<MaaInferenceBenchmarkPass> RunMaaInferenceBenchmarkPassAsync(
+        InferenceExecutionProvider provider,
+        int deviceId,
+        IReadOnlyList<string> entries)
+    {
+        using var session = new RhodesMaaSession();
+        var options = BuildBaseSessionOptions() with
+        {
+            InferenceProvider = provider,
+            InferenceDeviceId = deviceId,
+        };
+        var initializationTimer = Stopwatch.StartNew();
+        var snapshot = await session.InitializeOfflineAsync(options);
+        initializationTimer.Stop();
+        if (!snapshot.IsReady)
+            return MaaInferenceBenchmarkPass.Failed(snapshot.Detail, initializationTimer.Elapsed);
+
+        foreach (var entry in entries)
+        {
+            var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+            var warmup = await session.RunResourceRecognitionAsync(entry, payload, _lastCapture);
+            if (!warmup.Succeeded)
+                return MaaInferenceBenchmarkPass.Failed($"warmup {entry}: {warmup.Detail}", initializationTimer.Elapsed);
+        }
+
+        var elapsedByEntry = entries.ToDictionary(
+            entry => entry,
+            _ => new List<TimeSpan>(3),
+            StringComparer.Ordinal);
+        var results = new List<MaaTaskRunResult>(entries.Count);
+        for (var iteration = 0; iteration < 3; iteration++)
+        {
+            results.Clear();
+            foreach (var entry in entries)
+            {
+                var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                var timer = Stopwatch.StartNew();
+                results.Add(await session.RunResourceRecognitionAsync(entry, payload, _lastCapture));
+                timer.Stop();
+                elapsedByEntry[entry].Add(timer.Elapsed);
+            }
+        }
+        var failed = results.FirstOrDefault(result => !result.Succeeded);
+        if (failed is not null)
+            return MaaInferenceBenchmarkPass.Failed($"{failed.Entry}: {failed.Detail}", initializationTimer.Elapsed);
+
+        var medianTicks = elapsedByEntry.Values.Sum(samples =>
+        {
+            var ordered = samples.OrderBy(sample => sample).ToArray();
+            return ordered[ordered.Length / 2].Ticks;
+        });
+
+        var rows = RhodesMaaOcrDetailRows.FromTaskResults(results)
+            .Select(row => $"{row.Entry}\t{row.Text}\t{row.Source}")
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(row => row, StringComparer.Ordinal)
+            .ToArray();
+        var fingerprint = string.Join("\n", rows);
+        return new MaaInferenceBenchmarkPass(
+            true,
+            initializationTimer.Elapsed,
+            TimeSpan.FromTicks(medianTicks),
+            fingerprint,
+            rows.Length > 0,
+            "");
     }
 
     private Task PrepareAdbTouchTestAsync()
@@ -7439,6 +7826,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         var shouldRestoreTarget = false;
         _lastResourceExecutionPlan = plan;
+        using var diagnosticsDeferral = _resourceTaskDiagnosticsGate.Defer();
         try
         {
             StatusMessage = $"MAA実行計画: {plan.Summary} / {openResult.Detail}";
@@ -7531,6 +7919,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 ResourceTaskResults.ToArray(),
                 CancellationToken.None);
             await RetryLowConfidenceInitialFrameAsync(plan, runtimePlan, operatorScanTracker);
+            FlushResourceTaskDiagnostics();
             await RunScrollRecognitionFramesAsync(plan, operatorScanTracker);
             await RunSuiCatchWindDetailProbeAsync(plan);
             RefreshInspectorRows();
@@ -7553,6 +7942,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         finally
         {
+            FlushResourceTaskDiagnostics();
             if (shouldRestoreTarget)
             {
                 var restoreResult = await RhodesRecognitionNavigation.ExecuteAsync(
@@ -7590,6 +7980,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var relicCount = RhodesRelicOwnedCountReader.FromTaskResults(execution.TaskResults);
         if (relicCount is not null)
             StatusMessage = $"秘宝所持数を先読みしました: {relicCount.Count}件";
+        var operatorCount = RhodesOperatorOwnedCountReader.FromTaskResults(
+            execution.TaskResults,
+            CurrentSelectedOperatorCount());
+        if (operatorCount is not null)
+            StatusMessage = $"招集済みオペレーター数を先読みしました: {operatorCount.Count}名";
     }
 
     private async Task RunTemplateOcrExpansionsAsync(
@@ -7611,6 +8006,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 request.Scale);
             ResourceTaskResults.Add(result);
             RefreshResourceTaskDiagnostics();
+        }
+
+        if (string.Equals(profileId, "relicsFull", StringComparison.Ordinal))
+        {
+            var stackRequests = RhodesRelicStackOcrPlanner.BuildRequests(
+                frameResults,
+                encodedImage,
+                SelectedCampaign?.Id ?? _runState.CampaignId);
+            foreach (var request in stackRequests)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var result = await _session.RunResourceRecognitionAsync(
+                    request.Entry,
+                    request.PayloadJson,
+                    encodedImage,
+                    cancellationToken,
+                    request.Scale);
+                ResourceTaskResults.Add(result);
+                RefreshResourceTaskDiagnostics();
+            }
+            if (stackRequests.Count > 0)
+                StatusMessage = $"スタック表示を{stackRequests.Count}件確認しました。";
         }
 
         if (string.Equals(profileId, "is6ActiveCoinsFull", StringComparison.Ordinal))
@@ -7937,9 +8354,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             && plan.ProfileId is not ("is6CoinsFull" or "is4RevelationFull" or "is4ParadigmLost"))
             return;
         var initialCandidateCount = CurrentLocalCandidateCount(plan.ProfileId);
-        var expectedCandidateCount = plan.ProfileId == "relicsFull"
-            ? RhodesRelicOwnedCountReader.FromTaskResults(ResourceTaskResults)?.Count
-            : null;
+        var expectedCandidateCount = plan.ProfileId switch
+        {
+            "relicsFull" => RhodesRelicOwnedCountReader.FromTaskResults(ResourceTaskResults)?.Count,
+            "operatorsFull" => RhodesOperatorOwnedCountReader.FromTaskResults(
+                ResourceTaskResults,
+                CurrentSelectedOperatorCount())?.Count,
+            _ => null,
+        };
         var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
         if (RhodesRecognitionRuntimePlan.ShouldRetryRelicFrameWithoutScroll(
                 plan.ProfileId,
@@ -7959,9 +8381,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 initialCandidateCount = CurrentLocalCandidateCount(plan.ProfileId);
             }
         }
-        if (RhodesRecognitionRuntimePlan.ShouldSkipScroll(plan.ProfileId, initialCandidateCount, expectedCandidateCount))
+        if (RhodesRecognitionRuntimePlan.ShouldSkipScroll(
+                plan.ProfileId,
+                initialCandidateCount,
+                expectedCandidateCount,
+                operatorScanTracker?.ResolvedCardCount))
         {
-            StatusMessage = $"秘宝候補{initialCandidateCount}/{expectedCandidateCount}件: 所持数と一致したため終了しました。";
+            var candidateLabel = plan.ProfileId == "operatorsFull" ? "オペレーター候補" : "秘宝候補";
+            var candidateUnit = plan.ProfileId == "operatorsFull" ? "名" : "件";
+            StatusMessage = $"{candidateLabel}{initialCandidateCount}/{expectedCandidateCount}{candidateUnit}: 所持数と一致したため終了しました。";
             return;
         }
         if (RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll(
@@ -8044,7 +8472,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 if (RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount(
                         plan.ProfileId,
                         candidateCount,
-                        expectedCandidateCount))
+                        expectedCandidateCount,
+                        operatorScanTracker?.ResolvedCardCount))
                 {
                     reachedExpectedCandidateCount = true;
                     break;
@@ -8086,7 +8515,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             completedPassCount++;
             if (reachedExpectedCandidateCount)
             {
-                StatusMessage = $"秘宝候補{CurrentLocalCandidateCount(plan.ProfileId)}/{expectedCandidateCount}件: 所持数と一致したため終了しました。";
+                var candidateLabel = plan.ProfileId == "operatorsFull" ? "オペレーター候補" : "秘宝候補";
+                var candidateUnit = plan.ProfileId == "operatorsFull" ? "名" : "件";
+                StatusMessage = $"{candidateLabel}{CurrentLocalCandidateCount(plan.ProfileId)}/{expectedCandidateCount}{candidateUnit}: 所持数と一致したため終了しました。";
                 break;
             }
             if (RhodesRecognitionRuntimePlan.CanStopResolvedOperatorScan(
@@ -8346,13 +8777,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             profileId,
             visibleFrameResults,
             cancellationToken);
+        FlushResourceTaskDiagnostics();
     }
 
-    private int CurrentLocalCandidateCount(string profileId) =>
-        RhodesMaaLocalCandidateConverter.FromTaskResults(
+    private int CurrentLocalCandidateCount(string profileId)
+    {
+        var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
             profileId,
             ResourceTaskResults,
-            SelectedCampaign?.Id ?? _runState.CampaignId).Count;
+            SelectedCampaign?.Id ?? _runState.CampaignId);
+        if (!profileId.Equals("operatorsFull", StringComparison.Ordinal))
+            return candidates.Count;
+
+        return RhodesRecognitionRuntimePlan.CountOperatorRosterCandidates(candidates);
+    }
+
+    private int CurrentSelectedOperatorCount() =>
+        _allOperators
+            .Where(item => item.IsSelected)
+            .Sum(item => item.SupportsMultipleCount ? Math.Max(1, item.SelectionCount) : 1);
 
 
     private async Task<bool> ConvertResourceTaskResultsCoreAsync()
@@ -8457,6 +8900,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void RefreshResourceTaskDiagnostics()
+    {
+        if (!_resourceTaskDiagnosticsGate.Request())
+            return;
+
+        RefreshResourceTaskDiagnosticsCore();
+    }
+
+    private void FlushResourceTaskDiagnostics()
+    {
+        if (_resourceTaskDiagnosticsGate.Flush())
+            RefreshResourceTaskDiagnosticsCore();
+    }
+
+    private void RefreshResourceTaskDiagnosticsCore()
     {
         ResourceTaskDiagnostics = RhodesMaaTaskDiagnostics.Summarize(ResourceTaskResults);
         ReplaceCollection(OcrDetailRows, RhodesMaaOcrDetailRows.FromTaskResults(ResourceTaskResults));
@@ -8947,6 +9404,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             PersistChoiceStateInBackground();
         }
+    }
+
+    private void OnRelicChoicePropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
+    {
+        if (_isRestoringChoiceState
+            || eventArgs.PropertyName != nameof(SukiChoiceItem.RelicStackCount)
+            || sender is not SukiChoiceItem { IsSelected: true })
+        {
+            return;
+        }
+
+        RefreshRelicSummaries();
+        PersistChoiceStateInBackground();
     }
 
     private async Task PersistSuiCandleBearerTargetsAfterChoiceChangeAsync()
@@ -9550,7 +10020,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return capture?.Succeeded == true;
     }
 
-    private async Task<MaaCaptureResult?> CaptureCoreAsync()
+    private async Task<MaaCaptureResult> CaptureCoreAsync()
     {
         var capture = await _session.CaptureEncodedAsync();
         CaptureState = capture.Succeeded ? $"取得済み: {capture.Detail}" : $"失敗: {capture.Detail}";
@@ -9612,7 +10082,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return RhodesMaaAdbOptionPolicy.Resolve(
             requested,
             BuildAdbConnectionSettings(),
-            _muMuCapability).Options;
+            _muMuCapability,
+            _ldPlayerCapability).Options;
     }
 
     private MaaSessionOptions BuildBaseSessionOptions()
@@ -9623,7 +10094,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             AdbConfigJson.Trim(),
             SelectedAdbInputMethod?.Value ?? AdbInputMethods.Default,
             SelectedAdbScreencapMethod?.Value ?? AdbScreencapMethods.Default,
-            SelectedAdbPreset?.Id ?? "auto");
+            SelectedAdbPreset?.Id ?? "auto") with
+        {
+            InferenceProvider = SelectedMaaInferenceProvider?.Value ?? InferenceExecutionProvider.Auto,
+            InferenceDeviceId = MaaInferenceDeviceId,
+        };
     }
 
     private async Task<RhodesFrameRecordResult> SaveCaptureFrameAsync(byte[] encodedImage)
@@ -9818,5 +10293,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private sealed record MaaInferenceBenchmarkPass(
+        bool Succeeded,
+        TimeSpan Initialization,
+        TimeSpan Elapsed,
+        string Fingerprint,
+        bool HasEvidence,
+        string Error)
+    {
+        public static MaaInferenceBenchmarkPass Failed(string error, TimeSpan initialization) =>
+            new(false, initialization, TimeSpan.Zero, "", false, error);
     }
 }

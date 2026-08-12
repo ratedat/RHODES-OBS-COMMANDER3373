@@ -13,6 +13,7 @@ import { normalizeAdbSettings } from "./domain/adb-settings.js";
 import { preserveLocalConfigOnReset } from "./domain/local-config.js";
 import { normalizeOperatorCounts, operatorCountFor } from "./domain/operator-counts.js";
 import { normalizeOperatorPromotionLevels } from "./domain/operator-promotions.js";
+import { normalizeRelicStackCounts } from "./domain/relic-stacks.js";
 import { extractRunStatusCandidates } from "./domain/recognition/run-status-extractor.js";
 import { createRelicCandidateExtractor } from "./domain/recognition/relic-candidate-extractor.js";
 import { createOperatorCandidateExtractor } from "./domain/recognition/operator-candidate-extractor.js";
@@ -40,6 +41,9 @@ const SCAN_PROFILES = path.join(DATA, "recognition", "scan-profiles.json");
 const MAA_TASKS = path.join(DATA, "recognition", "maa-tasks.json");
 const MAA_OPERATOR_OCR_MAP = path.join(DATA, "recognition", "maa-operator-name-ocr.json");
 const MAA_GENERATED_PIPELINE = path.join(ROOT, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json");
+const RELIC_STACK_RULES_FILE = path.join(DATA, "relic-stack-rules.json");
+const RELIC_STACK_RULES_DATA = await readJson(RELIC_STACK_RULES_FILE).catch(() => ({ schemaVersion: 1, rules: [] }));
+const RELIC_STACK_RULES = Array.isArray(RELIC_STACK_RULES_DATA.rules) ? RELIC_STACK_RULES_DATA.rules : [];
 
 const argvPort = (() => {
   const index = process.argv.indexOf("--port");
@@ -99,6 +103,7 @@ function initialStateFromExample(example) {
   state.usedRelicIds = Array.isArray(state.usedRelicIds)
     ? state.usedRelicIds.filter((id) => state.relics.includes(id))
     : [];
+  state.relicStackCounts = normalizeRelicStackCounts(state.relicStackCounts, state.relics, RELIC_STACK_RULES);
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.operatorCounts = normalizeOperatorCounts(state.operatorCounts, state.operators);
   state.operatorPromotionLevels = normalizeOperatorPromotionLevels(state.operatorPromotionLevels, state.operators);
@@ -130,6 +135,7 @@ function normalizeState(state) {
   next.usedRelicIds = Array.isArray(next.usedRelicIds)
     ? [...new Set(next.usedRelicIds.filter((id) => next.relics.includes(id)))]
     : [];
+  next.relicStackCounts = normalizeRelicStackCounts(next.relicStackCounts, next.relics, RELIC_STACK_RULES);
   next.operators = Array.isArray(next.operators) ? [...new Set(next.operators.filter(Boolean))] : [];
   next.operatorCounts = normalizeOperatorCounts(next.operatorCounts, next.operators);
   next.operatorPromotionLevels = normalizeOperatorPromotionLevels(next.operatorPromotionLevels, next.operators);
@@ -455,6 +461,7 @@ async function masterData() {
       tagGroups: effectRulesRaw.tagGroups || {},
       rules: effectRulesRaw.rules || [],
     },
+    relicStackRules: RELIC_STACK_RULES,
     startTemplates: startTemplatesRaw.templates || [],
   };
 }

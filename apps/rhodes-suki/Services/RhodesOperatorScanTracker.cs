@@ -22,10 +22,11 @@ public sealed class RhodesOperatorScanTracker
     private const int CardDifferenceMatchDistance = 6;
     private const int ViewportMatchDistance = 4;
     private const int ViewportDifferenceMatchDistance = 8;
+    private const int ViewportPositionTolerance = 8;
 
     private readonly int _maxAttemptsPerCard;
     private readonly List<CardState> _cards = [];
-    private IReadOnlyList<RhodesOperatorCardFingerprint> _previousViewport = [];
+    private IReadOnlyList<CardObservation> _previousViewport = [];
     private IReadOnlyList<CardState> _currentViewport = [];
     private int _stableViewportCount;
     private long _nextTrackingId = 1;
@@ -44,16 +45,17 @@ public sealed class RhodesOperatorScanTracker
         _cards.Count > 0
         && _cards.All(card => card.Resolved || card.Attempts >= _maxAttemptsPerCard);
 
+    public int ResolvedCardCount => _cards.Count(card => card.Resolved);
+
     public RhodesOperatorScanSelection Select(
         byte[] encodedImage,
         IReadOnlyList<MaaDynamicOcrRequest> requests)
     {
         var observations = Fingerprints(encodedImage, requests);
-        var viewport = observations.Select(item => item.Fingerprint).ToArray();
-        _stableViewportCount = EquivalentViewport(_previousViewport, viewport)
+        _stableViewportCount = EquivalentViewport(_previousViewport, observations)
             ? _stableViewportCount + 1
             : 0;
-        _previousViewport = viewport;
+        _previousViewport = observations;
 
         var usedCards = new HashSet<CardState>();
         var currentCards = new List<CardState>(observations.Length);
@@ -140,14 +142,14 @@ public sealed class RhodesOperatorScanTracker
     }
 
     private static bool EquivalentViewport(
-        IReadOnlyList<RhodesOperatorCardFingerprint> left,
-        IReadOnlyList<RhodesOperatorCardFingerprint> right)
+        IReadOnlyList<CardObservation> left,
+        IReadOnlyList<CardObservation> right)
     {
         if (left.Count == 0 || left.Count != right.Count)
             return false;
 
         var used = new bool[right.Count];
-        foreach (var fingerprint in left)
+        foreach (var observation in left)
         {
             var matchIndex = -1;
             var matchAverageDistance = int.MaxValue;
@@ -157,13 +159,15 @@ public sealed class RhodesOperatorScanTracker
                 if (used[index])
                     continue;
                 var averageDistance = RhodesRecognitionFrameFingerprint.Distance(
-                    fingerprint.AverageHash,
-                    right[index].AverageHash);
+                    observation.Fingerprint.AverageHash,
+                    right[index].Fingerprint.AverageHash);
                 var differenceDistance = RhodesRecognitionFrameFingerprint.Distance(
-                    fingerprint.DifferenceHash,
-                    right[index].DifferenceHash);
+                    observation.Fingerprint.DifferenceHash,
+                    right[index].Fingerprint.DifferenceHash);
                 if (averageDistance <= ViewportMatchDistance
                     && differenceDistance <= ViewportDifferenceMatchDistance
+                    && Math.Abs(observation.Request.X - right[index].Request.X) <= ViewportPositionTolerance
+                    && Math.Abs(observation.Request.Y - right[index].Request.Y) <= ViewportPositionTolerance
                     && (averageDistance < matchAverageDistance
                         || averageDistance == matchAverageDistance
                         && differenceDistance < matchDifferenceDistance))

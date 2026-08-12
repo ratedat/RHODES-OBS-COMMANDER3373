@@ -1046,6 +1046,32 @@ a:hover { text-decoration: underline; }
   pointer-events: none;
 }
 .relic-used-icon { font-size: 11px; font-style: normal; font-weight: 900; line-height: 1; }
+.relic-stack-badge {
+  position: absolute;
+  z-index: 3;
+  left: 1px;
+  bottom: 1px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  min-height: 17px;
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding: 1px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 9px;
+  background: #126b61;
+  color: #fff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  font-size: 10px !important;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}
+.relic-stack-control { display: grid; gap: 2px; min-width: 92px; color: var(--muted); font-size: 10px; }
+.relic-stack-control input { width: 92px; min-height: 30px; padding: 4px 7px; }
+.relic-stack-control small { text-align: center; color: var(--muted); }
 .overlay-part-operator-groups { display: grid; gap: 8px; }
 .overlay-part-operator-group { min-width: 0; display: grid; gap: 4px; }
 .overlay-part-operator-group h3 { margin: 0; display: flex; justify-content: space-between; color: var(--accent-2); font-size: 12px; line-height: 1.2; }

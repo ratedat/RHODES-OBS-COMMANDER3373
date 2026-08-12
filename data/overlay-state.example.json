@@ -36,6 +36,7 @@
     "ingot": null
   },
   "relics": [],
+  "relicStackCounts": {},
   "operators": [],
   "operatorCounts": {},
   "operatorPromotionLevels": {},

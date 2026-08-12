@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "updatedAt": "2026-08-12",
+    "source": "User-provided verified working list",
+    "note": "maximum=null means no known in-game upper limit. The list may be incomplete; generic badge OCR remains available for unlisted relics."
+  },
+  "rules": [
+    {
+      "relicId": "is3_mizuki_relic_261",
+      "campaignId": "is3_mizuki",
+      "name": "生還者の契約",
+      "maximum": null
+    },
+    {
+      "relicId": "is3_mizuki_relic_256",
+      "campaignId": "is3_mizuki",
+      "name": "断杖・学識",
+      "maximum": null
+    },
+    {
+      "relicId": "is3_mizuki_relic_257",
+      "campaignId": "is3_mizuki",
+      "name": "断杖・叡智の光",
+      "maximum": null
+    },
+    {
+      "relicId": "is4_sami_relic_256",
+      "campaignId": "is4_sami",
+      "name": "ミノスの賛歌",
+      "maximum": 15
+    },
+    {
+      "relicId": "is4_sami_relic_257",
+      "campaignId": "is4_sami",
+      "name": "Friston.P",
+      "maximum": 15
+    },
+    {
+      "relicId": "is4_sami_relic_207",
+      "campaignId": "is4_sami",
+      "name": "丸い石の祭壇",
+      "maximum": 10
+    },
+    {
+      "relicId": "is5_sarkaz_relic_219",
+      "campaignId": "is5_sarkaz",
+      "name": "生還者の契約",
+      "maximum": null
+    },
+    {
+      "relicId": "is5_sarkaz_relic_204",
+      "campaignId": "is5_sarkaz",
+      "name": "「知識の橋」",
+      "maximum": 10
+    },
+    {
+      "relicId": "is5_sarkaz_relic_197",
+      "campaignId": "is5_sarkaz",
+      "name": "Friston.P",
+      "maximum": 15
+    },
+    {
+      "relicId": "is5_sarkaz_relic_199",
+      "campaignId": "is5_sarkaz",
+      "name": "ミノスの賛歌",
+      "maximum": 15
+    },
+    {
+      "relicId": "is5_sarkaz_relic_277",
+      "campaignId": "is5_sarkaz",
+      "name": "論断：先鋒",
+      "maximum": 7
+    },
+    {
+      "relicId": "is5_sarkaz_relic_276",
+      "campaignId": "is5_sarkaz",
+      "name": "論断：前衛",
+      "maximum": 7
+    },
+    {
+      "relicId": "is5_sarkaz_relic_279",
+      "campaignId": "is5_sarkaz",
+      "name": "論断：狙撃",
+      "maximum": 7
+    },
+    {
+      "relicId": "is5_sarkaz_relic_282",
+      "campaignId": "is5_sarkaz",
+      "name": "論断：術師",
+      "maximum": 7
+    },
+    {
+      "relicId": "is5_sarkaz_relic_278",
+      "campaignId": "is5_sarkaz",
+      "name": "論断：重装",
+      "maximum": 7
+    },
+    {
+      "relicId": "is5_sarkaz_relic_283",
+      "campaignId": "is5_sarkaz",
+      "name": "論断：補助",
+      "maximum": 7
+    },
+    {
+      "relicId": "is5_sarkaz_relic_281",
+      "campaignId": "is5_sarkaz",
+      "name": "論断：医療",
+      "maximum": 7
+    },
+    {
+      "relicId": "is5_sarkaz_relic_280",
+      "campaignId": "is5_sarkaz",
+      "name": "論断：特殊",
+      "maximum": 7
+    },
+    {
+      "relicId": "is5_sarkaz_relic_195",
+      "campaignId": "is5_sarkaz",
+      "name": "丸い石の祭壇",
+      "maximum": 10
+    },
+    {
+      "relicId": "is5_sarkaz_relic_287",
+      "campaignId": "is5_sarkaz",
+      "name": "呪儀の溯獣",
+      "maximum": 10
+    },
+    {
+      "relicId": "is6_sui_relic_185",
+      "campaignId": "is6_sui",
+      "name": "飛駄輸送",
+      "maximum": 10
+    },
+    {
+      "relicId": "is6_sui_relic_182",
+      "campaignId": "is6_sui",
+      "name": "家庭風の炒め物",
+      "maximum": 15
+    },
+    {
+      "relicId": "is6_sui_relic_192",
+      "campaignId": "is6_sui",
+      "name": "山河に醸す",
+      "maximum": 10
+    },
+    {
+      "relicId": "is6_sui_relic_194",
+      "campaignId": "is6_sui",
+      "name": "鏗金の征鼓",
+      "maximum": 10
+    },
+    {
+      "relicId": "is6_sui_relic_240",
+      "campaignId": "is6_sui",
+      "name": "子武の剣",
+      "maximum": 6
+    },
+    {
+      "relicId": "is6_sui_relic_253",
+      "campaignId": "is6_sui",
+      "name": "生還者の契約",
+      "maximum": null
+    },
+    {
+      "relicId": "is6_sui_relic_266",
+      "campaignId": "is6_sui",
+      "name": "驚堂木",
+      "maximum": 15
+    },
+    {
+      "relicId": "is6_sui_relic_271",
+      "campaignId": "is6_sui",
+      "name": "登天の斧",
+      "maximum": 2
+    },
+    {
+      "relicId": "is6_sui_relic_276",
+      "campaignId": "is6_sui",
+      "name": "勝利の琴",
+      "maximum": 17
+    },
+    {
+      "relicId": "is6_sui_relic_281",
+      "campaignId": "is6_sui",
+      "name": "兵鋒",
+      "maximum": 15
+    },
+    {
+      "relicId": "is6_sui_relic_260",
+      "campaignId": "is6_sui",
+      "name": "丸い石の祭壇",
+      "maximum": 10
+    }
+  ]
+}

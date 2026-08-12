@@ -84,6 +84,22 @@ export function removeCoinEntry(state, campaignId, fieldId, index) {
 export function clearRelics(state) {
   state.relics = [];
   state.usedRelicIds = [];
+  state.relicStackCounts = {};
+}
+
+export function updateRelicStackCount(state, relicId, value, maximum = null) {
+  state.relicStackCounts ||= {};
+  const numeric = Number(value);
+  const count = Number.isSafeInteger(numeric) && numeric > 0 ? numeric : 0;
+  const numericMaximum = Number(maximum);
+  const normalized = Number.isSafeInteger(numericMaximum) && numericMaximum > 0
+    ? Math.min(count, numericMaximum)
+    : count;
+  if (!(state.relics || []).includes(relicId) || normalized <= 0) {
+    delete state.relicStackCounts[relicId];
+    return;
+  }
+  state.relicStackCounts[relicId] = normalized;
 }
 
 export function addBossFlag(state, text) {
@@ -136,6 +152,7 @@ export function updateRunField(state, field, value, checked) {
     state.run.difficultyTierId = null;
     state.relics = [];
     state.usedRelicIds = [];
+    state.relicStackCounts = {};
     state.bossFlags = [];
     state.bossSelections ||= {};
     state.bossSelections[value] ||= {};
@@ -255,6 +272,7 @@ export function toggleChoice(state, type, id) {
   state[key] = [...set];
   if (type === "relic" && !set.has(id)) {
     state.usedRelicIds = (state.usedRelicIds || []).filter((relicId) => relicId !== id);
+    if (state.relicStackCounts && typeof state.relicStackCounts === "object") delete state.relicStackCounts[id];
   }
 }
 

@@ -330,6 +330,20 @@
       "numericFallback": true
     },
     {
+      "id": "run.operator_count",
+      "profileIds": [
+        "operatorsFull"
+      ],
+      "roi": [
+        994,
+        650,
+        58,
+        58
+      ],
+      "scale": 6,
+      "numericFallback": true
+    },
+    {
       "id": "run.idea",
       "profileIds": [
         "runStatusFull"

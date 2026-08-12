@@ -975,6 +975,9 @@ public sealed record SukiRunStateSnapshot(
 
     public IReadOnlyDictionary<string, int> OperatorPromotionLevels { get; init; } =
         new Dictionary<string, int>(StringComparer.Ordinal);
+
+    public IReadOnlyDictionary<string, int> RelicStackCounts { get; init; } =
+        new Dictionary<string, int>(StringComparer.Ordinal);
 }
 
 public sealed record RhodesRunCatalogSnapshot(
@@ -1040,6 +1043,7 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
     private bool _isCandleBearerTarget;
     private bool _isEliteTwo;
     private int _selectionCount = 1;
+    private int _relicStackCount;
 
     public SukiChoiceItem(
         string kind,
@@ -1056,7 +1060,9 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
         string detail = "",
         string searchText = "",
         string imagePath = "",
-        bool supportsUsedFlag = false)
+        bool supportsUsedFlag = false,
+        bool supportsRelicStackCount = false,
+        int? relicStackMaximum = null)
     {
         Kind = kind;
         Id = id;
@@ -1072,6 +1078,11 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
         Detail = detail;
         ImagePath = imagePath;
         SupportsUsedFlag = supportsUsedFlag;
+        SupportsRelicStackCount = kind.Equals("relic", StringComparison.Ordinal)
+            && supportsRelicStackCount;
+        RelicStackMaximum = SupportsRelicStackCount && relicStackMaximum > 0
+            ? relicStackMaximum
+            : null;
         SearchText = string.IsNullOrWhiteSpace(searchText)
             ? $"{id} {name} {heading} {operatorClass} {operatorBranch} {campaignId} {category} {detail}"
             : searchText;
@@ -1106,6 +1117,39 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
     public bool HiddenByDefault { get; }
 
     public bool SupportsUsedFlag { get; }
+
+    public bool SupportsRelicStackCount { get; private set; }
+
+    public int? RelicStackMaximum { get; private set; }
+
+    public int RelicStackInputMaximum => RelicStackMaximum ?? int.MaxValue;
+
+    public string RelicStackMaximumLabel => RelicStackMaximum is int maximum
+        ? $"上限{maximum}"
+        : "上限なし";
+
+    public void EnableRelicStackCount(int? maximum = null)
+    {
+        if (!Kind.Equals("relic", StringComparison.Ordinal))
+            return;
+
+        var normalizedMaximum = maximum > 0 ? maximum : null;
+        if (SupportsRelicStackCount && RelicStackMaximum == normalizedMaximum)
+            return;
+        SupportsRelicStackCount = true;
+        RelicStackMaximum = normalizedMaximum;
+        if (RelicStackMaximum is int value && _relicStackCount > value)
+            _relicStackCount = value;
+        OnPropertyChanged(nameof(SupportsRelicStackCount));
+        OnPropertyChanged(nameof(RelicStackMaximum));
+        OnPropertyChanged(nameof(RelicStackInputMaximum));
+        OnPropertyChanged(nameof(RelicStackMaximumLabel));
+        OnPropertyChanged(nameof(RelicStackCount));
+        OnPropertyChanged(nameof(IsRelicStackCountVisible));
+        OnPropertyChanged(nameof(HasRelicStackCount));
+        OnPropertyChanged(nameof(RelicStackLabel));
+        OnPropertyChanged(nameof(StateLabel));
+    }
 
     public string SearchText { get; }
 
@@ -1194,6 +1238,30 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
 
     public bool IsSelectionCountVisible => SupportsMultipleCount && IsSelected;
 
+    public int RelicStackCount
+    {
+        get => SupportsRelicStackCount ? _relicStackCount : 0;
+        set
+        {
+            var normalized = SupportsRelicStackCount
+                ? Math.Clamp(value, 0, RelicStackInputMaximum)
+                : 0;
+            if (_relicStackCount == normalized)
+                return;
+            _relicStackCount = normalized;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasRelicStackCount));
+            OnPropertyChanged(nameof(RelicStackLabel));
+            OnPropertyChanged(nameof(StateLabel));
+        }
+    }
+
+    public bool HasRelicStackCount => IsSelected && RelicStackCount > 0;
+
+    public bool IsRelicStackCountVisible => SupportsRelicStackCount && IsSelected;
+
+    public string RelicStackLabel => HasRelicStackCount ? $"×{RelicStackCount}" : "";
+
     public bool IsSelected
     {
         get => _isSelected;
@@ -1202,10 +1270,12 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
             if (_isSelected == value)
                 return;
             var resetSelectionCount = !value && _selectionCount != 1;
+            var resetRelicStackCount = !value && _relicStackCount != 0;
             _isSelected = value;
             if (!value)
             {
                 _selectionCount = 1;
+                _relicStackCount = 0;
                 _isEliteTwo = false;
             }
             OnPropertyChanged();
@@ -1216,6 +1286,11 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
                 OnPropertyChanged(nameof(SelectionCount));
             OnPropertyChanged(nameof(EffectiveSelectionCount));
             OnPropertyChanged(nameof(IsSelectionCountVisible));
+            if (resetRelicStackCount)
+                OnPropertyChanged(nameof(RelicStackCount));
+            OnPropertyChanged(nameof(HasRelicStackCount));
+            OnPropertyChanged(nameof(IsRelicStackCountVisible));
+            OnPropertyChanged(nameof(RelicStackLabel));
             OnPropertyChanged(nameof(IsEliteTwo));
             OnPropertyChanged(nameof(IsPromotionToggleVisible));
             OnPropertyChanged(nameof(PromotionButtonLabel));
@@ -1268,9 +1343,10 @@ public sealed class SukiChoiceItem : INotifyPropertyChanged
             if (IsSelected)
             {
                 var promotion = SupportsEliteTwo && IsEliteTwo ? " / 昇進2" : "";
+                var stack = HasRelicStackCount ? $" / スタック ×{RelicStackCount}" : "";
                 if (SupportsMultipleCount && SelectionCount > 1)
                     return $"選択中 / {SelectionCount}名{promotion}";
-                return IsUsed ? $"選択中 / 使用済{promotion}" : $"選択中{promotion}";
+                return IsUsed ? $"選択中 / 使用済{promotion}{stack}" : $"選択中{promotion}{stack}";
             }
             if (IsExcluded)
                 return "除外";

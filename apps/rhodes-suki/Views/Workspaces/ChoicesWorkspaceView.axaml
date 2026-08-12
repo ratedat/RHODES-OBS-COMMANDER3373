@@ -156,14 +156,26 @@
                           <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="3" Opacity="0.58" />
                         </Grid>
                       </Button>
-                      <Button Grid.Column="1"
-                              Content="{Binding UsageButtonLabel}"
-                              Command="{Binding DataContext.ToggleRelicUsedCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding IsUsageToggleVisible}"
-                              Width="72"
-                              VerticalAlignment="Center"
-                              ToolTip.Tip="探索継続効果の使用状態を切り替えます" />
+                      <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                        <Border Width="96" Padding="8,6" CornerRadius="6" BorderBrush="#356E67" BorderThickness="1" Background="#102925"
+                                IsVisible="{Binding IsRelicStackCountVisible}"
+                                ToolTip.Tip="画面取得で認識した値を確認・修正できます。0は未確認として出力しません。">
+                          <StackPanel Spacing="3">
+                            <TextBlock Text="スタック数" FontSize="10" Opacity="0.72" HorizontalAlignment="Center" />
+                            <NumericUpDown Minimum="0" Maximum="{Binding RelicStackInputMaximum}" Increment="1" FormatString="0"
+                                           Value="{Binding RelicStackCount, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                                           ToolTip.Tip="{Binding RelicStackMaximumLabel}" />
+                            <TextBlock Text="{Binding RelicStackMaximumLabel}" FontSize="9" Opacity="0.58" HorizontalAlignment="Center" />
+                          </StackPanel>
+                        </Border>
+                        <Button Content="{Binding UsageButtonLabel}"
+                                Command="{Binding DataContext.ToggleRelicUsedCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"
+                                IsVisible="{Binding IsUsageToggleVisible}"
+                                Width="72"
+                                HorizontalAlignment="Center"
+                                ToolTip.Tip="探索継続効果の使用状態を切り替えます" />
+                      </StackPanel>
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

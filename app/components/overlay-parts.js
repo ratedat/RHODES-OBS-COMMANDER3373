@@ -1,5 +1,6 @@
 import { assetUrl, html, stars } from "../lib/format.js";
 import { renderRelicUsedBadge } from "./relic-used-badge.js";
+import { renderRelicStackBadge } from "./relic-stack-badge.js";
 import { renderOperatorPortrait } from "./operator-promotion-badge.js";
 import { operatorRosterCount } from "../domain/operator-counts.js";
 
@@ -58,7 +59,7 @@ function renderStatusPart(args, context) {
 function renderRelicsPart(args, context) {
   const body = args.relics.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("horizontalRelicScrollSpeed")}">
     <div class="overlay-part-relic-grid">
-      ${args.relics.map((item) => `<div class="overlay-part-relic ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span>${html(item.name)}</span>${renderRelicUsedBadge(item)}</div>`).join("")}
+      ${args.relics.map((item) => `<div class="overlay-part-relic ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span>${html(item.name)}</span>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("")}
     </div>
   </div>` : empty("秘宝なし");
   return section("relics", "Relics", args.relics.length, body);
