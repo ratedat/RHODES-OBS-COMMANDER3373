@@ -8,6 +8,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const portableRoot = path.join(repoRoot, "outputs", "suki-portable");
 const releaseRoot = path.join(repoRoot, "outputs", "release");
 const folderOnly = process.argv.includes("--folder-only");
+const slim = process.argv.includes("--slim");
 const nodeRuntime = {
   version: "24.18.0",
   distributionDirectory: "node-v24.18.0-win-x64",
@@ -27,6 +28,10 @@ const excludedPortableEntries = new Set([
   "RHODES OBS COMMANDER3373 Debug Logs",
   "glm-ocr-runtime",
   "ollama-runtime",
+]);
+const slimExcludedPortableEntries = new Set([
+  "nodejs-runtime",
+  "cloudflared-runtime",
 ]);
 
 function run(command, args, options = {}) {
@@ -68,7 +73,8 @@ async function copyPortablePayload(targetRoot) {
       const relative = path.relative(portableRoot, source);
       if (!relative || relative.startsWith("..")) return true;
       const [topLevel] = relative.split(path.sep);
-      return !excludedPortableEntries.has(topLevel);
+      if (excludedPortableEntries.has(topLevel)) return false;
+      return !(slim && slimExcludedPortableEntries.has(topLevel));
     },
   });
 }
@@ -199,6 +205,9 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
     await copyFile(path.join(repoRoot, source), path.join(targetRoot, target));
   }
 
+  const runtimeBundleDescription = slim
+    ? "Node.jsとcloudflaredは容量削減のため同梱していません。OBS出力または簡易公開の初回利用時に公式配布元から取得し、SHA-256を検証して実行フォルダへ配置します。初回のみインターネット接続が必要です。"
+    : "OBS出力と大会入力の簡易公開に必要なNode.jsとcloudflaredは、検証済みのものを同梱しています。";
   const readme = `# RHODES OBS COMMANDER3373 公開デバッグ版
 
 この配布はIS#2からIS#6の専用認識を利用できるAvalonia/SukiUI公開デバッグ版です。歳の銭OCR（有効銭・保有銭）は安定化まで停止しているため、銭は手動入力してください。
@@ -217,7 +226,7 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
 
 ## OBS Overlay / Sidecar
 
-OBS出力と大会入力の簡易公開に必要なNode.jsとcloudflaredは検証済みのものを同梱しています。
+${runtimeBundleDescription}
 インストーラー、管理者権限、OCRモデルの導入は不要です。「出力」画面から配信サーバーまたは「簡易公開を開始」を実行してください。
 セキュリティ製品やネットワークがCloudflareへの通信を遮断した場合は、画面に表示される失敗段階と詳細を報告ZIPへ添付してください。
 
@@ -239,7 +248,7 @@ Revision: ${sourceRevision}${sourceStatus ? ` (${sourceStatus})` : ""}
   await fs.writeFile(path.join(targetRoot, "README_PUBLIC_DEBUG.md"), readme, "utf8");
   await fs.writeFile(
     path.join(targetRoot, "BUILD_INFO.txt"),
-    `revision=${sourceRevision}\nstatus=${sourceStatus || "clean"}\nbuiltAt=${new Date().toISOString()}\n`,
+    `revision=${sourceRevision}\nstatus=${sourceStatus || "clean"}\nruntimeBundle=${slim ? "on-demand" : "bundled"}\nbuiltAt=${new Date().toISOString()}\n`,
     "utf8",
   );
 }
@@ -248,6 +257,7 @@ async function writeDistributionProfile(targetRoot) {
   const profile = {
     schemaVersion: 1,
     channel: "public-debug",
+    runtimeBundle: slim ? "on-demand" : "bundled",
   };
   await fs.writeFile(
     path.join(targetRoot, "distribution-profile.json"),
@@ -318,7 +328,7 @@ await fs.access(path.join(portableRoot, "RhodesSuki.exe"));
 const revision = run("git", ["rev-parse", "--short", "HEAD"], { capture: true });
 const dirty = run("git", ["status", "--porcelain"], { capture: true }).length > 0;
 const sourceStatus = dirty ? "dirty working tree" : "clean";
-const packageName = `RHODES-OBS-COMMANDER3373-public-debug-${buildTimestamp()}-${revision}${dirty ? "-dirty" : ""}`;
+const packageName = `RHODES-OBS-COMMANDER3373-public-debug-${buildTimestamp()}-${revision}${slim ? "-slim" : ""}${dirty ? "-dirty" : ""}`;
 const packageRoot = path.join(releaseRoot, packageName);
 const zipPath = path.join(releaseRoot, `${packageName}.zip`);
 
@@ -326,7 +336,7 @@ await fs.mkdir(releaseRoot, { recursive: true });
 await fs.rm(packageRoot, { recursive: true, force: true });
 if (!folderOnly) await fs.rm(zipPath, { force: true });
 await copyPortablePayload(packageRoot);
-await ensureBundledPublicRuntime(packageRoot);
+if (!slim) await ensureBundledPublicRuntime(packageRoot);
 await addWebOverlayRuntime(packageRoot);
 await resetPublicState(packageRoot);
 await writeDistributionProfile(packageRoot);

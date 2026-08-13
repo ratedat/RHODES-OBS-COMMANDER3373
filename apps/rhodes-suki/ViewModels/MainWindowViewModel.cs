@@ -2332,7 +2332,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return _tournamentQuickStatus.Diagnostic;
             if (_tournamentQuickStatus.Installed)
                 return $"簡易公開ランタイム v{_tournamentQuickStatus.Version} を利用できます。";
-            return "公開デバッグ版には必要なランタイムが同梱されています。「簡易公開を開始」を押してください。";
+            return "「簡易公開を開始」でランタイムを確認し、未導入の場合は公式配布元から自動取得します。";
         }
     }
 

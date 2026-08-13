@@ -46,6 +46,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(packageJson, /"suki:publish:portable": "node tools\/publish-suki-portable\.mjs"/);
   assert.match(packageJson, /"suki:package:public-debug": "node tools\/package-suki-public-debug\.mjs"/);
   assert.match(packageJson, /"suki:package:public-debug:folder": "node tools\/package-suki-public-debug\.mjs --folder-only"/);
+  assert.match(packageJson, /"suki:package:public-debug:slim": "node tools\/package-suki-public-debug\.mjs --slim"/);
   assert.match(portablePublisher, /--self-contained/);
   assert.match(portablePublisher, /PublishSingleFile=true/);
   assert.match(portablePublisher, /IncludeNativeLibrariesForSelfExtract=true/);
@@ -93,10 +94,17 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(publicDebugPackager, /distribution-profile\.json/);
   assert.match(publicDebugPackager, /public-debug/);
   assert.match(publicDebugPackager, /const folderOnly = process\.argv\.includes\("--folder-only"\)/);
+  assert.match(publicDebugPackager, /const slim = process\.argv\.includes\("--slim"\)/);
+  assert.match(publicDebugPackager, /const slimExcludedPortableEntries = new Set\(\[[\s\S]*?"nodejs-runtime"[\s\S]*?"cloudflared-runtime"[\s\S]*?\]\);/);
+  assert.match(publicDebugPackager, /slim && slimExcludedPortableEntries\.has\(topLevel\)/);
+  assert.match(publicDebugPackager, /if \(!slim\) await ensureBundledPublicRuntime\(packageRoot\)/);
+  assert.match(publicDebugPackager, /runtimeBundle: slim \? "on-demand" : "bundled"/);
+  assert.match(publicDebugPackager, /slim \? "-slim" : ""/);
   assert.match(publicDebugPackager, /if \(!folderOnly\) \{[\s\S]*?run\("tar\.exe"/);
   assert.match(outputWorkspace, /大会入力（簡易公開）/u);
   assert.match(outputWorkspace, /簡易公開を開始/u);
   assert.match(outputWorkspace, /OCRモデル、インストーラー、管理者権限は不要/u);
+  assert.match(outputWorkspace, /未導入の場合.*SHA-256/u);
   assert.match(outputWorkspace, /外部中継サーバー（上級者向け）/u);
   assert.ok(discordGuide.length <= 2000, "Discord guide fits in one standard message");
   assert.match(discordGuide, /ZIPをすべて展開/u);

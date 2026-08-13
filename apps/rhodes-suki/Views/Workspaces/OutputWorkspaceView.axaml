@@ -147,7 +147,7 @@
         </Grid>
 
         <TextBlock Grid.Row="4" Classes="caption" TextWrapping="Wrap"
-                   Text="公開デバッグ版には必要なNode.jsとcloudflaredを同梱しています。OCRモデル、インストーラー、管理者権限は不要です。一時URLは停止または3373終了後に失効します。Cloudflareへの通信が遮断された場合は、停止した段階と詳細をここに表示します。" />
+                   Text="Node.jsとcloudflaredは未導入の場合に公式配布元から取得し、SHA-256を検証して配置します。OCRモデル、インストーラー、管理者権限は不要です。一時URLは停止または3373終了後に失効します。Cloudflareへの通信が遮断された場合は、停止した段階と詳細をここに表示します。" />
       </Grid>
     </Border>
 
