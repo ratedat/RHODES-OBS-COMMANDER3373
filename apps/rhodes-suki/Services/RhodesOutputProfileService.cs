@@ -8,7 +8,7 @@ public static partial class RhodesOutputProfileService
 {
     public const string ProfileKind = "rhodes-output-profile";
     public const int ProfileSchemaVersion = 1;
-    public const int OutputSchemaVersion = 2;
+    public const int OutputSchemaVersion = 3;
     public const int MaxCustomCssLength = 65_536;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -22,6 +22,20 @@ public static partial class RhodesOutputProfileService
     {
         var integratedAppearance = NormalizeAppearance(preferences.IntegratedAppearance);
         var individualAppearance = NormalizeAppearance(preferences.IndividualAppearance ?? integratedAppearance);
+        var individualBackgroundEnabled = preferences.IndividualBackgroundEnabled
+            ?? preferences.BackgroundEnabled;
+        var individualBackgroundOpacity = Math.Clamp(
+            preferences.IndividualBackgroundOpacity
+                ?? preferences.BackgroundOpacity,
+            0,
+            100);
+        var canvasBackgroundEnabled = preferences.CanvasBackgroundEnabled
+            ?? preferences.BackgroundEnabled;
+        var canvasBackgroundOpacity = Math.Clamp(
+            preferences.CanvasBackgroundOpacity
+                ?? preferences.BackgroundOpacity,
+            0,
+            100);
         var parts = (preferences.Parts ?? [])
             .Where(part => !string.IsNullOrWhiteSpace(part.Id))
             .Select(part => part with
@@ -45,30 +59,36 @@ public static partial class RhodesOutputProfileService
             IndividualAppearance = individualAppearance,
             IndividualTournamentMode = preferences.IndividualTournamentMode
                 ?? preferences.TournamentMode,
-            IndividualBackgroundEnabled = preferences.IndividualBackgroundEnabled
-                ?? preferences.BackgroundEnabled,
-            IndividualBackgroundOpacity = Math.Clamp(
-                preferences.IndividualBackgroundOpacity
-                    ?? preferences.BackgroundOpacity,
-                0,
-                100),
+            IndividualBackgroundEnabled = individualBackgroundEnabled,
+            IndividualBackgroundOpacity = individualBackgroundOpacity,
             IndividualShowPartTitles = preferences.IndividualShowPartTitles
                 ?? preferences.ShowPartTitles,
             IndividualScrollSpeed = Math.Clamp(preferences.IndividualScrollSpeed ?? preferences.ScrollSpeed, 0, 30),
+            CanvasBackgroundEnabled = canvasBackgroundEnabled,
+            CanvasBackgroundOpacity = canvasBackgroundOpacity,
+            IndividualCanvasBackgroundEnabled = preferences.IndividualCanvasBackgroundEnabled
+                ?? individualBackgroundEnabled,
+            IndividualCanvasBackgroundOpacity = Math.Clamp(
+                preferences.IndividualCanvasBackgroundOpacity
+                    ?? individualBackgroundOpacity,
+                0,
+                100),
         };
     }
 
     public static SukiOutputAppearance NormalizeAppearance(SukiOutputAppearance? appearance)
     {
         appearance ??= new SukiOutputAppearance();
+        var backgroundColor = NormalizeColor(appearance.BackgroundColor, "#080B0C");
         return appearance with
         {
             FontColor = NormalizeColor(appearance.FontColor, "#F2EFE6"),
-            BackgroundColor = NormalizeColor(appearance.BackgroundColor, "#080B0C"),
+            BackgroundColor = backgroundColor,
             BorderColor = NormalizeColor(appearance.BorderColor, "#2B3638"),
             AccentColor = NormalizeColor(appearance.AccentColor, "#55D6BE"),
             FontSizePercent = Math.Clamp(appearance.FontSizePercent, 60, 200),
             CustomCss = NormalizeCustomCss(appearance.CustomCss),
+            CanvasBackgroundColor = NormalizeColor(appearance.CanvasBackgroundColor, backgroundColor),
         };
     }
 

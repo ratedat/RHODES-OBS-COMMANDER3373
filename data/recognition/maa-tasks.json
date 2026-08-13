@@ -332,7 +332,8 @@
     {
       "id": "run.operator_count",
       "profileIds": [
-        "operatorsFull"
+        "operatorsFull",
+        "relicsFull"
       ],
       "roi": [
         994,
@@ -342,6 +343,21 @@
       ],
       "scale": 6,
       "numericFallback": true
+    },
+    {
+      "id": "run.relic_count_marker",
+      "profileIds": [
+        "relicsFull"
+      ],
+      "roi": [
+        158,
+        658,
+        26,
+        32
+      ],
+      "scale": 10,
+      "numericFallback": true,
+      "note": "Conservative digit-presence fallback. A strong digit may prove ownership when image inspection is unavailable, but non-digit OCR never proves that the relic list is empty."
     },
     {
       "id": "run.idea",

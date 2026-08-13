@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 
 test("Suki shell references SukiUI and Maa.Framework as the replacement desktop stack", async () => {
@@ -109,7 +110,9 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(sarkazGuide, /公開デバッグ版自体はIS#2からIS#6/u);
   assert.match(sarkazGuide, /歳の銭OCR.*手動入力/u);
   assert.match(outputCssGuide, /統合Overlayと個別ウィンドウでは、CSSを別々に保存します/u);
-  assert.match(outputCssGuide, /背景を表示/u);
+  assert.match(outputCssGuide, /全体背景.*枠背景/u);
+  assert.match(outputCssGuide, /全体背景/u);
+  assert.match(outputCssGuide, /枠背景/u);
   assert.match(server, /state\.run\.campaignId = "is2_phantom"/);
   assert.match(server, /next\.run\.campaignId = next\.run\.campaignId \|\| "is2_phantom"/);
 });
@@ -982,6 +985,311 @@ test("MAA resource generator output is checked into the Suki shell", () => {
   });
 });
 
+test("Suki debug workspace integrates local MAA tools and a recognition-only lab", async () => {
+  const debugWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/DebugWorkspaceView.axaml", "utf8");
+  const developmentTools = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaDevelopmentTools.cs", "utf8");
+  const evidenceKit = await fs.readFile("apps/rhodes-suki/Services/RhodesMaaEvidenceKit.cs", "utf8");
+  const recognitionLab = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionLab.cs", "utf8");
+  const recognitionViewModel = await fs.readFile("apps/rhodes-suki/ViewModels/RhodesRecognitionLabViewModel.cs", "utf8");
+  const project = await fs.readFile("apps/rhodes-suki/RhodesSuki.csproj", "utf8");
+
+  assert.match(debugWorkspace, /MaaDevelopmentTools\.OpenMseCommand/);
+  assert.match(debugWorkspace, /MaaDevelopmentTools\.OpenMpeCommand/);
+  assert.match(debugWorkspace, /MaaDevelopmentTools\.OpenLogAnalyzerCommand/);
+  assert.match(debugWorkspace, /MaaDevelopmentTools\.RunEvidenceKitCommand/);
+  assert.match(debugWorkspace, /RecognitionLab\.RunCommand/);
+  assert.match(debugWorkspace, /状態へ未反映/);
+  assert.match(recognitionViewModel, /歳・有効銭/);
+  assert.match(recognitionViewModel, /歳・保有銭/);
+  assert.match(developmentTools, /BuildLogAnalyzerRequest/);
+  assert.doesNotMatch(developmentTools, /https?:\/\//);
+  assert.match(evidenceKit, /MAA_EVIDENCE_AUTO_UPDATE/);
+  assert.match(evidenceKit, /MAA_EVIDENCE_TELEMETRY/);
+  assert.match(evidenceKit, /\["inspect", materials, "--format", "json", "--output", output\]/);
+  assert.match(recognitionLab, /"recognition"\] = "OCR"/);
+  assert.match(recognitionLab, /"recognition"\] = "TemplateMatch"/);
+  assert.match(recognitionLab, /"recognition"\] = "ColorMatch"/);
+  assert.doesNotMatch(recognitionLab, /\["action"\]/i);
+  assert.doesNotMatch(recognitionLab, /click|swipe|keyevent/i);
+  assert.match(recognitionViewModel, /stateApplied = false/);
+  assert.match(recognitionViewModel, /inputActionIssued = false/);
+  assert.doesNotMatch(recognitionViewModel, /SaveCandidatesAsync|ApplyCandidatesAsync/);
+  assert.match(project, /Content Include="interface_ja_jp\.json"/);
+  assert.match(project, /Content Include="interface_en_us\.json"/);
+});
+
+test("Suki workbench follows the DADS-inspired spacing and button hierarchy", async () => {
+  const theme = await fs.readFile("apps/rhodes-suki/Views/WorkbenchTheme.axaml", "utf8");
+  const mainWindow = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const runtimeWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml", "utf8");
+
+  assert.match(theme, /x:Key="WorkbenchControlTargetMinHeight">44<\/x:Double>/);
+  assert.match(theme, /x:Key="WorkbenchPrimaryActionMinHeight">48<\/x:Double>/);
+  assert.match(theme, /x:Key="WorkbenchPagePadding">24<\/Thickness>/);
+  assert.match(theme, /x:Key="WorkbenchCardPadding">16<\/Thickness>/);
+  assert.match(theme, /x:Key="WorkbenchCornerMedium">6<\/CornerRadius>/);
+  assert.match(theme, /Style Selector="Button\.primary, Button\.primaryAction"/);
+  assert.match(theme, /Style Selector="Button\.tertiary, Button\.tertiaryAction"/);
+  assert.match(
+    theme,
+    /Style Selector="RadioButton\.segmented"[\s\S]*?MinHeight" Value="\{StaticResource WorkbenchControlTargetMinHeight\}"/,
+  );
+  assert.match(theme, /Style Selector="Border\.settingsCard"/);
+  assert.match(mainWindow, /Classes="tertiaryAction iconAction"[^>]+AutomationProperties\.Name="その他の操作"/);
+  assert.match(runtimeWorkspace, /<StackPanel Spacing="16" HorizontalAlignment="Stretch">/);
+  assert.match(runtimeWorkspace, /<Grid Grid\.Row="1" ColumnDefinitions="\*,Auto" ColumnSpacing="16">/);
+  assert.match(runtimeWorkspace, /Grid\.Column="1" Classes="runtimeActions" HorizontalAlignment="Right"/);
+  assert.match(runtimeWorkspace, /Classes="secondaryAction" Content="保存"/);
+  assert.match(runtimeWorkspace, /Classes="primaryAction" Content="接続・撮影"/);
+  assert.doesNotMatch(runtimeWorkspace, /Content="使用"[^>]+Padding="8,3"/);
+});
+
+test("Suki workbench uses a familiar Windows light visual system", async () => {
+  const app = await fs.readFile("apps/rhodes-suki/App.axaml", "utf8");
+  const theme = await fs.readFile("apps/rhodes-suki/Views/WorkbenchTheme.axaml", "utf8");
+  const mainWindow = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const runtimeWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml", "utf8");
+
+  assert.match(app, /RequestedThemeVariant="Light"/);
+  assert.match(app, /<suki:SukiTheme ThemeColor="Blue" \/>/);
+  assert.doesNotMatch(app, /ThemeColor="Orange"|ThemeColor="Green"/);
+
+  for (const [token, value] of [
+    ["WorkbenchBase", "#E9ECEF"],
+    ["WorkbenchSidebar", "#F1F2F4"],
+    ["WorkbenchToolbar", "#F5F6F7"],
+    ["WorkbenchContent", "#EDF0F2"],
+    ["WorkbenchFloating", "#F8F9FA"],
+    ["WorkbenchControlBorder", "#707B88"],
+    ["WorkbenchAccent", "#155F99"],
+    ["WorkbenchAccentStrong", "#0F527F"],
+    ["WorkbenchAccentForeground", "#FFFFFF"],
+    ["WorkbenchAccentHover", "#0B466E"],
+    ["WorkbenchAccentPressed", "#083A5B"],
+    ["WorkbenchFocus", "#155F99"],
+  ]) {
+    assert.match(theme, new RegExp(`x:Key="${token}">${value}<\\/SolidColorBrush>`));
+  }
+  assert.doesNotMatch(theme, /#12110F|#E47B3C|#A84D1F|#7C3818/i);
+  assert.match(theme, /x:Key="WorkbenchCornerSmall">4<\/CornerRadius>/);
+  assert.match(theme, /x:Key="WorkbenchCornerMedium">6<\/CornerRadius>/);
+  assert.match(theme, /Style Selector="Button:focus-visible"[\s\S]*?WorkbenchFocus/);
+  assert.match(theme, /Style Selector="Button:disabled"[\s\S]*?WorkbenchTextTertiary/);
+  assert.match(theme, /Style Selector="TextBlock\.wordmark"[\s\S]*?WorkbenchUiFontFamily/);
+  const styleRules = theme.slice(theme.indexOf("</Styles.Resources>") + "</Styles.Resources>".length);
+  assert.doesNotMatch(styleRules, /#[0-9A-F]{6,8}/i);
+  assert.match(
+    theme,
+    /Style Selector="Border\.settingsCard"[\s\S]*?Background" Value="Transparent"[\s\S]*?BorderThickness" Value="0,0,0,1"[\s\S]*?CornerRadius" Value="0"/,
+  );
+  assert.match(theme, /Style Selector="Border\.connectionModeSelector"/);
+  assert.match(theme, /TextBlock#SegmentMark/);
+  assert.match(theme, /RadioButton\.segmented:checked[\s\S]*?SegmentMark[\s\S]*?Opacity" Value="1"/);
+  assert.match(
+    theme,
+    /Style Selector="ListBox\.navList ListBoxItem"[\s\S]*?<ControlTemplate>[\s\S]*?Border x:Name="NavItemSurface"/,
+  );
+  assert.match(theme, /ContentPresenter x:Name="NavItemContent"/);
+  assert.match(
+    theme,
+    /ListBox\.navList ListBoxItem:selected \/template\/ ContentPresenter#NavItemContent[\s\S]*?Background" Value="\{StaticResource WorkbenchPressed\}"/,
+  );
+  assert.match(
+    theme,
+    /Style Selector="ListBox\.navList ListBoxItem:selected">[\s\S]*?Background" Value="\{StaticResource WorkbenchPressed\}"/,
+  );
+  assert.match(theme, /ListBox\.navList ListBoxItem:selected \/template\/ Border#NavItemSurface/);
+
+  assert.doesNotMatch(mainWindow, /BROADCAST CONTROL|\{Binding Subtitle\}/);
+  assert.match(mainWindow, /Text="\{Binding Description\}" Classes="navDescription"/);
+  assert.doesNotMatch(mainWindow, /CornerRadius="17"/);
+
+  assert.match(runtimeWorkspace, /<Border Classes="connectionModeSelector">/);
+  assert.match(runtimeWorkspace, /Classes="connectionModeChoices"/);
+  assert.match(
+    runtimeWorkspace,
+    /Text="\{Binding RuntimeLayout\.Header\.Detail\}"[^>]+HorizontalAlignment="Left"/,
+  );
+  assert.match(runtimeWorkspace, /Classes="secondaryAction" Content="PC接続・撮影テスト"/);
+  assert.doesNotMatch(runtimeWorkspace, /Classes="primaryAction" Content="PC接続・撮影テスト"/);
+  const pcConnectionIndex = runtimeWorkspace.indexOf('Header="PC版ウィンドウ接続・操作"');
+  const sharedInferenceIndex = runtimeWorkspace.indexOf('Text="MAA推論（CPU / GPU）"');
+  assert.ok(pcConnectionIndex >= 0);
+  assert.ok(sharedInferenceIndex > pcConnectionIndex);
+});
+
+test("Suki status copy describes the optional server without API sync jargon", async () => {
+  const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
+  const recognitionWorkflow = await fs.readFile("apps/rhodes-suki/Services/RhodesRecognitionWorkflow.cs", "utf8");
+
+  assert.doesNotMatch(viewModel, /API同期(?:は)?失敗|APIへ同期しました|ADB API設定の反映は失敗/);
+  assert.doesNotMatch(recognitionWorkflow, /API同期失敗|API同期は失敗/);
+  assert.match(viewModel, /配信サーバーは未起動です/);
+});
+
+test("Suki workbench keeps guidance concise and uses a multilingual Noto type system", async () => {
+  const theme = await fs.readFile("apps/rhodes-suki/Views/WorkbenchTheme.axaml", "utf8");
+  const runtimeWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml", "utf8");
+  const runWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RunWorkspaceView.axaml", "utf8");
+  const specialWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/SpecialWorkspaceView.axaml", "utf8");
+
+  assert.match(
+    theme,
+    /FontFamily x:Key="WorkbenchUiFontFamily">avares:\/\/RhodesSuki\/Assets\/Fonts#Noto Sans JP<\/FontFamily>/,
+  );
+  assert.match(
+    theme,
+    /FontFamily x:Key="WorkbenchMonoFontFamily">Noto Sans Mono CJK JP, Noto Sans Mono, Cascadia Mono, Consolas<\/FontFamily>/,
+  );
+  assert.match(theme, /Style Selector="Window"[\s\S]*?FontFamily" Value="\{StaticResource WorkbenchUiFontFamily\}"/);
+  assert.match(theme, /Style Selector="TextBlock\.wordmark"[\s\S]*?WorkbenchUiFontFamily/);
+  assert.match(theme, /Style Selector="TextBlock\.mono"[\s\S]*?WorkbenchMonoFontFamily/);
+  assert.doesNotMatch(theme, /Bahnschrift|Segoe UI Variable Display/);
+
+  assert.match(theme, /Style Selector="Button\.helpIcon"/);
+  assert.match(theme, /ToolTip\.ShowDelay" Value="350"/);
+  assert.match(
+    theme,
+    /Style Selector="TextBlock\.compactHelp"[\s\S]*?MaxLines" Value="1"[\s\S]*?TextTrimming" Value="CharacterEllipsis"/,
+  );
+  assert.match(theme, /Style Selector="ToolTip"[\s\S]*?MaxWidth" Value="420"/);
+  assert.match(
+    theme,
+    /Style Selector="ToolTip \/template\/ ContentPresenter"[\s\S]*?TextWrapping" Value="Wrap"[\s\S]*?MaxWidth" Value="396"/,
+  );
+
+  assert.match(runtimeWorkspace, /Text="起動済みPC版へ接続します。" Classes="supporting compactHelp"/);
+  assert.match(runtimeWorkspace, /Classes="helpIcon" Content="\?"[\s\S]*?title=アークナイツ[\s\S]*?class=UnityWndClass/);
+  assert.match(
+    runtimeWorkspace,
+    /ItemsSource="\{Binding PcScreencapMethodOptions\}"[^>]+ToolTip\.Tip="\{Binding SelectedPcScreencapMethod\.Detail\}"/,
+  );
+  assert.match(
+    runtimeWorkspace,
+    /ItemsSource="\{Binding PcMouseMethodOptions\}"[^>]+ToolTip\.Tip="\{Binding SelectedPcMouseMethod\.Detail\}"/,
+  );
+  assert.match(
+    runtimeWorkspace,
+    /ItemsSource="\{Binding PcKeyboardMethodOptions\}"[^>]+ToolTip\.Tip="\{Binding SelectedPcKeyboardMethod\.Detail\}"/,
+  );
+  assert.doesNotMatch(runtimeWorkspace, /Grid\.Row="2"[^>]+Text="\{Binding SelectedPc(?:Screencap|Mouse|Keyboard)Method\.Detail\}"/);
+  assert.doesNotMatch(runtimeWorkspace, /<TextBlock Text="\{Binding Detail\}" Classes="supporting" TextWrapping="Wrap" \/>/);
+
+  assert.match(
+    runWorkspace,
+    /Text="\{Binding Helper\}" Classes="caption compactHelp"[^>]+ToolTip\.Tip="\{Binding Helper\}"/,
+  );
+  assert.match(
+    specialWorkspace,
+    /Text="\{Binding Effect\}" Classes="caption compactHelp"[^>]+ToolTip\.Tip="\{Binding Effect\}"/,
+  );
+});
+
+test("Suki bundles static Noto Sans JP faces so mixed Japanese and Latin honor the same weight", async () => {
+  const theme = await fs.readFile("apps/rhodes-suki/Views/WorkbenchTheme.axaml", "utf8");
+  const project = await fs.readFile("apps/rhodes-suki/RhodesSuki.csproj", "utf8");
+  const provenance = await fs.readFile("apps/rhodes-suki/Assets/Fonts/README.md", "utf8");
+  const license = await fs.readFile("apps/rhodes-suki/Assets/Fonts/OFL-NotoSansJP.txt", "utf8");
+  const fontPaths = [
+    "apps/rhodes-suki/Assets/Fonts/NotoSansJP-Regular.otf",
+    "apps/rhodes-suki/Assets/Fonts/NotoSansJP-Medium.otf",
+    "apps/rhodes-suki/Assets/Fonts/NotoSansJP-Bold.otf",
+  ];
+
+  assert.match(
+    theme,
+    /FontFamily x:Key="WorkbenchUiFontFamily">avares:\/\/RhodesSuki\/Assets\/Fonts#Noto Sans JP<\/FontFamily>/,
+  );
+  assert.match(project, /<AvaloniaResource Include="Assets\\Fonts\\NotoSansJP-\*\.otf" \/>/);
+  assert.doesNotMatch(project, /NotoSansJP-VF\.ttf/);
+  for (const fontPath of fontPaths) {
+    const font = await fs.stat(fontPath);
+    assert.ok(font.size > 4_000_000, `${fontPath} should contain the Japanese static face`);
+  }
+  assert.match(provenance, /523d033d6cb47f4a80c58a35753646f5c3608a78/);
+  assert.match(provenance, /Regular.*Medium.*Bold/s);
+  assert.match(provenance, /Avalonia.*可変フォント.*未対応/s);
+  assert.match(license, /SIL OPEN FONT LICENSE Version 1\.1/);
+});
+
+test("Suki workbench keeps dense operational text readable and reflow-safe", async () => {
+  const theme = await fs.readFile("apps/rhodes-suki/Views/WorkbenchTheme.axaml", "utf8");
+  const mainWindow = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
+  const runtimeWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml", "utf8");
+
+  assert.match(theme, /x:Key="WorkbenchTypeBodySize">14<\/x:Double>/);
+  assert.match(theme, /x:Key="WorkbenchTypeSupportingSize">14<\/x:Double>/);
+  assert.match(theme, /x:Key="WorkbenchTypeCaptionSize">12<\/x:Double>/);
+  assert.match(theme, /x:Key="WorkbenchTypeMonoSize">14<\/x:Double>/);
+  assert.match(theme, /Style Selector="TextBlock\.workspaceTitle"/);
+  assert.match(theme, /Style Selector="TextBlock\.supporting"/);
+  assert.match(theme, /Style Selector="TextBlock\.fieldLabel"/);
+  assert.match(theme, /Style Selector="TextBlock\.denseLabel"/);
+  assert.doesNotMatch(mainWindow, /FontSize="(?:10|11)"/);
+  assert.doesNotMatch(runtimeWorkspace, /FontSize="(?:10|11)"/);
+  assert.doesNotMatch(mainWindow, /Classes="(?:supporting|caption|mono|fieldLabel|denseLabel)"[^>]+Opacity=/);
+  assert.doesNotMatch(runtimeWorkspace, /Classes="(?:supporting|caption|mono|fieldLabel|denseLabel)"[^>]+Opacity=/);
+  assert.match(
+    mainWindow,
+    /Text="\{Binding StatusMessage\}"[^>]+TextTrimming="CharacterEllipsis"[^>]+MaxLines="1"[^>]+ToolTip\.Tip="\{Binding StatusMessage\}"/,
+  );
+  assert.match(
+    mainWindow,
+    /Text="\{Binding ConnectionStatusDetail\}"[^>]+TextTrimming="CharacterEllipsis"/,
+  );
+  assert.match(
+    runtimeWorkspace,
+    /Text="\{Binding RuntimeLayout\.Header\.Detail\}"[^>]+Classes="supporting"[^>]+MaxWidth="800"/,
+  );
+  assert.match(runtimeWorkspace, /Classes="settingsSubCard" MinHeight="260"/);
+  assert.doesNotMatch(runtimeWorkspace, /Classes="settingsSubCard" Height="236"/);
+});
+
+test("Suki runtime switches exclusively between retained ADB and PC settings", async () => {
+  const runtimeWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml", "utf8");
+  const viewModel = await fs.readFile("apps/rhodes-suki/ViewModels/MainWindowViewModel.cs", "utf8");
+
+  assert.match(runtimeWorkspace, /Text="使用する接続先"/);
+  assert.match(
+    runtimeWorkspace,
+    /RadioButton[^>]+Content="ADB \/ Android"[^>]+GroupName="RuntimeConnectionTarget"[^>]+IsChecked="\{Binding IsAdbConnectionTargetSelected, Mode=OneWay\}"[^>]+Command="\{Binding SetConnectionTargetCommand\}"[^>]+CommandParameter="adb"/,
+  );
+  assert.match(
+    runtimeWorkspace,
+    /RadioButton[^>]+Content="PC版"[^>]+GroupName="RuntimeConnectionTarget"[^>]+IsChecked="\{Binding IsPcConnectionTargetSelected, Mode=OneWay\}"[^>]+Command="\{Binding SetConnectionTargetCommand\}"[^>]+CommandParameter="pc"/,
+  );
+  assert.doesNotMatch(runtimeWorkspace, /ItemsSource="\{Binding PcConnectionTargetOptions\}"/);
+  assert.match(runtimeWorkspace, /Header="PC版ウィンドウ接続・操作"[^>]+IsVisible="\{Binding IsPcConnectionTargetSelected\}"/);
+  assert.match(runtimeWorkspace, /Header="エミュレーター接続強化（MuMu \/ LDPlayer）"[^>]+IsVisible="\{Binding IsAdbConnectionTargetSelected\}"/);
+  assert.match(runtimeWorkspace, /Header="接続回復・高度なADB設定"[^>]+IsVisible="\{Binding IsAdbConnectionTargetSelected\}"/);
+
+  assert.match(viewModel, /public bool IsAdbConnectionTargetSelected => !IsPcConnectionTargetSelected;/);
+  assert.match(viewModel, /SetConnectionTargetCommand = new AsyncRelayCommand\(SetConnectionTargetAsync\);/);
+  assert.match(viewModel, /private Task SetConnectionTargetAsync\(object\? parameter\)/);
+  assert.match(viewModel, /private void ResetConnectionTargetStatus\(\)/);
+
+  const connectStart = viewModel.indexOf("private async Task ConnectAndCaptureCoreAsync()");
+  const connectEnd = viewModel.indexOf("private async Task RefreshEmulatorCapabilityAsync()", connectStart);
+  assert.ok(connectStart >= 0);
+  assert.ok(connectEnd > connectStart);
+  const connectBody = viewModel.slice(connectStart, connectEnd);
+  assert.match(connectBody, /if \(IsPcConnectionTargetSelected\)/);
+  assert.match(connectBody, /ConnectPcWindowAndCaptureCoreAsync\(\)/);
+  assert.match(connectBody, /ConnectAdbAndCaptureCoreAsync\(\)/);
+
+  for (const methodName of [
+    "private async Task ConnectAsync()",
+    "private async Task RunAdbConnectionTestAsync()",
+    "private async Task ConnectPcWindowAndCaptureAsync()",
+  ]) {
+    const methodStart = viewModel.indexOf(methodName);
+    assert.ok(methodStart >= 0, `${methodName} exists`);
+    const methodEnd = viewModel.indexOf("\n    private ", methodStart + methodName.length);
+    const methodBody = viewModel.slice(methodStart, methodEnd);
+    assert.doesNotMatch(methodBody, /SelectedPcConnectionTarget\s*=/);
+  }
+});
+
 test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   const mainWindowXaml = await fs.readFile("apps/rhodes-suki/Views/MainWindow.axaml", "utf8");
   const runtimeWorkspace = await fs.readFile("apps/rhodes-suki/Views/Workspaces/RuntimeWorkspaceView.axaml", "utf8");
@@ -1009,8 +1317,9 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   const publicDebugPolicy = await fs.readFile("apps/rhodes-suki/Services/RhodesPublicDebugPolicy.cs", "utf8");
   const bugReportBundle = await fs.readFile("apps/rhodes-suki/Services/RhodesBugReportBundle.cs", "utf8");
   const workspaceLayoutRegistry = await fs.readFile("apps/rhodes-suki/Services/RhodesWorkspaceLayoutRegistry.cs", "utf8");
+  const outputCssTemplateCatalog = await fs.readFile("apps/rhodes-suki/Services/RhodesOutputCssTemplateCatalog.cs", "utf8");
 
-  assert.match(workspaceLayoutRegistry, /ADB検出/);
+  assert.match(workspaceLayoutRegistry, /ADB \/ AndroidまたはPC版/);
   assert.match(workspaceLayoutRegistry, /接続・撮影/);
   assert.match(xaml, /RuntimeLayout\.Header\.Title/);
   assert.match(xaml, /RuntimeLayout\.Connection\.Title/);
@@ -1031,9 +1340,9 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(mainWindowXaml, /ConnectionStatusLabel/);
   assert.match(mainWindowXaml, /ConnectionStatusBackground/);
   assert.match(mainWindowXaml, /Classes="primaryAction"[\s\S]+Content="取得して反映"[\s\S]+RunAllOperationalRecognitionAndApplyCommand/);
-  assert.match(mainWindowXaml, /Classes="appleToolbar"/);
-  assert.match(mainWindowXaml, /Classes="appleSidebar"/);
-  assert.match(mainWindowXaml, /Classes="appleWorkspace"/);
+  assert.match(mainWindowXaml, /Classes="workbenchToolbar"/);
+  assert.match(mainWindowXaml, /Classes="workbenchSidebar"/);
+  assert.match(mainWindowXaml, /Classes="workbenchWorkspace"/);
   assert.match(runWorkspace, /<UniformGrid Columns="4" HorizontalAlignment="Stretch"/);
   assert.match(runWorkspace, /最大4体/);
   assert.match(choicesWorkspace, /OperatorClassOptions[\s\S]+OperatorBranchOptions[\s\S]+OperatorRarityOptions/);
@@ -1048,8 +1357,10 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(recognitionWorkspace, /x:Name="RoiCanvas"/);
   assert.match(recognitionWorkspace, /\{Binding CapturePixelSizeLabel\}/);
   assert.match(runtimeWorkspace, /<ScrollViewer[^>]+VerticalScrollBarVisibility="Auto"[^>]+HorizontalScrollBarVisibility="Disabled"/);
-  assert.match(runtimeWorkspace, /<StackPanel Spacing="12" HorizontalAlignment="Stretch">/);
+  assert.match(runtimeWorkspace, /<StackPanel Spacing="16" HorizontalAlignment="Stretch">/);
+  assert.match(runtimeWorkspace, /<Grid Grid\.Row="1" ColumnDefinitions="\*,Auto" ColumnSpacing="16">/);
   assert.match(runtimeWorkspace, /WrapPanel[^>]+Classes="runtimeActions"[^>]+HorizontalAlignment="Left"/);
+  assert.match(runtimeWorkspace, /WrapPanel[^>]+Classes="runtimeActions"[^>]+HorizontalAlignment="Right"/);
   assert.match(runtimeWorkspace, /Content="自動検出" Command="\{Binding RefreshAdbDevicesCommand\}"/);
   assert.match(runtimeWorkspace, /Content="接続・撮影" Command="\{Binding ConnectAndCaptureCommand\}"/);
   assert.match(runtimeWorkspace, /Content="状態確認" Command="\{Binding RefreshOptionalRuntimesCommand\}"/);
@@ -1058,17 +1369,26 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.doesNotMatch(runtimeWorkspace, /RunSelectedProfileRecognitionAndApplyCommand/);
   assert.doesNotMatch(runtimeWorkspace, /CreateBugReportBundleCommand/);
   assert.doesNotMatch(runtimeWorkspace, /Content="診断実行"/);
-  assert.match(mainWindowXaml, /Content="ADB接続設定"[\s\S]+CommandParameter="runtime"/);
+  assert.match(mainWindowXaml, /Content="接続設定"[\s\S]+CommandParameter="runtime"/);
+  assert.match(mainWindowXaml, /Header="接続設定"[^>]+CommandParameter="runtime"/);
+  assert.doesNotMatch(mainWindowXaml, /ADB接続設定/);
   assert.match(mainWindowXaml, /RunAllOperationalRecognitionAndApplyCommand/);
   assert.match(recognitionWorkspace, /IsVisible="\{Binding IsLastCaptureImageEmpty\}"/);
   assert.match(debugWorkspace, /IsVisible="\{Binding IsFrameRecordHistoryEmpty\}"/);
   assert.match(debugWorkspace, /IsVisible="\{Binding HasFrameRecordHistory\}"/);
   assert.match(choicesWorkspace, /ColumnDefinitions="\*,150,180,130,160"/);
-  assert.doesNotMatch(runtimeWorkspace, /Classes="runtimeActions" HorizontalAlignment="Right"/);
   assert.doesNotMatch(runtimeWorkspace, /<Grid ColumnDefinitions="\*,Auto" ColumnSpacing="12">\s*<StackPanel Spacing="2">\s*<TextBlock Text="\{Binding RuntimeLayout\.Connection\.Title\}"/s);
   assert.match(runtimeWorkspace, /<Grid RowDefinitions="Auto,Auto" RowSpacing="8">\s*<StackPanel Spacing="2">\s*<TextBlock Text="\{Binding RuntimeLayout\.Connection\.Title\}"/s);
   assert.match(runtimeWorkspace, /<WrapPanel Grid\.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">[\s\S]*<Button Content="候補を使用"/);
   assert.match(runtimeWorkspace, /Text="MAA接続方式"/);
+  assert.match(runtimeWorkspace, /SetConnectionTargetCommand/);
+  assert.match(runtimeWorkspace, /PcMouseMethodOptions/);
+  assert.match(runtimeWorkspace, /SelectedPcMouseMethod/);
+  assert.match(runtimeWorkspace, /PcKeyboardMethodOptions/);
+  assert.match(runtimeWorkspace, /SelectedPcKeyboardMethod/);
+  assert.doesNotMatch(runtimeWorkspace, /PC版は撮影と認識のみです/);
+  assert.match(viewModel, /EnsurePcControllerReadyAsync/);
+  assert.match(viewModel, /IsPcConnectionTargetSelected/);
   assert.match(specialWorkspace, /Text="啓示（複数選択）"/);
   assert.match(specialWorkspace, /ItemsSource="\{Binding ManualMizukiRevelationOptions\}"[\s\S]*?<CheckBox IsChecked="\{Binding IsSelected, Mode=TwoWay\}"/);
   assert.match(viewModel, /ManualMizukiRevelationOptions/);
@@ -1077,7 +1397,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(runtimeWorkspace, /Text="入力方式"[\s\S]*AdbInputMethodOptions/);
   assert.match(runtimeWorkspace, /AdbMethodDetail[^>]+MaxLines="2"/);
   assert.match(runtimeWorkspace, /RuntimeLayout\.OptionalRuntime\.Detail[^>]+MaxLines="2"/);
-  assert.ok((runtimeWorkspace.match(/Height="236"/g) ?? []).length >= 2);
+  assert.ok((runtimeWorkspace.match(/Classes="settingsSubCard" MinHeight="260"/g) ?? []).length >= 2);
   assert.match(runtimeWorkspace, /AdbPathCandidates[\s\S]*MaxLines="2"/);
   assert.match(runtimeWorkspace, /AdbDevices[\s\S]*MaxLines="2"/);
   assert.match(runtimeWorkspace, /IsVisible="\{Binding IsAdbPathCandidateListEmpty\}"/);
@@ -1364,9 +1684,19 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(outputWorkspace, /IsLiveCssIndividual/);
   assert.match(outputWorkspace, /LiveCssCharacterCount/);
   assert.match(outputWorkspace, /ClearLiveCssCommand/);
+  assert.match(outputWorkspace, /OutputCssTemplates/);
+  assert.match(outputWorkspace, /SelectedOutputCssTemplate/);
+  assert.match(outputWorkspace, /InsertOutputCssTemplateCommand/);
+  assert.match(outputWorkspace, /Content="見本を挿入"/);
   assert.match(viewModel, /public string LiveCssEditorText/);
   assert.match(viewModel, /public string LiveCssScopeDescription/);
   assert.match(viewModel, /public string LiveCssCharacterCount/);
+  assert.match(viewModel, /OutputCssTemplates/);
+  assert.match(viewModel, /InsertOutputCssTemplateAsync/);
+  assert.match(outputCssTemplateCatalog, /title-icon-line/);
+  assert.match(outputCssTemplateCatalog, /\.overlay-card-header::before/);
+  assert.match(outputCssTemplateCatalog, /\.overlay-part-head::before/);
+  assert.match(outputCssTemplateCatalog, /mask-image/);
   assert.match(xaml, /個別ウインドウURL/);
   assert.match(xaml, /実況・解説・大会運営が手動操作に使うページ/);
   assert.match(xaml, /ディスプレイキャプチャでは映り込む場合があります/);
@@ -1377,6 +1707,12 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /OutputTournamentMode/);
   assert.match(xaml, /OutputBackgroundEnabled/);
   assert.match(xaml, /OutputBackgroundOpacity/);
+  assert.match(xaml, /OutputCanvasBackgroundEnabled/);
+  assert.match(xaml, /OutputCanvasBackgroundOpacity/);
+  assert.match(xaml, /OutputCanvasBackgroundColor/);
+  assert.match(xaml, /IndividualOutputCanvasBackgroundEnabled/);
+  assert.match(xaml, /IndividualOutputCanvasBackgroundOpacity/);
+  assert.match(xaml, /IndividualOutputCanvasBackgroundColor/);
   assert.match(xaml, /OutputShowPartTitles/);
   assert.match(xaml, /OutputScrollSpeed/);
   assert.match(xaml, /ScrollEnabled/);
@@ -1421,7 +1757,12 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /接続回復でのみ起動/u);
   assert.match(xaml, /OFFではADB serialから自動推定/u);
   assert.match(xaml, /通常版は0/u);
-  assert.match(xaml, /日本版はcom\.YoStarJP\.Arknights/u);
+  assert.match(runtimeWorkspace, /ItemsSource="\{Binding AdbGamePackageOptions\}"/);
+  assert.match(runtimeWorkspace, /SelectedItem="\{Binding SelectedAdbGamePackageOption, Mode=TwoWay\}"/);
+  assert.match(runtimeWorkspace, /IsVisible="\{Binding IsCustomAdbGamePackageSelected\}"/);
+  assert.match(runtimeWorkspace, /Text="\{Binding CustomAdbGamePackage, Mode=TwoWay\}"/);
+  assert.match(runtimeWorkspace, /Text="\{Binding AdbGamePackageDescription\}"/);
+  assert.match(viewModel, /ApplyAdbGamePackage\(adbConnection\.GamePackage\)/);
   assert.match(xaml, /ADB接続やタップは行いません/u);
   assert.match(xaml, /SelectedAdbInputFallbackMethod\.Detail/);
   assert.match(xaml, /SelectedAdbScreencapFallbackMethod\.Detail/);

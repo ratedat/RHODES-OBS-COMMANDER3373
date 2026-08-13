@@ -215,6 +215,7 @@ assertSafeOutputPath();
 await cleanOutputPreservingUserData();
 
 run(process.execPath, ["tools/generate-maa-resource.mjs"]);
+run(process.execPath, ["tools/update-maa-resource-hash.mjs"]);
 run(process.execPath, ["tools/generate-maa-interface.mjs"]);
 run(process.execPath, ["tools/check-maa-contract.mjs"]);
 run("dotnet", [

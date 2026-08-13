@@ -26,6 +26,7 @@ export const overlayScrollSpeedLabels = {
 export const defaultOverlayAppearance = Object.freeze({
   fontColor: "#F2EFE6",
   backgroundColor: "#080B0C",
+  canvasBackgroundColor: "#080B0C",
   borderColor: "#2B3638",
   accentColor: "#55D6BE",
   fontSizePercent: 100,
@@ -71,6 +72,16 @@ export function normalizeOverlayAppearance(value = {}, fallback = defaultOverlay
     const candidate = String(source[field] ?? base[field] ?? defaultOverlayAppearance[field]);
     return cssHexColorPattern.test(candidate) ? candidate.toUpperCase() : defaultOverlayAppearance[field];
   };
+  const backgroundColor = color("backgroundColor");
+  const hasOwnBackgroundColor = Object.prototype.hasOwnProperty.call(source, "backgroundColor");
+  const canvasBackgroundCandidate = source.canvasBackgroundColor != null
+    ? String(source.canvasBackgroundColor)
+    : hasOwnBackgroundColor
+      ? backgroundColor
+      : String(base.canvasBackgroundColor ?? backgroundColor);
+  const canvasBackgroundColor = cssHexColorPattern.test(canvasBackgroundCandidate)
+    ? canvasBackgroundCandidate.toUpperCase()
+    : backgroundColor;
   const rawFontSize = Number(source.fontSizePercent ?? base.fontSizePercent);
   const fontSizePercent = Number.isFinite(rawFontSize)
     ? Math.min(200, Math.max(60, Math.round(rawFontSize)))
@@ -79,7 +90,8 @@ export function normalizeOverlayAppearance(value = {}, fallback = defaultOverlay
 
   return {
     fontColor: color("fontColor"),
-    backgroundColor: color("backgroundColor"),
+    backgroundColor,
+    canvasBackgroundColor,
     borderColor: color("borderColor"),
     accentColor: color("accentColor"),
     fontSizePercent,
@@ -117,6 +129,24 @@ export function resolveOverlayBackgroundAlpha(preferences = {}, partId = null) {
     part?.backgroundOpacity
       ?? (partId ? preferences.sukiOutputIndividualBackgroundOpacity : null)
       ?? preferences.sukiOutputBackgroundOpacity,
+    100,
+  );
+  return Math.round((opacity / 100) * 100) / 100;
+}
+
+export function resolveOverlayCanvasBackgroundEnabled(preferences = {}, partId = null) {
+  if (partId && typeof preferences.sukiOutputIndividualCanvasBackgroundEnabled === "boolean") {
+    return preferences.sukiOutputIndividualCanvasBackgroundEnabled;
+  }
+  return preferences.sukiOutputCanvasBackgroundEnabled === true;
+}
+
+export function resolveOverlayCanvasBackgroundAlpha(preferences = {}, partId = null) {
+  if (!resolveOverlayCanvasBackgroundEnabled(preferences, partId)) return 0;
+  const opacity = clampOverlayBackgroundOpacity(
+    partId
+      ? preferences.sukiOutputIndividualCanvasBackgroundOpacity
+      : preferences.sukiOutputCanvasBackgroundOpacity,
     100,
   );
   return Math.round((opacity / 100) * 100) / 100;

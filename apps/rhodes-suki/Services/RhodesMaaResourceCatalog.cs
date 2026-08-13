@@ -245,6 +245,15 @@ public static class RhodesMaaResourceCatalog
         {
             using var document = JsonDocument.Parse(File.ReadAllText(interfacePath));
             var root = document.RootElement;
+            if (!root.TryGetProperty("interface_version", out var interfaceVersion)
+                || !interfaceVersion.TryGetInt32(out var interfaceVersionValue)
+                || interfaceVersionValue != 2)
+            {
+                errors.Add("interface_version must be 2");
+            }
+            if (root.TryGetProperty("telemetry", out _))
+                errors.Add("telemetry must remain unconfigured");
+            ValidateInterfaceTranslations(root, errors);
             var pipelineEntries = PipelineEntries(errors);
             foreach (var entry in pipelineEntries.Where(RhodesMaaRecognitionPolicy.IsAbandonedRunEntry))
                 errors.Add($"pipeline contains abandoned run target {entry}");
@@ -268,6 +277,8 @@ public static class RhodesMaaResourceCatalog
             foreach (var resource in ArrayItems(root, "resource"))
             {
                 var resourceName = JsonString(resource, "name");
+                if (string.IsNullOrWhiteSpace(JsonString(resource, "hash")))
+                    errors.Add($"resource {DisplayName(resourceName)} is missing hash");
                 foreach (var controllerName in JsonStrings(resource, "controller"))
                 {
                     if (!controllers.Contains(controllerName))
@@ -457,6 +468,7 @@ public static class RhodesMaaResourceCatalog
         try
         {
             using var document = JsonDocument.Parse(File.ReadAllText(path));
+            var translations = InterfaceTranslations(document.RootElement);
             var taskEntryByName = InterfaceTaskEntryByName(document.RootElement);
             var presetEntriesById = InterfacePresetEntriesById(document.RootElement, taskEntryByName);
             if (!document.RootElement.TryGetProperty("group", out var groups) || groups.ValueKind != JsonValueKind.Array)
@@ -469,11 +481,11 @@ public static class RhodesMaaResourceCatalog
                 var id = JsonString(group, "name");
                 if (string.IsNullOrWhiteSpace(id))
                     continue;
-                var label = JsonString(group, "label");
+                var label = ResolveInterfaceText(JsonString(group, "label"), translations);
                 profiles.Add(new ProfileMetadata(
                     id,
                     string.IsNullOrWhiteSpace(label) ? id : label,
-                    JsonString(group, "description"),
+                    ResolveInterfaceText(JsonString(group, "description"), translations),
                     "interface.json group/preset",
                     index++,
                     presetEntriesById.TryGetValue(id, out var entries) ? entries : []));
@@ -513,6 +525,7 @@ public static class RhodesMaaResourceCatalog
         try
         {
             using var document = JsonDocument.Parse(File.ReadAllText(path));
+            var translations = InterfaceTranslations(document.RootElement);
             if (!document.RootElement.TryGetProperty("task", out var tasks) || tasks.ValueKind != JsonValueKind.Array)
                 return new Dictionary<string, TaskMetadata>(StringComparer.Ordinal);
 
@@ -522,10 +535,10 @@ public static class RhodesMaaResourceCatalog
                 var entry = JsonString(task, "entry");
                 if (string.IsNullOrWhiteSpace(entry))
                     continue;
-                var label = JsonString(task, "label");
+                var label = ResolveInterfaceText(JsonString(task, "label"), translations);
                 metadataByEntry.TryAdd(entry, new TaskMetadata(
                     string.IsNullOrWhiteSpace(label) ? entry : label,
-                    JsonString(task, "description"),
+                    ResolveInterfaceText(JsonString(task, "description"), translations),
                     JsonStrings(task, "group")));
             }
 
@@ -561,6 +574,141 @@ public static class RhodesMaaResourceCatalog
         }
 
         return entriesById;
+    }
+
+    private static IReadOnlyDictionary<string, string> InterfaceTranslations(JsonElement root)
+    {
+        if (!root.TryGetProperty("languages", out var languages)
+            || languages.ValueKind != JsonValueKind.Object)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        var relativePath = JsonString(languages, "ja_jp");
+        if (!TryResolveInterfaceFile(relativePath, out var path) || !File.Exists(path))
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+                return new Dictionary<string, string>(StringComparer.Ordinal);
+            return document.RootElement.EnumerateObject()
+                .Where(item => item.Value.ValueKind == JsonValueKind.String)
+                .ToDictionary(
+                    item => item.Name,
+                    item => item.Value.GetString() ?? "",
+                    StringComparer.Ordinal);
+        }
+        catch
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+    }
+
+    private static string ResolveInterfaceText(
+        string value,
+        IReadOnlyDictionary<string, string> translations)
+    {
+        if (!value.StartsWith('$') || value.Length < 2)
+            return value;
+        return translations.TryGetValue(value[1..], out var translated)
+            && !string.IsNullOrWhiteSpace(translated)
+                ? translated
+                : value;
+    }
+
+    private static void ValidateInterfaceTranslations(JsonElement root, ICollection<string> errors)
+    {
+        if (!root.TryGetProperty("languages", out var languages)
+            || languages.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add("languages must define ja_jp and en_us translation files");
+            return;
+        }
+
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        CollectTranslationKeys(root, keys);
+        foreach (var language in new[] { "ja_jp", "en_us" })
+        {
+            var relativePath = JsonString(languages, language);
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                errors.Add($"languages is missing {language}");
+                continue;
+            }
+            if (!TryResolveInterfaceFile(relativePath, out var path))
+            {
+                errors.Add($"translation path escapes application root: {relativePath}");
+                continue;
+            }
+            if (!File.Exists(path))
+            {
+                errors.Add($"translation file does not exist: {relativePath}");
+                continue;
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    errors.Add($"translation file must be an object: {relativePath}");
+                    continue;
+                }
+                foreach (var key in keys)
+                {
+                    if (!document.RootElement.TryGetProperty(key, out var translated)
+                        || translated.ValueKind != JsonValueKind.String
+                        || string.IsNullOrWhiteSpace(translated.GetString()))
+                    {
+                        errors.Add($"translation {relativePath} is missing key {key}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"translation {relativePath} is invalid: {ex.Message}");
+            }
+        }
+    }
+
+    private static void CollectTranslationKeys(JsonElement element, ISet<string> keys)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                    CollectTranslationKeys(property.Value, keys);
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                    CollectTranslationKeys(item, keys);
+                break;
+            case JsonValueKind.String:
+                var value = element.GetString() ?? "";
+                if (value.StartsWith('$') && value.Length > 1)
+                    keys.Add(value[1..]);
+                break;
+        }
+    }
+
+    private static bool TryResolveInterfaceFile(string relativePath, out string path)
+    {
+        path = "";
+        if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+            return false;
+        var baseDirectory = Path.GetFullPath(AppContext.BaseDirectory);
+        var candidate = Path.GetFullPath(Path.Combine(
+            baseDirectory,
+            relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        var basePrefix = baseDirectory.EndsWith(Path.DirectorySeparatorChar)
+            ? baseDirectory
+            : baseDirectory + Path.DirectorySeparatorChar;
+        if (!candidate.StartsWith(basePrefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+        path = candidate;
+        return true;
     }
 
     private static IReadOnlyList<MaaResourceTaskPreview> PipelineTasks(

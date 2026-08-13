@@ -259,9 +259,32 @@
       "source": "maa-tasks.ocrRegions",
       "id": "run.operator_count",
       "profileIds": [
-        "operatorsFull"
+        "operatorsFull",
+        "relicsFull"
       ],
       "scale": 6,
+      "numericFallback": true
+    }
+  },
+  "RhodesOcrRegion_run_relic_count_marker": {
+    "recognition": "OCR",
+    "roi": [
+      158,
+      658,
+      26,
+      32
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "run.relic_count_marker",
+      "profileIds": [
+        "relicsFull"
+      ],
+      "scale": 10,
       "numericFallback": true
     }
   },

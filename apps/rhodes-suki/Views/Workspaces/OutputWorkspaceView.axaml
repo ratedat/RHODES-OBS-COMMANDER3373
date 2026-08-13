@@ -10,34 +10,35 @@
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="12">
-    <Border Classes="appleCard">
-      <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
-        <TextBlock Text="OBS設定ガイド / OBSへ表示するまで" Classes="h2" />
-        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="18">
+    <Expander Header="OBSへ表示するまで（3ステップ）" IsExpanded="False">
+      <Border Classes="surfaceCard" Margin="0,8,0,0">
+      <Grid RowDefinitions="Auto,Auto" RowSpacing="12">
+        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="24">
           <StackPanel Spacing="3">
-            <TextBlock Text="1. 配信サーバーを起動" FontSize="13" FontWeight="SemiBold" />
-            <TextBlock Text="下の「起動」を押し、状態が稼働中になったことを確認します。配信中はサーバーを終了しないでください。"
+            <TextBlock Text="1  配信サーバーを起動" Classes="denseLabel" />
+            <TextBlock Text="「起動」を押し、稼働中を確認します。"
                        Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="3">
-            <TextBlock Text="2. OBSへURLを追加" FontSize="13" FontWeight="SemiBold" />
-            <TextBlock Text="OBSの「ソース」→「＋」→「ブラウザ」を選び、Overlay URLまたは必要な部品別URLを貼り付けます。"
+            <TextBlock Text="2  OBSへURLを追加" Classes="denseLabel" />
+            <TextBlock Text="ブラウザソースへカスタムOverlay URLを貼り付けます。"
                        Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
           <StackPanel Grid.Column="2" Spacing="3">
-            <TextBlock Text="3. サイズと表示を確認" FontSize="13" FontWeight="SemiBold" />
-            <TextBlock Text="統合Overlayは1920x1080基準です。部品別URLは各行の目安サイズをOBSの幅・高さへ入力します。"
+            <TextBlock Text="3  サイズを確認" Classes="denseLabel" />
+            <TextBlock Text="統合Overlayは1920×1080で確認します。"
                        Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
         </Grid>
-        <TextBlock Grid.Row="2"
-                   Text="自動取得結果は配信前にラン・特殊値・選択画面で確認し、取得が不安定な状態付き項目は手動で補正してください。"
+        <TextBlock Grid.Row="1"
+                   Text="配信前に取得結果を確認し、必要な項目だけ手動補正してください。"
                    Classes="caption" TextWrapping="Wrap" />
       </Grid>
-    </Border>
+      </Border>
+    </Expander>
 
     <!-- 配信サーバー: overlay/sidecar/state APIを提供する app/server.mjs をここから管理する -->
-    <Border Classes="appleCard">
+    <Border Classes="surfaceCard">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
         <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
           <TextBlock Text="配信サーバーとURL" Classes="h2" VerticalAlignment="Center" />
@@ -91,7 +92,7 @@
       </Grid>
     </Border>
 
-    <Border Classes="appleCard">
+    <Border Classes="surfaceCard">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="10">
         <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
           <StackPanel Spacing="2">
@@ -117,7 +118,7 @@
                   Command="{Binding UninstallTournamentQuickCommand}" />
         </Grid>
 
-        <Border Grid.Row="2" Background="#101617" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="10">
+        <Border Grid.Row="2" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="6" Padding="10">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
             <StackPanel>
               <TextBlock Text="{Binding TournamentQuickState}" FontSize="13" FontWeight="SemiBold" />
@@ -151,7 +152,7 @@
     </Border>
 
     <Expander Header="外部中継サーバー（上級者向け）" IsExpanded="False">
-      <Border Classes="appleCard" Margin="0,8,0,0">
+      <Border Classes="surfaceCard" Margin="0,8,0,0">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
           <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
             <StackPanel Spacing="2">
@@ -183,7 +184,7 @@
             </StackPanel>
           </Grid>
 
-          <Border Grid.Row="2" Background="#101617" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="10">
+          <Border Grid.Row="2" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="6" Padding="10">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
               <StackPanel>
                 <TextBlock Text="{Binding TournamentRemoteState}" FontSize="13" FontWeight="SemiBold" />
@@ -203,7 +204,7 @@
 
     <!-- HUD (本人用透過小窓): 表示する内容をここで選ぶ -->
     <Expander Header="本人用HUD" IsExpanded="False">
-    <Border Classes="appleCard" Margin="0,8,0,0">
+    <Border Classes="surfaceCard" Margin="0,8,0,0">
       <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
         <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
           <TextBlock Text="HUD (本人用小窓)" Classes="h2" VerticalAlignment="Center" />
@@ -229,7 +230,7 @@
     </Border>
     </Expander>
 
-    <Border Classes="appleCard">
+    <Border Classes="surfaceCard">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
         <StackPanel Spacing="3">
           <TextBlock Text="出力プロファイル (JSON)" Classes="sectionTitle" />
@@ -244,8 +245,8 @@
       </Grid>
     </Border>
 
-    <Border CornerRadius="8" Padding="12" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+    <Border Classes="surfaceCard">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
           <StackPanel Spacing="2">
             <TextBlock Text="統合Overlay設定" Classes="h2" />
@@ -254,25 +255,12 @@
           </StackPanel>
           <Button Grid.Column="1" Classes="primary" Content="保存して反映" Command="{Binding SaveSettingsCommand}" VerticalAlignment="Center" />
         </Grid>
-        <Grid Grid.Row="1" RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="16" RowSpacing="12">
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16">
           <StackPanel Spacing="2">
             <CheckBox Content="大会向け簡潔表示" IsChecked="{Binding OutputTournamentMode, Mode=TwoWay}" />
             <TextBlock Text="余白と情報密度を大会配信向けに調整します。" Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="2">
-            <CheckBox Content="背景を表示" IsChecked="{Binding OutputBackgroundEnabled, Mode=TwoWay}" />
-            <TextBlock Text="OFFでは中立背景と枠を完全に除去します。" Classes="caption" TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Grid.Column="2" Spacing="2">
-            <TextBlock Text="背景濃度" FontSize="12" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0"
-                             Value="{Binding OutputBackgroundOpacity, Mode=TwoWay}"
-                             IsEnabled="{Binding OutputBackgroundEnabled}" />
-              <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
-            </Grid>
-          </StackPanel>
-          <StackPanel Grid.Row="1" Spacing="2">
             <TextBlock Text="スクロール速度" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
               <NumericUpDown Minimum="0" Maximum="30" Increment="1" FormatString="0"
@@ -281,7 +269,7 @@
               <TextBlock Grid.Column="1" Text="px/s" Classes="caption" VerticalAlignment="Center" />
             </Grid>
           </StackPanel>
-          <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+          <StackPanel Grid.Column="2" Spacing="2">
             <TextBlock Text="文字サイズ" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
               <NumericUpDown Minimum="60" Maximum="200" Increment="5" FormatString="0"
@@ -290,13 +278,52 @@
             </Grid>
           </StackPanel>
         </Grid>
-        <Grid Grid.Row="2" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
-          <StackPanel Spacing="3"><TextBlock Text="フォント色" Classes="caption" /><TextBox Text="{Binding OutputFontColor, Mode=TwoWay}" PlaceholderText="#F2EFE6" /></StackPanel>
-          <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="背景色" Classes="caption" /><TextBox Text="{Binding OutputBackgroundColor, Mode=TwoWay}" PlaceholderText="#080B0C" /></StackPanel>
-          <StackPanel Grid.Column="2" Spacing="3"><TextBlock Text="枠色" Classes="caption" /><TextBox Text="{Binding OutputBorderColor, Mode=TwoWay}" PlaceholderText="#2B3638" /></StackPanel>
-          <StackPanel Grid.Column="3" Spacing="3"><TextBlock Text="強調色" Classes="caption" /><TextBox Text="{Binding OutputAccentColor, Mode=TwoWay}" PlaceholderText="#55D6BE" /></StackPanel>
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
+          <Border Classes="settingsSubCard">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="10" ColumnSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock Text="全体背景" Classes="sectionTitle" />
+                <TextBlock Text="OBS Browser Source全体を塗ります。" Classes="caption" TextWrapping="Wrap" />
+              </StackPanel>
+              <CheckBox Grid.Column="1" Content="表示" IsChecked="{Binding OutputCanvasBackgroundEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+              <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="濃度" Classes="caption" />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                    <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding OutputCanvasBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding OutputCanvasBackgroundEnabled}" />
+                    <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
+                  </Grid>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="色" Classes="caption" /><TextBox Text="{Binding OutputCanvasBackgroundColor, Mode=TwoWay}" PlaceholderText="#080B0C" /></StackPanel>
+              </Grid>
+            </Grid>
+          </Border>
+          <Border Grid.Column="1" Classes="settingsSubCard">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="10" ColumnSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock Text="枠背景" Classes="sectionTitle" />
+                <TextBlock Text="カードと部品枠の中立面を塗ります。" Classes="caption" TextWrapping="Wrap" />
+              </StackPanel>
+              <CheckBox Grid.Column="1" Content="表示" IsChecked="{Binding OutputBackgroundEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+              <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="濃度" Classes="caption" />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                    <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding OutputBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding OutputBackgroundEnabled}" />
+                    <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
+                  </Grid>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="色" Classes="caption" /><TextBox Text="{Binding OutputBackgroundColor, Mode=TwoWay}" PlaceholderText="#080B0C" /></StackPanel>
+              </Grid>
+            </Grid>
+          </Border>
         </Grid>
-        <Expander Grid.Row="3" Header="上級者向けユーザーCSS">
+        <Grid Grid.Row="3" ColumnDefinitions="*,*,*" ColumnSpacing="10">
+          <StackPanel Spacing="3"><TextBlock Text="フォント色" Classes="caption" /><TextBox Text="{Binding OutputFontColor, Mode=TwoWay}" PlaceholderText="#F2EFE6" /></StackPanel>
+          <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="枠線色" Classes="caption" /><TextBox Text="{Binding OutputBorderColor, Mode=TwoWay}" PlaceholderText="#2B3638" /></StackPanel>
+          <StackPanel Grid.Column="2" Spacing="3"><TextBlock Text="強調色" Classes="caption" /><TextBox Text="{Binding OutputAccentColor, Mode=TwoWay}" PlaceholderText="#55D6BE" /></StackPanel>
+        </Grid>
+        <Expander Grid.Row="4" Header="上級者向けユーザーCSS">
           <StackPanel Margin="0,10,0,0" Spacing="5">
             <TextBox Text="{Binding OutputCustomCss, Mode=TwoWay}" AcceptsReturn="True" MinHeight="110"
                      FontFamily="Consolas" TextWrapping="Wrap" PlaceholderText="/* 統合Overlayだけに追加されるCSS */" />
@@ -306,8 +333,8 @@
       </Grid>
     </Border>
 
-    <Border CornerRadius="8" Padding="12" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+    <Border Classes="surfaceCard">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
           <StackPanel Spacing="2">
             <TextBlock Text="個別ウィンドウ設定" Classes="h2" />
@@ -316,29 +343,16 @@
           </StackPanel>
           <Button Grid.Column="1" Classes="primary" Content="保存して反映" Command="{Binding SaveSettingsCommand}" VerticalAlignment="Center" />
         </Grid>
-        <Grid Grid.Row="1" RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="16" RowSpacing="12">
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16">
           <StackPanel Spacing="2"><CheckBox Content="大会向け簡潔表示" IsChecked="{Binding IndividualOutputTournamentMode, Mode=TwoWay}" /></StackPanel>
-          <StackPanel Grid.Column="1" Spacing="2"><CheckBox Content="背景を表示" IsChecked="{Binding IndividualOutputBackgroundEnabled, Mode=TwoWay}" /></StackPanel>
-          <StackPanel Grid.Column="2" Spacing="2">
-            <TextBlock Text="背景濃度" FontSize="12" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0"
-                             Value="{Binding IndividualOutputBackgroundOpacity, Mode=TwoWay}"
-                             IsEnabled="{Binding IndividualOutputBackgroundEnabled}" />
-              <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
-            </Grid>
-          </StackPanel>
-          <StackPanel Grid.Row="1" Spacing="2"><CheckBox Content="タイトルを表示" IsChecked="{Binding IndividualOutputShowPartTitles, Mode=TwoWay}" /></StackPanel>
-          <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+          <StackPanel Grid.Column="1" Spacing="2">
             <TextBlock Text="スクロール速度" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <NumericUpDown Minimum="0" Maximum="30" Increment="1" FormatString="0"
-                             Value="{Binding IndividualOutputScrollSpeed, Mode=TwoWay}"
-                             ToolTip.Tip="0にすると停止します。" />
+              <NumericUpDown Minimum="0" Maximum="30" Increment="1" FormatString="0" Value="{Binding IndividualOutputScrollSpeed, Mode=TwoWay}" ToolTip.Tip="0にすると停止します。" />
               <TextBlock Grid.Column="1" Text="px/s" Classes="caption" VerticalAlignment="Center" />
             </Grid>
           </StackPanel>
-          <StackPanel Grid.Row="1" Grid.Column="2" Spacing="2">
+          <StackPanel Grid.Column="2" Spacing="2">
             <TextBlock Text="文字サイズ" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
               <NumericUpDown Minimum="60" Maximum="200" Increment="5" FormatString="0" Value="{Binding IndividualOutputFontSizePercent, Mode=TwoWay}" />
@@ -346,13 +360,47 @@
             </Grid>
           </StackPanel>
         </Grid>
-        <Grid Grid.Row="2" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
-          <StackPanel Spacing="3"><TextBlock Text="フォント色" Classes="caption" /><TextBox Text="{Binding IndividualOutputFontColor, Mode=TwoWay}" PlaceholderText="#F2EFE6" /></StackPanel>
-          <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="背景色" Classes="caption" /><TextBox Text="{Binding IndividualOutputBackgroundColor, Mode=TwoWay}" PlaceholderText="#080B0C" /></StackPanel>
-          <StackPanel Grid.Column="2" Spacing="3"><TextBlock Text="枠色" Classes="caption" /><TextBox Text="{Binding IndividualOutputBorderColor, Mode=TwoWay}" PlaceholderText="#2B3638" /></StackPanel>
-          <StackPanel Grid.Column="3" Spacing="3"><TextBlock Text="強調色" Classes="caption" /><TextBox Text="{Binding IndividualOutputAccentColor, Mode=TwoWay}" PlaceholderText="#55D6BE" /></StackPanel>
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
+          <Border Classes="settingsSubCard">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="10" ColumnSpacing="12">
+              <StackPanel Spacing="2"><TextBlock Text="全体背景" Classes="sectionTitle" /><TextBlock Text="個別Browser Source全体を塗ります。" Classes="caption" TextWrapping="Wrap" /></StackPanel>
+              <CheckBox Grid.Column="1" Content="表示" IsChecked="{Binding IndividualOutputCanvasBackgroundEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+              <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="濃度" Classes="caption" />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                    <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding IndividualOutputCanvasBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding IndividualOutputCanvasBackgroundEnabled}" />
+                    <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
+                  </Grid>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="色" Classes="caption" /><TextBox Text="{Binding IndividualOutputCanvasBackgroundColor, Mode=TwoWay}" PlaceholderText="#080B0C" /></StackPanel>
+              </Grid>
+            </Grid>
+          </Border>
+          <Border Grid.Column="1" Classes="settingsSubCard">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="10" ColumnSpacing="12">
+              <StackPanel Spacing="2"><TextBlock Text="枠背景" Classes="sectionTitle" /><TextBlock Text="カードと部品枠の中立面を塗ります。" Classes="caption" TextWrapping="Wrap" /></StackPanel>
+              <CheckBox Grid.Column="1" Content="表示" IsChecked="{Binding IndividualOutputBackgroundEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+              <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="濃度" Classes="caption" />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                    <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding IndividualOutputBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding IndividualOutputBackgroundEnabled}" />
+                    <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
+                  </Grid>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="色" Classes="caption" /><TextBox Text="{Binding IndividualOutputBackgroundColor, Mode=TwoWay}" PlaceholderText="#080B0C" /></StackPanel>
+              </Grid>
+            </Grid>
+          </Border>
         </Grid>
-        <Expander Grid.Row="3" Header="個別ウィンドウ用ユーザーCSS">
+        <Grid Grid.Row="3" ColumnDefinitions="*,*,*,Auto" ColumnSpacing="10">
+          <StackPanel Spacing="3"><TextBlock Text="フォント色" Classes="caption" /><TextBox Text="{Binding IndividualOutputFontColor, Mode=TwoWay}" PlaceholderText="#F2EFE6" /></StackPanel>
+          <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="枠線色" Classes="caption" /><TextBox Text="{Binding IndividualOutputBorderColor, Mode=TwoWay}" PlaceholderText="#2B3638" /></StackPanel>
+          <StackPanel Grid.Column="2" Spacing="3"><TextBlock Text="強調色" Classes="caption" /><TextBox Text="{Binding IndividualOutputAccentColor, Mode=TwoWay}" PlaceholderText="#55D6BE" /></StackPanel>
+          <CheckBox Grid.Column="3" Content="タイトルを表示" IsChecked="{Binding IndividualOutputShowPartTitles, Mode=TwoWay}" VerticalAlignment="Center" />
+        </Grid>
+        <Expander Grid.Row="4" Header="個別ウィンドウ用ユーザーCSS">
           <StackPanel Margin="0,10,0,0" Spacing="5">
             <TextBox Text="{Binding IndividualOutputCustomCss, Mode=TwoWay}" AcceptsReturn="True" MinHeight="110"
                      FontFamily="Consolas" TextWrapping="Wrap" PlaceholderText="/* 部品別URLだけに追加されるCSS */" />
@@ -362,7 +410,7 @@
       </Grid>
     </Border>
 
-    <Border Classes="appleCard">
+    <Border Classes="surfaceCard">
       <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
         <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
           <StackPanel Spacing="2">
@@ -421,7 +469,7 @@
             </ItemsControl>
           </Border>
 
-          <Border Grid.Column="1" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="12">
+          <Border Grid.Column="1" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchControlBorder}" BorderThickness="1" CornerRadius="6" Padding="12">
             <StackPanel Spacing="10" DataContext="{Binding SelectedOverlayLayoutItem}">
               <TextBlock Text="選択中の部品" Classes="caption" />
               <TextBlock Text="{Binding Label, FallbackValue=部品を選択}" FontSize="16" FontWeight="SemiBold" />
@@ -451,8 +499,8 @@
             </StackPanel>
           </Border>
         </Grid>
-        <Border Grid.Row="3" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="12">
-          <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+        <Border Grid.Row="3" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchControlBorder}" BorderThickness="1" CornerRadius="6" Padding="12">
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
               <StackPanel Spacing="2">
                 <TextBlock Text="ライブCSS" Classes="h2" />
@@ -467,11 +515,20 @@
               </StackPanel>
               <Button Grid.Column="2" Content="CSSをクリア" Command="{Binding ClearLiveCssCommand}" VerticalAlignment="Center" />
             </Grid>
-            <TextBox Grid.Row="1" Text="{Binding LiveCssEditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     AcceptsReturn="True" MinHeight="160" MaxHeight="260" MaxLength="65536"
-                     FontFamily="Consolas" TextWrapping="Wrap"
-                     PlaceholderText="/* 選択中の出力へ適用するCSS */" />
-            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <ComboBox ItemsSource="{Binding OutputCssTemplates}"
+                        SelectedItem="{Binding SelectedOutputCssTemplate, Mode=TwoWay}"
+                        ItemTemplate="{StaticResource OutputCssTemplateComboItemTemplate}"
+                        SelectionBoxItemTemplate="{StaticResource OutputCssTemplateSelectionTemplate}"
+                        ToolTip.Tip="見本を選び、現在のCSS末尾へ追加します。既存CSSは上書きしません。" />
+              <Button Grid.Column="1" Classes="secondaryAction" Content="見本を挿入"
+                      Command="{Binding InsertOutputCssTemplateCommand}" />
+            </Grid>
+            <TextBox Grid.Row="2" Text="{Binding LiveCssEditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      AcceptsReturn="True" MinHeight="160" MaxHeight="260" MaxLength="65536"
+                      FontFamily="Consolas" TextWrapping="Wrap"
+                      PlaceholderText="/* 選択中の出力へ適用するCSS */" />
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <TextBlock Text="{Binding LiveCssScopeDescription}" Classes="caption" TextWrapping="Wrap" />
               <TextBlock Grid.Column="1" Text="{Binding LiveCssCharacterCount}" FontFamily="Consolas" Classes="caption" />
             </Grid>
@@ -488,7 +545,7 @@
         <ItemsControl ItemsSource="{Binding OverlayPartLinks}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border CornerRadius="7" Padding="9,7" Margin="0,0,0,6" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+              <Border CornerRadius="6" Padding="10,8" Margin="0,0,0,6" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                 <Grid ColumnDefinitions="190,*,Auto,Auto" ColumnSpacing="10">
                   <StackPanel Spacing="1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" />
@@ -514,7 +571,7 @@
         <ItemsControl Grid.Row="1" ItemsSource="{Binding OutputParts}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border CornerRadius="8" Padding="12" Margin="0,0,0,10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+              <Border CornerRadius="6" Padding="12" Margin="0,0,0,10" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{Binding Label}" FontSize="15" FontWeight="SemiBold" />

@@ -7,12 +7,12 @@
       <Border MinHeight="132"
               Margin="0,0,0,8"
               Padding="10"
-              Background="#11191A"
-              BorderBrush="#2B3638"
+              Background="{StaticResource WorkbenchFloating}"
+              BorderBrush="{StaticResource WorkbenchSeparator}"
               BorderThickness="1"
               CornerRadius="6">
         <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="48,*,Auto" ColumnSpacing="9" RowSpacing="7">
-          <Border Width="44" Height="44" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+          <Border Width="44" Height="44" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
             <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
           </Border>
           <StackPanel Grid.Column="1" Spacing="2">
@@ -25,10 +25,11 @@
                   ToolTip.Tip="この啓示を削除"
                   Command="{Binding DataContext.RemoveManualSamiRevelationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                   CommandParameter="{Binding}" />
-          <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+          <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding Effect}" Classes="caption compactHelp"
+                     ToolTip.Tip="{Binding Effect}" />
           <Grid Grid.Row="2" Grid.ColumnSpan="3" ColumnDefinitions="Auto,32,*,Auto,96" ColumnSpacing="8">
             <TextBlock Text="修辞" VerticalAlignment="Center" FontWeight="SemiBold" />
-            <Border Grid.Column="1" Width="30" Height="30" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+            <Border Grid.Column="1" Width="30" Height="30" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
               <Image Source="{Binding StateImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
             </Border>
             <ComboBox Grid.Column="2"
@@ -59,7 +60,7 @@
                 VerticalAlignment="Top" />
       </Grid>
 
-      <Border Classes="appleCard">
+      <Border Classes="surfaceCard">
         <StackPanel Spacing="10">
           <StackPanel Spacing="2">
             <TextBlock Text="{Binding SpecialValuesSection.Title}" Classes="h2" />
@@ -91,7 +92,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="appleCard" IsVisible="{Binding IsSamiCampaignSelected}">
+      <Border Classes="surfaceCard" IsVisible="{Binding IsSamiCampaignSelected}">
         <StackPanel Spacing="16">
           <Grid ColumnDefinitions="*" ColumnSpacing="10">
             <StackPanel Spacing="2">
@@ -118,7 +119,7 @@
             </Grid>
 
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-              <Border Padding="10" Background="#0D1415" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6">
+              <Border Padding="10" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="6">
                 <StackPanel Spacing="8">
                   <StackPanel Spacing="2">
                     <TextBlock Text="構成" Classes="h3" />
@@ -129,7 +130,7 @@
                 </StackPanel>
               </Border>
 
-              <Border Grid.Column="1" Padding="10" Background="#0D1415" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6">
+              <Border Grid.Column="1" Padding="10" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="6">
                 <StackPanel Spacing="8">
                   <StackPanel Spacing="2">
                     <TextBlock Text="本因" Classes="h3" />
@@ -156,12 +157,13 @@
                             CommandParameter="{Binding}"
                             HorizontalContentAlignment="Stretch">
                       <Grid ColumnDefinitions="44,*" ColumnSpacing="8">
-                        <Border Width="42" Height="42" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                        <Border Width="42" Height="42" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
                           <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                         </Border>
                         <StackPanel Grid.Column="1" Spacing="2">
                           <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                          <TextBlock Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+                          <TextBlock Text="{Binding Effect}" Classes="caption compactHelp"
+                                     ToolTip.Tip="{Binding Effect}" />
                         </StackPanel>
                       </Grid>
                     </Button>
@@ -185,12 +187,13 @@
                             CommandParameter="{Binding}"
                             HorizontalContentAlignment="Stretch">
                       <Grid ColumnDefinitions="44,*" ColumnSpacing="8">
-                        <Border Width="42" Height="42" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                        <Border Width="42" Height="42" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
                           <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                         </Border>
                         <StackPanel Grid.Column="1" Spacing="2">
                           <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                          <TextBlock Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+                          <TextBlock Text="{Binding Effect}" Classes="caption compactHelp"
+                                     ToolTip.Tip="{Binding Effect}" />
                         </StackPanel>
                       </Grid>
                     </Button>
@@ -224,10 +227,10 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="5" Padding="9" Margin="0,0,8,8">
+                  <Border Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="5" Padding="9" Margin="0,0,8,8">
                     <StackPanel Spacing="6">
                       <Grid ColumnDefinitions="38,*" ColumnSpacing="8">
-                        <Border Width="36" Height="36" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                        <Border Width="36" Height="36" Background="{StaticResource WorkbenchFloating}" CornerRadius="4" ClipToBounds="True">
                           <Image Source="{Binding SelectedImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                         </Border>
                         <TextBlock Grid.Column="1" Text="{Binding ParentName}" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -244,7 +247,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="appleCard" IsVisible="{Binding IsSuiCampaignSelected}">
+      <Border Classes="surfaceCard" IsVisible="{Binding IsSuiCampaignSelected}">
         <StackPanel Spacing="14">
           <StackPanel Spacing="2">
             <TextBlock Text="歳特殊値の手動入力" Classes="h2" />
@@ -298,7 +301,7 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="#121A1B" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="5" Padding="9" Margin="0,0,8,8">
+                  <Border Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="5" Padding="9" Margin="0,0,8,8">
                     <StackPanel Spacing="6">
                       <TextBlock Text="{Binding ParentName}" FontWeight="SemiBold" />
                       <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption, Mode=TwoWay}" />
@@ -310,8 +313,8 @@
             </ItemsControl>
 
             <Border IsVisible="{Binding IsManualSuiDogPaintingTargetSelectionVisible}"
-                    Background="#0C1011"
-                    BorderBrush="#2B3638"
+                    Background="{StaticResource WorkbenchSubtleSurface}"
+                    BorderBrush="{StaticResource WorkbenchSeparator}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="10">
@@ -364,20 +367,20 @@
                           Height="64"
                           Margin="0,0,8,8"
                           Padding="8"
-                          Background="#11191A"
-                          BorderBrush="#2B3638"
+                          Background="{StaticResource WorkbenchFloating}"
+                          BorderBrush="{StaticResource WorkbenchSeparator}"
                           BorderThickness="1"
                           CornerRadius="6">
                     <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
                       <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                 VerticalAlignment="Center"
                                 ToolTip.Tip="この招集枠を持燭人として表示" />
-                      <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                      <Border Grid.Column="1" Width="40" Height="40" Background="{StaticResource WorkbenchPreviewPanel}" CornerRadius="4" ClipToBounds="True">
                         <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                       </Border>
                       <TextBlock Grid.Column="2"
                                  Text="{Binding Name}"
-                                 Foreground="#FF9AC2"
+                                 Foreground="{StaticResource WorkbenchCandleTarget}"
                                  FontWeight="SemiBold"
                                  VerticalAlignment="Center"
                                  TextTrimming="CharacterEllipsis" />
@@ -397,7 +400,7 @@
                        IsVisible="{Binding IsSuiCoinRecognitionAvailable}" />
             <TextBlock Text="公開デバッグ版では歳の銭OCRは停止中です。有効銭と保有銭は下の欄から手動入力してください。"
                        Classes="caption"
-                       Foreground="#F4BE73"
+                       Foreground="{StaticResource WorkbenchWarning}"
                        TextWrapping="Wrap"
                        IsVisible="{Binding IsSuiCoinRecognitionRestricted}" />
             <WrapPanel Orientation="Horizontal">
@@ -419,16 +422,16 @@
           </StackPanel>
 
           <Grid ColumnDefinitions="360,*" ColumnSpacing="12">
-            <Border Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="10">
+            <Border Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="6" Padding="10">
               <StackPanel Spacing="8">
                 <TextBlock Text="有効銭" FontWeight="SemiBold" />
                 <TextBlock Text="現在有効な銭。状態は各行で変更できます。" Classes="caption" TextWrapping="Wrap" />
                 <ItemsControl ItemsSource="{Binding ManualSuiActiveCoinEditors}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border Background="#121A1B" CornerRadius="5" Padding="8" Margin="0,0,0,7">
+                      <Border Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="5" Padding="8" Margin="0,0,0,7">
                         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="72,*,34" ColumnSpacing="8" RowSpacing="7">
-                          <Border Width="40" Height="40" Background="#090D0E" CornerRadius="4" ClipToBounds="True">
+                          <Border Width="40" Height="40" Background="{StaticResource WorkbenchPreviewPanel}" CornerRadius="4" ClipToBounds="True">
                             <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                           </Border>
                           <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
@@ -454,7 +457,7 @@
               </StackPanel>
             </Border>
 
-            <Border Grid.Column="1" Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="10">
+            <Border Grid.Column="1" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="6" Padding="10">
               <StackPanel Spacing="8">
                 <TextBlock Text="保有銭" FontWeight="SemiBold" />
                 <TextBlock Text="同種を複数所持できます。個数と状態を別々に保存します。" Classes="caption" TextWrapping="Wrap" />
@@ -464,9 +467,9 @@
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border Width="410" Background="#121A1B" CornerRadius="5" Padding="8" Margin="0,0,8,8">
+                      <Border Width="410" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="5" Padding="8" Margin="0,0,8,8">
                         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="72,*,34" ColumnSpacing="8" RowSpacing="7">
-                          <Border Width="40" Height="40" Background="#090D0E" CornerRadius="4" ClipToBounds="True">
+                          <Border Width="40" Height="40" Background="{StaticResource WorkbenchPreviewPanel}" CornerRadius="4" ClipToBounds="True">
                             <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                           </Border>
                           <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
@@ -504,7 +507,7 @@
           </Grid>
           <TextBlock Text="追加先を選び、銭をクリックしてください。状態違いを作る場合は同じ銭をもう一度追加します。" Classes="caption" />
 
-          <Border Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="8" MaxHeight="470">
+          <Border Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="6" Padding="8" MaxHeight="470">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
               <ItemsControl ItemsSource="{Binding ManualSuiCoinCatalog}">
                 <ItemsControl.ItemsPanel>
@@ -521,7 +524,7 @@
                             Command="{Binding DataContext.AddManualSuiCoinCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}">
                       <Grid ColumnDefinitions="52,*" ColumnSpacing="12">
-                        <Border Width="48" Height="48" Background="#090D0E" CornerRadius="4" ClipToBounds="True">
+                        <Border Width="48" Height="48" Background="{StaticResource WorkbenchPreviewPanel}" CornerRadius="4" ClipToBounds="True">
                           <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                         </Border>
                         <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
@@ -533,11 +536,8 @@
                                      Classes="caption"
                                      TextTrimming="CharacterEllipsis" />
                           <TextBlock Text="{Binding Effect}"
-                                     Classes="caption"
-                                     LineHeight="17"
-                                     MaxLines="2"
-                                     TextWrapping="Wrap"
-                                     TextTrimming="CharacterEllipsis" />
+                                     Classes="caption compactHelp"
+                                     ToolTip.Tip="{Binding Effect}" />
                         </StackPanel>
                       </Grid>
                     </Button>
@@ -549,7 +549,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="appleCard" IsVisible="{Binding IsPhantomCampaignSelected}">
+      <Border Classes="surfaceCard" IsVisible="{Binding IsPhantomCampaignSelected}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <StackPanel Spacing="2">
@@ -588,8 +588,8 @@
                         Command="{Binding DataContext.ToggleManualHallucinationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding}">
                   <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="22,*,Auto" ColumnSpacing="7" RowSpacing="4">
-                    <Border Width="18" Height="18" CornerRadius="9" BorderBrush="#6D8386" BorderThickness="1.5" VerticalAlignment="Center">
-                      <TextBlock Text="●" FontSize="12" Foreground="#36E2B6" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsSelected}" />
+                    <Border Width="18" Height="18" CornerRadius="9" BorderBrush="{StaticResource WorkbenchControlBorder}" BorderThickness="1.5" VerticalAlignment="Center">
+                      <TextBlock Text="●" FontSize="12" Foreground="{StaticResource WorkbenchAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsSelected}" />
                     </Border>
                     <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
                     <TextBlock Grid.Column="2" Text="{Binding Category}" Classes="caption" />
@@ -604,9 +604,9 @@
           <ItemsControl ItemsSource="{Binding ActiveManualHallucinationFusions}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Background="#18241E" BorderBrush="#3E725F" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,6">
+                <Border Background="{StaticResource WorkbenchSuccessSurface}" BorderBrush="{StaticResource WorkbenchSuccess}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,6">
                   <StackPanel Spacing="3">
-                    <TextBlock Text="{Binding Name, StringFormat='複合幻覚: {0}'}" FontWeight="SemiBold" Foreground="#77E3C2" />
+                    <TextBlock Text="{Binding Name, StringFormat='複合幻覚: {0}'}" FontWeight="Medium" Foreground="{StaticResource WorkbenchSuccess}" />
                     <TextBlock Text="{Binding Effect}" TextWrapping="Wrap" />
                   </StackPanel>
                 </Border>
@@ -618,7 +618,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="appleCard" IsVisible="{Binding IsMizukiCampaignSelected}">
+      <Border Classes="surfaceCard" IsVisible="{Binding IsMizukiCampaignSelected}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <StackPanel Spacing="2">
@@ -643,23 +643,24 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border Width="320"
-                        MinHeight="82"
+                        MinHeight="68"
                         Margin="0,0,10,10"
                         Padding="9"
-                        Background="#11191A"
-                        BorderBrush="#2B3638"
+                        Background="{StaticResource WorkbenchFloating}"
+                        BorderBrush="{StaticResource WorkbenchSeparator}"
                         BorderThickness="1"
                         CornerRadius="6">
                   <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                               VerticalAlignment="Center"
                               ToolTip.Tip="この呼び声を選択" />
-                    <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                    <Border Grid.Column="1" Width="40" Height="40" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
                       <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                     </Border>
                     <StackPanel Grid.Column="2" Spacing="3">
                       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+                      <TextBlock Text="{Binding Effect}" Classes="caption compactHelp"
+                                 ToolTip.Tip="{Binding Effect}" />
                     </StackPanel>
                   </Grid>
                 </Border>
@@ -675,23 +676,24 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border Width="320"
-                        MinHeight="82"
+                        MinHeight="68"
                         Margin="0,0,10,10"
                         Padding="9"
-                        Background="#11191A"
-                        BorderBrush="#2B3638"
+                        Background="{StaticResource WorkbenchFloating}"
+                        BorderBrush="{StaticResource WorkbenchSeparator}"
                         BorderThickness="1"
                         CornerRadius="6">
                   <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                               VerticalAlignment="Center"
                               ToolTip.Tip="この啓示を選択" />
-                    <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                    <Border Grid.Column="1" Width="40" Height="40" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
                       <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                     </Border>
                     <StackPanel Grid.Column="2" Spacing="3">
                       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Effect}" Classes="caption" TextWrapping="Wrap" MaxLines="2" />
+                      <TextBlock Text="{Binding Effect}" Classes="caption compactHelp"
+                                 ToolTip.Tip="{Binding Effect}" />
                     </StackPanel>
                   </Grid>
                 </Border>
@@ -709,7 +711,7 @@
               <ComboBox.ItemTemplate>
                 <DataTemplate>
                   <Grid Width="500" ColumnDefinitions="48,*" ColumnSpacing="10">
-                    <Border Width="44" Height="44" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                    <Border Width="44" Height="44" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
                       <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
                     </Border>
                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
@@ -742,15 +744,15 @@
                         Height="64"
                         Margin="0,0,8,8"
                         Padding="8"
-                        Background="#11191A"
-                        BorderBrush="#2B3638"
+                        Background="{StaticResource WorkbenchFloating}"
+                        BorderBrush="{StaticResource WorkbenchSeparator}"
                         BorderThickness="1"
                         CornerRadius="6">
                   <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                               VerticalAlignment="Center"
                               ToolTip.Tip="この招集枠を拒絶反応の対象にする" />
-                    <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                    <Border Grid.Column="1" Width="40" Height="40" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
                       <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                     </Border>
                     <TextBlock Grid.Column="2" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
@@ -774,18 +776,18 @@
                         Height="64"
                         Margin="0,0,8,8"
                         Padding="8"
-                        Background="#11191A"
-                        BorderBrush="#6E5D23"
+                        Background="{StaticResource WorkbenchWarningSurface}"
+                        BorderBrush="{StaticResource WorkbenchWarning}"
                         BorderThickness="1"
                         CornerRadius="6">
                   <Grid ColumnDefinitions="Auto,42,*" ColumnSpacing="9">
                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                               VerticalAlignment="Center"
                               ToolTip.Tip="この招集枠を進化対象にする" />
-                    <Border Grid.Column="1" Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                    <Border Grid.Column="1" Width="40" Height="40" Background="{StaticResource WorkbenchFloating}" CornerRadius="4" ClipToBounds="True">
                       <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                     </Border>
-                    <TextBlock Grid.Column="2" Text="{Binding Name}" Foreground="#FFD447" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Text="{Binding Name}" Foreground="{StaticResource WorkbenchWarning}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -794,7 +796,7 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="appleCard" IsVisible="{Binding IsSarkazCampaignSelected}">
+      <Border Classes="surfaceCard" IsVisible="{Binding IsSarkazCampaignSelected}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <StackPanel Spacing="2">
@@ -815,7 +817,7 @@
             <TextBlock Text="思案（種類別個数）" FontSize="13" FontWeight="SemiBold" />
             <TextBlock Grid.Column="1" Text="画像または詳細ボタンで内容を確認できます" Classes="caption" />
           </Grid>
-          <Border Background="#0C1011" BorderBrush="#2B3638" BorderThickness="1" CornerRadius="6" Padding="8" MaxHeight="560">
+          <Border Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="6" Padding="8" MaxHeight="560">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
               <ItemsControl ItemsSource="{Binding ManualThoughtEditors}">
                 <ItemsControl.ItemsPanel>
@@ -823,9 +825,9 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border Width="336" Margin="0,0,8,8" Padding="7" Background="#121A1B" CornerRadius="5">
+                    <Border Width="336" Margin="0,0,8,8" Padding="7" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" CornerRadius="5">
                       <Grid ColumnDefinitions="44,*,34,86" ColumnSpacing="8">
-                        <Border Width="40" Height="40" Background="#0C1011" CornerRadius="4" ClipToBounds="True">
+                        <Border Width="40" Height="40" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="4" ClipToBounds="True">
                           <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}"
                                  Width="40"
                                  Height="40"
@@ -851,9 +853,9 @@
             </ScrollViewer>
           </Border>
 
-          <Border IsVisible="{Binding IsThoughtDetailVisible}" Background="#121A1B" BorderBrush="#3B4A4C" BorderThickness="1" CornerRadius="6" Padding="12">
+          <Border IsVisible="{Binding IsThoughtDetailVisible}" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchControlBorder}" BorderThickness="1" CornerRadius="6" Padding="12">
             <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="12">
-              <Border Width="88" Height="88" Background="#0C1011" CornerRadius="5" ClipToBounds="True" VerticalAlignment="Top">
+              <Border Width="88" Height="88" Background="{StaticResource WorkbenchSubtleSurface}" CornerRadius="5" ClipToBounds="True" VerticalAlignment="Top">
                 <Image Source="{Binding SelectedThoughtDetail.ImagePath, Converter={StaticResource BitmapPathConverter}}"
                        Width="88"
                        Height="88"

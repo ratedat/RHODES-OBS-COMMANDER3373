@@ -2,7 +2,7 @@
 
 このガイドは、RHODES OBS COMMANDER3373のOBS出力をユーザーCSSで調整する方法を説明します。
 
-フォント色、背景色、枠色、文字サイズ、背景の表示・非表示など、一般的な変更は先に画面上の簡易設定を使ってください。
+フォント色、全体背景、枠背景、枠線色、文字サイズなど、一般的な変更は先に画面上の簡易設定を使ってください。
 
 ユーザーCSSは、簡易設定だけでは足りない場合に使う上級者向け機能です。
 
@@ -59,8 +59,10 @@
 | 変数 | 内容 | 値の例 |
 | --- | --- | --- |
 | `--overlay-font-color` | 基本文字色 | `#FFFFFF` |
-| `--overlay-background-rgb` | 背景色のRGBチャンネル | `8 11 12` |
-| `--overlay-background-alpha` | 背景の不透明度 | `0.85` |
+| `--overlay-background-rgb` | 枠背景色のRGBチャンネル | `8 11 12` |
+| `--overlay-background-alpha` | 枠背景の不透明度 | `0.85` |
+| `--overlay-canvas-background-rgb` | 全体背景色のRGBチャンネル | `0 0 0` |
+| `--overlay-canvas-background-alpha` | 全体背景の不透明度 | `0` |
 | `--overlay-border-color` | 枠線色 | `#4A5658` |
 | `--overlay-accent-color` | 強調色 | `#55D6BE` |
 | `--overlay-font-scale` | 全体文字倍率 | `1.1` |
@@ -72,6 +74,8 @@
   --overlay-font-color: #ffffff;
   --overlay-background-rgb: 8 11 12;
   --overlay-background-alpha: 0.88;
+  --overlay-canvas-background-rgb: 0 0 0;
+  --overlay-canvas-background-alpha: 0;
   --overlay-border-color: #4a5658;
   --overlay-accent-color: #55d6be;
   --overlay-font-scale: 1.05;
@@ -80,7 +84,9 @@
 
 互換用に `--text`、`--accent`、`--accent-2`、`--line` も設定されますが、新しいCSSでは上表の `--overlay-*` 変数を優先してください。
 
-背景そのものを消す場合は、CSSで透明度だけを変更せず、画面上の「背景を表示」をOFFにしてください。
+`--overlay-background-*` はカード・部品枠、`--overlay-canvas-background-*` はBrowser Source全体へ適用されます。
+
+背景を完全に消す場合は、画面上の「全体背景」または「枠背景」の表示をOFFにしてください。
 
 ## 主なルートクラス
 
@@ -106,7 +112,9 @@
 
 | セレクター | 状態 |
 | --- | --- |
-| `html.overlay-background-disabled` | 背景表示がOFF |
+| `html.overlay-canvas-background-disabled` | 全体背景がOFF |
+| `html.overlay-frame-background-disabled` | 枠背景がOFF |
+| `html.overlay-background-disabled` | 全体背景と枠背景が両方OFF（互換クラス） |
 | `html.overlay-tournament-mode` | 大会向け表示がON |
 | `html.overlay-part-titles-hidden` | 個別ウィンドウのタイトル表示がOFF |
 
@@ -138,6 +146,21 @@
 長期利用するCSSでは、細かい子要素の階層ではなく、上表のクラスとCSS変数を優先してください。
 
 ## 使用例
+
+### 透明キャンバス＋半透明枠
+
+ゲーム画面へカードだけを重ねたい場合の基本例です。
+
+```css
+:root {
+  --overlay-canvas-background-rgb: 0 0 0;
+  --overlay-canvas-background-alpha: 0;
+  --overlay-background-rgb: 8 11 12;
+  --overlay-background-alpha: 0.86;
+}
+```
+
+画面上の簡易設定では「全体背景」をOFF、「枠背景」をONにして同じ構成を作れます。
 
 ### 統合Overlayの数値を見やすくする
 
@@ -188,11 +211,11 @@
 }
 ```
 
-### 背景OFF時に影も消す
+### 枠背景OFF時に影も消す
 
 ```css
-html.overlay-background-disabled .overlay-card,
-html.overlay-background-disabled .overlay-part-shell {
+html.overlay-frame-background-disabled .overlay-card,
+html.overlay-frame-background-disabled .overlay-part-shell {
   box-shadow: none;
 }
 ```
@@ -261,9 +284,9 @@ Webフォントは配信元サーバーのCORS設定によって読み込めな�
 
 - 統合Overlay用CSS
 - 個別ウィンドウ用CSS
-- フォント色、背景色、枠色、強調色
+- フォント色、全体背景色、枠背景色、枠線色、強調色
 - 文字サイズ
-- 背景表示と背景不透明度
+- 全体背景と枠背景それぞれの表示・不透明度
 - スクロール設定
 - 個別パーツ設定
 - ライブレイアウトの部品配置
@@ -281,8 +304,11 @@ JSONの概要は次の形です。
   "kind": "rhodes-output-profile",
   "schemaVersion": 1,
   "outputPreferences": {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
+    "canvasBackgroundEnabled": false,
+    "canvasBackgroundOpacity": 0,
     "integratedAppearance": {
+      "canvasBackgroundColor": "#000000",
       "customCss": ""
     },
     "individualAppearance": {
@@ -322,7 +348,8 @@ CSSの一部だけを確認する場合は、対象範囲を `/*` と `*/` で�
 | 統合Overlayだけ変化しない | 統合Overlay用CSSへ入力したか確認します。 |
 | 個別ウィンドウだけ変化しない | 個別ウィンドウ用CSSへ入力したか確認します。 |
 | 一部パーツだけ崩れる | ルートクラスで対象を限定し、固定幅や絶対配置を減らします。 |
-| 背景が残る | CSSの透明度ではなく「背景を表示」をOFFにします。 |
+| 全体に背景が残る | 「全体背景」をOFFにするか、`--overlay-canvas-background-alpha`を確認します。 |
+| カード内に背景が残る | 「枠背景」をOFFにするか、`--overlay-background-alpha`を確認します。 |
 | 外部フォントや画像が出ない | URLをブラウザで直接開けるか、HTTPSか、フォント配信元がCORSを許可しているか確認します。OBS Browser Sourceも再読み込みしてください。 |
 | 設定を戻せない | CSS欄を空にするか、正常なJSONプロファイルをインポートします。 |
 

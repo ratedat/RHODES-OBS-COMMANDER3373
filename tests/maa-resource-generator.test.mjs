@@ -57,6 +57,7 @@ test("MAA recognition policy defines the retained run target boundary once", () 
   assert.equal(isRetainedRecognitionSource({ id: "run.hope.current" }), false);
   assert.equal(isRetainedRecognitionSource({ id: "run.ingot" }), true);
   assert.equal(isRetainedRecognitionSource({ id: "run.idea.current" }), true);
+  assert.equal(isRetainedRecognitionSource({ id: "run.relic_count_marker" }), true);
   assert.equal(isRetainedRecognitionSource({ id: "run.safe" }), false);
   assert.equal(isRetainedRecognitionSource({ id: "run.safe", candidateField: "commandLevel" }), false);
   assert.equal(isAbandonedRunMaaEntry("RhodesOcrRegion_run_shield"), true);
@@ -92,6 +93,7 @@ test("MAA resource generator refuses abandoned run value targets even if source 
         { id: "run.command.level", roi: [1, 2, 3, 4] },
         { id: "run.safe", roi: [1, 2, 3, 4] },
         { id: "run.ingot", roi: [5, 6, 7, 8] },
+        { id: "run.relic_count_marker", roi: [9, 10, 11, 12] },
       ],
     },
     scanProfiles: {
@@ -116,6 +118,7 @@ test("MAA resource generator refuses abandoned run value targets even if source 
   assert.equal(pipeline.RhodesOcrRegion_run_safe, undefined);
   assert.equal(pipeline.RhodesTemplate_runStatusFull_run_top_hope, undefined);
   assert.equal(pipeline.RhodesOcrRegion_run_ingot.recognition, "OCR");
+  assert.equal(pipeline.RhodesOcrRegion_run_relic_count_marker.recognition, "OCR");
   assert.equal(pipeline.RhodesTemplate_runStatusFull_run_ingot.recognition, "TemplateMatch");
 });
 

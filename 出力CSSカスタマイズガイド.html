@@ -264,13 +264,19 @@
       --overlay-font-color: #ffffff;
       --overlay-background-rgb: 8 11 12;
       --overlay-background-alpha: .88;
+      --overlay-canvas-background-rgb: 0 0 0;
+      --overlay-canvas-background-alpha: 0;
       --overlay-border-color: #4a5658;
       --overlay-accent-color: #55d6be;
       --overlay-font-scale: 1;
       width: min(100%, 920px);
+      padding: 12px;
       color: var(--overlay-font-color);
+      background: rgb(var(--overlay-canvas-background-rgb) / var(--overlay-canvas-background-alpha));
       font-size: calc(14px * var(--overlay-font-scale));
     }
+
+    .overlay-demo.no-canvas-background { background: transparent; }
 
     .demo-surface {
       border: 1px solid var(--overlay-border-color);
@@ -279,7 +285,7 @@
       box-shadow: 0 12px 30px rgb(0 0 0 / 22%);
     }
 
-    .overlay-demo.no-background .demo-surface {
+    .overlay-demo.no-frame-background .demo-surface {
       border-color: transparent;
       background: transparent;
       box-shadow: none;
@@ -607,8 +613,12 @@
             <div class="color-row"><input id="font-color" type="color" value="#ffffff"><output id="font-color-value">#FFFFFF</output></div>
           </div>
           <div class="control-group">
-            <label for="background-color">背景色</label>
-            <div class="color-row"><input id="background-color" type="color" value="#080b0c"><output id="background-color-value">#080B0C</output></div>
+            <label for="canvas-background-color">全体背景色</label>
+            <div class="color-row"><input id="canvas-background-color" type="color" value="#000000"><output id="canvas-background-color-value">#000000</output></div>
+          </div>
+          <div class="control-group">
+            <label for="frame-background-color">枠背景色</label>
+            <div class="color-row"><input id="frame-background-color" type="color" value="#080b0c"><output id="frame-background-color-value">#080B0C</output></div>
           </div>
           <div class="control-group">
             <label for="border-color">枠色</label>
@@ -622,9 +632,13 @@
             <label for="font-scale">文字倍率 <output id="font-scale-value">1.00</output></label>
             <input id="font-scale" type="range" min="0.75" max="1.60" value="1" step="0.05">
           </div>
-          <label class="toggle-row toggle-label" for="background-enabled">
-            <input id="background-enabled" type="checkbox" checked>
-            背景を表示
+          <label class="toggle-row toggle-label" for="canvas-background-enabled">
+            <input id="canvas-background-enabled" type="checkbox">
+            全体背景を表示
+          </label>
+          <label class="toggle-row toggle-label" for="frame-background-enabled">
+            <input id="frame-background-enabled" type="checkbox" checked>
+            枠背景を表示
           </label>
           <div class="control-group">
             <span class="toggle-label">プリセット</span>
@@ -632,7 +646,7 @@
               <button class="button" type="button" data-preset="standard">標準</button>
               <button class="button" type="button" data-preset="contrast">高コントラスト</button>
               <button class="button" type="button" data-preset="gold">大会ゴールド</button>
-              <button class="button" type="button" data-preset="clear">背景なし</button>
+              <button class="button" type="button" data-preset="clear">透明＋枠</button>
             </div>
           </div>
         </div>
@@ -705,8 +719,10 @@
       <p class="section-note">細かいHTML階層より、次の変数とルートクラスを優先してください。</p>
       <div class="reference-grid">
         <article class="reference-item"><code>--overlay-font-color</code><p>基本文字色。</p></article>
-        <article class="reference-item"><code>--overlay-background-rgb</code><p>背景色。カンマなしのRGB値を指定します。</p></article>
-        <article class="reference-item"><code>--overlay-background-alpha</code><p>背景の不透明度。0から1。</p></article>
+        <article class="reference-item"><code>--overlay-background-rgb</code><p>枠背景色。カンマなしのRGB値を指定します。</p></article>
+        <article class="reference-item"><code>--overlay-background-alpha</code><p>枠背景の不透明度。0から1。</p></article>
+        <article class="reference-item"><code>--overlay-canvas-background-rgb</code><p>Browser Source全体の背景色。</p></article>
+        <article class="reference-item"><code>--overlay-canvas-background-alpha</code><p>全体背景の不透明度。0から1。</p></article>
         <article class="reference-item"><code>--overlay-border-color</code><p>カードと部品の枠色。</p></article>
         <article class="reference-item"><code>--overlay-accent-color</code><p>見出しや重要値の強調色。</p></article>
         <article class="reference-item"><code>--overlay-font-scale</code><p>Overlay全体の文字倍率。</p></article>
@@ -714,9 +730,17 @@
         <article class="reference-item"><code>.overlay-part-operators</code><p>オペレーター個別ウィンドウのみ。</p></article>
         <article class="reference-item"><code>.overlay-part-special</code><p>特殊値個別ウィンドウのみ。</p></article>
       </div>
-      <div class="notice">背景を完全に消す場合は、透明度を0にするだけでなく3373の「背景を表示」をOFFにしてください。CSS側で追加した背景画像も消したい場合は、背景OFF用セレクターで明示的に解除します。</div>
-      <pre><code>html.overlay-background-disabled .overlay-app,
-html.overlay-background-disabled .overlay-part-shell {
+      <h3>透明キャンバス＋半透明枠</h3>
+      <p>ゲーム画面へ情報カードだけを重ねる基本例です。画面上では「全体背景」をOFF、「枠背景」をONにして同じ構成を作れます。</p>
+      <pre><code>:root {
+  --overlay-canvas-background-rgb: 0 0 0;
+  --overlay-canvas-background-alpha: 0;
+  --overlay-background-rgb: 8 11 12;
+  --overlay-background-alpha: .86;
+}</code></pre>
+      <div class="notice">CSS側で追加した画像や影まで消したい場合は、全体背景・枠背景それぞれのOFF用クラスで明示的に解除します。</div>
+      <pre><code>html.overlay-canvas-background-disabled .overlay-app,
+html.overlay-frame-background-disabled .overlay-part-shell {
   background: transparent !important;
   background-image: none !important;
   box-shadow: none !important;
@@ -773,7 +797,7 @@ html.overlay-background-disabled .overlay-part-shell {
       <ul class="checklist">
         <li>OBSのURLとポートが現在の3373と一致している</li>
         <li>統合Overlay用CSSと個別ウィンドウ用CSSを取り違えていない</li>
-        <li>背景ON/OFFと背景不透明度を確認した</li>
+        <li>全体背景と枠背景それぞれのON/OFF・不透明度を確認した</li>
         <li>外部フォント読み込み後に文字が見切れていない</li>
         <li>外部画像がOBSを動かすPCから開ける</li>
         <li>縦型、横型、full、個別パーツを必要な範囲で確認した</li>
@@ -787,11 +811,13 @@ html.overlay-background-disabled .overlay-part-shell {
     (() => {
       const inputs = {
         font: document.querySelector("#font-color"),
-        background: document.querySelector("#background-color"),
+        canvasBackground: document.querySelector("#canvas-background-color"),
+        frameBackground: document.querySelector("#frame-background-color"),
         border: document.querySelector("#border-color"),
         accent: document.querySelector("#accent-color"),
         scale: document.querySelector("#font-scale"),
-        enabled: document.querySelector("#background-enabled"),
+        canvasEnabled: document.querySelector("#canvas-background-enabled"),
+        frameEnabled: document.querySelector("#frame-background-enabled"),
       };
       const demo = document.querySelector("#overlay-demo");
       const stage = document.querySelector("#overlay-stage");
@@ -806,28 +832,34 @@ html.overlay-background-disabled .overlay-part-shell {
       };
 
       const render = () => {
-        const backgroundEnabled = inputs.enabled.checked;
+        const canvasBackgroundEnabled = inputs.canvasEnabled.checked;
+        const frameBackgroundEnabled = inputs.frameEnabled.checked;
         demo.style.setProperty("--overlay-font-color", inputs.font.value);
-        demo.style.setProperty("--overlay-background-rgb", hexToChannels(inputs.background.value));
+        demo.style.setProperty("--overlay-canvas-background-rgb", hexToChannels(inputs.canvasBackground.value));
+        demo.style.setProperty("--overlay-canvas-background-alpha", canvasBackgroundEnabled ? "0.88" : "0");
+        demo.style.setProperty("--overlay-background-rgb", hexToChannels(inputs.frameBackground.value));
+        demo.style.setProperty("--overlay-background-alpha", frameBackgroundEnabled ? "0.88" : "0");
         demo.style.setProperty("--overlay-border-color", inputs.border.value);
         demo.style.setProperty("--overlay-accent-color", inputs.accent.value);
         demo.style.setProperty("--overlay-font-scale", inputs.scale.value);
-        demo.classList.toggle("no-background", !backgroundEnabled);
+        demo.classList.toggle("no-canvas-background", !canvasBackgroundEnabled);
+        demo.classList.toggle("no-frame-background", !frameBackgroundEnabled);
 
         document.querySelector("#font-color-value").value = inputs.font.value.toUpperCase();
-        document.querySelector("#background-color-value").value = inputs.background.value.toUpperCase();
+        document.querySelector("#canvas-background-color-value").value = inputs.canvasBackground.value.toUpperCase();
+        document.querySelector("#frame-background-color-value").value = inputs.frameBackground.value.toUpperCase();
         document.querySelector("#border-color-value").value = inputs.border.value.toUpperCase();
         document.querySelector("#accent-color-value").value = inputs.accent.value.toUpperCase();
         document.querySelector("#font-scale-value").value = Number(inputs.scale.value).toFixed(2);
 
-        output.value = `:root {\n  --overlay-font-color: ${inputs.font.value};\n  --overlay-background-rgb: ${hexToChannels(inputs.background.value)};\n  --overlay-background-alpha: 0.88;\n  --overlay-border-color: ${inputs.border.value};\n  --overlay-accent-color: ${inputs.accent.value};\n  --overlay-font-scale: ${inputs.scale.value};\n}\n${backgroundEnabled ? "" : `\nhtml.overlay-background-disabled .overlay-app,\nhtml.overlay-background-disabled .overlay-part-shell {\n  background: transparent !important;\n  background-image: none !important;\n  box-shadow: none !important;\n}\n`}`;
+        output.value = `:root {\n  --overlay-font-color: ${inputs.font.value};\n  --overlay-canvas-background-rgb: ${hexToChannels(inputs.canvasBackground.value)};\n  --overlay-canvas-background-alpha: ${canvasBackgroundEnabled ? "0.88" : "0"};\n  --overlay-background-rgb: ${hexToChannels(inputs.frameBackground.value)};\n  --overlay-background-alpha: ${frameBackgroundEnabled ? "0.88" : "0"};\n  --overlay-border-color: ${inputs.border.value};\n  --overlay-accent-color: ${inputs.accent.value};\n  --overlay-font-scale: ${inputs.scale.value};\n}`;
       };
 
       const presets = {
-        standard: { font: "#ffffff", background: "#080b0c", border: "#4a5658", accent: "#55d6be", scale: "1", enabled: true },
-        contrast: { font: "#ffffff", background: "#000000", border: "#ffffff", accent: "#6fffe2", scale: "1.15", enabled: true },
-        gold: { font: "#fff8e8", background: "#12100a", border: "#8d7336", accent: "#e5bc54", scale: "1.05", enabled: true },
-        clear: { font: "#ffffff", background: "#080b0c", border: "#4a5658", accent: "#55d6be", scale: "1.1", enabled: false },
+        standard: { font: "#ffffff", canvasBackground: "#080b0c", frameBackground: "#080b0c", border: "#4a5658", accent: "#55d6be", scale: "1", canvasEnabled: true, frameEnabled: true },
+        contrast: { font: "#ffffff", canvasBackground: "#000000", frameBackground: "#000000", border: "#ffffff", accent: "#6fffe2", scale: "1.15", canvasEnabled: true, frameEnabled: true },
+        gold: { font: "#fff8e8", canvasBackground: "#090704", frameBackground: "#12100a", border: "#8d7336", accent: "#e5bc54", scale: "1.05", canvasEnabled: true, frameEnabled: true },
+        clear: { font: "#ffffff", canvasBackground: "#000000", frameBackground: "#080b0c", border: "#4a5658", accent: "#55d6be", scale: "1.1", canvasEnabled: false, frameEnabled: true },
       };
 
       Object.values(inputs).forEach((input) => input.addEventListener("input", render));
@@ -835,11 +867,13 @@ html.overlay-background-disabled .overlay-part-shell {
         button.addEventListener("click", () => {
           const preset = presets[button.dataset.preset];
           inputs.font.value = preset.font;
-          inputs.background.value = preset.background;
+          inputs.canvasBackground.value = preset.canvasBackground;
+          inputs.frameBackground.value = preset.frameBackground;
           inputs.border.value = preset.border;
           inputs.accent.value = preset.accent;
           inputs.scale.value = preset.scale;
-          inputs.enabled.checked = preset.enabled;
+          inputs.canvasEnabled.checked = preset.canvasEnabled;
+          inputs.frameEnabled.checked = preset.frameEnabled;
           render();
         });
       });

@@ -41,7 +41,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private int _muMuInstanceIndex;
     private bool _ldPlayerScreenshotEnhancementEnabled;
     private int _ldPlayerInstanceIndex;
-    private string _adbGamePackage = "com.YoStarJP.Arknights";
+    private SukiAdbGamePackageOption? _selectedAdbGamePackageOption;
+    private string _customAdbGamePackage = "";
     private int _adbGameCloneIndex;
     private SukiAdbInputMethodOption? _selectedAdbInputFallbackMethod;
     private SukiAdbScreencapMethodOption? _selectedAdbScreencapFallbackMethod;
@@ -63,7 +64,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _maaInferenceBenchmarkStatus = "保存FrameでCPUとDirectMLを比較できます。";
     private string _pcPreferredWindowTitle = "アークナイツ";
     private string _pcPreferredWindowClass = "";
+    private SukiMaaConnectionTargetOption? _selectedPcConnectionTarget;
     private SukiWin32ScreencapOption? _selectedPcScreencapMethod;
+    private SukiWin32InputOption? _selectedPcMouseMethod;
+    private SukiWin32InputOption? _selectedPcKeyboardMethod;
     private SukiDesktopWindowPreview? _selectedPcWindow;
     private string _pcWindowStatus = "PCクライアント起動後にウィンドウを再検出してください。";
     private int _touchTestX;
@@ -190,6 +194,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private SukiAdbScreencapMethodOption? _selectedAdbScreencapMethod;
     private MaaResourceProfilePreview? _selectedResourceProfile;
     private MaaResourceExecutionPlan? _lastResourceExecutionPlan;
+    private bool _lastRecognitionProfileSkippedAfterUnconfirmedTarget;
+    private bool _lastRecognitionProfileResolvedAsEmptyRelics;
     private SukiOcrEngineOption? _selectedOcrEngine;
     private SukiCampaignPreview? _selectedCampaign;
     private bool _campaignSelectionSyncEnabled;
@@ -203,10 +209,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _outputTournamentMode;
     private bool _outputBackgroundEnabled;
     private int _outputBackgroundOpacity = 100;
+    private bool _outputCanvasBackgroundEnabled;
+    private int _outputCanvasBackgroundOpacity = 100;
     private bool _outputShowPartTitles = true;
     private int _outputScrollSpeed = 13;
     private string _outputFontColor = "#F2EFE6";
     private string _outputBackgroundColor = "#080B0C";
+    private string _outputCanvasBackgroundColor = "#080B0C";
     private string _outputBorderColor = "#2B3638";
     private string _outputAccentColor = "#55D6BE";
     private int _outputFontSizePercent = 100;
@@ -214,15 +223,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _individualOutputTournamentMode;
     private bool _individualOutputBackgroundEnabled;
     private int _individualOutputBackgroundOpacity = 100;
+    private bool _individualOutputCanvasBackgroundEnabled;
+    private int _individualOutputCanvasBackgroundOpacity = 100;
     private bool _individualOutputShowPartTitles = true;
     private int _individualOutputScrollSpeed = 13;
     private string _individualOutputFontColor = "#F2EFE6";
     private string _individualOutputBackgroundColor = "#080B0C";
+    private string _individualOutputCanvasBackgroundColor = "#080B0C";
     private string _individualOutputBorderColor = "#2B3638";
     private string _individualOutputAccentColor = "#55D6BE";
     private int _individualOutputFontSizePercent = 100;
     private string _individualOutputCustomCss = "";
     private string _liveCssScope = "integrated";
+    private SukiOutputCssTemplate? _selectedOutputCssTemplate;
     private string _outputProfileStatus = "未エクスポート";
     private SukiOverlayLayoutPreview? _selectedOverlayLayoutItem;
     private bool _showRoiOverlay = true;
@@ -296,6 +309,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             outputPart.PropertyChanged += (_, _) => RefreshInspectorRows();
         }
+        OutputCssTemplates = new ObservableCollection<SukiOutputCssTemplate>(
+            RhodesOutputCssTemplateCatalog.DefaultTemplates);
+        SelectedOutputCssTemplate = OutputCssTemplates.FirstOrDefault();
         OverlayLayoutItems = new ObservableCollection<SukiOverlayLayoutPreview>(RhodesOverlayLayoutCatalog.BuildPreviews());
         foreach (var layoutItem in OverlayLayoutItems)
             layoutItem.PropertyChanged += (_, _) => RefreshInspectorRows();
@@ -318,16 +334,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SukiAdbMethodCatalog.InputOptions.Where(option => option.Id != SukiAdbMethodCatalog.FastEmulatorMethodId));
         AdbScreencapFallbackMethodOptions = new ObservableCollection<SukiAdbScreencapMethodOption>(
             SukiAdbMethodCatalog.ScreencapOptions.Where(option => option.Id != SukiAdbMethodCatalog.FastEmulatorMethodId));
+        AdbGamePackageOptions = new ObservableCollection<SukiAdbGamePackageOption>(SukiAdbGamePackageCatalog.Options);
         MaaInferenceProviderOptions = new ObservableCollection<SukiMaaInferenceOption>(SukiMaaInferenceCatalog.Options);
+        PcConnectionTargetOptions = new ObservableCollection<SukiMaaConnectionTargetOption>(SukiMaaConnectionTargetCatalog.Options);
         PcScreencapMethodOptions = new ObservableCollection<SukiWin32ScreencapOption>(SukiWin32ScreencapCatalog.Options);
+        PcMouseMethodOptions = new ObservableCollection<SukiWin32InputOption>(SukiWin32InputCatalog.MouseOptions);
+        PcKeyboardMethodOptions = new ObservableCollection<SukiWin32InputOption>(SukiWin32InputCatalog.KeyboardOptions);
         PcWindows = [];
         SelectedAdbPreset = AdbPresets.FirstOrDefault(preset => preset.Id == "auto") ?? AdbPresets.FirstOrDefault();
         SelectedAdbInputMethod = SukiAdbMethodCatalog.FindInput(SukiAdbMethodCatalog.DefaultInputMethodId);
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(SukiAdbMethodCatalog.DefaultScreencapMethodId);
         SelectedAdbInputFallbackMethod = SukiAdbMethodCatalog.FindInput("minitouch");
         SelectedAdbScreencapFallbackMethod = SukiAdbMethodCatalog.FindScreencap("raw-gzip");
+        SelectedAdbGamePackageOption = SukiAdbGamePackageCatalog.Default;
         SelectedMaaInferenceProvider = SukiMaaInferenceCatalog.Find(SukiMaaInferenceCatalog.DefaultId);
+        SelectedPcConnectionTarget = SukiMaaConnectionTargetCatalog.Find(SukiMaaConnectionTargetCatalog.DefaultId);
         SelectedPcScreencapMethod = SukiWin32ScreencapCatalog.Find(SukiWin32ScreencapCatalog.DefaultId);
+        SelectedPcMouseMethod = SukiWin32InputCatalog.FindMouse(SukiWin32InputCatalog.DefaultMouseId);
+        SelectedPcKeyboardMethod = SukiWin32InputCatalog.FindKeyboard(SukiWin32InputCatalog.DefaultKeyboardId);
         Campaigns = new ObservableCollection<SukiCampaignPreview>(
             RhodesPublicDebugPolicy.FilterCampaigns(runCatalog.Campaigns, _distributionProfile));
         _allOperators = runCatalog.Operators;
@@ -384,10 +408,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         BaseResolution = Services.RhodesMaaPaths.BaseResolution;
         ResourceRoot = sessionSnapshot.ResourceRoot;
         AgentBinaryRoot = sessionSnapshot.AgentBinaryRoot;
+        var repositoryRoot = Path.GetDirectoryName(RhodesRunCatalog.ResolveDataRoot())
+            ?? Directory.GetCurrentDirectory();
+        var debugRoot = Path.Combine(AppContext.BaseDirectory, "RHODES OBS COMMANDER3373 Debug Logs");
+        MaaDevelopmentTools = new RhodesMaaDevelopmentToolsViewModel(repositoryRoot, debugRoot);
+        RecognitionLab = new RhodesRecognitionLabViewModel(
+            _session,
+            () => _lastCapture,
+            () => LastCapturePath,
+            Path.Combine(debugRoot, "recognition-lab"));
 
         ConnectCommand = new AsyncRelayCommand(ConnectAsync);
         ConnectAndCaptureCommand = new AsyncRelayCommand(ConnectAndCaptureAsync);
         SaveSettingsCommand = new AsyncRelayCommand(SaveSettingsAsync);
+        SetConnectionTargetCommand = new AsyncRelayCommand(SetConnectionTargetAsync);
         ApplyAdbPresetCommand = new AsyncRelayCommand(parameter => ApplyAdbPresetAsync(parameter as MaaAdbPresetPreview));
         ApplyAdbPathCandidateCommand = new AsyncRelayCommand(parameter => ApplyAdbPathCandidateAsync(parameter as MaaAdbPathCandidatePreview));
         RefreshAdbDevicesCommand = new AsyncRelayCommand(RefreshAdbDevicesAsync);
@@ -428,6 +462,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ResetOverlayLayoutCommand = new AsyncRelayCommand(ResetOverlayLayoutAsync);
         AdjustSelectedOverlayLayoutCommand = new AsyncRelayCommand(AdjustSelectedOverlayLayoutAsync);
         ClearLiveCssCommand = new AsyncRelayCommand(ClearLiveCssAsync);
+        InsertOutputCssTemplateCommand = new AsyncRelayCommand(InsertOutputCssTemplateAsync);
         RefreshNodeRuntimeCommand = new AsyncRelayCommand(RefreshNodeRuntimeAsync);
         InstallNodeRuntimeCommand = new AsyncRelayCommand(InstallNodeRuntimeAsync);
         UninstallNodeRuntimeCommand = new AsyncRelayCommand(UninstallNodeRuntimeAsync);
@@ -583,6 +618,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiOutputPartPreview> OutputParts { get; }
 
+    public ObservableCollection<SukiOutputCssTemplate> OutputCssTemplates { get; }
+
     public ObservableCollection<SukiOverlayLayoutPreview> OverlayLayoutItems { get; }
 
     public ObservableCollection<string> DebugLogLines { get; }
@@ -613,9 +650,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiAdbScreencapMethodOption> AdbScreencapFallbackMethodOptions { get; }
 
+    public ObservableCollection<SukiAdbGamePackageOption> AdbGamePackageOptions { get; }
+
     public ObservableCollection<SukiMaaInferenceOption> MaaInferenceProviderOptions { get; }
 
+    public ObservableCollection<SukiMaaConnectionTargetOption> PcConnectionTargetOptions { get; }
+
     public ObservableCollection<SukiWin32ScreencapOption> PcScreencapMethodOptions { get; }
+
+    public ObservableCollection<SukiWin32InputOption> PcMouseMethodOptions { get; }
+
+    public ObservableCollection<SukiWin32InputOption> PcKeyboardMethodOptions { get; }
 
     public ObservableCollection<SukiDesktopWindowPreview> PcWindows { get; }
 
@@ -705,6 +750,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string ResourceRoot { get; }
 
     public string AgentBinaryRoot { get; }
+
+    public RhodesMaaDevelopmentToolsViewModel MaaDevelopmentTools { get; }
+
+    public RhodesRecognitionLabViewModel RecognitionLab { get; }
 
     public string AdbPath
     {
@@ -803,10 +852,53 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set => SetProperty(ref _ldPlayerInstanceIndex, Math.Clamp(value, 0, 127));
     }
 
-    public string AdbGamePackage
+    public SukiAdbGamePackageOption? SelectedAdbGamePackageOption
     {
-        get => _adbGamePackage;
-        set => SetProperty(ref _adbGamePackage, string.IsNullOrWhiteSpace(value) ? "com.YoStarJP.Arknights" : value.Trim());
+        get => _selectedAdbGamePackageOption;
+        set
+        {
+            var normalized = value ?? SukiAdbGamePackageCatalog.Default;
+            var currentPackage = AdbGamePackage;
+            if (!SetProperty(ref _selectedAdbGamePackageOption, normalized))
+                return;
+
+            if (normalized.IsCustom && string.IsNullOrWhiteSpace(_customAdbGamePackage))
+                CustomAdbGamePackage = currentPackage;
+
+            OnPropertyChanged(nameof(IsCustomAdbGamePackageSelected));
+            OnPropertyChanged(nameof(AdbGamePackage));
+            OnPropertyChanged(nameof(AdbGamePackageDescription));
+        }
+    }
+
+    public string CustomAdbGamePackage
+    {
+        get => _customAdbGamePackage;
+        set
+        {
+            if (!SetProperty(ref _customAdbGamePackage, value ?? ""))
+                return;
+
+            OnPropertyChanged(nameof(AdbGamePackage));
+            OnPropertyChanged(nameof(AdbGamePackageDescription));
+        }
+    }
+
+    public bool IsCustomAdbGamePackageSelected => SelectedAdbGamePackageOption?.IsCustom == true;
+
+    public string AdbGamePackage => IsCustomAdbGamePackageSelected
+        ? SukiAdbGamePackageCatalog.NormalizePackage(CustomAdbGamePackage)
+        : SelectedAdbGamePackageOption?.PackageName ?? SukiAdbGamePackageCatalog.DefaultPackageName;
+
+    public string AdbGamePackageDescription
+    {
+        get
+        {
+            var option = SelectedAdbGamePackageOption ?? SukiAdbGamePackageCatalog.Default;
+            return option.IsCustom
+                ? $"{option.Detail} 空欄で保存した場合は日本版（JP）へ戻ります。"
+                : $"{option.Detail} 接続対象だけを指定する設定で、OCR・認識言語は切り替えません。";
+        }
     }
 
     public int AdbGameCloneIndex
@@ -973,16 +1065,50 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set => SetProperty(ref _pcPreferredWindowClass, value?.Trim() ?? "");
     }
 
+    public SukiMaaConnectionTargetOption? SelectedPcConnectionTarget
+    {
+        get => _selectedPcConnectionTarget;
+        set
+        {
+            if (!SetProperty(ref _selectedPcConnectionTarget, value))
+                return;
+            OnPropertyChanged(nameof(IsAdbConnectionTargetSelected));
+            OnPropertyChanged(nameof(IsPcConnectionTargetSelected));
+            OnPropertyChanged(nameof(ConnectionStatusDetail));
+        }
+    }
+
+    public bool IsAdbConnectionTargetSelected => !IsPcConnectionTargetSelected;
+
+    public bool IsPcConnectionTargetSelected => SelectedPcConnectionTarget?.IsPc == true;
+
     public SukiWin32ScreencapOption? SelectedPcScreencapMethod
     {
         get => _selectedPcScreencapMethod;
         set => SetProperty(ref _selectedPcScreencapMethod, value);
     }
 
+    public SukiWin32InputOption? SelectedPcMouseMethod
+    {
+        get => _selectedPcMouseMethod;
+        set => SetProperty(ref _selectedPcMouseMethod, value);
+    }
+
+    public SukiWin32InputOption? SelectedPcKeyboardMethod
+    {
+        get => _selectedPcKeyboardMethod;
+        set => SetProperty(ref _selectedPcKeyboardMethod, value);
+    }
+
     public SukiDesktopWindowPreview? SelectedPcWindow
     {
         get => _selectedPcWindow;
-        set => SetProperty(ref _selectedPcWindow, value);
+        set
+        {
+            if (!SetProperty(ref _selectedPcWindow, value))
+                return;
+            OnPropertyChanged(nameof(ConnectionStatusDetail));
+        }
     }
 
     public string PcWindowStatus
@@ -1462,6 +1588,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         get
         {
+            if (IsPcConnectionTargetSelected)
+            {
+                var window = SelectedPcWindow?.Title;
+                if (string.IsNullOrWhiteSpace(window))
+                    window = string.IsNullOrWhiteSpace(PcPreferredWindowTitle) ? "PCウィンドウ未選択" : PcPreferredWindowTitle;
+                return $"PC {window} · {CapturePixelSizeLabel}";
+            }
             var serial = string.IsNullOrWhiteSpace(AdbSerial) ? "serial未選択" : AdbSerial;
             return $"{serial} · {CapturePixelSizeLabel}";
         }
@@ -1798,6 +1931,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public bool OutputCanvasBackgroundEnabled
+    {
+        get => _outputCanvasBackgroundEnabled;
+        set
+        {
+            if (!SetProperty(ref _outputCanvasBackgroundEnabled, value))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
+    public int OutputCanvasBackgroundOpacity
+    {
+        get => _outputCanvasBackgroundOpacity;
+        set
+        {
+            var normalized = Math.Clamp(value, 0, 100);
+            if (!SetProperty(ref _outputCanvasBackgroundOpacity, normalized))
+                return;
+            RefreshInspectorRows();
+        }
+    }
+
     public bool OutputShowPartTitles
     {
         get => _outputShowPartTitles;
@@ -1822,6 +1978,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string OutputFontColor { get => _outputFontColor; set => SetProperty(ref _outputFontColor, value); }
     public string OutputBackgroundColor { get => _outputBackgroundColor; set => SetProperty(ref _outputBackgroundColor, value); }
+    public string OutputCanvasBackgroundColor { get => _outputCanvasBackgroundColor; set => SetProperty(ref _outputCanvasBackgroundColor, value); }
     public string OutputBorderColor { get => _outputBorderColor; set => SetProperty(ref _outputBorderColor, value); }
     public string OutputAccentColor { get => _outputAccentColor; set => SetProperty(ref _outputAccentColor, value); }
     public int OutputFontSizePercent { get => _outputFontSizePercent; set => SetProperty(ref _outputFontSizePercent, Math.Clamp(value, 60, 200)); }
@@ -1843,10 +2000,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool IndividualOutputTournamentMode { get => _individualOutputTournamentMode; set => SetProperty(ref _individualOutputTournamentMode, value); }
     public bool IndividualOutputBackgroundEnabled { get => _individualOutputBackgroundEnabled; set => SetProperty(ref _individualOutputBackgroundEnabled, value); }
     public int IndividualOutputBackgroundOpacity { get => _individualOutputBackgroundOpacity; set => SetProperty(ref _individualOutputBackgroundOpacity, Math.Clamp(value, 0, 100)); }
+    public bool IndividualOutputCanvasBackgroundEnabled { get => _individualOutputCanvasBackgroundEnabled; set => SetProperty(ref _individualOutputCanvasBackgroundEnabled, value); }
+    public int IndividualOutputCanvasBackgroundOpacity { get => _individualOutputCanvasBackgroundOpacity; set => SetProperty(ref _individualOutputCanvasBackgroundOpacity, Math.Clamp(value, 0, 100)); }
     public bool IndividualOutputShowPartTitles { get => _individualOutputShowPartTitles; set => SetProperty(ref _individualOutputShowPartTitles, value); }
     public int IndividualOutputScrollSpeed { get => _individualOutputScrollSpeed; set => SetProperty(ref _individualOutputScrollSpeed, Math.Clamp(value, 0, 30)); }
     public string IndividualOutputFontColor { get => _individualOutputFontColor; set => SetProperty(ref _individualOutputFontColor, value); }
     public string IndividualOutputBackgroundColor { get => _individualOutputBackgroundColor; set => SetProperty(ref _individualOutputBackgroundColor, value); }
+    public string IndividualOutputCanvasBackgroundColor { get => _individualOutputCanvasBackgroundColor; set => SetProperty(ref _individualOutputCanvasBackgroundColor, value); }
     public string IndividualOutputBorderColor { get => _individualOutputBorderColor; set => SetProperty(ref _individualOutputBorderColor, value); }
     public string IndividualOutputAccentColor { get => _individualOutputAccentColor; set => SetProperty(ref _individualOutputAccentColor, value); }
     public int IndividualOutputFontSizePercent { get => _individualOutputFontSizePercent; set => SetProperty(ref _individualOutputFontSizePercent, Math.Clamp(value, 60, 200)); }
@@ -1903,6 +2063,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string LiveCssCharacterCount =>
         $"{LiveCssEditorText.Length:N0} / {RhodesOutputProfileService.MaxCustomCssLength:N0}";
+
+    public SukiOutputCssTemplate? SelectedOutputCssTemplate
+    {
+        get => _selectedOutputCssTemplate;
+        set => SetProperty(ref _selectedOutputCssTemplate, value);
+    }
 
     public string OutputProfileStatus { get => _outputProfileStatus; private set => SetProperty(ref _outputProfileStatus, value); }
 
@@ -2541,6 +2707,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand SaveSettingsCommand { get; }
 
+    public ICommand SetConnectionTargetCommand { get; }
+
     public ICommand ApplyAdbPresetCommand { get; }
 
     public ICommand ApplyAdbPathCandidateCommand { get; }
@@ -2622,6 +2790,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand AdjustSelectedOverlayLayoutCommand { get; }
 
     public ICommand ClearLiveCssCommand { get; }
+
+    public ICommand InsertOutputCssTemplateCommand { get; }
 
     public ICommand RefreshNodeRuntimeCommand { get; }
 
@@ -3708,9 +3878,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var visible = OutputParts.Count(part => part.Enabled);
             yield return new SukiInspectorRow("表示部品", $"{visible}/{OutputParts.Count}", $"scroll {OutputScrollSpeed}px/s");
             yield return new SukiInspectorRow(
-                "背景",
+                "全体背景",
+                OutputCanvasBackgroundEnabled ? $"表示 {OutputCanvasBackgroundOpacity}%" : "非表示",
+                "OBSブラウザソース全体");
+            yield return new SukiInspectorRow(
+                "枠背景",
                 OutputBackgroundEnabled ? $"表示 {OutputBackgroundOpacity}%" : "非表示",
-                "OBSブラウザソースの背景");
+                "カードと部品枠");
             yield return new SukiInspectorRow("大会向け簡潔表示", OutputTournamentMode ? "ON" : "OFF", "部品内の余白を圧縮");
             yield break;
         }
@@ -3808,9 +3982,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(settings.AdbScreencapMethodId);
         SelectedMaaInferenceProvider = SukiMaaInferenceCatalog.Find(maaRuntime.InferenceProviderId);
         MaaInferenceDeviceId = maaRuntime.InferenceDeviceId;
+        SelectedPcConnectionTarget = SukiMaaConnectionTargetCatalog.Find(maaRuntime.ConnectionTargetId);
         PcPreferredWindowTitle = maaRuntime.PreferredWindowTitle;
         PcPreferredWindowClass = maaRuntime.PreferredWindowClass;
         SelectedPcScreencapMethod = SukiWin32ScreencapCatalog.Find(maaRuntime.Win32ScreencapMethodId);
+        SelectedPcMouseMethod = SukiWin32InputCatalog.FindMouse(maaRuntime.Win32MouseMethodId);
+        SelectedPcKeyboardMethod = SukiWin32InputCatalog.FindKeyboard(maaRuntime.Win32KeyboardMethodId);
         AdbAutoDetect = adbConnection.AutoDetect;
         AdbAlwaysAutoDetect = adbConnection.AlwaysAutoDetect;
         EmulatorRoot = adbConnection.EmulatorRoot;
@@ -3821,7 +3998,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         MuMuInstanceIndex = adbConnection.MuMuInstanceIndex;
         LdPlayerScreenshotEnhancementEnabled = adbConnection.LdPlayerScreenshotEnhancementEnabled;
         LdPlayerInstanceIndex = adbConnection.LdPlayerInstanceIndex;
-        AdbGamePackage = adbConnection.GamePackage;
+        ApplyAdbGamePackage(adbConnection.GamePackage);
         AdbGameCloneIndex = adbConnection.GameCloneIndex;
         SelectedAdbInputFallbackMethod = SukiAdbMethodCatalog.FindInput(adbConnection.InputFallbackMethodId);
         SelectedAdbScreencapFallbackMethod = SukiAdbMethodCatalog.FindScreencap(adbConnection.ScreencapFallbackMethodId);
@@ -3862,15 +4039,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             TryWriteStateSavePerformanceLog("settings-local", localSaveTimer.Elapsed);
 
             var apiSyncTimer = Stopwatch.StartNew();
-            var apiError = await SaveAdbSettingsToApiStateAsync();
+            var syncResult = await SaveAdbSettingsToApiStateAsync();
             apiSyncTimer.Stop();
             TryWriteStateSavePerformanceLog(
                 "settings-api-sync",
                 apiSyncTimer.Elapsed,
-                string.IsNullOrWhiteSpace(apiError) ? "success" : apiError);
-            StatusMessage = string.IsNullOrWhiteSpace(apiError)
-                ? $"Suki設定とADB API設定を保存しました: {RhodesSukiSettingsStore.DefaultPath}"
-                : $"Suki設定を保存しました。ADB API設定の反映は失敗: {apiError}";
+                syncResult.Succeeded ? "success" : syncResult.Error);
+            StatusMessage = syncResult.Succeeded
+                ? $"Suki設定を保存し、配信画面へ反映しました: {RhodesSukiSettingsStore.DefaultPath}"
+                : syncResult.IsUnavailable
+                    ? "Suki設定を保存しました。配信サーバーは未起動です。"
+                    : "Suki設定を保存しました。配信画面への反映に失敗しました。";
         });
     }
 
@@ -3892,11 +4071,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ApplyOutputPreferences(preferences);
             var adbConfigJson = SukiAdbConfigJson.Normalize(AdbConfigJson);
             await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings(adbConfigJson));
-            var apiError = await SaveAdbSettingsToApiStateAsync();
+            var syncResult = await SaveAdbSettingsToApiStateAsync();
             OutputProfileStatus = $"インポート済み: {path}";
-            StatusMessage = string.IsNullOrWhiteSpace(apiError)
+            StatusMessage = syncResult.Succeeded
                 ? "出力プロファイルを読み込み、Overlayへ反映しました。"
-                : $"出力プロファイルを保存しました。Overlayへの反映は失敗: {apiError}";
+                : syncResult.IsUnavailable
+                    ? "出力プロファイルを保存しました。配信サーバーは未起動です。"
+                    : "出力プロファイルを保存しました。配信画面への反映に失敗しました。";
         });
     }
 
@@ -3952,14 +4133,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             LightweightAdb: false));
     }
 
+    private void ApplyAdbGamePackage(string? packageName)
+    {
+        var normalized = SukiAdbGamePackageCatalog.NormalizePackage(packageName);
+        var option = SukiAdbGamePackageCatalog.FindByPackage(normalized);
+        if (option.IsCustom)
+            CustomAdbGamePackage = normalized;
+        SelectedAdbGamePackageOption = option;
+    }
+
     private SukiMaaRuntimeSettings BuildMaaRuntimeSettings()
     {
         return RhodesSukiSettingsStore.NormalizeMaaRuntime(new SukiMaaRuntimeSettings(
+            ConnectionTargetId: SelectedPcConnectionTarget?.Id ?? SukiMaaConnectionTargetCatalog.DefaultId,
             InferenceProviderId: SelectedMaaInferenceProvider?.Id ?? SukiMaaInferenceCatalog.DefaultId,
             InferenceDeviceId: MaaInferenceDeviceId,
             PreferredWindowTitle: PcPreferredWindowTitle,
             PreferredWindowClass: PcPreferredWindowClass,
-            Win32ScreencapMethodId: SelectedPcScreencapMethod?.Id ?? SukiWin32ScreencapCatalog.DefaultId));
+            Win32ScreencapMethodId: SelectedPcScreencapMethod?.Id ?? SukiWin32ScreencapCatalog.DefaultId,
+            Win32MouseMethodId: SelectedPcMouseMethod?.Id ?? SukiWin32InputCatalog.DefaultMouseId,
+            Win32KeyboardMethodId: SelectedPcKeyboardMethod?.Id ?? SukiWin32InputCatalog.DefaultKeyboardId));
     }
 
     private void ApplyOutputPreferences(SukiOutputPreferences? preferences)
@@ -3972,11 +4165,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OutputTournamentMode = preferences.TournamentMode;
         OutputBackgroundEnabled = preferences.BackgroundEnabled;
         OutputBackgroundOpacity = preferences.BackgroundOpacity;
+        OutputCanvasBackgroundEnabled = preferences.CanvasBackgroundEnabled ?? preferences.BackgroundEnabled;
+        OutputCanvasBackgroundOpacity = preferences.CanvasBackgroundOpacity ?? preferences.BackgroundOpacity;
         OutputShowPartTitles = preferences.ShowPartTitles;
         OutputScrollSpeed = preferences.ScrollSpeed;
         var integratedAppearance = preferences.IntegratedAppearance ?? new SukiOutputAppearance();
         OutputFontColor = integratedAppearance.FontColor;
         OutputBackgroundColor = integratedAppearance.BackgroundColor;
+        OutputCanvasBackgroundColor = integratedAppearance.CanvasBackgroundColor ?? integratedAppearance.BackgroundColor;
         OutputBorderColor = integratedAppearance.BorderColor;
         OutputAccentColor = integratedAppearance.AccentColor;
         OutputFontSizePercent = integratedAppearance.FontSizePercent;
@@ -3985,11 +4181,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IndividualOutputTournamentMode = preferences.IndividualTournamentMode ?? preferences.TournamentMode;
         IndividualOutputBackgroundEnabled = preferences.IndividualBackgroundEnabled ?? preferences.BackgroundEnabled;
         IndividualOutputBackgroundOpacity = preferences.IndividualBackgroundOpacity ?? preferences.BackgroundOpacity;
+        IndividualOutputCanvasBackgroundEnabled = preferences.IndividualCanvasBackgroundEnabled
+            ?? preferences.IndividualBackgroundEnabled
+            ?? preferences.BackgroundEnabled;
+        IndividualOutputCanvasBackgroundOpacity = preferences.IndividualCanvasBackgroundOpacity
+            ?? preferences.IndividualBackgroundOpacity
+            ?? preferences.BackgroundOpacity;
         IndividualOutputShowPartTitles = preferences.IndividualShowPartTitles ?? preferences.ShowPartTitles;
         IndividualOutputScrollSpeed = preferences.IndividualScrollSpeed ?? preferences.ScrollSpeed;
         var individualAppearance = preferences.IndividualAppearance ?? new SukiOutputAppearance();
         IndividualOutputFontColor = individualAppearance.FontColor;
         IndividualOutputBackgroundColor = individualAppearance.BackgroundColor;
+        IndividualOutputCanvasBackgroundColor = individualAppearance.CanvasBackgroundColor ?? individualAppearance.BackgroundColor;
         IndividualOutputBorderColor = individualAppearance.BorderColor;
         IndividualOutputAccentColor = individualAppearance.AccentColor;
         IndividualOutputFontSizePercent = individualAppearance.FontSizePercent;
@@ -4014,7 +4217,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task<string> SaveAdbSettingsToApiStateAsync()
+    private async Task<RhodesSukiStateSyncResult> SaveAdbSettingsToApiStateAsync()
     {
         var choiceOptions = BuildChoicePersistenceOptions();
         var result = await RhodesSukiStateSyncWorkflow.SyncSettingsAsync(
@@ -4037,10 +4240,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (result.ShouldReloadRunState)
             ReloadRunStateFromStore();
         RefreshRuntimeCapabilities();
-        return result.Error;
+        return result;
     }
 
-    private async Task<string> SaveRunContextToApiStateAsync(string campaignId)
+    private async Task<RhodesSukiStateSyncResult> SaveRunContextToApiStateAsync(string campaignId)
     {
         var result = await RhodesSukiStateSyncWorkflow.SyncRunContextAsync(
             campaignId,
@@ -4050,7 +4253,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         _rhodesApiStatus = result.ApiStatus;
         RefreshRuntimeCapabilities();
-        return result.Error;
+        return result;
     }
 
     private Task SetWorkspaceAsync(object? parameter)
@@ -4070,6 +4273,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         WorkspaceTab = ChoiceTab == "recognition" ? "recognition" : "choices";
         StatusMessage = $"{ChoicePanelTitle}を表示しています。";
         return Task.CompletedTask;
+    }
+
+    private Task SetConnectionTargetAsync(object? parameter)
+    {
+        var target = SukiMaaConnectionTargetCatalog.Find(parameter as string);
+        if (string.Equals(SelectedPcConnectionTarget?.Id, target.Id, StringComparison.Ordinal))
+            return Task.CompletedTask;
+
+        SelectedPcConnectionTarget = target;
+        ResetConnectionTargetStatus();
+        StatusMessage = target.IsPc
+            ? "接続先をPC版へ切り替えました。PC版設定はADB設定と別に保持されます。"
+            : "接続先をADB / Androidへ切り替えました。ADB設定はPC版設定と別に保持されます。";
+        return Task.CompletedTask;
+    }
+
+    private void ResetConnectionTargetStatus()
+    {
+        _adbDiagnosticsMaaReady = null;
+        _adbDiagnosticsCaptureSucceeded = null;
+        _adbDiagnosticsCaptureDetail = "";
+        RefreshRuntimeCapabilities();
+        RefreshInspectorRows();
     }
 
     private Task OpenRecognitionProfileAsync(object? parameter)
@@ -4122,16 +4348,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         await RunBusyAsync(async () =>
         {
-            var apiError = await SaveRunContextToApiStateAsync(campaignId);
-            if (!string.IsNullOrWhiteSpace(apiError))
+            var syncResult = await SaveRunContextToApiStateAsync(campaignId);
+            if (!syncResult.Succeeded)
                 await RhodesRunStateStore.SaveRunContextAsync(campaignId);
 
             ReloadRunStateFromStore();
             var campaign = Campaigns.FirstOrDefault(item => string.Equals(item.Id, _runState.CampaignId, StringComparison.Ordinal));
             RefreshRunStatePreviews();
-            StatusMessage = string.IsNullOrWhiteSpace(apiError)
-                ? $"{campaign?.DisplayName ?? campaignId} を現在ランに設定し、APIへ同期しました。"
-                : $"{campaign?.DisplayName ?? campaignId} を現在ランに設定しました。API同期は失敗: {apiError}";
+            var campaignName = campaign?.DisplayName ?? campaignId;
+            StatusMessage = syncResult.Succeeded
+                ? $"{campaignName} を現在ランに設定し、配信画面へ反映しました。"
+                : syncResult.IsUnavailable
+                    ? $"{campaignName} を現在ランに設定しました。配信サーバーは未起動です。"
+                    : $"{campaignName} を現在ランに設定しました。配信画面への反映に失敗しました。";
         });
     }
 
@@ -4445,11 +4674,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            await ConnectAndCaptureCoreAsync();
+            await ConnectAdbAndCaptureCoreAsync();
         });
     }
 
     private async Task ConnectAndCaptureCoreAsync()
+    {
+        if (IsPcConnectionTargetSelected)
+        {
+            await ConnectPcWindowAndCaptureCoreAsync();
+            return;
+        }
+
+        await ConnectAdbAndCaptureCoreAsync();
+    }
+
+    private async Task ConnectAdbAndCaptureCoreAsync()
     {
         if (AdbAlwaysAutoDetect
             || (AdbAutoDetect && (string.IsNullOrWhiteSpace(AdbSerial) || string.IsNullOrWhiteSpace(AdbPath))))
@@ -4579,39 +4819,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task ConnectPcWindowAndCaptureAsync()
     {
-        await RunBusyAsync(async () =>
-        {
-            if (SelectedPcWindow is null)
-                await RefreshPcWindowsCoreAsync();
-            if (SelectedPcWindow is null)
-            {
-                StatusMessage = "PCクライアントのウィンドウを選択してください。";
-                return;
-            }
+        await RunBusyAsync(ConnectPcWindowAndCaptureCoreAsync);
+    }
 
-            var selectedWindow = SelectedPcWindow!;
-            PcWindowStatus = $"接続中: {selectedWindow.DisplayName}";
-            var snapshot = await _session.InitializeWin32Async(
-                BuildBaseSessionOptions(),
-                selectedWindow.Handle,
-                SelectedPcScreencapMethod?.Id ?? SukiWin32ScreencapCatalog.DefaultId);
-            SessionState = snapshot.State;
-            SessionDetail = snapshot.Detail;
-            if (!snapshot.IsReady)
-            {
-                PcWindowStatus = snapshot.Detail;
-                StatusMessage = $"PCウィンドウへ接続できませんでした: {snapshot.Detail}";
-                return;
-            }
+    private async Task ConnectPcWindowAndCaptureCoreAsync()
+    {
+        if (!await EnsurePcControllerReadyAsync(forceReconnect: true))
+            return;
 
-            var capture = await CaptureCoreAsync();
-            PcWindowStatus = capture.Succeeded
-                ? $"撮影OK: {selectedWindow.Title} / {CapturePixelSizeLabel} / {capture.Detail}"
-                : $"撮影失敗: {capture.Detail}";
-            StatusMessage = capture.Succeeded
-                ? "PCクライアントのウィンドウを1280x720座標系で撮影しました。"
-                : $"PCクライアントの撮影に失敗しました: {capture.Detail}";
-        });
+        var capture = await CaptureCoreAsync();
+        var selectedWindow = SelectedPcWindow!;
+        PcWindowStatus = capture.Succeeded
+            ? $"撮影OK: {selectedWindow.Title} / {CapturePixelSizeLabel} / {capture.Detail}"
+            : $"撮影失敗: {capture.Detail}";
+        StatusMessage = capture.Succeeded
+            ? "PCクライアントのウィンドウを1280x720座標系で撮影しました。"
+            : $"PCクライアントの撮影に失敗しました: {capture.Detail}";
     }
 
     private async Task RunMaaInferenceBenchmarkAsync()
@@ -5167,7 +5390,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 executionPlan: CurrentResourceExecutionPlan);
             if (!await RunAllResourceTasksCoreAsync())
                 return;
-            if (!await ConvertResourceTaskResultsCoreAsync())
+            if (!_lastRecognitionProfileResolvedAsEmptyRelics
+                && !await ConvertResourceTaskResultsCoreAsync())
                 return;
 
             var afterTaskResults = ResourceTaskResults.ToArray();
@@ -7146,7 +7370,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         await RunBusyAsync(async () =>
         {
             StatusMessage = "選択プロファイルの認識を開始します。";
-            if (await RunAllResourceTasksCoreAsync())
+            if (await RunAllResourceTasksCoreAsync()
+                && !_lastRecognitionProfileResolvedAsEmptyRelics)
                 await ConvertResourceTaskResultsCoreAsync();
         });
     }
@@ -7252,6 +7477,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         if (!await RunAllResourceTasksCoreAsync())
             return false;
+        if (_lastRecognitionProfileSkippedAfterUnconfirmedTarget)
+            return true;
+        if (_lastRecognitionProfileResolvedAsEmptyRelics)
+        {
+            await ApplyCandidateResultsCoreAsync();
+            return true;
+        }
         var converted = await ConvertResourceTaskResultsCoreAsync();
         EnsureAgeResetCandidateWhenUndetected();
         EnsureHallucinationResetCandidateWhenUndetected();
@@ -7738,6 +7970,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return Task.CompletedTask;
     }
 
+    private Task InsertOutputCssTemplateAsync()
+    {
+        var template = SelectedOutputCssTemplate;
+        if (template is null)
+        {
+            StatusMessage = "挿入するCSSテンプレートを選択してください。";
+            return Task.CompletedTask;
+        }
+
+        var current = LiveCssEditorText.TrimEnd();
+        var addition = template.Css.Trim();
+        var updated = current.Length == 0
+            ? $"{addition}{Environment.NewLine}"
+            : $"{current}{Environment.NewLine}{Environment.NewLine}{addition}{Environment.NewLine}";
+        if (updated.Length > RhodesOutputProfileService.MaxCustomCssLength)
+        {
+            StatusMessage = $"{template.DisplayName}を挿入できません。CSSの上限は{RhodesOutputProfileService.MaxCustomCssLength:N0}文字です。";
+            return Task.CompletedTask;
+        }
+
+        LiveCssEditorText = updated;
+        var target = IsLiveCssIntegrated ? "統合Overlay" : "個別ウィンドウ";
+        StatusMessage = $"{template.DisplayName}を{target}用CSSへ挿入しました。保存して反映すると出力へ適用されます。";
+        return Task.CompletedTask;
+    }
+
     private void SetLiveCssScope(string scope)
     {
         if (_liveCssScope == scope)
@@ -7785,6 +8043,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         var plan = CurrentResourceExecutionPlan;
         _lastResourceExecutionPlan = null;
+        _lastRecognitionProfileSkippedAfterUnconfirmedTarget = false;
+        _lastRecognitionProfileResolvedAsEmptyRelics = false;
         ClearRoiRescanComparison();
         ResourceTaskResults.Clear();
         CandidateResults.Clear();
@@ -7813,7 +8073,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return false;
         }
 
-        await RunPreNavigationResourceTasksAsync(plan);
+        var relicFooterAvailability = await RunPreNavigationResourceTasksAsync(plan);
+        if (plan.ProfileId.Equals("relicsFull", StringComparison.Ordinal)
+            && relicFooterAvailability == RhodesRelicFooterAvailability.Empty)
+        {
+            _lastResourceExecutionPlan = plan;
+            _lastRecognitionProfileResolvedAsEmptyRelics = true;
+            CandidateResults.Add(RhodesRecognitionCandidateApplier.CreateNoRelicsCandidate(CurrentCampaignId));
+            LastCandidateApplySummary = "秘宝0件";
+            StatusMessage = "マップ下部の秘宝ボタンが無効のため、所持秘宝0件として確定しました。";
+            RefreshResourceTaskDiagnostics();
+            RefreshInspectorRows();
+            return true;
+        }
 
         var openResult = await RhodesRecognitionNavigation.ExecuteAsync(
             navigation.OpenSteps,
@@ -7888,6 +8160,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         plan.TaskEntries,
                         plan);
                 }
+                if (RhodesRecognitionRuntimePlan.CanContinueAfterUnconfirmedTarget(plan.ProfileId))
+                {
+                    _lastRecognitionProfileSkippedAfterUnconfirmedTarget = true;
+                    StatusMessage = "時代詳細画面が開かなかったため、時代の現在値を保持して後続の取得を続けます。";
+                    RefreshInspectorRows();
+                    return true;
+                }
                 StatusMessage = plan.ProfileId switch
                 {
                     "runStatusFull" => "分隊情報画面を確認できません。左下の分隊アイコンが表示されたマップ画面から再実行してください。",
@@ -7954,13 +8233,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task RunPreNavigationResourceTasksAsync(MaaResourceExecutionPlan plan)
+    private async Task<RhodesRelicFooterAvailability> RunPreNavigationResourceTasksAsync(MaaResourceExecutionPlan plan)
     {
         var preNavigationPlan = RhodesRecognitionRuntimePlan.PreparePreNavigation(plan);
         if (preNavigationPlan.TaskEntries.Count == 0)
-            return;
+            return RhodesRelicFooterAvailability.Unknown;
         if (!await ForceCaptureAsync() || _lastCapture.Length == 0)
-            return;
+            return RhodesRelicFooterAvailability.Unknown;
 
         var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
             preNavigationPlan,
@@ -7975,7 +8254,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 RefreshResourceTaskDiagnostics();
             });
         if (!execution.Succeeded)
-            return;
+            return RhodesRelicFooterAvailability.Unknown;
+
+        var relicAvailability = RhodesRelicFooterAvailabilityReader.Evaluate(
+            execution.TaskResults,
+            _lastCapture);
+        if (relicAvailability == RhodesRelicFooterAvailability.Empty)
+            StatusMessage = "秘宝ボタンが無効のため、所持秘宝0件を確認しました。";
+        else if (relicAvailability == RhodesRelicFooterAvailability.HasOwnedRelics)
+            StatusMessage = "秘宝ボタンの所持数表示を確認しました。";
 
         var relicCount = RhodesRelicOwnedCountReader.FromTaskResults(execution.TaskResults);
         if (relicCount is not null)
@@ -7985,6 +8272,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             CurrentSelectedOperatorCount());
         if (operatorCount is not null)
             StatusMessage = $"招集済みオペレーター数を先読みしました: {operatorCount.Count}名";
+        return relicAvailability;
     }
 
     private async Task RunTemplateOcrExpansionsAsync(
@@ -9329,19 +9617,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 OutputBorderColor,
                 OutputAccentColor,
                 OutputFontSizePercent,
-                OutputCustomCss),
+                OutputCustomCss,
+                OutputCanvasBackgroundColor),
             IndividualAppearance: new SukiOutputAppearance(
                 IndividualOutputFontColor,
                 IndividualOutputBackgroundColor,
                 IndividualOutputBorderColor,
                 IndividualOutputAccentColor,
                 IndividualOutputFontSizePercent,
-                IndividualOutputCustomCss),
+                IndividualOutputCustomCss,
+                IndividualOutputCanvasBackgroundColor),
             IndividualTournamentMode: IndividualOutputTournamentMode,
             IndividualBackgroundEnabled: IndividualOutputBackgroundEnabled,
             IndividualBackgroundOpacity: IndividualOutputBackgroundOpacity,
             IndividualShowPartTitles: IndividualOutputShowPartTitles,
-            IndividualScrollSpeed: IndividualOutputScrollSpeed));
+            IndividualScrollSpeed: IndividualOutputScrollSpeed,
+            CanvasBackgroundEnabled: OutputCanvasBackgroundEnabled,
+            CanvasBackgroundOpacity: OutputCanvasBackgroundOpacity,
+            IndividualCanvasBackgroundEnabled: IndividualOutputCanvasBackgroundEnabled,
+            IndividualCanvasBackgroundOpacity: IndividualOutputCanvasBackgroundOpacity));
     }
 
     private SukiChoiceCatalogFilterState OperatorChoiceFilterState()
@@ -9976,7 +10270,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<bool> EnsureMaaControllerReadyAsync(bool forceReconnect = false)
     {
-        if (!forceReconnect && _session.IsControllerReady)
+        if (IsPcConnectionTargetSelected)
+            return await EnsurePcControllerReadyAsync(forceReconnect);
+
+        if (!forceReconnect
+            && SukiMaaConnectionTargetPolicy.IsReady(
+                "adb",
+                _session.IsControllerReady,
+                _session.ControllerKind))
             return true;
 
         if (AdbAlwaysAutoDetect
@@ -9996,6 +10297,54 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _adbConnectionValidated = true;
             await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings());
         }
+        return snapshot.IsReady;
+    }
+
+    private async Task<bool> EnsurePcControllerReadyAsync(bool forceReconnect = false)
+    {
+        if (SelectedPcWindow is null)
+            await RefreshPcWindowsCoreAsync();
+        if (SelectedPcWindow is null)
+        {
+            _adbDiagnosticsMaaReady = false;
+            PcWindowStatus = "PCクライアントのゲームウィンドウを選択してください。";
+            StatusMessage = PcWindowStatus;
+            RefreshRuntimeCapabilities();
+            return false;
+        }
+
+        var selectedWindow = SelectedPcWindow;
+        var plan = RhodesMaaPcConnectionPolicy.Resolve(
+            SelectedPcScreencapMethod?.Id,
+            SelectedPcMouseMethod?.Id,
+            SelectedPcKeyboardMethod?.Id);
+        var alreadyReady = SukiMaaConnectionTargetPolicy.IsReady(
+                "pc",
+                _session.IsControllerReady,
+                _session.ControllerKind)
+            && _session.ActiveWin32WindowHandle == selectedWindow.Handle
+            && Equals(_session.ActivePcConnectionPlan, plan);
+        if (!forceReconnect && alreadyReady)
+            return true;
+
+        PcWindowStatus = $"接続中: {selectedWindow.DisplayName}";
+        StatusMessage = "PCクライアントへMAA Win32 Controllerで接続しています。";
+        var snapshot = await _session.InitializeWin32Async(
+            BuildBaseSessionOptions(),
+            selectedWindow.Handle,
+            SelectedPcScreencapMethod?.Id ?? SukiWin32ScreencapCatalog.DefaultId,
+            SelectedPcMouseMethod?.Id ?? SukiWin32InputCatalog.DefaultMouseId,
+            SelectedPcKeyboardMethod?.Id ?? SukiWin32InputCatalog.DefaultKeyboardId);
+        ApplyMaaSessionSnapshot(
+            snapshot,
+            snapshot.IsReady
+                ? "PCクライアントへ接続しました。"
+                : $"PCクライアントへ接続できませんでした: {snapshot.Detail}");
+        PcWindowStatus = snapshot.IsReady
+            ? $"接続OK: {selectedWindow.Title} / {plan.ScreencapMethod} / {plan.MouseMethod}"
+            : snapshot.Detail;
+        if (snapshot.IsReady)
+            await RhodesSukiSettingsStore.SaveAsync(BuildCurrentSettings());
         return snapshot.IsReady;
     }
 

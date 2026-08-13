@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 
 const operatorOcrMap = JSON.parse(await fs.readFile(new URL("../data/recognition/maa-operator-name-ocr.json", import.meta.url), "utf8"));
+const operatorCatalog = JSON.parse(await fs.readFile(new URL("../data/operators.json", import.meta.url), "utf8"));
 
 test("MAA Japanese operator OCR map keeps raw CharsNameOcrReplace rules", () => {
   assert.equal(operatorOcrMap.source.project, "MaaAssistantArknights/MaaAssistantArknights");
@@ -39,4 +40,37 @@ test("MAA Japanese operator OCR map includes OCR equivalence classes and recruit
   assert.ok(operatorOcrMap.equivalenceClasses.some((group) => group.includes("夕") && group.includes("タ")));
   assert.ok(operatorOcrMap.publicRecruitmentOperators.some((operator) => operator.name === "ジャスティスナイト"));
   assert.ok(operatorOcrMap.summary.publicRecruitmentOperatorCount >= 150);
+});
+
+test("operator catalog exposes current JP additions and keeps future operators hidden", () => {
+  const operatorsById = new Map(operatorCatalog.operators.map((operator) => [operator.id, operator]));
+
+  for (const id of ["bellone", "ripresa"]) {
+    const operator = operatorsById.get(id);
+    assert.ok(operator, `${id} must exist in the operator catalog`);
+    assert.equal(operator.isJapanUnreleased, false);
+    assert.equal(operator.hiddenByDefault, false);
+  }
+
+  for (const id of ["mechanist", "thumpy", "angelina2", "jacinta", "timeslot"]) {
+    const operator = operatorsById.get(id);
+    assert.ok(operator, `${id} must exist in the operator catalog`);
+    assert.equal(operator.isJapanUnreleased, true);
+    assert.equal(operator.hiddenByDefault, true);
+  }
+
+  assert.equal(operatorOcrMap.summary.localOperatorCount, operatorCatalog.operators.length);
+  assert.equal(operatorOcrMap.summary.invalidRegexRules, 0);
+});
+
+test("MAA Japanese operator OCR map recognizes current JP additions", () => {
+  const bellone = operatorOcrMap.rules.find((rule) => rule.pattern === "ベッローネ");
+  assert.ok(bellone);
+  assert.equal(bellone.maaReplacement, "贝洛内");
+  assert.deepEqual(bellone.localMatches.map((operator) => operator.id), ["bellone"]);
+
+  const ripresa = operatorOcrMap.rules.find((rule) => rule.pattern === "リプレーザ");
+  assert.ok(ripresa);
+  assert.equal(ripresa.maaReplacement, "复奏");
+  assert.deepEqual(ripresa.localMatches.map((operator) => operator.id), ["ripresa"]);
 });

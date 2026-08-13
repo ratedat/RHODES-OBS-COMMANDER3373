@@ -152,7 +152,7 @@
 
             <Expander Header="ROI調整 (開発者向け)">
               <StackPanel Spacing="8" Margin="0,8,0,0">
-                <Border CornerRadius="7" Padding="9" Background="#151913" BorderBrush="#3A4528" BorderThickness="1">
+                <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchWarningSurface}" BorderBrush="{StaticResource WorkbenchWarning}" BorderThickness="1">
                   <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
                     <TextBlock Text="{Binding SelectedRoiEditDraft.StatusLabel}" FontSize="13" FontWeight="SemiBold" />
                     <TextBlock Grid.Column="1" Text="{Binding SelectedRoiEditDraft.RoiJson}" Classes="mono" />
@@ -182,7 +182,7 @@
                   </Grid>
                 </Border>
 
-                <Border CornerRadius="7" Padding="9" Background="#121A1C" BorderBrush="#2E4448" BorderThickness="1">
+                <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                   <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
                     <TextBlock Text="表示中ROI一括" FontSize="13" FontWeight="SemiBold" />
                     <Button Grid.Column="1" Content="全選択" Command="{Binding IncludeAllRoiBatchDraftsCommand}" Padding="8,3" />
@@ -220,7 +220,7 @@
                   </Grid>
                 </Border>
 
-                <Border CornerRadius="7" Padding="9" Background="#131719" BorderBrush="#334147" BorderThickness="1">
+                <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                   <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
                     <TextBlock Text="ROI調整セッション" FontSize="13" FontWeight="SemiBold" />
                     <Button Grid.Column="1" Content="更新" Command="{Binding RefreshRoiAdjustmentSessionsCommand}" Padding="8,3" />
@@ -239,7 +239,7 @@
                   </Grid>
                 </Border>
 
-                <Border CornerRadius="7" Padding="9" Background="#151915" BorderBrush="#3B4730" BorderThickness="1">
+                <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchSuccessSurface}" BorderBrush="{StaticResource WorkbenchSuccess}" BorderThickness="1">
                   <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
                     <TextBlock Text="調整後再スキャン比較" FontSize="13" FontWeight="SemiBold" />
                     <Button Grid.Column="1" Content="再スキャン比較" Command="{Binding RunRoiRescanComparisonCommand}" Padding="8,3" />
@@ -256,7 +256,7 @@
                     <ListBox Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding RoiRescanComparisonRows}" SelectedItem="{Binding SelectedRoiRescanComparisonRow, Mode=TwoWay}" MaxHeight="132" Background="Transparent" BorderThickness="0" Padding="0">
                       <ListBox.ItemTemplate>
                         <DataTemplate>
-                          <Border CornerRadius="6" Padding="8" Background="#101514" BorderBrush="#2F3A30" BorderThickness="1" Margin="0,0,0,6">
+                          <Border CornerRadius="6" Padding="8" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" Margin="0,0,0,6">
                             <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" RowSpacing="2">
                               <TextBlock Text="{Binding StateLabel}" FontSize="11" FontWeight="SemiBold" Opacity="0.82" />
                               <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -269,7 +269,7 @@
                         </DataTemplate>
                       </ListBox.ItemTemplate>
                     </ListBox>
-                    <TreeView Grid.Row="5" Grid.ColumnSpan="2" ItemsSource="{Binding RoiRescanEvidencePreviewNodes}" SelectedItem="{Binding SelectedRoiRescanEvidencePreviewNode, Mode=TwoWay}" MaxHeight="180" Background="#0E1212" BorderBrush="#2F3A30" BorderThickness="1" Padding="4">
+                    <TreeView Grid.Row="5" Grid.ColumnSpan="2" ItemsSource="{Binding RoiRescanEvidencePreviewNodes}" SelectedItem="{Binding SelectedRoiRescanEvidencePreviewNode, Mode=TwoWay}" MaxHeight="180" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" Padding="4">
                       <TreeView.ItemTemplate>
                         <TreeDataTemplate ItemsSource="{Binding SafeChildren}">
                           <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="8">
@@ -280,7 +280,7 @@
                         </TreeDataTemplate>
                       </TreeView.ItemTemplate>
                     </TreeView>
-                    <TextBox Grid.Row="6" Grid.ColumnSpan="2" Text="{Binding RoiRescanEvidencePreviewText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="10" MaxHeight="160" Background="#0E1212" BorderBrush="#2F3A30" BorderThickness="1" />
+                    <TextBox Grid.Row="6" Grid.ColumnSpan="2" Text="{Binding RoiRescanEvidencePreviewText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="10" MaxHeight="160" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" />
                   </Grid>
                 </Border>
 
@@ -289,7 +289,7 @@
                 <ListBox ItemsSource="{Binding RoiPreviewRows}" SelectedItem="{Binding SelectedRoiPreviewRow, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
-                      <Border CornerRadius="7" Padding="9" Background="#171B22" BorderBrush="#354052" BorderThickness="1" Margin="0,0,0,8">
+                      <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchSelection}" BorderBrush="{StaticResource WorkbenchAccent}" BorderThickness="1" Margin="0,0,0,8">
                         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="3">
                           <TextBlock Text="{Binding DisplayTitle}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
                           <TextBlock Grid.Column="1" Text="{Binding EditKindLabel}" FontSize="11" Opacity="0.78" />
@@ -317,7 +317,7 @@
             <ListBox ItemsSource="{Binding CandidateResults}" SelectedItem="{Binding SelectedCandidateResult, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">
               <ListBox.ItemTemplate>
                 <DataTemplate>
-                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#132021" BorderBrush="#2B4547" BorderThickness="1">
+                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                     <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="80,*,90" ColumnSpacing="8">
                       <TextBlock Text="{Binding Kind}" Classes="caption" />
                       <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" />
@@ -357,7 +357,7 @@
                 <ItemsControl ItemsSource="{Binding RecognitionScanHistory}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Border CornerRadius="7" Padding="8" Margin="0,0,0,6" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+                      <Border CornerRadius="7" Padding="8" Margin="0,0,0,6" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" RowSpacing="3">
                           <TextBlock Text="{Binding DisplayProfile}" FontSize="13" FontWeight="SemiBold" />
                           <TextBlock Grid.Column="1" Text="{Binding TimestampLabel}" Classes="mono" />
@@ -376,7 +376,7 @@
                 <ListBox ItemsSource="{Binding OcrDetailRows}" SelectedItem="{Binding SelectedOcrDetailRow, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
-                      <Border CornerRadius="7" Padding="9" Background="#132021" BorderBrush="#2B4547" BorderThickness="1" Margin="0,0,0,8">
+                      <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" Margin="0,0,0,8">
                         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                           <TextBlock Text="{Binding Text}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
                           <TextBlock Grid.Column="1" Text="{Binding ScoreLabel}" Classes="mono" />
@@ -389,7 +389,7 @@
                 <ListBox ItemsSource="{Binding RecognitionScanLogRows}" SelectedItem="{Binding SelectedRecognitionScanLogRow, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
-                      <Border CornerRadius="7" Padding="9" Background="#101617" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                      <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" Margin="0,0,0,8">
                         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                           <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" />
                           <TextBlock Grid.Column="1" Text="{Binding At}" Classes="mono" />

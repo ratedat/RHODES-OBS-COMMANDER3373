@@ -292,6 +292,13 @@ test("relic tap area avoids the inactive count edge", async () => {
   assert.ok(tap.area.x + tap.area.width <= 215, "relic tap should stay inside the right side of the button");
 });
 
+test("operator restore waits for the map before the next profile tap", async () => {
+  const profiles = await profilesById();
+  const restoreWait = (profiles.get("operatorsFull").restoreSteps || []).find((step) => step.type === "wait");
+
+  assert.ok(restoreWait.durationMs >= 600, "operator close animation must finish before relic navigation starts");
+});
+
 test("vertical full scan profiles sweep down and back up without Android edge gestures", async () => {
   const profiles = await profilesById();
 

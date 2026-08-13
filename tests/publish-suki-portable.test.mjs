@@ -43,6 +43,9 @@ test("output CSS guide documents the supported customization contract", () => {
   assert.match(guide, /--overlay-font-color/);
   assert.match(guide, /--overlay-background-rgb/);
   assert.match(guide, /--overlay-background-alpha/);
+  assert.match(guide, /--overlay-canvas-background-rgb/);
+  assert.match(guide, /--overlay-canvas-background-alpha/);
+  assert.match(guide, /透明キャンバス.*半透明枠/u);
   assert.match(guide, /\.overlay-part-status/);
   assert.match(guide, /\.overlay-part-special/);
   assert.match(guide, /@import/);
@@ -64,6 +67,10 @@ test("interactive HTML CSS guide is self-contained and shows concrete overlay ex
   assert.match(guide, /id="overlay-demo"/u);
   assert.match(guide, /id="generated-css"/u);
   assert.match(guide, /--overlay-font-color/);
+  assert.match(guide, /--overlay-canvas-background-rgb/);
+  assert.match(guide, /透明キャンバス.*半透明枠/u);
+  assert.match(guide, /setProperty\("--overlay-canvas-background-alpha"/);
+  assert.match(guide, /setProperty\("--overlay-background-alpha"/);
   assert.match(guide, /\.overlay-part-operators/);
   assert.match(guide, /@font-face/);
   assert.match(guide, /background-image: url/u);

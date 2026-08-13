@@ -205,12 +205,16 @@ public static class RhodesStateApiClient
         preferences["sukiOutputTournamentMode"] = outputPreferences.TournamentMode;
         preferences["sukiOutputBackgroundEnabled"] = outputPreferences.BackgroundEnabled;
         preferences["sukiOutputBackgroundOpacity"] = Math.Clamp(outputPreferences.BackgroundOpacity, 0, 100);
+        preferences["sukiOutputCanvasBackgroundEnabled"] = outputPreferences.CanvasBackgroundEnabled;
+        preferences["sukiOutputCanvasBackgroundOpacity"] = outputPreferences.CanvasBackgroundOpacity;
         preferences["sukiOutputShowPartTitles"] = outputPreferences.ShowPartTitles;
         preferences["sukiOutputSchemaVersion"] = outputPreferences.SchemaVersion;
         preferences["sukiOutputIntegratedAppearance"] = ToOutputAppearanceJson(outputPreferences.IntegratedAppearance);
         preferences["sukiOutputIndividualTournamentMode"] = outputPreferences.IndividualTournamentMode;
         preferences["sukiOutputIndividualBackgroundEnabled"] = outputPreferences.IndividualBackgroundEnabled;
         preferences["sukiOutputIndividualBackgroundOpacity"] = outputPreferences.IndividualBackgroundOpacity;
+        preferences["sukiOutputIndividualCanvasBackgroundEnabled"] = outputPreferences.IndividualCanvasBackgroundEnabled;
+        preferences["sukiOutputIndividualCanvasBackgroundOpacity"] = outputPreferences.IndividualCanvasBackgroundOpacity;
         preferences["sukiOutputIndividualShowPartTitles"] = outputPreferences.IndividualShowPartTitles;
         preferences["sukiOutputIndividualScrollSpeed"] = outputPreferences.IndividualScrollSpeed;
         preferences["sukiOutputIndividualAppearance"] = ToOutputAppearanceJson(outputPreferences.IndividualAppearance);
@@ -341,6 +345,7 @@ public static class RhodesStateApiClient
         {
             ["fontColor"] = normalized.FontColor,
             ["backgroundColor"] = normalized.BackgroundColor,
+            ["canvasBackgroundColor"] = normalized.CanvasBackgroundColor,
             ["borderColor"] = normalized.BorderColor,
             ["accentColor"] = normalized.AccentColor,
             ["fontSizePercent"] = normalized.FontSizePercent,

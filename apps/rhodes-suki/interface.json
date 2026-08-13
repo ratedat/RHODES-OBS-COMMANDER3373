@@ -1,16 +1,20 @@
 {
   "interface_version": 2,
+  "languages": {
+    "ja_jp": "interface_ja_jp.json",
+    "en_us": "interface_en_us.json"
+  },
   "name": "rhodes_obs_commander3373",
-  "label": "RHODES OBS COMMANDER3373",
-  "title": "RHODES OBS COMMANDER3373",
+  "label": "$project.label",
+  "title": "$project.title",
   "version": "0.1.0",
   "github": "https://github.com/ratedat/RHODES-OBS-COMMANDER3373",
   "license": "AGPL-3.0-only",
-  "description": "MAAFramework resource shell for Arknights Integrated Strategies OCR and OBS support. Fixed coordinate base: 1280x720. Target policy: data/recognition/maa-recognition-target-policy.json.",
+  "description": "$project.description",
   "controller": [
     {
       "name": "android_adb",
-      "label": "Android / Google Play Games / Emulator ADB",
+      "label": "$controller.android_adb.label",
       "type": "Adb",
       "display_short_side": 720,
       "adb": {}
@@ -19,117 +23,118 @@
   "resource": [
     {
       "name": "base",
-      "label": "RHODES Base 1280x720",
+      "label": "$resource.base.label",
       "path": [
         "resource/base"
       ],
       "controller": [
         "android_adb"
-      ]
+      ],
+      "hash": "4ae67899c1c9d326"
     }
   ],
   "group": [
     {
       "name": "runStatusFull",
-      "label": "基礎情報",
-      "description": "源石錐、等級、分隊、ISごとの特殊値を取得します。 target policy: data/recognition/maa-recognition-target-policy.json",
+      "label": "$group.runStatusFull.label",
+      "description": "$group.runStatusFull.description",
       "default_expand": true
     },
     {
       "name": "operatorsFull",
-      "label": "オペレーター",
-      "description": "招集済みオペレーターを取得します。",
+      "label": "$group.operatorsFull.label",
+      "description": "$group.operatorsFull.description",
       "default_expand": true
     },
     {
       "name": "relicsFull",
-      "label": "秘宝",
-      "description": "所持秘宝を取得します。",
+      "label": "$group.relicsFull.label",
+      "description": "$group.relicsFull.description",
       "default_expand": true
     },
     {
       "name": "is4RevelationFull",
-      "label": "啓示",
-      "description": "IS#4の啓示を取得します。",
+      "label": "$group.is4RevelationFull.label",
+      "description": "$group.is4RevelationFull.description",
       "default_expand": false
     },
     {
       "name": "is4ParadigmLost",
-      "label": "パラダイムロスト",
-      "description": "IS#4で発動中のパラダイムロストを取得します。",
+      "label": "$group.is4ParadigmLost.label",
+      "description": "$group.is4ParadigmLost.description",
       "default_expand": false
     },
     {
       "name": "is5ThoughtFull",
-      "label": "思案",
-      "description": "IS#5の思案を取得します。",
+      "label": "$group.is5ThoughtFull.label",
+      "description": "$group.is5ThoughtFull.description",
       "default_expand": false
     },
     {
       "name": "is5AgeFull",
-      "label": "時代",
-      "description": "IS#5の時代を取得します。",
+      "label": "$group.is5AgeFull.label",
+      "description": "$group.is5AgeFull.description",
       "default_expand": false
     },
     {
       "name": "is2HallucinationsFull",
-      "label": "幻覚",
-      "description": "IS#2の上部中央に表示される幻覚を複数件まとめて取得します。",
+      "label": "$group.is2HallucinationsFull.label",
+      "description": "$group.is2HallucinationsFull.description",
       "default_expand": false
     },
     {
       "name": "is2PerformanceFull",
-      "label": "演目",
-      "description": "IS#2の画面下部中央に表示される現在の演目を1件取得します。",
+      "label": "$group.is2PerformanceFull.label",
+      "description": "$group.is2PerformanceFull.description",
       "default_expand": false
     },
     {
       "name": "is3KeyFull",
-      "label": "源石錐・鍵",
-      "description": "IS#3の右上に表示される源石錐と鍵の所持数を取得します。",
+      "label": "$group.is3KeyFull.label",
+      "description": "$group.is3KeyFull.description",
       "default_expand": false
     },
     {
       "name": "is3LightHordeFull",
-      "label": "灯火・大群",
-      "description": "IS#3の灯火と、複数発動する大群の呼び声を取得します。",
+      "label": "$group.is3LightHordeFull.label",
+      "description": "$group.is3LightHordeFull.description",
       "default_expand": false
     },
     {
       "name": "is3RejectionFull",
-      "label": "拒絶反応・啓示",
-      "description": "IS#3の共用詳細パネルを文字認識し、拒絶反応は1件、啓示は複数件を取得します。拒絶反応の影響対象は続くオペレーター取得でカード背景から判定します。",
+      "label": "$group.is3RejectionFull.label",
+      "description": "$group.is3RejectionFull.description",
       "default_expand": false
     },
     {
       "name": "is6BaseFull",
-      "label": "源石錐・遊覧券",
-      "description": "IS#6の右上に表示される源石錐と遊覧券の所持数を取得します。",
+      "label": "$group.is6BaseFull.label",
+      "description": "$group.is6BaseFull.description",
       "default_expand": false
     },
     {
       "name": "is6ActiveCoinsFull",
-      "label": "有効銭",
-      "description": "IS#6の有効銭パネルを開き、正式名称をMAA-OCRで取得します。",
+      "label": "$group.is6ActiveCoinsFull.label",
+      "description": "$group.is6ActiveCoinsFull.description",
       "default_expand": false
     },
     {
       "name": "is6SeasonalHours",
-      "label": "歳時",
-      "description": "IS#6の現在の歳時を名称・状態・効果文から取得します。画面に醒覚が表示されている場合は通常段階より優先します。",
+      "label": "$group.is6SeasonalHours.label",
+      "description": "$group.is6SeasonalHours.description",
       "default_expand": false
     },
     {
       "name": "is6CoinsFull",
-      "label": "保有銭",
-      "description": "IS#6の銭匣を開き、保有銭を取得します。",
+      "label": "$group.is6CoinsFull.label",
+      "description": "$group.is6CoinsFull.description",
       "default_expand": false
     }
   ],
   "task": [
     {
       "name": "rhodes_probe",
-      "label": "Probe",
+      "label": "$task.rhodes_probe.label",
       "entry": "RhodesProbe",
       "controller": [
         "android_adb"
@@ -137,11 +142,11 @@
       "resource": [
         "base"
       ],
-      "description": "MAAFramework接続確認用のDirectHitタスクです。 / DirectHit"
+      "description": "$task.rhodes_probe.description"
     },
     {
       "name": "rhodes_run_status_idea_icon",
-      "label": "基本情報: 構想アイコン",
+      "label": "$task.rhodes_run_status_idea_icon.label",
       "entry": "RhodesRunStatusIdeaIcon",
       "controller": [
         "android_adb"
@@ -149,14 +154,14 @@
       "resource": [
         "base"
       ],
-      "description": "構想値の基準点になるアイコンTemplateMatchです。 / TemplateMatch",
+      "description": "$task.rhodes_run_status_idea_icon.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_run_status_ingot_icon",
-      "label": "基本情報: 源石錐アイコン",
+      "label": "$task.rhodes_run_status_ingot_icon.label",
       "entry": "RhodesRunStatusIngotIcon",
       "controller": [
         "android_adb"
@@ -164,14 +169,14 @@
       "resource": [
         "base"
       ],
-      "description": "源石錐の基準点になるアイコンTemplateMatchです。 / TemplateMatch",
+      "description": "$task.rhodes_run_status_ingot_icon.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_operator_codename_flag",
-      "label": "オペレーター: CODENAME",
+      "label": "$task.rhodes_operator_codename_flag.label",
       "entry": "RhodesOperatorCodenameFlag",
       "controller": [
         "android_adb"
@@ -179,14 +184,14 @@
       "resource": [
         "base"
       ],
-      "description": "招集カード内のCODENAME目印をMAA TemplateMatchで検出します。 / TemplateMatch",
+      "description": "$task.rhodes_operator_codename_flag.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_operator_name_ocr",
-      "label": "オペレーター: 名前OCR",
+      "label": "$task.rhodes_operator_name_ocr.label",
       "entry": "RhodesOperatorNameOcr",
       "controller": [
         "android_adb"
@@ -194,14 +199,14 @@
       "resource": [
         "base"
       ],
-      "description": "招集カード領域をMAA-OCRで読ませます。 / OCR",
+      "description": "$task.rhodes_operator_name_ocr.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_relic_button",
-      "label": "画面判定: 秘宝ボタン",
+      "label": "$task.rhodes_relic_button.label",
       "entry": "RhodesRelicButton",
       "controller": [
         "android_adb"
@@ -209,14 +214,14 @@
       "resource": [
         "base"
       ],
-      "description": "マップ下部の秘宝ボタンをMAA TemplateMatchで検出します。 / TemplateMatch",
+      "description": "$task.rhodes_relic_button.description",
       "group": [
         "relicsFull"
       ]
     },
     {
       "name": "rhodes_operator_button",
-      "label": "画面判定: 隊員ボタン",
+      "label": "$task.rhodes_operator_button.label",
       "entry": "RhodesOperatorButton",
       "controller": [
         "android_adb"
@@ -224,14 +229,14 @@
       "resource": [
         "base"
       ],
-      "description": "マップ下部の隊員ボタンをMAA TemplateMatchで検出します。 / TemplateMatch",
+      "description": "$task.rhodes_operator_button.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_thought_button",
-      "label": "画面判定: 思案ボタン",
+      "label": "$task.rhodes_thought_button.label",
       "entry": "RhodesThoughtButton",
       "controller": [
         "android_adb"
@@ -239,14 +244,14 @@
       "resource": [
         "base"
       ],
-      "description": "マップ下部の思案ボタンをMAA TemplateMatchで検出します。 / TemplateMatch",
+      "description": "$task.rhodes_thought_button.description",
       "group": [
         "is5ThoughtFull"
       ]
     },
     {
       "name": "rhodes_screen_run_squad_info_panel",
-      "label": "生成: 分隊情報パネル",
+      "label": "$task.rhodes_screen_run_squad_info_panel.label",
       "entry": "RhodesScreen_run_squad_info_panel",
       "controller": [
         "android_adb"
@@ -254,14 +259,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.squad_info_panel / profiles: runStatusFull",
+      "description": "$task.rhodes_screen_run_squad_info_panel.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_screen_run_operator_list",
-      "label": "生成: オペレーター一覧",
+      "label": "$task.rhodes_screen_run_operator_list.label",
       "entry": "RhodesScreen_run_operator_list",
       "controller": [
         "android_adb"
@@ -269,14 +274,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.operator_list / profiles: operatorsFull",
+      "description": "$task.rhodes_screen_run_operator_list.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_screen_run_sarkaz_age_detail",
-      "label": "生成: サルカズ 時代詳細",
+      "label": "$task.rhodes_screen_run_sarkaz_age_detail.label",
       "entry": "RhodesScreen_run_sarkaz_age_detail",
       "controller": [
         "android_adb"
@@ -284,14 +289,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.sarkaz_age_detail / profiles: is5AgeFull",
+      "description": "$task.rhodes_screen_run_sarkaz_age_detail.description",
       "group": [
         "is5AgeFull"
       ]
     },
     {
       "name": "rhodes_screen_run_map_footer",
-      "label": "生成: マップ下部フッター",
+      "label": "$task.rhodes_screen_run_map_footer.label",
       "entry": "RhodesScreen_run_map_footer",
       "controller": [
         "android_adb"
@@ -299,7 +304,7 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.map_footer / profiles: runStatusFull, operatorsFull, relicsFull, is4RevelationFull, is4ParadigmLost, is5ThoughtFull, is5AgeFull, is2HallucinationsFull, is2PerformanceFull, is3KeyFull, is3LightHordeFull, is3RejectionFull, is6BaseFull, is6ActiveCoinsFull, is6CoinsFull, is6SeasonalHours",
+      "description": "$task.rhodes_screen_run_map_footer.description",
       "group": [
         "runStatusFull",
         "operatorsFull",
@@ -321,7 +326,7 @@
     },
     {
       "name": "rhodes_screen_run_map_footer_relic",
-      "label": "生成: マップ下部フッター 秘宝ボタン",
+      "label": "$task.rhodes_screen_run_map_footer_relic.label",
       "entry": "RhodesScreen_run_map_footer_relic",
       "controller": [
         "android_adb"
@@ -329,14 +334,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / run.map_footer.relic / profiles: relicsFull",
+      "description": "$task.rhodes_screen_run_map_footer_relic.description",
       "group": [
         "relicsFull"
       ]
     },
     {
       "name": "rhodes_screen_relic_list",
-      "label": "生成: 秘宝一覧 閉じるボタン",
+      "label": "$task.rhodes_screen_relic_list.label",
       "entry": "RhodesScreen_relic_list",
       "controller": [
         "android_adb"
@@ -344,14 +349,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.screens / relic.list / profiles: relicsFull",
+      "description": "$task.rhodes_screen_relic_list.description",
       "group": [
         "relicsFull"
       ]
     },
     {
       "name": "rhodes_candidate_is5_sarkaz_map_select_campaign",
-      "label": "生成: IS#5 campaign marker",
+      "label": "$task.rhodes_candidate_is5_sarkaz_map_select_campaign.label",
       "entry": "RhodesCandidate_is5_sarkaz_map_select_campaign",
       "controller": [
         "android_adb"
@@ -359,14 +364,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.candidates / is5.sarkaz.map_select.campaign / profiles: runStatusFull",
+      "description": "$task.rhodes_candidate_is5_sarkaz_map_select_campaign.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_run_ingot",
-      "label": "生成: run.ingot",
+      "label": "$task.rhodes_ocr_region_run_ingot.label",
       "entry": "RhodesOcrRegion_run_ingot",
       "controller": [
         "android_adb"
@@ -374,14 +379,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.ingot / profiles: runStatusFull",
+      "description": "$task.rhodes_ocr_region_run_ingot.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_run_operator_count",
-      "label": "生成: run.operator_count",
+      "label": "$task.rhodes_ocr_region_run_operator_count.label",
       "entry": "RhodesOcrRegion_run_operator_count",
       "controller": [
         "android_adb"
@@ -389,14 +394,30 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.operator_count / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_run_operator_count.description",
       "group": [
-        "operatorsFull"
+        "operatorsFull",
+        "relicsFull"
+      ]
+    },
+    {
+      "name": "rhodes_ocr_region_run_relic_count_marker",
+      "label": "$task.rhodes_ocr_region_run_relic_count_marker.label",
+      "entry": "RhodesOcrRegion_run_relic_count_marker",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "$task.rhodes_ocr_region_run_relic_count_marker.description",
+      "group": [
+        "relicsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_run_idea",
-      "label": "生成: run.idea",
+      "label": "$task.rhodes_ocr_region_run_idea.label",
       "entry": "RhodesOcrRegion_run_idea",
       "controller": [
         "android_adb"
@@ -404,14 +425,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.idea / profiles: runStatusFull",
+      "description": "$task.rhodes_ocr_region_run_idea.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_run_idea_current",
-      "label": "生成: run.idea.current",
+      "label": "$task.rhodes_ocr_region_run_idea_current.label",
       "entry": "RhodesOcrRegion_run_idea_current",
       "controller": [
         "android_adb"
@@ -419,14 +440,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.idea.current / profiles: runStatusFull",
+      "description": "$task.rhodes_ocr_region_run_idea_current.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_run_squad_card",
-      "label": "生成: run.squad_card",
+      "label": "$task.rhodes_ocr_region_run_squad_card.label",
       "entry": "RhodesOcrRegion_run_squad_card",
       "controller": [
         "android_adb"
@@ -434,14 +455,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.squad_card / profiles: runStatusFull",
+      "description": "$task.rhodes_ocr_region_run_squad_card.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_run_squad_name",
-      "label": "生成: run.squad_name",
+      "label": "$task.rhodes_ocr_region_run_squad_name.label",
       "entry": "RhodesOcrRegion_run_squad_name",
       "controller": [
         "android_adb"
@@ -449,14 +470,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.squad_name / profiles: runStatusFull",
+      "description": "$task.rhodes_ocr_region_run_squad_name.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_run_difficulty_grade",
-      "label": "生成: run.difficulty_grade",
+      "label": "$task.rhodes_ocr_region_run_difficulty_grade.label",
       "entry": "RhodesOcrRegion_run_difficulty_grade",
       "controller": [
         "android_adb"
@@ -464,14 +485,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_grade / profiles: runStatusFull",
+      "description": "$task.rhodes_ocr_region_run_difficulty_grade.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_run_difficulty_block",
-      "label": "生成: run.difficulty_block",
+      "label": "$task.rhodes_ocr_region_run_difficulty_block.label",
       "entry": "RhodesOcrRegion_run_difficulty_block",
       "controller": [
         "android_adb"
@@ -479,11 +500,11 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / run.difficulty_block"
+      "description": "$task.rhodes_ocr_region_run_difficulty_block.description"
     },
     {
       "name": "rhodes_ocr_region_relic_list_text",
-      "label": "生成: relic.list_text",
+      "label": "$task.rhodes_ocr_region_relic_list_text.label",
       "entry": "RhodesOcrRegion_relic_list_text",
       "controller": [
         "android_adb"
@@ -491,14 +512,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / relic.list_text / profiles: relicsFull",
+      "description": "$task.rhodes_ocr_region_relic_list_text.description",
       "group": [
         "relicsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_relic_detail_name",
-      "label": "生成: relic.detail_name",
+      "label": "$task.rhodes_ocr_region_relic_detail_name.label",
       "entry": "RhodesOcrRegion_relic_detail_name",
       "controller": [
         "android_adb"
@@ -506,14 +527,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / relic.detail_name / profiles: relicsFull",
+      "description": "$task.rhodes_ocr_region_relic_detail_name.description",
       "group": [
         "relicsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is4_revelation_list_text",
-      "label": "生成: is4.revelation_list_text",
+      "label": "$task.rhodes_ocr_region_is4_revelation_list_text.label",
       "entry": "RhodesOcrRegion_is4_revelation_list_text",
       "controller": [
         "android_adb"
@@ -521,14 +542,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is4.revelation_list_text / profiles: is4RevelationFull",
+      "description": "$task.rhodes_ocr_region_is4_revelation_list_text.description",
       "group": [
         "is4RevelationFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is4_paradigm_lost_text",
-      "label": "生成: is4.paradigm_lost_text",
+      "label": "$task.rhodes_ocr_region_is4_paradigm_lost_text.label",
       "entry": "RhodesOcrRegion_is4_paradigm_lost_text",
       "controller": [
         "android_adb"
@@ -536,14 +557,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is4.paradigm_lost_text / profiles: is4ParadigmLost",
+      "description": "$task.rhodes_ocr_region_is4_paradigm_lost_text.description",
       "group": [
         "is4ParadigmLost"
       ]
     },
     {
       "name": "rhodes_ocr_region_is5_thought_load_current",
-      "label": "生成: is5.thought_load.current",
+      "label": "$task.rhodes_ocr_region_is5_thought_load_current.label",
       "entry": "RhodesOcrRegion_is5_thought_load_current",
       "controller": [
         "android_adb"
@@ -551,14 +572,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is5.thought_load.current / profiles: is5ThoughtFull",
+      "description": "$task.rhodes_ocr_region_is5_thought_load_current.description",
       "group": [
         "is5ThoughtFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is5_thought_list_text",
-      "label": "生成: is5.thought_list_text",
+      "label": "$task.rhodes_ocr_region_is5_thought_list_text.label",
       "entry": "RhodesOcrRegion_is5_thought_list_text",
       "controller": [
         "android_adb"
@@ -566,14 +587,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is5.thought_list_text / profiles: is5ThoughtFull",
+      "description": "$task.rhodes_ocr_region_is5_thought_list_text.description",
       "group": [
         "is5ThoughtFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is6_active_coin_list_text",
-      "label": "生成: is6.active_coin_list_text",
+      "label": "$task.rhodes_ocr_region_is6_active_coin_list_text.label",
       "entry": "RhodesOcrRegion_is6_active_coin_list_text",
       "controller": [
         "android_adb"
@@ -581,14 +602,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is6.active_coin_list_text / profiles: is6ActiveCoinsFull",
+      "description": "$task.rhodes_ocr_region_is6_active_coin_list_text.description",
       "group": [
         "is6ActiveCoinsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is6_seasonal_hour_detail_text",
-      "label": "生成: is6.seasonal_hour_detail_text",
+      "label": "$task.rhodes_ocr_region_is6_seasonal_hour_detail_text.label",
       "entry": "RhodesOcrRegion_is6_seasonal_hour_detail_text",
       "controller": [
         "android_adb"
@@ -596,14 +617,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is6.seasonal_hour_detail_text / profiles: is6SeasonalHours",
+      "description": "$task.rhodes_ocr_region_is6_seasonal_hour_detail_text.description",
       "group": [
         "is6SeasonalHours"
       ]
     },
     {
       "name": "rhodes_ocr_region_is6_coin_list_text",
-      "label": "生成: is6.coin_list_text",
+      "label": "$task.rhodes_ocr_region_is6_coin_list_text.label",
       "entry": "RhodesOcrRegion_is6_coin_list_text",
       "controller": [
         "android_adb"
@@ -611,14 +632,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is6.coin_list_text / profiles: is6CoinsFull",
+      "description": "$task.rhodes_ocr_region_is6_coin_list_text.description",
       "group": [
         "is6CoinsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_list_text",
-      "label": "生成: operator.list_text",
+      "label": "$task.rhodes_ocr_region_operator_list_text.label",
       "entry": "RhodesOcrRegion_operator_list_text",
       "controller": [
         "android_adb"
@@ -626,14 +647,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.list_text / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_list_text.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_left_1",
-      "label": "生成: operator.name.left.1",
+      "label": "$task.rhodes_ocr_region_operator_name_left_1.label",
       "entry": "RhodesOcrRegion_operator_name_left_1",
       "controller": [
         "android_adb"
@@ -641,14 +662,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.1 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_left_1.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_center_1",
-      "label": "生成: operator.name.center.1",
+      "label": "$task.rhodes_ocr_region_operator_name_center_1.label",
       "entry": "RhodesOcrRegion_operator_name_center_1",
       "controller": [
         "android_adb"
@@ -656,14 +677,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.1 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_center_1.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_right_1",
-      "label": "生成: operator.name.right.1",
+      "label": "$task.rhodes_ocr_region_operator_name_right_1.label",
       "entry": "RhodesOcrRegion_operator_name_right_1",
       "controller": [
         "android_adb"
@@ -671,14 +692,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.1 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_right_1.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_left_2",
-      "label": "生成: operator.name.left.2",
+      "label": "$task.rhodes_ocr_region_operator_name_left_2.label",
       "entry": "RhodesOcrRegion_operator_name_left_2",
       "controller": [
         "android_adb"
@@ -686,14 +707,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.2 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_left_2.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_center_2",
-      "label": "生成: operator.name.center.2",
+      "label": "$task.rhodes_ocr_region_operator_name_center_2.label",
       "entry": "RhodesOcrRegion_operator_name_center_2",
       "controller": [
         "android_adb"
@@ -701,14 +722,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.2 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_center_2.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_right_2",
-      "label": "生成: operator.name.right.2",
+      "label": "$task.rhodes_ocr_region_operator_name_right_2.label",
       "entry": "RhodesOcrRegion_operator_name_right_2",
       "controller": [
         "android_adb"
@@ -716,14 +737,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.2 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_right_2.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_left_3",
-      "label": "生成: operator.name.left.3",
+      "label": "$task.rhodes_ocr_region_operator_name_left_3.label",
       "entry": "RhodesOcrRegion_operator_name_left_3",
       "controller": [
         "android_adb"
@@ -731,14 +752,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.3 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_left_3.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_center_3",
-      "label": "生成: operator.name.center.3",
+      "label": "$task.rhodes_ocr_region_operator_name_center_3.label",
       "entry": "RhodesOcrRegion_operator_name_center_3",
       "controller": [
         "android_adb"
@@ -746,14 +767,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.3 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_center_3.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_right_3",
-      "label": "生成: operator.name.right.3",
+      "label": "$task.rhodes_ocr_region_operator_name_right_3.label",
       "entry": "RhodesOcrRegion_operator_name_right_3",
       "controller": [
         "android_adb"
@@ -761,14 +782,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.3 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_right_3.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_left_4",
-      "label": "生成: operator.name.left.4",
+      "label": "$task.rhodes_ocr_region_operator_name_left_4.label",
       "entry": "RhodesOcrRegion_operator_name_left_4",
       "controller": [
         "android_adb"
@@ -776,14 +797,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.left.4 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_left_4.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_center_4",
-      "label": "生成: operator.name.center.4",
+      "label": "$task.rhodes_ocr_region_operator_name_center_4.label",
       "entry": "RhodesOcrRegion_operator_name_center_4",
       "controller": [
         "android_adb"
@@ -791,14 +812,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.center.4 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_center_4.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_operator_name_right_4",
-      "label": "生成: operator.name.right.4",
+      "label": "$task.rhodes_ocr_region_operator_name_right_4.label",
       "entry": "RhodesOcrRegion_operator_name_right_4",
       "controller": [
         "android_adb"
@@ -806,14 +827,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / operator.name.right.4 / profiles: operatorsFull",
+      "description": "$task.rhodes_ocr_region_operator_name_right_4.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is5_age_detail_text",
-      "label": "生成: is5.age_detail_text",
+      "label": "$task.rhodes_ocr_region_is5_age_detail_text.label",
       "entry": "RhodesOcrRegion_is5_age_detail_text",
       "controller": [
         "android_adb"
@@ -821,14 +842,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is5.age_detail_text / profiles: is5AgeFull",
+      "description": "$task.rhodes_ocr_region_is5_age_detail_text.description",
       "group": [
         "is5AgeFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is3_ingot_value",
-      "label": "生成: is3.ingot_value",
+      "label": "$task.rhodes_ocr_region_is3_ingot_value.label",
       "entry": "RhodesOcrRegion_is3_ingot_value",
       "controller": [
         "android_adb"
@@ -836,14 +857,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is3.ingot_value / profiles: is3KeyFull",
+      "description": "$task.rhodes_ocr_region_is3_ingot_value.description",
       "group": [
         "is3KeyFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is3_key_value",
-      "label": "生成: is3.key_value",
+      "label": "$task.rhodes_ocr_region_is3_key_value.label",
       "entry": "RhodesOcrRegion_is3_key_value",
       "controller": [
         "android_adb"
@@ -851,14 +872,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is3.key_value / profiles: is3KeyFull",
+      "description": "$task.rhodes_ocr_region_is3_key_value.description",
       "group": [
         "is3KeyFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is6_ingot_value",
-      "label": "生成: is6.ingot_value",
+      "label": "$task.rhodes_ocr_region_is6_ingot_value.label",
       "entry": "RhodesOcrRegion_is6_ingot_value",
       "controller": [
         "android_adb"
@@ -866,14 +887,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is6.ingot_value / profiles: is6BaseFull",
+      "description": "$task.rhodes_ocr_region_is6_ingot_value.description",
       "group": [
         "is6BaseFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is6_ticket_value",
-      "label": "生成: is6.ticket_value",
+      "label": "$task.rhodes_ocr_region_is6_ticket_value.label",
       "entry": "RhodesOcrRegion_is6_ticket_value",
       "controller": [
         "android_adb"
@@ -881,14 +902,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is6.ticket_value / profiles: is6BaseFull",
+      "description": "$task.rhodes_ocr_region_is6_ticket_value.description",
       "group": [
         "is6BaseFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is3_light_value",
-      "label": "生成: is3.light_value",
+      "label": "$task.rhodes_ocr_region_is3_light_value.label",
       "entry": "RhodesOcrRegion_is3_light_value",
       "controller": [
         "android_adb"
@@ -896,14 +917,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is3.light_value / profiles: is3LightHordeFull",
+      "description": "$task.rhodes_ocr_region_is3_light_value.description",
       "group": [
         "is3LightHordeFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is3_horde_call_list_text",
-      "label": "生成: is3.horde_call_list_text",
+      "label": "$task.rhodes_ocr_region_is3_horde_call_list_text.label",
       "entry": "RhodesOcrRegion_is3_horde_call_list_text",
       "controller": [
         "android_adb"
@@ -911,14 +932,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is3.horde_call_list_text / profiles: is3LightHordeFull",
+      "description": "$task.rhodes_ocr_region_is3_horde_call_list_text.description",
       "group": [
         "is3LightHordeFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is3_rejection_name",
-      "label": "生成: is3.rejection_name",
+      "label": "$task.rhodes_ocr_region_is3_rejection_name.label",
       "entry": "RhodesOcrRegion_is3_rejection_name",
       "controller": [
         "android_adb"
@@ -926,14 +947,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is3.rejection_name / profiles: is3RejectionFull",
+      "description": "$task.rhodes_ocr_region_is3_rejection_name.description",
       "group": [
         "is3RejectionFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is3_rejection_operators",
-      "label": "生成: is3.rejection_operators",
+      "label": "$task.rhodes_ocr_region_is3_rejection_operators.label",
       "entry": "RhodesOcrRegion_is3_rejection_operators",
       "controller": [
         "android_adb"
@@ -941,14 +962,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is3.rejection_operators / profiles: is3RejectionFull",
+      "description": "$task.rhodes_ocr_region_is3_rejection_operators.description",
       "group": [
         "is3RejectionFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is2_hallucination_top",
-      "label": "生成: is2.hallucination_top",
+      "label": "$task.rhodes_ocr_region_is2_hallucination_top.label",
       "entry": "RhodesOcrRegion_is2_hallucination_top",
       "controller": [
         "android_adb"
@@ -956,14 +977,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is2.hallucination_top / profiles: is2HallucinationsFull",
+      "description": "$task.rhodes_ocr_region_is2_hallucination_top.description",
       "group": [
         "is2HallucinationsFull"
       ]
     },
     {
       "name": "rhodes_ocr_region_is2_performance_bottom",
-      "label": "生成: is2.performance_bottom",
+      "label": "$task.rhodes_ocr_region_is2_performance_bottom.label",
       "entry": "RhodesOcrRegion_is2_performance_bottom",
       "controller": [
         "android_adb"
@@ -971,14 +992,14 @@
       "resource": [
         "base"
       ],
-      "description": "OCR / maa-tasks.ocrRegions / is2.performance_bottom / profiles: is2PerformanceFull",
+      "description": "$task.rhodes_ocr_region_is2_performance_bottom.description",
       "group": [
         "is2PerformanceFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_idea_current",
-      "label": "生成: RhodesTemplate_runStatusFull_run_idea_current",
+      "label": "$task.rhodes_template_run_status_full_run_idea_current.label",
       "entry": "RhodesTemplate_runStatusFull_run_idea_current",
       "controller": [
         "android_adb"
@@ -986,14 +1007,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_idea_current.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_ingot",
-      "label": "生成: RhodesTemplate_runStatusFull_run_ingot",
+      "label": "$task.rhodes_template_run_status_full_run_ingot.label",
       "entry": "RhodesTemplate_runStatusFull_run_ingot",
       "controller": [
         "android_adb"
@@ -1001,14 +1022,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_ingot.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_difficulty_grade_anchor",
-      "label": "生成: RhodesTemplate_runStatusFull_run_difficulty_grade_anchor",
+      "label": "$task.rhodes_template_run_status_full_run_difficulty_grade_anchor.label",
       "entry": "RhodesTemplate_runStatusFull_run_difficulty_grade_anchor",
       "controller": [
         "android_adb"
@@ -1016,14 +1037,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_difficulty_grade_anchor.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_difficulty_grade_is6_sui_anchor",
-      "label": "生成: RhodesTemplate_runStatusFull_run_difficulty_grade_is6_sui_anchor",
+      "label": "$task.rhodes_template_run_status_full_run_difficulty_grade_is6_sui_anchor.label",
       "entry": "RhodesTemplate_runStatusFull_run_difficulty_grade_is6_sui_anchor",
       "controller": [
         "android_adb"
@@ -1031,14 +1052,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_difficulty_grade_is6_sui_anchor.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is5_sarkaz_batch",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is5_sarkaz_batch.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch",
       "controller": [
         "android_adb"
@@ -1046,14 +1067,14 @@
       "resource": [
         "base"
       ],
-      "description": "Or / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is5_sarkaz_batch.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is6_sui_batch",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is6_sui_batch.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch",
       "controller": [
         "android_adb"
@@ -1061,14 +1082,14 @@
       "resource": [
         "base"
       ],
-      "description": "Or / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is6_sui_batch.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is2_phantom_batch",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is2_phantom_batch",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is2_phantom_batch.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is2_phantom_batch",
       "controller": [
         "android_adb"
@@ -1076,14 +1097,14 @@
       "resource": [
         "base"
       ],
-      "description": "Or / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is2_phantom_batch.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_01",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_01",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_01.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_01",
       "controller": [
         "android_adb"
@@ -1091,14 +1112,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_01.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_02",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_02",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_02.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_02",
       "controller": [
         "android_adb"
@@ -1106,14 +1127,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_02.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_03",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_03",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_03.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_03",
       "controller": [
         "android_adb"
@@ -1121,14 +1142,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_03.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_04",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_04",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_04.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_04",
       "controller": [
         "android_adb"
@@ -1136,14 +1157,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_04.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_05",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_05",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_05.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_05",
       "controller": [
         "android_adb"
@@ -1151,14 +1172,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_05.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_06",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_06",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_06.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_06",
       "controller": [
         "android_adb"
@@ -1166,14 +1187,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_06.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_07",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_07",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_07.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_07",
       "controller": [
         "android_adb"
@@ -1181,14 +1202,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_07.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_08",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_08",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_08.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_08",
       "controller": [
         "android_adb"
@@ -1196,14 +1217,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_08.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_09",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_09",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_09.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_09",
       "controller": [
         "android_adb"
@@ -1211,14 +1232,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_09.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_10",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_10",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_10.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_10",
       "controller": [
         "android_adb"
@@ -1226,14 +1247,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_10.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_11",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_11",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_11.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_11",
       "controller": [
         "android_adb"
@@ -1241,14 +1262,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_11.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_12",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_12",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_12.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_12",
       "controller": [
         "android_adb"
@@ -1256,14 +1277,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_12.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_13",
-      "label": "生成: RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_13",
+      "label": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_13.label",
       "entry": "RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_13",
       "controller": [
         "android_adb"
@@ -1271,14 +1292,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: runStatusFull",
+      "description": "$task.rhodes_template_run_status_full_run_squad_icon_is3_mizuki_squad_13.description",
       "group": [
         "runStatusFull"
       ]
     },
     {
       "name": "rhodes_template_operators_full_operator_recruit_name",
-      "label": "生成: RhodesTemplate_operatorsFull_operator_recruit_name",
+      "label": "$task.rhodes_template_operators_full_operator_recruit_name.label",
       "entry": "RhodesTemplate_operatorsFull_operator_recruit_name",
       "controller": [
         "android_adb"
@@ -1286,14 +1307,14 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: operatorsFull",
+      "description": "$task.rhodes_template_operators_full_operator_recruit_name.description",
       "group": [
         "operatorsFull"
       ]
     },
     {
       "name": "rhodes_template_operators_full_operator_card_name",
-      "label": "生成: RhodesTemplate_operatorsFull_operator_card_name",
+      "label": "$task.rhodes_template_operators_full_operator_card_name.label",
       "entry": "RhodesTemplate_operatorsFull_operator_card_name",
       "controller": [
         "android_adb"
@@ -1301,7 +1322,7 @@
       "resource": [
         "base"
       ],
-      "description": "TemplateMatch / scan-profiles.templateOcrRegions / profiles: operatorsFull",
+      "description": "$task.rhodes_template_operators_full_operator_card_name.description",
       "group": [
         "operatorsFull"
       ]
@@ -1310,8 +1331,8 @@
   "preset": [
     {
       "name": "runStatusFull",
-      "label": "基礎情報",
-      "description": "基礎情報プロファイルのResource taskだけを選択します。",
+      "label": "$preset.runStatusFull.label",
+      "description": "$preset.runStatusFull.description",
       "task": [
         {
           "name": "rhodes_run_status_idea_icon",
@@ -1503,8 +1524,8 @@
     },
     {
       "name": "operatorsFull",
-      "label": "オペレーター",
-      "description": "オペレータープロファイルのResource taskだけを選択します。",
+      "label": "$preset.operatorsFull.label",
+      "description": "$preset.operatorsFull.description",
       "task": [
         {
           "name": "rhodes_operator_codename_flag",
@@ -1636,8 +1657,8 @@
     },
     {
       "name": "relicsFull",
-      "label": "秘宝",
-      "description": "秘宝プロファイルのResource taskだけを選択します。",
+      "label": "$preset.relicsFull.label",
+      "description": "$preset.relicsFull.description",
       "task": [
         {
           "name": "rhodes_relic_button",
@@ -1664,6 +1685,18 @@
           }
         },
         {
+          "name": "rhodes_ocr_region_run_operator_count",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_run_relic_count_marker",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
           "name": "rhodes_ocr_region_relic_list_text",
           "option": {
             "enabled": true
@@ -1679,8 +1712,8 @@
     },
     {
       "name": "is4RevelationFull",
-      "label": "啓示",
-      "description": "啓示プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is4RevelationFull.label",
+      "description": "$preset.is4RevelationFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1698,8 +1731,8 @@
     },
     {
       "name": "is4ParadigmLost",
-      "label": "パラダイムロスト",
-      "description": "パラダイムロストプロファイルのResource taskだけを選択します。",
+      "label": "$preset.is4ParadigmLost.label",
+      "description": "$preset.is4ParadigmLost.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1717,8 +1750,8 @@
     },
     {
       "name": "is5ThoughtFull",
-      "label": "思案",
-      "description": "思案プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is5ThoughtFull.label",
+      "description": "$preset.is5ThoughtFull.description",
       "task": [
         {
           "name": "rhodes_thought_button",
@@ -1748,8 +1781,8 @@
     },
     {
       "name": "is5AgeFull",
-      "label": "時代",
-      "description": "時代プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is5AgeFull.label",
+      "description": "$preset.is5AgeFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_sarkaz_age_detail",
@@ -1773,8 +1806,8 @@
     },
     {
       "name": "is2HallucinationsFull",
-      "label": "幻覚",
-      "description": "幻覚プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is2HallucinationsFull.label",
+      "description": "$preset.is2HallucinationsFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1792,8 +1825,8 @@
     },
     {
       "name": "is2PerformanceFull",
-      "label": "演目",
-      "description": "演目プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is2PerformanceFull.label",
+      "description": "$preset.is2PerformanceFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1811,8 +1844,8 @@
     },
     {
       "name": "is3KeyFull",
-      "label": "源石錐・鍵",
-      "description": "源石錐・鍵プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is3KeyFull.label",
+      "description": "$preset.is3KeyFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1836,8 +1869,8 @@
     },
     {
       "name": "is3LightHordeFull",
-      "label": "灯火・大群",
-      "description": "灯火・大群プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is3LightHordeFull.label",
+      "description": "$preset.is3LightHordeFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1861,8 +1894,8 @@
     },
     {
       "name": "is3RejectionFull",
-      "label": "拒絶反応・啓示",
-      "description": "拒絶反応・啓示プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is3RejectionFull.label",
+      "description": "$preset.is3RejectionFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1886,8 +1919,8 @@
     },
     {
       "name": "is6BaseFull",
-      "label": "源石錐・遊覧券",
-      "description": "源石錐・遊覧券プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is6BaseFull.label",
+      "description": "$preset.is6BaseFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1911,8 +1944,8 @@
     },
     {
       "name": "is6ActiveCoinsFull",
-      "label": "有効銭",
-      "description": "有効銭プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is6ActiveCoinsFull.label",
+      "description": "$preset.is6ActiveCoinsFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1930,8 +1963,8 @@
     },
     {
       "name": "is6SeasonalHours",
-      "label": "歳時",
-      "description": "歳時プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is6SeasonalHours.label",
+      "description": "$preset.is6SeasonalHours.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
@@ -1949,8 +1982,8 @@
     },
     {
       "name": "is6CoinsFull",
-      "label": "保有銭",
-      "description": "保有銭プロファイルのResource taskだけを選択します。",
+      "label": "$preset.is6CoinsFull.label",
+      "description": "$preset.is6CoinsFull.description",
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",

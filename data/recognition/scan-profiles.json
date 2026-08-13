@@ -519,11 +519,11 @@
       },
       "scrollAxis": "horizontal",
       "scrollDirection": "two-way",
-      "restoreSteps": [
-        {
-          "type": "tap",
-          "point": {
-            "x": 948,
+        "restoreSteps": [
+          {
+            "type": "tap",
+            "point": {
+              "x": 948,
             "y": 678
           },
           "label": "隊員を閉じる",
@@ -533,12 +533,12 @@
             "width": 88,
             "height": 66
           }
-        },
-        {
-          "type": "wait",
-          "durationMs": 160,
-          "label": "閉じる待ち"
-        }
+          },
+          {
+            "type": "wait",
+            "durationMs": 650,
+            "label": "閉じる待ち"
+          }
       ],
       "maxScrolls": 30,
       "endFingerprintStableCount": 2,

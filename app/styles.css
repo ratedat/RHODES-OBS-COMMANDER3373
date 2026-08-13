@@ -603,8 +603,11 @@ a:hover { text-decoration: underline; }
 }
 .overlay-mode,
 .overlay-mode body {
-  background: rgb(var(--overlay-background-rgb, 8 11 12) / var(--overlay-background-alpha, 1));
+  background: rgb(var(--overlay-canvas-background-rgb, 8 11 12) / var(--overlay-canvas-background-alpha, 1));
 }
+:root.overlay-canvas-background-disabled,
+.overlay-canvas-background-disabled body,
+.overlay-canvas-background-disabled #app,
 :root.overlay-background-disabled,
 .overlay-background-disabled body,
 .overlay-background-disabled #app {
@@ -918,6 +921,12 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
 }
 .overlay-background-disabled .overlay-part-shell {
+  background: transparent !important;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.overlay-frame-background-disabled .overlay-part-shell {
   background: transparent !important;
   border-color: transparent;
   box-shadow: none;
@@ -1782,6 +1791,39 @@ a:hover { text-decoration: underline; }
 .overlay-background-disabled .compact-counts span,
 .overlay-background-disabled .compact-more,
 .overlay-background-disabled .stream-counts span {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.overlay-frame-background-disabled :is(
+  .compact-overlay-shell,
+  .stream-overlay-shell,
+  .overlay-card,
+  .overlay-part-shell,
+  .overlay-part-status-main,
+  .overlay-part-status-cell,
+  .overlay-part-relic,
+  .overlay-part-operator,
+  .overlay-part-empty,
+  .stream-head,
+  .stream-run,
+  .stream-panel,
+  .stream-relic-tile,
+  .stream-operator-tile,
+  .overlay-card-header,
+  .kpi,
+  .relic-tile,
+  .operator-row,
+  .effect-row,
+  .boss-card,
+  .boss-chip,
+  .special-overlay-group > header,
+  .special-overlay-chip,
+  .compact-counts span,
+  .compact-more,
+  .stream-counts span
+) {
   background: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;

@@ -9,7 +9,7 @@
     </StackPanel>
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="12">
-        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+        <Border Classes="surfaceCard" Padding="10">
           <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
             <TextBlock Text="バグ報告ZIP" FontSize="14" FontWeight="SemiBold" />
             <Button Grid.Column="1"
@@ -33,7 +33,7 @@
           </Grid>
         </Border>
 
-        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+        <Border Classes="surfaceCard" Padding="10">
           <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" RowSpacing="6">
             <StackPanel Spacing="2">
               <TextBlock Text="受信報告の取込" FontSize="14" FontWeight="SemiBold" />
@@ -66,7 +66,7 @@
           </Grid>
         </Border>
 
-        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+        <Border Classes="surfaceCard" Padding="10">
           <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
             <TextBlock Text="最新の証跡" FontSize="14" FontWeight="SemiBold" />
             <TextBlock Grid.Row="1" Text="{Binding LastCapturePath}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
@@ -74,7 +74,121 @@
           </Grid>
         </Border>
 
-        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+        <Expander Header="MAA開発ツール・証跡 (ローカルのみ)">
+          <StackPanel Spacing="10" Margin="0,8,0,0">
+            <TextBlock Text="MSE/MPEはVS Codeのローカルプロジェクトを開きます。MLA/MEKも指定した端末内の素材だけを扱い、自動アップロードしません。"
+                       FontSize="11" TextWrapping="Wrap" Opacity="0.64" />
+            <TextBlock Text="MPE用pipelineは生成結果の確認用です。正規編集元は data/recognition/*.json で、生成JSONへ直接保存した変更は再生成時に上書きされます。"
+                       FontSize="11" TextWrapping="Wrap" Opacity="0.64" />
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="8">
+              <Button Content="MSEで開く" Command="{Binding MaaDevelopmentTools.OpenMseCommand}" Padding="10,4" />
+              <Button Grid.Column="1" Content="MPEで生成結果" Command="{Binding MaaDevelopmentTools.OpenMpeCommand}" Padding="10,4" />
+              <Button Grid.Column="2" Content="MEK確認" Command="{Binding MaaDevelopmentTools.ProbeEvidenceKitCommand}" Padding="10,4" />
+              <TextBlock Grid.Column="3" Text="{Binding MaaDevelopmentTools.RepositoryRoot}" FontFamily="Consolas" FontSize="10"
+                         TextWrapping="Wrap" VerticalAlignment="Center" Opacity="0.48" />
+            </Grid>
+
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+              <StackPanel Spacing="2">
+                <TextBlock Text="解析素材（maa.log / maafw.log / ZIP / フォルダ）" FontSize="11" Opacity="0.62" />
+                <TextBox Text="{Binding MaaDevelopmentTools.MaterialsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="ファイル" Click="SelectMaaMaterialsFileClick" Padding="9,4" VerticalAlignment="Bottom" />
+              <Button Grid.Column="2" Content="フォルダ" Click="SelectMaaMaterialsFolderClick" Padding="9,4" VerticalAlignment="Bottom" />
+
+              <StackPanel Grid.Row="1" Spacing="2">
+                <TextBlock Text="MaaLogAnalyzerローカル実行ファイル（任意）" FontSize="11" Opacity="0.62" />
+                <TextBox Text="{Binding MaaDevelopmentTools.LogAnalyzerPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="例: C:\Tools\MaaLogAnalyzer.exe" />
+              </StackPanel>
+              <Button Grid.Row="1" Grid.Column="1" Content="参照" Click="SelectMaaLogAnalyzerClick" Padding="9,4" VerticalAlignment="Bottom" />
+              <Button Grid.Row="1" Grid.Column="2" Content="MLA起動" Command="{Binding MaaDevelopmentTools.OpenLogAnalyzerCommand}" Padding="9,4" VerticalAlignment="Bottom" />
+            </Grid>
+
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="8" RowSpacing="4">
+              <StackPanel Spacing="2">
+                <TextBlock Text="MaaEvidenceKitコマンド" FontSize="11" Opacity="0.62" />
+                <TextBox Text="{Binding MaaDevelopmentTools.EvidenceExecutable, Mode=TwoWay}" PlaceholderText="maa-evidence" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="証跡を生成" Command="{Binding MaaDevelopmentTools.RunEvidenceKitCommand}" Padding="12,4" VerticalAlignment="Bottom" />
+              <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding MaaDevelopmentTools.EvidenceSummary}" FontFamily="Consolas" FontSize="11"
+                         TextWrapping="Wrap" Opacity="0.68" />
+            </Grid>
+            <TextBlock Text="{Binding MaaDevelopmentTools.Status}" FontSize="11" TextWrapping="Wrap" Opacity="0.72" />
+            <TextBlock Text="{Binding MaaDevelopmentTools.LastEvidencePath}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.48" />
+          </StackPanel>
+        </Expander>
+
+        <Expander Header="認識ラボ (MFAToolsPlus系の比較導線 / 状態へ未反映)">
+          <StackPanel Spacing="10" Margin="0,8,0,0">
+            <Border CornerRadius="7" Padding="8" Background="{StaticResource WorkbenchSuccessSurface}" BorderBrush="{StaticResource WorkbenchSuccess}" BorderThickness="1">
+              <TextBlock Text="ここではOCR・画像・色・歳の銭認識だけを実行します。タップ、スワイプ、キー入力、ラン状態への自動反映は行いません。"
+                         FontSize="11" TextWrapping="Wrap" />
+            </Border>
+
+            <Grid ColumnDefinitions="260,*" ColumnSpacing="10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="認識方式" FontSize="11" Opacity="0.62" />
+                <ComboBox ItemsSource="{Binding RecognitionLab.ModeOptions}"
+                          SelectedItem="{Binding RecognitionLab.SelectedMode, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="{Binding RecognitionLab.SelectedModeDetail}" FontSize="11"
+                         TextWrapping="Wrap" VerticalAlignment="Bottom" Opacity="0.62" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Frame画像" FontSize="11" Opacity="0.62" />
+                <TextBox Text="{Binding RecognitionLab.ImagePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="画像を選択" Click="SelectRecognitionLabImageClick" Padding="9,4" VerticalAlignment="Bottom" />
+              <Button Grid.Column="2" Content="最新Frame" Command="{Binding RecognitionLab.UseLatestCaptureCommand}" Padding="9,4" VerticalAlignment="Bottom" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+              <StackPanel Spacing="2"><TextBlock Text="ROI X" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="1279" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiX, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="ROI Y" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="719" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiY, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="幅" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="1" Maximum="1280" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiWidth, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="3" Spacing="2"><TextBlock Text="高さ" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="1" Maximum="720" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiHeight, Mode=TwoWay}" /></StackPanel>
+            </Grid>
+
+            <Grid IsVisible="{Binding RecognitionLab.IsOcrMode}" ColumnDefinitions="*,150,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="2"><TextBlock Text="expected（カンマまたは改行区切り）" FontSize="10" Opacity="0.58" /><TextBox Text="{Binding RecognitionLab.Expected, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="threshold" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding RecognitionLab.Threshold, Mode=TwoWay}" /></StackPanel>
+              <CheckBox Grid.Column="2" Content="only_rec" IsChecked="{Binding RecognitionLab.OnlyRecognition, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,7" />
+            </Grid>
+
+            <Grid IsVisible="{Binding RecognitionLab.IsTemplateMode}" ColumnDefinitions="*,120,150" ColumnSpacing="8">
+              <StackPanel Spacing="2"><TextBlock Text="template（resource/base/imageからの相対パス）" FontSize="10" Opacity="0.58" /><TextBox Text="{Binding RecognitionLab.Template, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="method" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="10" Increment="1" FormatString="0" Value="{Binding RecognitionLab.TemplateMethod, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="threshold" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding RecognitionLab.Threshold, Mode=TwoWay}" /></StackPanel>
+            </Grid>
+
+            <Grid IsVisible="{Binding RecognitionLab.IsColorMode}" RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,120,120" ColumnSpacing="8" RowSpacing="6">
+              <StackPanel Spacing="2"><TextBlock Text="lower (3値)" FontSize="10" Opacity="0.58" /><TextBox Text="{Binding RecognitionLab.ColorLower, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="upper (3値)" FontSize="10" Opacity="0.58" /><TextBox Text="{Binding RecognitionLab.ColorUpper, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="method" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding RecognitionLab.ColorMethod, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="3" Spacing="2"><TextBlock Text="count" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="1" Maximum="921600" Increment="1" FormatString="0" Value="{Binding RecognitionLab.ColorCount, Mode=TwoWay}" /></StackPanel>
+              <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Content="connected（連結領域として判定）" IsChecked="{Binding RecognitionLab.ColorConnected, Mode=TwoWay}" />
+            </Grid>
+
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <Button Content="認識だけ実行" Command="{Binding RecognitionLab.RunCommand}" Padding="14,5" />
+              <TextBlock Grid.Column="1" Text="{Binding RecognitionLab.Status}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" Opacity="0.72" />
+            </Grid>
+            <TextBox Text="{Binding RecognitionLab.ResultJson}" IsReadOnly="True" AcceptsReturn="True" MinHeight="150" MaxHeight="300"
+                     FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" PlaceholderText="認識結果JSON" />
+            <TextBlock Text="{Binding RecognitionLab.LastLogPath}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" Opacity="0.48" />
+          </StackPanel>
+        </Expander>
+
+        <Border Classes="surfaceCard" Padding="10">
           <Grid RowDefinitions="Auto,180" RowSpacing="8">
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
               <StackPanel Spacing="2">
@@ -97,7 +211,7 @@
                 <ItemsControl ItemsSource="{Binding FrameRecordHistory}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border CornerRadius="7" Padding="8" Margin="0,0,0,6" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+                    <Border CornerRadius="7" Padding="8" Margin="0,0,0,6" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                       <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" RowSpacing="3">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                           <TextBlock Text="{Binding CapturedAtLabel}" FontFamily="Consolas" FontSize="11" Opacity="0.72" />
@@ -136,7 +250,7 @@
             <ItemsControl ItemsSource="{Binding InspectorRows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,6" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,6" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                     <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="110,*" ColumnSpacing="8">
                       <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.58" />
                       <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -158,7 +272,7 @@
             <ItemsControl ItemsSource="{Binding WorkspaceActions}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#0C1011" BorderBrush="#273335" BorderThickness="1">
+                  <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="{StaticResource WorkbenchSubtleSurface}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="5">
                       <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                         <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -172,10 +286,10 @@
                       </Grid>
                       <TextBlock Grid.Row="1" Text="{Binding Workflow}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.64" />
                       <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="6">
-                        <Border CornerRadius="5" Padding="6,2" Background="#132629" BorderBrush="#315154" BorderThickness="1">
+                        <Border CornerRadius="5" Padding="6,2" Background="{StaticResource WorkbenchSuccessSurface}" BorderBrush="{StaticResource WorkbenchSuccess}" BorderThickness="1">
                           <TextBlock Text="{Binding MaaRequirementLabel}" FontSize="11" />
                         </Border>
-                        <Border Grid.Column="1" CornerRadius="5" Padding="6,2" Background="#1E2115" BorderBrush="#4B4A2C" BorderThickness="1">
+                        <Border Grid.Column="1" CornerRadius="5" Padding="6,2" Background="{StaticResource WorkbenchWarningSurface}" BorderBrush="{StaticResource WorkbenchWarning}" BorderThickness="1">
                           <TextBlock Text="{Binding StateWriteLabel}" FontSize="11" />
                         </Border>
                         <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.52" />
@@ -193,7 +307,7 @@
             <ItemsControl ItemsSource="{Binding ProbePayloads}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                  <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" Margin="0,0,0,8">
                     <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="4">
                       <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
                       <Button Grid.Column="1" Grid.RowSpan="3" Content="実行" Command="{Binding DataContext.RunProbeCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" VerticalAlignment="Center" />
@@ -207,7 +321,7 @@
             <ItemsControl ItemsSource="{Binding ProbeResults}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border CornerRadius="7" Padding="9" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Margin="0,0,0,8">
+                  <Border CornerRadius="7" Padding="9" Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" Margin="0,0,0,8">
                     <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                       <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
                       <TextBlock Grid.Column="1" Text="{Binding Status}" FontFamily="Consolas" FontSize="12" />

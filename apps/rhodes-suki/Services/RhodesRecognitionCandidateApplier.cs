@@ -48,6 +48,16 @@ public static class RhodesRecognitionCandidateApplier
         RecognitionKey: "maa-local:age:none",
         AgeId: NoAgeId);
 
+    public static MaaCandidatePreview CreateNoRelicsCandidate(string campaignId) => new(
+        "relic",
+        "秘宝なし",
+        "",
+        "マップ下部の秘宝ボタンが無効",
+        1.0,
+        CampaignId: campaignId,
+        RecognitionKey: $"maa-local:relics:none:{campaignId}",
+        SlotKind: "clear");
+
     public static MaaCandidatePreview CreateNoHallucinationCandidate() => new(
         "runStatus",
         "幻覚なし",
@@ -277,7 +287,9 @@ public static class RhodesRecognitionCandidateApplier
         if (CandidateIsKind(candidate, "operator"))
             return $"operator:{CandidateId(candidate.OperatorId, candidate.Value)}";
         if (CandidateIsKind(candidate, "relic"))
-            return $"relic:{CandidateId(candidate.RelicId, candidate.Value)}";
+            return candidate.SlotKind.Equals("clear", StringComparison.OrdinalIgnoreCase)
+                ? "relic:clear"
+                : $"relic:{CandidateId(candidate.RelicId, candidate.Value)}";
         if (CandidateIsKind(candidate, "thought"))
             return $"thought:{CandidateId(candidate.ThoughtId, candidate.Value)}";
         if (CandidateIsKind(candidate, "age"))
@@ -378,6 +390,9 @@ public static class RhodesRecognitionCandidateApplier
         {
             return "campaign-mismatch";
         }
+
+        if (candidate.SlotKind.Equals("clear", StringComparison.OrdinalIgnoreCase))
+            return "already-empty-relics";
 
         return StringSetIgnoredReason(state, "relics", candidate.RelicId, candidate.Value, "relic");
     }
@@ -1592,11 +1607,27 @@ public static class RhodesRecognitionCandidateApplier
             return false;
         }
 
+        if (candidate.SlotKind.Equals("clear", StringComparison.OrdinalIgnoreCase))
+            return ClearRelicState(state, applied);
+
         var relicId = CandidateId(candidate.RelicId, candidate.Value);
         var ownedChanged = ApplyStringSetCandidate(state, "relics", relicId, "", applied, "relic");
         var usageChanged = ApplyRelicUsageState(state, candidate, relicId, applied);
         var stackChanged = ApplyRelicStackCount(state, candidate, relicId, applied);
         return ownedChanged || usageChanged || stackChanged;
+    }
+
+    private static bool ClearRelicState(JsonObject state, ICollection<string> applied)
+    {
+        var changed = state["relics"] is not JsonArray relics || relics.Count > 0
+            || state["usedRelicIds"] is not JsonArray usedRelics || usedRelics.Count > 0
+            || state["relicStackCounts"] is not JsonObject stackCounts || stackCounts.Count > 0;
+        state["relics"] = new JsonArray();
+        state["usedRelicIds"] = new JsonArray();
+        state["relicStackCounts"] = new JsonObject();
+        if (changed)
+            applied.Add("relic:clear");
+        return changed;
     }
 
     private static bool ApplyRelicStackCount(

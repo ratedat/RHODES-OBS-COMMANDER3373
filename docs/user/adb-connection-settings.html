@@ -56,8 +56,26 @@
         <tr><td>ADB Config</td><td>MAAFrameworkへ渡す高度なJSON設定です。</td><td>通常は自動生成に任せ、手編集時はJSON objectのままにします。</td></tr>
         <tr><td>エミュレータールート</td><td>MuMuまたはLDPlayerのインストールフォルダーです。</td><td>空欄ならADBパスから推定します。能力確認に失敗した場合だけ指定します。</td></tr>
         <tr><td>instance番号</td><td>複数起動時の仮想端末番号です。</td><td>通常はserialから推定します。MuMuのclone番号とは別です。</td></tr>
+        <tr><td>ゲームパッケージ</td><td>接続対象のアークナイツ地域版を選びます。</td><td>既定値は日本版（JP）です。一覧外の将来クライアントだけ「カスタム」を使います。</td></tr>
       </tbody>
     </table>
+  </section>
+
+  <section>
+    <h2>ゲームパッケージ（地域版）</h2>
+    <p>選択したpackage名はMuMuの表示先特定など、接続強化機能へ渡されます。新規設定は日本版（JP）です。既存設定に一覧外の値が保存されている場合は、削除せず「カスタム」として表示します。</p>
+    <table>
+      <thead><tr><th>選択肢</th><th>Android package名</th></tr></thead>
+      <tbody>
+        <tr><td>日本版（JP）</td><td><code>com.YoStarJP.Arknights</code></td></tr>
+        <tr><td>グローバル版（EN）</td><td><code>com.YoStarEN.Arknights</code></td></tr>
+        <tr><td>韓国版（KR）</td><td><code>com.YoStarKR.Arknights</code></td></tr>
+        <tr><td>中国版（公式）</td><td><code>com.hypergryph.arknights</code></td></tr>
+        <tr><td>中国版（Bilibili）</td><td><code>com.hypergryph.arknights.bilibili</code></td></tr>
+        <tr><td>繁中版（TW）</td><td><code>tw.txwy.and.arknights</code></td></tr>
+      </tbody>
+    </table>
+    <div class="warning"><strong>この選択だけではOCR・認識言語は切り替わりません。</strong>多言語認識を公開する際は、対応するMAA resourceと本体UI翻訳を別途選択できるようにします。</div>
   </section>
 
   <section>

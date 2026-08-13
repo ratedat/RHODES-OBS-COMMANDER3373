@@ -3,6 +3,8 @@ using MaaFramework.Binding.Buffers;
 using MaaFramework.Binding.Custom;
 using RhodesSuki.Models;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.Security.Principal;
 
 namespace RhodesSuki.Services;
 
@@ -21,6 +23,12 @@ public sealed class RhodesMaaSession : IDisposable
     public bool IsControllerReady => _tasker?.Controller is { IsConnected: true };
 
     public bool IsTaskerReady => _tasker is not null;
+
+    public MaaSessionControllerKind ControllerKind { get; private set; }
+
+    public IntPtr ActiveWin32WindowHandle { get; private set; }
+
+    public MaaPcConnectionPlan? ActivePcConnectionPlan { get; private set; }
 
     public MaaSessionOptions? EffectiveOptions { get; private set; }
 
@@ -144,6 +152,7 @@ public sealed class RhodesMaaSession : IDisposable
 
                 var linkStatus = _tasker.Controller?.LinkStart().Wait();
                 var ok = linkStatus == MaaJobStatus.Succeeded;
+                ControllerKind = ok ? MaaSessionControllerKind.Adb : MaaSessionControllerKind.None;
                 return Snapshot(
                     ok ? "接続済み" : "接続失敗",
                     $"MAA Controller LinkStart: {linkStatus} / {toolkitDetail}",
@@ -202,6 +211,8 @@ public sealed class RhodesMaaSession : IDisposable
                         false);
                 }
 
+                ControllerKind = MaaSessionControllerKind.Offline;
+
                 return Snapshot(
                     "オフライン認識",
                     "MAA Resource をADBなし再実行用に初期化しました。",
@@ -222,10 +233,35 @@ public sealed class RhodesMaaSession : IDisposable
         string? screencapMethodId,
         CancellationToken cancellationToken = default)
     {
+        return await InitializeWin32Async(
+            options,
+            windowHandle,
+            screencapMethodId,
+            null,
+            null,
+            cancellationToken);
+    }
+
+    public async Task<MaaSessionSnapshot> InitializeWin32Async(
+        MaaSessionOptions options,
+        IntPtr windowHandle,
+        string? screencapMethodId,
+        string? mouseMethodId,
+        string? keyboardMethodId,
+        CancellationToken cancellationToken = default)
+    {
         DisposeCurrent();
 
         if (!OperatingSystem.IsWindows())
             return Snapshot("PC撮影非対応", "Win32 ControllerはWindowsでのみ使用できます。", options, false);
+        if (!IsCurrentProcessElevated())
+        {
+            return Snapshot(
+                "PC操作権限不足",
+                "PCクライアント操作には管理者権限が必要です。RHODESを管理者として起動し直してください。",
+                options,
+                false);
+        }
 
         var runtimeStatus = MaaFrameworkRuntimeProbe.ProbeAppBaseDirectory(AppContext.BaseDirectory);
         if (!runtimeStatus.IsReady)
@@ -239,7 +275,10 @@ public sealed class RhodesMaaSession : IDisposable
             return Snapshot("PCウィンドウ未選択", "撮影するゲームウィンドウを選択してください。", options, false);
 
         EffectiveOptions = options;
-        var plan = RhodesMaaPcConnectionPolicy.Resolve(screencapMethodId);
+        var plan = RhodesMaaPcConnectionPolicy.Resolve(
+            screencapMethodId,
+            mouseMethodId,
+            keyboardMethodId);
         return await Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -270,9 +309,12 @@ public sealed class RhodesMaaSession : IDisposable
 
                 var linkStatus = _tasker.Controller?.LinkStart().Wait();
                 var ok = linkStatus == MaaJobStatus.Succeeded;
+                ControllerKind = ok ? MaaSessionControllerKind.Win32 : MaaSessionControllerKind.None;
+                ActiveWin32WindowHandle = ok ? windowHandle : IntPtr.Zero;
+                ActivePcConnectionPlan = ok ? plan : null;
                 return Snapshot(
                     ok ? "PCウィンドウ接続済み" : "PCウィンドウ接続失敗",
-                    $"MAA Win32 Controller LinkStart: {linkStatus} / capture={plan.ScreencapMethod} / 1280x720",
+                    $"MAA Win32 Controller LinkStart: {linkStatus} / capture={plan.ScreencapMethod} / mouse={plan.MouseMethod} / keyboard={plan.KeyboardMethod} / 1280x720",
                     options,
                     ok);
             }
@@ -527,6 +569,16 @@ public sealed class RhodesMaaSession : IDisposable
         _resource = null;
         _offlineControllerApi = null;
         EffectiveOptions = null;
+        ControllerKind = MaaSessionControllerKind.None;
+        ActiveWin32WindowHandle = IntPtr.Zero;
+        ActivePcConnectionPlan = null;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static bool IsCurrentProcessElevated()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     private static async Task<IReadOnlyList<AdbDeviceInfo>> FindToolkitDevicesAsync(

@@ -9,6 +9,8 @@ import {
   resolveOverlayAppearance,
   resolveOverlayBackgroundAlpha,
   resolveOverlayBackgroundEnabled,
+  resolveOverlayCanvasBackgroundAlpha,
+  resolveOverlayCanvasBackgroundEnabled,
   resolveOverlayScrollSpeed,
   shouldShowOverlayPartTitles,
 } from "../app/lib/overlay-config.js";
@@ -111,6 +113,15 @@ test("overlay background off removes integrated and nested neutral surfaces", as
   assert.match(transparentSurfaceRule[1], /box-shadow:\s*none\s*!important/);
 });
 
+test("overlay canvas and frame surfaces use separate CSS contracts", async () => {
+  const css = await fs.readFile("app/styles.css", "utf8");
+
+  assert.match(css, /\.overlay-mode,[\s\S]*?background:\s*rgb\(var\(--overlay-canvas-background-rgb,[\s\S]*?var\(--overlay-canvas-background-alpha,/);
+  assert.match(css, /\.overlay-card\s*\{[\s\S]*?background:\s*rgb\(var\(--overlay-background-rgb,[\s\S]*?var\(--overlay-background-alpha,/);
+  assert.match(css, /:root\.overlay-canvas-background-disabled/);
+  assert.match(css, /\.overlay-frame-background-disabled :is\(/);
+});
+
 test("overlay background opacity is clamped and applies only when background is enabled", () => {
   assert.equal(resolveOverlayBackgroundAlpha(normalizePreferences({
     sukiOutputBackgroundEnabled: true,
@@ -124,6 +135,39 @@ test("overlay background opacity is clamped and applies only when background is 
     sukiOutputBackgroundEnabled: false,
     sukiOutputBackgroundOpacity: 100,
   })), 0);
+});
+
+test("overlay canvas and frame backgrounds resolve independently", () => {
+  const preferences = normalizePreferences({
+    sukiOutputSchemaVersion: 3,
+    sukiOutputBackgroundEnabled: true,
+    sukiOutputBackgroundOpacity: 76,
+    sukiOutputCanvasBackgroundEnabled: false,
+    sukiOutputCanvasBackgroundOpacity: 31,
+    sukiOutputIndividualBackgroundEnabled: true,
+    sukiOutputIndividualBackgroundOpacity: 42,
+    sukiOutputIndividualCanvasBackgroundEnabled: true,
+    sukiOutputIndividualCanvasBackgroundOpacity: 18,
+    sukiOutputIntegratedAppearance: {
+      backgroundColor: "#112233",
+      canvasBackgroundColor: "#445566",
+    },
+    sukiOutputIndividualAppearance: {
+      backgroundColor: "#778899",
+      canvasBackgroundColor: "#AABBCC",
+    },
+  });
+
+  assert.equal(resolveOverlayBackgroundEnabled(preferences), true);
+  assert.equal(resolveOverlayBackgroundAlpha(preferences), 0.76);
+  assert.equal(resolveOverlayCanvasBackgroundEnabled(preferences), false);
+  assert.equal(resolveOverlayCanvasBackgroundAlpha(preferences), 0);
+  assert.equal(resolveOverlayBackgroundAlpha(preferences, "operators"), 0.42);
+  assert.equal(resolveOverlayCanvasBackgroundAlpha(preferences, "operators"), 0.18);
+  assert.equal(resolveOverlayAppearance(preferences).backgroundColor, "#112233");
+  assert.equal(resolveOverlayAppearance(preferences).canvasBackgroundColor, "#445566");
+  assert.equal(resolveOverlayAppearance(preferences, "operators").backgroundColor, "#778899");
+  assert.equal(resolveOverlayAppearance(preferences, "operators").canvasBackgroundColor, "#AABBCC");
 });
 
 test("legacy transparent-background settings migrate without changing their visible result", () => {
@@ -173,7 +217,7 @@ test("individual overlay titles default to visible and can be hidden", () => {
   })), false);
 });
 
-test("legacy output settings migrate to schema 2 without coupling integrated and individual appearance", () => {
+test("legacy output settings migrate to schema 3 without coupling integrated and individual appearance", () => {
   const preferences = normalizePreferences({
     sukiOutputTournamentMode: false,
     sukiOutputBackgroundEnabled: true,
@@ -195,16 +239,22 @@ test("legacy output settings migrate to schema 2 without coupling integrated and
     }],
   });
 
-  assert.equal(preferences.sukiOutputSchemaVersion, 2);
+  assert.equal(preferences.sukiOutputSchemaVersion, 3);
   assert.equal(preferences.sukiOutputIndividualTournamentMode, false);
   assert.equal(preferences.sukiOutputIndividualBackgroundEnabled, true);
   assert.equal(preferences.sukiOutputIndividualBackgroundOpacity, 72);
+  assert.equal(preferences.sukiOutputCanvasBackgroundEnabled, true);
+  assert.equal(preferences.sukiOutputCanvasBackgroundOpacity, 72);
+  assert.equal(preferences.sukiOutputIndividualCanvasBackgroundEnabled, true);
+  assert.equal(preferences.sukiOutputIndividualCanvasBackgroundOpacity, 72);
   assert.equal(preferences.sukiOutputIndividualShowPartTitles, true);
   assert.equal(preferences.sukiOutputParts[0].tournamentMode, true);
   assert.equal(preferences.sukiOutputParts[0].backgroundEnabled, false);
   assert.equal(preferences.sukiOutputParts[0].backgroundOpacity, 20);
   assert.equal(preferences.sukiOutputParts[0].showTitle, false);
   assert.deepEqual(preferences.sukiOutputIndividualAppearance, preferences.sukiOutputIntegratedAppearance);
+  assert.equal(preferences.sukiOutputIntegratedAppearance.canvasBackgroundColor, "#223344");
+  assert.equal(preferences.sukiOutputIndividualAppearance.canvasBackgroundColor, "#223344");
 
   preferences.sukiOutputIndividualAppearance.fontColor = "#AABBCC";
   assert.equal(preferences.sukiOutputIntegratedAppearance.fontColor, "#112233");
@@ -238,4 +288,20 @@ test("integrated and individual overlays resolve independent appearance and scro
   assert.equal(resolveOverlayAppearance(preferences, "operators").customCss, ".individual-only {}");
   assert.equal(resolveOverlayScrollSpeed(preferences, "horizontalOperatorScrollSpeed"), 7);
   assert.equal(resolveOverlayScrollSpeed(preferences, "horizontalOperatorScrollSpeed", "operators"), 19);
+});
+
+test("partial individual appearance inherits the integrated canvas color", () => {
+  const preferences = normalizePreferences({
+    sukiOutputSchemaVersion: 3,
+    sukiOutputIntegratedAppearance: {
+      backgroundColor: "#111111",
+      canvasBackgroundColor: "#223344",
+    },
+    sukiOutputIndividualAppearance: {
+      fontColor: "#FFFFFF",
+    },
+  });
+
+  assert.equal(resolveOverlayAppearance(preferences, "operators").backgroundColor, "#111111");
+  assert.equal(resolveOverlayAppearance(preferences, "operators").canvasBackgroundColor, "#223344");
 });

@@ -3,51 +3,79 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ClipToBounds="True">
-    <StackPanel Spacing="12" HorizontalAlignment="Stretch">
-      <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+    <StackPanel Spacing="16" HorizontalAlignment="Stretch">
+      <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
           <StackPanel Spacing="2">
-          <TextBlock Text="{Binding RuntimeLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding RuntimeLayout.Header.Detail}" FontSize="12" Opacity="0.62" />
+          <TextBlock Text="{Binding RuntimeLayout.Header.Title}" Classes="workspaceTitle" />
+          <TextBlock Text="{Binding RuntimeLayout.Header.Detail}" Classes="supporting" MaxWidth="800" HorizontalAlignment="Left" />
           </StackPanel>
           <Button Grid.Column="1" Classes="tertiaryAction" Content="← ランへ戻る"
                   Command="{Binding SetWorkspaceCommand}" CommandParameter="run" />
         </Grid>
-        <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">
-          <Button Content="自動検出" Command="{Binding RefreshAdbDevicesCommand}"
-                  ToolTip.Tip="ADB実行ファイルと接続可能な端末を検出" />
-          <Button Classes="primary" Content="接続・撮影" Command="{Binding ConnectAndCaptureCommand}"
-                  ToolTip.Tip="選択中のADB設定で接続し、スクリーンショットを1枚取得" />
-          <Button Content="状態確認" Command="{Binding RefreshOptionalRuntimesCommand}"
-                  ToolTip.Tip="API、MAA、任意OCR、Hyper-Vの状態を更新" />
-          <Button Content="接続設定ガイド（HTML）" Command="{Binding OpenAdbConnectionGuideCommand}"
-                  ToolTip.Tip="同梱されたADB接続設定の詳しい説明を既定ブラウザーで開きます。" />
-          <Button Content="保存" Command="{Binding SaveSettingsCommand}"
-                  ToolTip.Tip="現在のADB・PC撮影・MAA推論・OCR設定を保存" />
-        </WrapPanel>
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+          <WrapPanel Classes="runtimeActions" HorizontalAlignment="Left">
+            <Button Classes="secondaryAction" Content="自動検出" Command="{Binding RefreshAdbDevicesCommand}"
+                    IsVisible="{Binding IsAdbConnectionTargetSelected}"
+                   ToolTip.Tip="ADB実行ファイルと接続可能な端末を検出" />
+            <Button Classes="secondaryAction" Content="状態確認" Command="{Binding RefreshOptionalRuntimesCommand}"
+                   ToolTip.Tip="API、MAA、任意OCR、Hyper-Vの状態を更新" />
+            <Button Classes="tertiaryAction" Content="接続設定ガイド（HTML）" Command="{Binding OpenAdbConnectionGuideCommand}"
+                    IsVisible="{Binding IsAdbConnectionTargetSelected}"
+                   ToolTip.Tip="同梱されたADB接続設定の詳しい説明を既定ブラウザーで開きます。" />
+          </WrapPanel>
+          <WrapPanel Grid.Column="1" Classes="runtimeActions" HorizontalAlignment="Right">
+            <Button Classes="secondaryAction" Content="保存" Command="{Binding SaveSettingsCommand}"
+                   ToolTip.Tip="現在のADB・PC撮影・MAA推論・OCR設定を保存" />
+            <Button Classes="primaryAction" Content="接続・撮影" Command="{Binding ConnectAndCaptureCommand}"
+                    ToolTip.Tip="選択中のADB / AndroidまたはPC版設定で接続し、スクリーンショットを1枚取得" />
+          </WrapPanel>
+        </Grid>
       </Grid>
 
+      <Border Classes="connectionModeSelector">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+          <StackPanel Spacing="2" VerticalAlignment="Center">
+            <TextBlock Text="使用する接続先" Classes="sectionTitle" />
+            <TextBlock Text="ADBまたはPC版を選択。設定は別々に保持されます。"
+                       Classes="supporting compactHelp"
+                       ToolTip.Tip="ADB / AndroidとPC版はどちらか一方だけを使用します。切り替えても、もう一方の設定値は消えずに保持されます。" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Classes="connectionModeChoices" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <RadioButton Classes="segmented" Content="ADB / Android" GroupName="RuntimeConnectionTarget"
+                         IsChecked="{Binding IsAdbConnectionTargetSelected, Mode=OneWay}"
+                         Command="{Binding SetConnectionTargetCommand}" CommandParameter="adb"
+                         AutomationProperties.Name="ADBまたはAndroidを接続先にする" />
+            <RadioButton Classes="segmented" Content="PC版" GroupName="RuntimeConnectionTarget"
+                         IsChecked="{Binding IsPcConnectionTargetSelected, Mode=OneWay}"
+                         Command="{Binding SetConnectionTargetCommand}" CommandParameter="pc"
+                         AutomationProperties.Name="PC版を接続先にする" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
       <!-- 段階診断: どこで失敗しているかを上から順に示す -->
-      <Expander Header="接続診断" IsExpanded="False">
-        <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Expander Header="接続診断" IsVisible="{Binding IsAdbConnectionTargetSelected}" IsExpanded="False">
+        <Border Classes="settingsCard">
           <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <TextBlock Text="接続・撮影の結果を段階別に表示します。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
+              <TextBlock Text="接続・撮影の結果を段階別に表示します。" Classes="supporting" TextWrapping="Wrap" VerticalAlignment="Center" />
               <Button Grid.Column="1" Content="診断コピー" Click="CopyAdbDiagnosticsClick" VerticalAlignment="Center" />
             </Grid>
             <ItemsControl Grid.Row="1" ItemsSource="{Binding AdbDiagnosticSteps}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border CornerRadius="7" Padding="9,7" Margin="0,0,0,6" Background="#101617" BorderBrush="#2B3638" BorderThickness="1">
+                <Border CornerRadius="{StaticResource WorkbenchCornerSmall}" Padding="9,7" Margin="0,0,0,6"
+                        Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                   <Grid ColumnDefinitions="64,190,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="2">
                     <Border Grid.RowSpan="2" CornerRadius="5" Padding="0,4" VerticalAlignment="Center"
                             Background="{Binding StateBackground}" BorderBrush="{Binding StateBorder}" BorderThickness="1">
-                      <TextBlock Text="{Binding State}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center"
+                      <TextBlock Text="{Binding State}" Classes="denseLabel" HorizontalAlignment="Center"
                                  Foreground="{Binding StateForeground}" />
                     </Border>
-                    <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
-                    <TextBlock Grid.Column="2" Text="{Binding Detail}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.72" />
-                    <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding NextAction}" IsVisible="{Binding HasNextAction}" FontSize="11" TextWrapping="Wrap" Foreground="#F0D06A" Opacity="0.9" />
+                    <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="{Binding Label}" Classes="denseLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="2" Text="{Binding Detail}" Classes="mono" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding NextAction}" IsVisible="{Binding HasNextAction}" Classes="supporting" TextWrapping="Wrap" Foreground="{StaticResource WorkbenchWarning}" />
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -57,12 +85,12 @@
         </Border>
       </Expander>
 
-      <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Border Classes="settingsCard" IsVisible="{Binding IsAdbConnectionTargetSelected}">
         <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
           <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
             <StackPanel Spacing="2">
-              <TextBlock Text="{Binding RuntimeLayout.Connection.Title}" FontSize="15" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding RuntimeLayout.Connection.Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
+              <TextBlock Text="{Binding RuntimeLayout.Connection.Title}" Classes="sectionTitle" />
+              <TextBlock Text="{Binding RuntimeLayout.Connection.Detail}" Classes="supporting" TextWrapping="Wrap" MaxLines="2" />
             </StackPanel>
             <WrapPanel Grid.Row="1" Classes="runtimeActions" HorizontalAlignment="Left">
               <Button Content="参照" Click="BrowseAdbPathClick" />
@@ -73,79 +101,178 @@
 
           <Grid Grid.Row="1" ColumnDefinitions="390,*,260" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4">
-              <TextBlock Grid.ColumnSpan="2" Text="プロファイル" FontSize="12" Opacity="0.68" />
+              <TextBlock Grid.ColumnSpan="2" Text="プロファイル" Classes="fieldLabel" />
               <ComboBox Grid.Row="1" ItemsSource="{Binding AdbPresets}" SelectedItem="{Binding SelectedAdbPreset, Mode=TwoWay}" ItemTemplate="{StaticResource AdbPresetComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbPresetSelectionTemplate}" />
               <Button Grid.Row="1" Grid.Column="1" Content="選択内容で上書き"
                       Command="{Binding ApplyAdbPresetCommand}" CommandParameter="{Binding SelectedAdbPreset}"
                       ToolTip.Tip="プロファイルのADBパス、serial、推奨撮影・入力方式で現在の欄を上書きします。保存は別途必要です。" />
             </Grid>
             <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="4">
-              <TextBlock Text="ADB実行ファイル" FontSize="12" Opacity="0.68" />
+              <TextBlock Text="ADB実行ファイル" Classes="fieldLabel" />
               <TextBox Grid.Row="1" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="adb または adb.exe のフルパス" />
             </Grid>
             <Grid Grid.Column="2" RowDefinitions="Auto,Auto" RowSpacing="4">
-              <TextBlock Text="接続serial" FontSize="12" Opacity="0.68" />
+              <TextBlock Text="接続serial" Classes="fieldLabel" />
               <TextBox Grid.Row="1" Text="{Binding AdbSerial, Mode=TwoWay}" PlaceholderText="127.0.0.1:16384 / emulator-5554" />
             </Grid>
 
             <Grid Grid.Row="1" Grid.ColumnSpan="3" RowDefinitions="Auto,Auto" RowSpacing="4">
-              <TextBlock Text="ADB Config" FontSize="12" Opacity="0.68" />
+              <TextBlock Text="ADB Config" Classes="fieldLabel" />
               <TextBox Grid.Row="1" Text="{Binding AdbConfigJson, Mode=TwoWay}" />
             </Grid>
           </Grid>
 
-          <TextBlock Grid.Row="2" Text="{Binding AdbDetectionDetail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
+          <TextBlock Grid.Row="2" Text="{Binding AdbDetectionDetail}" Classes="supporting" TextWrapping="Wrap" MaxLines="2" />
         </Grid>
       </Border>
 
-      <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Border Classes="settingsCard" IsVisible="{Binding IsAdbConnectionTargetSelected}">
         <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
           <StackPanel Spacing="2">
-            <TextBlock Text="MAA接続方式" FontSize="15" FontWeight="SemiBold" />
-            <TextBlock Text="MAAFrameworkのADB撮影・入力・OCR方式を選びます。MuMu/LDは高速方式を優先し、Google Play Gamesなどは標準または互換方式で確認します。" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
+            <TextBlock Text="MAA接続方式" Classes="sectionTitle" />
+            <TextBlock Text="MAAFrameworkのADB撮影・入力・OCR方式を選びます。MuMu/LDは高速方式を優先し、Google Play Gamesなどは標準または互換方式で確認します。" Classes="supporting" TextWrapping="Wrap" MaxLines="2" />
           </StackPanel>
 
-          <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="12">
+          <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="12">
             <Grid RowDefinitions="Auto,Auto" RowSpacing="4">
-              <TextBlock Text="撮影方式" FontSize="12" Opacity="0.68" />
+              <TextBlock Text="撮影方式" Classes="fieldLabel" />
               <ComboBox Grid.Row="1" ItemsSource="{Binding AdbScreencapMethodOptions}" SelectedItem="{Binding SelectedAdbScreencapMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
             </Grid>
             <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="4">
-              <TextBlock Text="入力方式" FontSize="12" Opacity="0.68" />
+              <TextBlock Text="入力方式" Classes="fieldLabel" />
               <ComboBox Grid.Row="1" ItemsSource="{Binding AdbInputMethodOptions}" SelectedItem="{Binding SelectedAdbInputMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
-            </Grid>
-            <Grid Grid.Column="2" RowDefinitions="Auto,Auto" RowSpacing="4">
-              <TextBlock Text="OCR" FontSize="12" Opacity="0.68" />
-              <ComboBox Grid.Row="1" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
             </Grid>
           </Grid>
 
           <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="4">
-            <TextBlock Text="{Binding AdbDetectionSummary}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-            <TextBlock Grid.Column="1" Text="{Binding AdbMethodSummary}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-            <TextBlock Grid.Row="1" Text="{Binding AdbDetectionDetail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AdbMethodDetail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" />
+            <TextBlock Text="{Binding AdbDetectionSummary}" Classes="denseLabel" TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="1" Text="{Binding AdbMethodSummary}" Classes="denseLabel" TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Row="1" Text="{Binding AdbDetectionDetail}" Classes="supporting" TextWrapping="Wrap" MaxLines="2" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AdbMethodDetail}" Classes="supporting" TextWrapping="Wrap" MaxLines="2" />
           </Grid>
         </Grid>
       </Border>
 
-      <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Expander Header="PC版ウィンドウ接続・操作" IsVisible="{Binding IsPcConnectionTargetSelected}" IsExpanded="True">
+        <Border Classes="settingsCard">
+          <StackPanel Spacing="11">
+            <StackPanel Spacing="4">
+              <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
+                <TextBlock Text="MaaFramework Win32 ControllerでPC版から取得" Classes="sectionTitle" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="helpIcon" Content="?"
+                        AutomationProperties.Name="PC版接続方式の説明"
+                        ToolTip.Tip="MAAと同じ撮影・マウス接続方式で起動済みウィンドウのHWNDへ接続します。日本版はtitle=アークナイツ / class=UnityWndClassで実機確認済みです。" />
+              </Grid>
+              <TextBlock Text="起動済みPC版へ接続します。" Classes="supporting compactHelp" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+              <TextBlock Text="優先window title" Classes="fieldLabel" />
+              <TextBlock Grid.Column="1" Text="優先window class（任意）" Classes="fieldLabel" />
+              <TextBox Grid.Row="1" Text="{Binding PcPreferredWindowTitle, Mode=TwoWay}" PlaceholderText="アークナイツ"
+                       ToolTip.Tip="既知候補: アークナイツ / Arknights / 明日方舟 / 명일방주" />
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding PcPreferredWindowClass, Mode=TwoWay}" PlaceholderText="UnityWndClass（日本版実機確認済み）"
+                       ToolTip.Tip="保存後はwindow titleとclassをHWNDの代わりに再検出条件として使います。" />
+              <Button Grid.Row="1" Grid.Column="2" Content="ウィンドウ再検出" Command="{Binding RefreshPcWindowsCommand}" />
+              <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="保存後もタイトルとクラスから再検出します。"
+                         Classes="supporting compactHelp"
+                         ToolTip.Tip="既知候補: アークナイツ / Arknights / 明日方舟 / 명일방주。titleとclassは保存後もHWNDの代わりに再検出条件として使います。" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,300,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+              <TextBlock Text="対象ウィンドウ" Classes="fieldLabel" />
+              <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto" ColumnSpacing="6">
+                <TextBlock Text="撮影方式" Classes="fieldLabel" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="helpIcon" Content="?"
+                        AutomationProperties.Name="PC撮影方式の説明"
+                        ToolTip.Tip="{Binding SelectedPcScreencapMethod.Detail}" />
+              </Grid>
+              <ComboBox Grid.Row="1" ItemsSource="{Binding PcWindows}" SelectedItem="{Binding SelectedPcWindow, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PcScreencapMethodOptions}" SelectedItem="{Binding SelectedPcScreencapMethod, Mode=TwoWay}"
+                        ToolTip.Tip="{Binding SelectedPcScreencapMethod.Detail}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Detail}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button Grid.Row="1" Grid.Column="2" Classes="secondaryAction" Content="PC接続・撮影テスト" Command="{Binding ConnectPcWindowAndCaptureCommand}" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+              <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="6">
+                <TextBlock Text="マウス入力方式" Classes="fieldLabel" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="helpIcon" Content="?"
+                        AutomationProperties.Name="PCマウス入力方式の説明"
+                        ToolTip.Tip="{Binding SelectedPcMouseMethod.Detail}" />
+              </Grid>
+              <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto" ColumnSpacing="6">
+                <TextBlock Text="キーボード接続方式" Classes="fieldLabel" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="helpIcon" Content="?"
+                        AutomationProperties.Name="PCキーボード接続方式の説明"
+                        ToolTip.Tip="{Binding SelectedPcKeyboardMethod.Detail}" />
+              </Grid>
+              <ComboBox Grid.Row="1" ItemsSource="{Binding PcMouseMethodOptions}" SelectedItem="{Binding SelectedPcMouseMethod, Mode=TwoWay}"
+                        ToolTip.Tip="{Binding SelectedPcMouseMethod.Detail}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Detail}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PcKeyboardMethodOptions}" SelectedItem="{Binding SelectedPcKeyboardMethod, Mode=TwoWay}"
+                        ToolTip.Tip="{Binding SelectedPcKeyboardMethod.Detail}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Detail}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBlock Text="取得は撮影と許可されたタップ／スワイプだけです。"
+                         Classes="supporting compactHelp" VerticalAlignment="Center"
+                         ToolTip.Tip="取得操作は認識プロファイルで許可された矩形内タップとスワイプだけです。キー操作やクライアントの起動・終了は行いません。撮影画像は1280x720へ正規化します。管理者として起動されたゲームへ接続する場合はRHODESも管理者として起動してください。" />
+              <Button Grid.Column="1" Classes="helpIcon" Content="?"
+                      AutomationProperties.Name="PC版取得操作の説明"
+                      ToolTip.Tip="取得操作は認識プロファイルで許可された矩形内タップとスワイプだけです。キー操作やクライアントの起動・終了は行いません。撮影画像は1280x720へ正規化します。管理者として起動されたゲームへ接続する場合はRHODESも管理者として起動してください。" />
+            </Grid>
+            <TextBlock Text="{Binding PcWindowStatus}" Classes="mono" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </Expander>
+
+      <!-- 接続先固有の設定を先に完了してから、共通の認識エンジンを調整する。 -->
+      <Border Classes="settingsCard">
         <StackPanel Spacing="10">
           <StackPanel Spacing="2">
-            <TextBlock Text="MAA推論（CPU / GPU）" FontSize="15" FontWeight="SemiBold" />
-            <TextBlock Text="既定は自動です。DirectMLは保存済みの同一FrameをCPUと比較し、認識結果が一致することを確認してから選択してください。"
-                       FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+            <TextBlock Text="MAA推論（CPU / GPU）" Classes="sectionTitle" />
+            <TextBlock Text="OCRと推論providerはADB / AndroidとPC版で共通です。DirectMLは保存済みの同一FrameをCPUと比較してから選択してください。"
+                       Classes="supporting" TextWrapping="Wrap" />
           </StackPanel>
+          <Grid RowDefinitions="Auto,Auto" RowSpacing="4">
+            <TextBlock Text="OCR" Classes="fieldLabel" />
+            <ComboBox Grid.Row="1" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
+          </Grid>
           <Grid ColumnDefinitions="*,170,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
-            <TextBlock Text="推論provider" FontSize="12" Opacity="0.68" />
-            <TextBlock Grid.Column="1" IsVisible="{Binding IsDirectMlInferenceSelected}" Text="DXGI adapter index" FontSize="12" Opacity="0.68" />
-            <ComboBox Grid.Row="1" ItemsSource="{Binding MaaInferenceProviderOptions}" SelectedItem="{Binding SelectedMaaInferenceProvider, Mode=TwoWay}">
+            <TextBlock Text="推論provider" Classes="fieldLabel" />
+            <TextBlock Grid.Column="1" IsVisible="{Binding IsDirectMlInferenceSelected}" Text="DXGI adapter index" Classes="fieldLabel" />
+            <ComboBox Grid.Row="1" ItemsSource="{Binding MaaInferenceProviderOptions}" SelectedItem="{Binding SelectedMaaInferenceProvider, Mode=TwoWay}"
+                      ToolTip.Tip="{Binding SelectedMaaInferenceProvider.Detail}">
               <ComboBox.ItemTemplate>
                 <DataTemplate>
-                  <StackPanel Spacing="1">
-                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.62" />
-                  </StackPanel>
+                  <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{Binding Detail}" />
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
@@ -154,120 +281,69 @@
                            ToolTip.Tip="MaaFrameworkがDXGI EnumAdapters1で数えるGPU番号です。複数GPU環境では保存Frame比較で選択を確認してください。" />
             <Button Grid.Row="1" Grid.Column="2" Content="保存FrameでCPU/GPU比較" Command="{Binding RunMaaInferenceBenchmarkCommand}"
                     ToolTip.Tip="現在読み込まれているFrameへ同じOCR taskを2回ずつ実行し、CPUとDirectMLの結果と処理時間を比較します。" />
-            <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding SelectedMaaInferenceProvider.Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
           </Grid>
-          <TextBlock Text="{Binding MaaInferenceBenchmarkStatus}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.72" />
+          <TextBlock Text="{Binding MaaInferenceBenchmarkStatus}" Classes="mono" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
 
-      <Expander Header="PC版ウィンドウ撮影（先行対応）" IsExpanded="True">
-        <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
-          <StackPanel Spacing="11">
-            <StackPanel Spacing="2">
-              <TextBlock Text="MaaFramework Win32 Controllerでゲームウィンドウを撮影" FontSize="15" FontWeight="SemiBold" />
-              <TextBlock Text="中国版MAAと同じく起動済みウィンドウのHWNDへ接続します。日本版公開前のため候補名を優先表示し、実際に列挙されたウィンドウから選択できるようにしています。"
-                         FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
-            </StackPanel>
-
-            <Grid ColumnDefinitions="*,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
-              <TextBlock Text="優先window title" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="1" Text="優先window class（任意）" FontSize="12" Opacity="0.68" />
-              <TextBox Grid.Row="1" Text="{Binding PcPreferredWindowTitle, Mode=TwoWay}" PlaceholderText="アークナイツ" />
-              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding PcPreferredWindowClass, Mode=TwoWay}" PlaceholderText="公開後の実機確認で必要な場合だけ指定" />
-              <Button Grid.Row="1" Grid.Column="2" Content="ウィンドウ再検出" Command="{Binding RefreshPcWindowsCommand}" />
-              <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="既知候補: アークナイツ / Arknights / 明日方舟 / 명일방주。titleとclassは保存後もHWNDの代わりに再検出条件として使います。"
-                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
-            </Grid>
-
-            <Grid ColumnDefinitions="*,300,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
-              <TextBlock Text="対象ウィンドウ" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="1" Text="撮影方式" FontSize="12" Opacity="0.68" />
-              <ComboBox Grid.Row="1" ItemsSource="{Binding PcWindows}" SelectedItem="{Binding SelectedPcWindow, Mode=TwoWay}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PcScreencapMethodOptions}" SelectedItem="{Binding SelectedPcScreencapMethod, Mode=TwoWay}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate>
-                    <StackPanel Spacing="1">
-                      <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.62" />
-                    </StackPanel>
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <Button Grid.Row="1" Grid.Column="2" Classes="primary" Content="PCウィンドウ接続・撮影" Command="{Binding ConnectPcWindowAndCaptureCommand}" />
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedPcScreencapMethod.Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
-            </Grid>
-
-            <TextBlock Text="先行対応は撮影と認識のみです。クライアントの起動・終了・マウス・キーボード操作は行いません。撮影画像は1280x720へ正規化します。"
-                       FontSize="11" TextWrapping="Wrap" Opacity="0.68" />
-            <TextBlock Text="{Binding PcWindowStatus}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" Opacity="0.72" />
-          </StackPanel>
-        </Border>
-      </Expander>
-
-      <Expander Header="エミュレーター接続強化（MuMu / LDPlayer）" IsExpanded="True">
-        <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Expander Header="エミュレーター接続強化（MuMu / LDPlayer）" IsVisible="{Binding IsAdbConnectionTargetSelected}" IsExpanded="True">
+        <Border Classes="settingsCard">
           <StackPanel Spacing="12">
             <StackPanel Spacing="2">
-              <TextBlock Text="選択中のエミュレーターに対応する接続強化を設定" FontSize="15" FontWeight="SemiBold" />
-              <TextBlock Text="MuMuは高速撮影と高速タッチ、LDPlayerはMAA公式対応範囲の高速撮影だけを使用できます。MuMu 12はnx_mainとnx_deviceの両方の配置を自動検出します。能力確認はファイルを調べるだけで、ADB接続や端末入力を行いません。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+              <TextBlock Text="選択中のエミュレーターに対応する接続強化を設定" Classes="sectionTitle" />
+              <TextBlock Text="MuMuは高速撮影と高速タッチ、LDPlayerはMAA公式対応範囲の高速撮影だけを使用できます。MuMu 12はnx_mainとnx_deviceの両方の配置を自動検出します。能力確認はファイルを調べるだけで、ADB接続や端末入力を行いません。" Classes="supporting" TextWrapping="Wrap" />
             </StackPanel>
 
             <Grid IsVisible="{Binding IsMuMuPresetSelected}" ColumnDefinitions="*,*,*" ColumnSpacing="10">
-              <Border CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+              <Border Classes="settingsSubCard">
                 <StackPanel Spacing="5">
                   <CheckBox Content="MuMu高速スクリーンショット"
                             IsChecked="{Binding MuMuScreenshotEnhancementEnabled, Mode=TwoWay}"
                             ToolTip.Tip="MuMu IPCで画面を取得し、失敗時は選択した撮影方式へ戻します。" />
                   <TextBlock Text="画面取得だけをMuMuのIPCへ切り替えます。ADB撮影より低遅延・ロスレスです。使用できない場合は「高速撮影失敗時」の方式へ自動で戻ります。"
-                             FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                             Classes="supporting" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
-              <Border Grid.Column="1" CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+              <Border Grid.Column="1" Classes="settingsSubCard">
                 <StackPanel Spacing="5">
                   <CheckBox Content="MuMu高速タッチ（6.3.2.0以上）"
                             IsChecked="{Binding MuMuTouchEnhancementEnabled, Mode=TwoWay}"
                             ToolTip.Tip="MuMu IPCでタップとスワイプを送り、失敗時は選択した入力方式へ戻します。" />
                   <TextBlock Text="タップとスワイプだけをMuMuのIPCへ切り替えます。確認操作付きタッチや認識profileの画面遷移で低遅延入力を利用できます。"
-                             FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                             Classes="supporting" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
-              <Border Grid.Column="2" CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+              <Border Grid.Column="2" Classes="settingsSubCard">
                 <StackPanel Spacing="5">
                   <CheckBox Content="MuMuネットワークブリッジ"
                             IsChecked="{Binding MuMuBridgeConnectionEnabled, Mode=TwoWay}"
                             ToolTip.Tip="MuMu IPCの接続先を下のinstance番号で固定します。" />
                   <TextBlock Text="複数起動・バックグラウンド常駐時の表示先を固定します。ONでは下のinstance番号を明示的に使用し、OFFではADB serialから自動推定します。"
-                             FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                             Classes="supporting" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
             </Grid>
 
-            <Border IsVisible="{Binding IsLdPlayerPresetSelected}" CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+            <Border IsVisible="{Binding IsLdPlayerPresetSelected}" Classes="settingsSubCard">
               <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
                 <StackPanel Spacing="5">
                   <CheckBox Content="LDPlayer高速スクリーンショット"
                             IsChecked="{Binding LdPlayerScreenshotEnhancementEnabled, Mode=TwoWay}"
                             ToolTip.Tip="ldopengl64.dllを使うMAA EmulatorExtras撮影を有効にし、失敗時は選択した撮影方式へ戻します。" />
                   <TextBlock Text="LDPlayer 9のldopengl64.dllを使って低遅延・ロスレスで撮影します。ldconsole.exeと撮影DLLが見つからない場合は自動でフォールバックします。"
-                             FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                             Classes="supporting" TextWrapping="Wrap" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="5">
-                  <TextBlock Text="LDPlayerの入力方式" FontSize="13" FontWeight="SemiBold" />
+                  <TextBlock Text="LDPlayerの入力方式" Classes="denseLabel" />
                   <TextBlock Text="MAAのEmulatorExtras高速入力はLDPlayerを公式対応対象に含めていません。上の「入力方式」で選んだMAA Touch／MiniTouch／ADB入力をそのまま使用し、高速入力フラグは追加しません。"
-                             FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                             Classes="supporting" TextWrapping="Wrap" />
                 </StackPanel>
               </Grid>
             </Border>
 
             <Grid ColumnDefinitions="*,Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
-              <TextBlock Text="エミュレータールート" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="2" Text="回復時に起動するエミュレーター本体" FontSize="12" Opacity="0.68" />
+              <TextBlock Text="エミュレータールート" Classes="fieldLabel" />
+              <TextBlock Grid.Column="2" Text="回復時に起動するエミュレーター本体" Classes="fieldLabel" />
               <TextBox Grid.Row="1" Text="{Binding EmulatorRoot, Mode=TwoWay}" PlaceholderText="MuMu Player 12 または LDPlayer 9 のフォルダー"
                        ToolTip.Tip="選択中のMuMuまたはLDPlayerのインストールフォルダーです。空欄ならADBパスから自動判定します。" />
               <Button Grid.Row="1" Grid.Column="1" Content="参照" Click="BrowseEmulatorRootClick" />
@@ -276,86 +352,100 @@
               <Button Grid.Row="1" Grid.Column="3" Content="参照" Click="BrowseEmulatorExecutableClick" />
               <TextBlock Grid.Row="2" Grid.ColumnSpan="2"
                          Text="選択中のエミュレーターのインストール先です。通常はADB実行ファイルのパスから自動判定されます。"
-                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+                         Classes="supporting" TextWrapping="Wrap" />
               <TextBlock Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"
                          Text="「失敗時にエミュレーター本体を起動」がONのとき、接続回復でのみ起動します。ゲームアプリは起動しません。"
-                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+                         Classes="supporting" TextWrapping="Wrap" />
             </Grid>
 
             <Grid ColumnDefinitions="160,160,*,180" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
-              <TextBlock Text="instance番号" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="1" Text="clone番号" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="2" Text="ゲームpackage" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="3" Text="能力確認" FontSize="12" Opacity="0.68" />
+              <TextBlock Text="instance番号" Classes="fieldLabel" />
+              <TextBlock Grid.Column="1" Text="clone番号" Classes="fieldLabel" />
+              <TextBlock Grid.Column="2" Text="ゲームパッケージ" Classes="fieldLabel" />
+              <TextBlock Grid.Column="3" Text="能力確認" Classes="fieldLabel" />
               <NumericUpDown Grid.Row="1" IsVisible="{Binding IsMuMuPresetSelected}" Minimum="0" Maximum="127" Increment="1" FormatString="0" Value="{Binding MuMuInstanceIndex, Mode=TwoWay}"
                              ToolTip.Tip="MuMu IPCが接続する仮想端末番号です。通常は0です。" />
               <NumericUpDown Grid.Row="1" IsVisible="{Binding IsLdPlayerPresetSelected}" Minimum="0" Maximum="127" Increment="1" FormatString="0" Value="{Binding LdPlayerInstanceIndex, Mode=TwoWay}"
                              ToolTip.Tip="LDPlayerのinstance番号です。通常はADB serialから自動推定されます。" />
               <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding AdbGameCloneIndex, Mode=TwoWay}"
                              ToolTip.Tip="同じ仮想端末内で複製したゲームアプリの番号です。通常は0です。" />
-              <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding AdbGamePackage, Mode=TwoWay}"
-                       ToolTip.Tip="表示先のゲームを特定するAndroid package名です。" />
+              <StackPanel Grid.Row="1" Grid.Column="2" Spacing="4">
+                <ComboBox ItemsSource="{Binding AdbGamePackageOptions}"
+                          SelectedItem="{Binding SelectedAdbGamePackageOption, Mode=TwoWay}"
+                          ToolTip.Tip="接続対象のアークナイツ地域版を選択します。新規設定の既定値は日本版です。">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBox IsVisible="{Binding IsCustomAdbGamePackageSelected}"
+                         Text="{Binding CustomAdbGamePackage, Mode=TwoWay}"
+                         PlaceholderText="例: com.example.future.Arknights"
+                         ToolTip.Tip="一覧にない将来のクライアントだけAndroid package名を入力します。" />
+              </StackPanel>
               <Button Grid.Row="1" Grid.Column="3" Content="エミュレーター能力を再確認" Command="{Binding RefreshEmulatorCapabilityCommand}"
                       ToolTip.Tip="MuMuのIPC/ManagerまたはLDPlayerのldconsole/撮影DLLを確認します。ADB接続や入力は行いません。" />
               <TextBlock Grid.Row="2" IsVisible="{Binding IsMuMuPresetSelected}" Text="MuMu本体の仮想端末番号です。ブリッジONではこの値を使用し、OFFではADB serialから自動推定します。通常は0です。"
-                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+                         Classes="supporting" TextWrapping="Wrap" />
               <TextBlock Grid.Row="2" IsVisible="{Binding IsLdPlayerPresetSelected}" Text="LDPlayer本体の仮想端末番号です。通常はADB serialから自動推定し、接続時のPIDはMaaToolkitが取得します。"
-                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+                         Classes="supporting" TextWrapping="Wrap" />
               <TextBlock Grid.Row="2" Grid.Column="1" Text="同じ仮想端末内で複製したゲームの番号です。通常版は0です。instance番号とは別物です。"
-                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
-              <TextBlock Grid.Row="2" Grid.Column="2" Text="表示先を特定するAndroid package名です。日本版はcom.YoStarJP.Arknightsです。別リージョン使用時だけ変更します。"
-                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+                         Classes="supporting" TextWrapping="Wrap" />
+              <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding AdbGamePackageDescription}"
+                         Classes="supporting" TextWrapping="Wrap" />
               <TextBlock Grid.Row="2" Grid.Column="3" Text="選択中のエミュレーターの高速撮影要件を再確認します。ADB接続やタップは行いません。"
-                         FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+                         Classes="supporting" TextWrapping="Wrap" />
             </Grid>
 
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
-              <TextBlock IsVisible="{Binding IsMuMuPresetSelected}" Text="高速タッチ失敗時" FontSize="12" Opacity="0.68" />
-              <TextBlock IsVisible="{Binding IsLdPlayerPresetSelected}" Text="LDPlayer入力" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="1" Text="高速撮影失敗時" FontSize="12" Opacity="0.68" />
+              <TextBlock IsVisible="{Binding IsMuMuPresetSelected}" Text="高速タッチ失敗時" Classes="fieldLabel" />
+              <TextBlock IsVisible="{Binding IsLdPlayerPresetSelected}" Text="LDPlayer入力" Classes="fieldLabel" />
+              <TextBlock Grid.Column="1" Text="高速撮影失敗時" Classes="fieldLabel" />
               <ComboBox Grid.Row="1" IsVisible="{Binding IsMuMuPresetSelected}" ItemsSource="{Binding AdbInputFallbackMethodOptions}" SelectedItem="{Binding SelectedAdbInputFallbackMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
-              <TextBlock Grid.Row="1" IsVisible="{Binding IsLdPlayerPresetSelected}" Text="上のMAA接続方式で選択" FontSize="12" VerticalAlignment="Center" />
+              <TextBlock Grid.Row="1" IsVisible="{Binding IsLdPlayerPresetSelected}" Text="上のMAA接続方式で選択" Classes="caption" VerticalAlignment="Center" />
               <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AdbScreencapFallbackMethodOptions}" SelectedItem="{Binding SelectedAdbScreencapFallbackMethod, Mode=TwoWay}" ItemTemplate="{StaticResource AdbMethodComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource AdbMethodSelectionTemplate}" />
-              <TextBlock Grid.Row="2" IsVisible="{Binding IsMuMuPresetSelected}" Text="{Binding SelectedAdbInputFallbackMethod.Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
-              <TextBlock Grid.Row="2" IsVisible="{Binding IsLdPlayerPresetSelected}" Text="LDPlayerではEmulatorExtras入力を追加せず、選択中の入力方式を維持します。" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedAdbScreencapFallbackMethod.Detail}" FontSize="10" TextWrapping="Wrap" Opacity="0.56" />
+              <TextBlock Grid.Row="2" IsVisible="{Binding IsMuMuPresetSelected}" Text="{Binding SelectedAdbInputFallbackMethod.Detail}" Classes="supporting" TextWrapping="Wrap" />
+              <TextBlock Grid.Row="2" IsVisible="{Binding IsLdPlayerPresetSelected}" Text="LDPlayerではEmulatorExtras入力を追加せず、選択中の入力方式を維持します。" Classes="supporting" TextWrapping="Wrap" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedAdbScreencapFallbackMethod.Detail}" Classes="supporting" TextWrapping="Wrap" />
             </Grid>
 
-            <TextBlock Text="{Binding EmulatorCapabilitySummary}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding AdbEnhancementStatus}" FontSize="11" TextWrapping="Wrap" Opacity="0.68" />
+            <TextBlock Text="{Binding EmulatorCapabilitySummary}" Classes="denseLabel" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding AdbEnhancementStatus}" Classes="supporting" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </Expander>
 
-      <Expander Header="接続検証（撮影ベンチマーク／確認付きタッチ）" IsExpanded="False">
-        <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Expander Header="接続検証（撮影ベンチマーク／確認付きタッチ）" IsVisible="{Binding IsAdbConnectionTargetSelected}" IsExpanded="False">
+        <Border Classes="settingsCard">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
               <Button Content="スクリーンショット10回計測" Command="{Binding RunAdbScreenshotBenchmarkCommand}" />
-              <TextBlock Grid.Column="1" Text="{Binding AdbBenchmarkStatus}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" Opacity="0.72" />
+              <TextBlock Grid.Column="1" Text="{Binding AdbBenchmarkStatus}" Classes="mono" TextWrapping="Wrap" VerticalAlignment="Center" />
             </Grid>
 
-            <Border CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+            <Border Classes="settingsSubCard">
               <StackPanel Spacing="9">
-                <TextBlock Text="安全タッチテスト" FontSize="14" FontWeight="SemiBold" />
-                <TextBlock Text="1280x720内の指定矩形から1点をランダム化し、次の確認操作を行った場合だけ1回タップします。" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                <TextBlock Text="安全タッチテスト" Classes="h3" />
+                <TextBlock Text="1280x720内の指定矩形から1点をランダム化し、次の確認操作を行った場合だけ1回タップします。" Classes="supporting" TextWrapping="Wrap" />
                 <Grid ColumnDefinitions="*,*,*,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4">
-                  <TextBlock Text="X" FontSize="11" Opacity="0.68" />
-                  <TextBlock Grid.Column="1" Text="Y" FontSize="11" Opacity="0.68" />
-                  <TextBlock Grid.Column="2" Text="幅" FontSize="11" Opacity="0.68" />
-                  <TextBlock Grid.Column="3" Text="高さ" FontSize="11" Opacity="0.68" />
+                  <TextBlock Text="X" Classes="supporting" />
+                  <TextBlock Grid.Column="1" Text="Y" Classes="supporting" />
+                  <TextBlock Grid.Column="2" Text="幅" Classes="supporting" />
+                  <TextBlock Grid.Column="3" Text="高さ" Classes="supporting" />
                   <NumericUpDown Grid.Row="1" Minimum="0" Maximum="1279" Increment="1" FormatString="0" Value="{Binding TouchTestX, Mode=TwoWay}" />
                   <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="719" Increment="1" FormatString="0" Value="{Binding TouchTestY, Mode=TwoWay}" />
                   <NumericUpDown Grid.Row="1" Grid.Column="2" Minimum="0" Maximum="1280" Increment="1" FormatString="0" Value="{Binding TouchTestWidth, Mode=TwoWay}" />
                   <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="0" Maximum="720" Increment="1" FormatString="0" Value="{Binding TouchTestHeight, Mode=TwoWay}" />
                   <Button Grid.Row="1" Grid.Column="4" Content="タップ点を準備" Command="{Binding PrepareAdbTouchTestCommand}" />
                 </Grid>
-                <TextBlock Text="{Binding TouchTestStatus}" FontSize="11" TextWrapping="Wrap" Opacity="0.72" />
-                <Border IsVisible="{Binding IsTouchTestConfirmationVisible}" CornerRadius="6" Padding="10" Background="#2A2111" BorderBrush="#F0D06A" BorderThickness="1">
+                <TextBlock Text="{Binding TouchTestStatus}" Classes="supporting" TextWrapping="Wrap" />
+                <Border IsVisible="{Binding IsTouchTestConfirmationVisible}" CornerRadius="{StaticResource WorkbenchCornerSmall}" Padding="10"
+                        Background="{StaticResource WorkbenchWarningSurface}" BorderBrush="{StaticResource WorkbenchWarning}" BorderThickness="1">
                   <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <TextBlock Text="{Binding TouchTestConfirmationDetail}" TextWrapping="Wrap" FontSize="11" Foreground="#F0D06A" />
+                    <TextBlock Text="{Binding TouchTestConfirmationDetail}" TextWrapping="Wrap" Classes="supporting" Foreground="{StaticResource WorkbenchWarning}" />
                     <Button Grid.Column="1" Content="取消" Command="{Binding CancelAdbTouchTestCommand}" />
-                    <Button Grid.Column="2" Classes="primary" Content="確認して1回タップ" Command="{Binding ConfirmAdbTouchTestCommand}" />
+                    <Button Grid.Column="2" Classes="primaryAction" Content="確認して1回タップ" Command="{Binding ConfirmAdbTouchTestCommand}" />
                   </Grid>
                 </Border>
               </StackPanel>
@@ -364,82 +454,85 @@
         </Border>
       </Expander>
 
-      <Expander Header="接続回復・高度なADB設定" IsExpanded="False">
-        <Border CornerRadius="8" Padding="12" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Expander Header="接続回復・高度なADB設定" IsVisible="{Binding IsAdbConnectionTargetSelected}" IsExpanded="False">
+        <Border Classes="settingsCard">
           <StackPanel Spacing="12">
             <WrapPanel>
-              <CheckBox Content="接続自動認識" IsChecked="{Binding AdbAutoDetect, Mode=TwoWay}" Margin="0,0,14,6" />
-              <CheckBox Content="接続前に毎回自動認識" IsChecked="{Binding AdbAlwaysAutoDetect, Mode=TwoWay}" Margin="0,0,14,6" />
-              <CheckBox Content="失敗時にADB server再起動" IsChecked="{Binding RestartAdbServerOnFailure, Mode=TwoWay}" Margin="0,0,14,6" />
-              <CheckBox Content="失敗時にエミュレーター本体を起動" IsChecked="{Binding RestartEmulatorOnFailure, Mode=TwoWay}" Margin="0,0,14,6" />
+              <CheckBox Content="接続自動認識" IsChecked="{Binding AdbAutoDetect, Mode=TwoWay}" Margin="0,0,16,8" />
+              <CheckBox Content="接続前に毎回自動認識" IsChecked="{Binding AdbAlwaysAutoDetect, Mode=TwoWay}" Margin="0,0,16,8" />
+              <CheckBox Content="失敗時にADB server再起動" IsChecked="{Binding RestartAdbServerOnFailure, Mode=TwoWay}" Margin="0,0,16,8" />
+              <CheckBox Content="失敗時にエミュレーター本体を起動" IsChecked="{Binding RestartEmulatorOnFailure, Mode=TwoWay}" Margin="0,0,16,8" />
             </WrapPanel>
 
             <Grid ColumnDefinitions="180,180,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="4">
-              <TextBlock Text="再接続回数" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="1" Text="再接続待機 (ms)" FontSize="12" Opacity="0.68" />
-              <TextBlock Grid.Column="2" Text="直近の回復結果" FontSize="12" Opacity="0.68" />
+              <TextBlock Text="再接続回数" Classes="fieldLabel" />
+              <TextBlock Grid.Column="1" Text="再接続待機 (ms)" Classes="fieldLabel" />
+              <TextBlock Grid.Column="2" Text="直近の回復結果" Classes="fieldLabel" />
               <NumericUpDown Grid.Row="1" Minimum="1" Maximum="5" Increment="1" FormatString="0" Value="{Binding AdbReconnectAttempts, Mode=TwoWay}" />
               <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="10000" Increment="250" FormatString="0" Value="{Binding AdbReconnectDelayMs, Mode=TwoWay}" />
-              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AdbRecoveryStatus}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" />
+              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AdbRecoveryStatus}" Classes="mono" TextWrapping="Wrap" VerticalAlignment="Center" />
             </Grid>
 
-            <Border CornerRadius="7" Padding="10" Background="#241619" BorderBrush="#7A3F48" BorderThickness="1">
+            <Border CornerRadius="{StaticResource WorkbenchCornerSmall}" Padding="10"
+                    Background="{StaticResource WorkbenchDangerSurface}" BorderBrush="{StaticResource WorkbenchDanger}" BorderThickness="1">
               <StackPanel Spacing="8">
-                <TextBlock Text="プロセス終了を伴う高度な操作" FontSize="14" FontWeight="SemiBold" Foreground="#F0A6AF" />
+                <TextBlock Text="プロセス終了を伴う高度な操作" Classes="h3" Foreground="{StaticResource WorkbenchDanger}" />
                 <CheckBox Content="接続失敗時に選択中ADBプロセスを終了して再起動" IsChecked="{Binding HardRestartAdbProcessOnFailure, Mode=TwoWay}" />
                 <CheckBox Content="アプリ終了時に選択中ADBプロセスを終了" IsChecked="{Binding KillAdbOnExit, Mode=TwoWay}" />
                 <CheckBox Content="この起動中だけ、上記のプロセス終了を許可する" IsChecked="{Binding AllowDestructiveAdbActionsThisSession, Mode=TwoWay}" />
-                <TextBlock Text="実行ファイルの正規化済み絶対パスが選択中ADBと完全一致するプロセスだけが対象です。この起動中の許可は保存されません。" FontSize="11" TextWrapping="Wrap" Foreground="#F0A6AF" Opacity="0.82" />
+                <TextBlock Text="実行ファイルの正規化済み絶対パスが選択中ADBと完全一致するプロセスだけが対象です。この起動中の許可は保存されません。" Classes="supporting" TextWrapping="Wrap" Foreground="{StaticResource WorkbenchDanger}" />
               </StackPanel>
             </Border>
 
-            <Border CornerRadius="7" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+            <Border Classes="settingsSubCard">
               <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                   <Button Content="Google公式 管理ADBを導入" Command="{Binding PrepareManagedAdbInstallCommand}" />
-                  <TextBlock Grid.Column="1" Text="{Binding ManagedAdbStatus}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" Opacity="0.72" />
+                  <TextBlock Grid.Column="1" Text="{Binding ManagedAdbStatus}" Classes="supporting" TextWrapping="Wrap" VerticalAlignment="Center" />
                 </Grid>
                 <CheckBox Content="導入済み管理ADBを使用" IsChecked="{Binding UseManagedAdb, Mode=TwoWay}" />
-                <Border IsVisible="{Binding IsManagedAdbInstallConfirmationVisible}" CornerRadius="6" Padding="10" Background="#2A2111" BorderBrush="#F0D06A" BorderThickness="1">
+                <Border IsVisible="{Binding IsManagedAdbInstallConfirmationVisible}" CornerRadius="{StaticResource WorkbenchCornerSmall}" Padding="10"
+                        Background="{StaticResource WorkbenchWarningSurface}" BorderBrush="{StaticResource WorkbenchWarning}" BorderThickness="1">
                   <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <TextBlock Text="{Binding ManagedAdbConfirmationDetail}" TextWrapping="Wrap" FontSize="11" Foreground="#F0D06A" />
+                    <TextBlock Text="{Binding ManagedAdbConfirmationDetail}" TextWrapping="Wrap" Classes="supporting" Foreground="{StaticResource WorkbenchWarning}" />
                     <Button Grid.Column="1" Content="取消" Command="{Binding CancelManagedAdbInstallCommand}" />
-                    <Button Grid.Column="2" Classes="primary" Content="確認して導入" Command="{Binding ConfirmManagedAdbInstallCommand}" />
+                    <Button Grid.Column="2" Classes="primaryAction" Content="確認して導入" Command="{Binding ConfirmManagedAdbInstallCommand}" />
                   </Grid>
                 </Border>
                 <CheckBox Content="軽量ADB（未対応）" IsChecked="False" IsEnabled="{Binding LightweightAdbSupported}" />
-                <TextBlock Text="{Binding LightweightAdbDetail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+                <TextBlock Text="{Binding LightweightAdbDetail}" Classes="supporting" TextWrapping="Wrap" />
               </StackPanel>
             </Border>
           </StackPanel>
         </Border>
       </Expander>
 
-      <Border CornerRadius="8" Padding="10" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Border Classes="settingsCard" IsVisible="{Binding IsAdbConnectionTargetSelected}">
         <StackPanel Spacing="2">
-          <TextBlock Text="{Binding RuntimeLayout.Detection.Title}" FontSize="15" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding RuntimeLayout.Detection.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+          <TextBlock Text="{Binding RuntimeLayout.Detection.Title}" Classes="sectionTitle" />
+          <TextBlock Text="{Binding RuntimeLayout.Detection.Detail}" Classes="supporting" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
 
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-        <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Height="236">
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding IsAdbConnectionTargetSelected}">
+        <Border Classes="settingsSubCard" MinHeight="260">
           <Grid RowDefinitions="Auto,*" RowSpacing="8">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="ADB候補" FontSize="14" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="1" Text="{Binding AdbPathCandidateSummary}" FontSize="12" Opacity="0.62" VerticalAlignment="Center" />
+              <TextBlock Text="ADB候補" Classes="h3" />
+              <TextBlock Grid.Column="1" Text="{Binding AdbPathCandidateSummary}" Classes="caption" VerticalAlignment="Center" />
             </Grid>
             <TextBlock Grid.Row="1" Text="{Binding AdbPathCandidateEmptyMessage}" IsVisible="{Binding IsAdbPathCandidateListEmpty}" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasAdbPathCandidates}">
               <ItemsControl ItemsSource="{Binding AdbPathCandidates}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#101718" BorderBrush="#2B3638" BorderThickness="1">
+                    <Border CornerRadius="{StaticResource WorkbenchCornerSmall}" Padding="9" Margin="0,0,0,8"
+                            Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                       <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="3">
-                        <TextBlock Text="{Binding DisplayName}" FontFamily="Consolas" FontSize="12" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="{Binding StateLabel}" FontSize="11" Opacity="0.74" />
-                        <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" Opacity="0.58" />
-                        <Button Grid.Row="1" Grid.Column="1" Content="使用" Command="{Binding DataContext.ApplyAdbPathCandidateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding IsSelectable}" Padding="8,3" />
+                        <TextBlock Text="{Binding DisplayName}" FontFamily="Consolas" Classes="caption" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding StateLabel}" Classes="supporting" />
+                        <TextBlock Grid.Row="1" Text="{Binding Detail}" Classes="supporting" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" />
+                        <Button Grid.Row="1" Grid.Column="1" Classes="compactAction" Content="使用" Command="{Binding DataContext.ApplyAdbPathCandidateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding IsSelectable}" />
                       </Grid>
                     </Border>
                   </DataTemplate>
@@ -449,24 +542,25 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1" CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1" Height="236">
+        <Border Grid.Column="1" Classes="settingsSubCard" MinHeight="260">
           <Grid RowDefinitions="Auto,*" RowSpacing="8">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="接続端末" FontSize="14" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="1" Text="{Binding AdbDeviceSummary}" FontSize="12" Opacity="0.62" VerticalAlignment="Center" />
+              <TextBlock Text="接続端末" Classes="h3" />
+              <TextBlock Grid.Column="1" Text="{Binding AdbDeviceSummary}" Classes="caption" VerticalAlignment="Center" />
             </Grid>
             <TextBlock Grid.Row="1" Text="{Binding AdbDeviceEmptyMessage}" IsVisible="{Binding IsAdbDeviceListEmpty}" TextWrapping="Wrap" Opacity="0.62" VerticalAlignment="Center" />
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasAdbDevices}">
               <ItemsControl ItemsSource="{Binding AdbDevices}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border CornerRadius="7" Padding="9" Margin="0,0,0,8" Background="#101718" BorderBrush="#2B3638" BorderThickness="1">
+                    <Border CornerRadius="{StaticResource WorkbenchCornerSmall}" Padding="9" Margin="0,0,0,8"
+                            Background="{StaticResource WorkbenchFloating}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1">
                       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                         <StackPanel Spacing="2">
-                          <TextBlock Text="{Binding Serial}" FontFamily="Consolas" FontSize="12" />
-                          <TextBlock Text="{Binding DisplayName}" FontSize="11" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" Opacity="0.62" />
+                          <TextBlock Text="{Binding Serial}" FontFamily="Consolas" Classes="caption" />
+                          <TextBlock Text="{Binding DisplayName}" Classes="supporting" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" />
                         </StackPanel>
-                        <Button Grid.Column="1" Content="使用" Command="{Binding DataContext.ApplyAdbDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding IsUsable}" VerticalAlignment="Center" Padding="8,3" />
+                        <Button Grid.Column="1" Classes="compactAction" Content="使用" Command="{Binding DataContext.ApplyAdbDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding IsUsable}" VerticalAlignment="Center" />
                       </Grid>
                     </Border>
                   </DataTemplate>
@@ -477,10 +571,10 @@
         </Border>
       </Grid>
 
-      <Border CornerRadius="8" Padding="10" Background="#11191A" BorderBrush="#2B3638" BorderThickness="1">
+      <Border Classes="settingsCard">
         <StackPanel Spacing="2">
-          <TextBlock Text="{Binding RuntimeLayout.Diagnostics.Title}" FontSize="15" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding RuntimeLayout.Diagnostics.Detail}" FontSize="11" TextWrapping="Wrap" Opacity="0.62" />
+          <TextBlock Text="{Binding RuntimeLayout.Diagnostics.Title}" Classes="sectionTitle" />
+          <TextBlock Text="{Binding RuntimeLayout.Diagnostics.Detail}" Classes="supporting" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
 
@@ -492,24 +586,24 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Border Width="226" MinHeight="116" CornerRadius="8" Padding="10" Margin="0,0,10,10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+            <Border Width="240" MinHeight="168" Classes="settingsSubCard" Margin="0,0,16,16">
               <Grid RowDefinitions="Auto,Auto,*,Auto" ColumnDefinitions="*,Auto" RowSpacing="4" ColumnSpacing="8">
-                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
-                <TextBlock Grid.Column="1" Text="{Binding Tag}" FontSize="10" Opacity="0.58" />
-                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding State}" FontSize="12" Opacity="0.78" />
-                <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="3" Opacity="0.58" />
-                <TextBlock Grid.Row="3" Text="{Binding PrimaryAction}" FontSize="10" Opacity="0.68" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding InstallLabel}" FontSize="10" Opacity="0.46" />
+                <TextBlock Text="{Binding Name}" Classes="denseLabel" />
+                <TextBlock Grid.Column="1" Text="{Binding Tag}" Classes="caption" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding State}" Classes="caption" />
+                <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Detail}" Classes="supporting" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="3" />
+                <TextBlock Grid.Row="3" Text="{Binding PrimaryAction}" Classes="caption" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding InstallLabel}" Classes="caption" />
               </Grid>
             </Border>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <Border CornerRadius="8" Padding="10" Background="#151D1E" BorderBrush="#2B3638" BorderThickness="1">
+      <Border Classes="settingsSubCard">
         <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="10" RowSpacing="8">
-          <TextBlock Text="{Binding RuntimeLayout.OptionalRuntime.Title}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1" Text="{Binding RuntimeLayout.OptionalRuntime.Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="2" Opacity="0.62" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding RuntimeLayout.OptionalRuntime.Title}" Classes="h3" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Text="{Binding RuntimeLayout.OptionalRuntime.Detail}" Classes="supporting" TextWrapping="Wrap" MaxLines="2" VerticalAlignment="Center" />
           <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Classes="runtimeActions" HorizontalAlignment="Left">
             <Button Content="GLM導入" Command="{Binding InstallGlmOcrCommand}" />
             <Button Content="GLM削除" Command="{Binding UninstallGlmOcrCommand}" />

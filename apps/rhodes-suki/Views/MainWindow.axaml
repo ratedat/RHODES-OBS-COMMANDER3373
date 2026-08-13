@@ -15,19 +15,16 @@
     Title="{Binding Title}">
   <!--
     シェル設計:
-      Top    : タイトル / IS選択 / 接続ピル(クリックで接続画面へ) / 主アクション
+      Top    : 製品名 / IS選択 / 接続状態(クリックで接続画面へ) / 主アクション
       Left   : ワークスペースナビ (選択状態を常時表示)
       Center : 選択中ワークスペースが全幅を使う。常設右ペインは廃止。
       Bottom : ステータスバー (+ 処理中表示)
     プレビュー・候補は認識ワークスペース内、報告取込・Frame再認識はデバッグ内で完結する。
   -->
-  <Grid RowDefinitions="74,*,30">
-    <Border Classes="appleToolbar">
-      <Grid ColumnDefinitions="300,240,*,Auto,Auto,Auto" ColumnSpacing="10">
-        <StackPanel Spacing="1" VerticalAlignment="Center">
-          <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" />
-          <TextBlock Text="BROADCAST CONTROL" FontSize="10" FontWeight="Bold" Foreground="{StaticResource WorkbenchThemeAccent}" />
-        </StackPanel>
+  <Grid RowDefinitions="68,*,36">
+    <Border Classes="workbenchToolbar">
+      <Grid ColumnDefinitions="260,240,*,Auto,Auto,Auto" ColumnSpacing="16">
+        <TextBlock Text="{Binding Title}" Classes="wordmark" VerticalAlignment="Center" />
 
         <ComboBox Grid.Column="1"
                   Width="240"
@@ -39,18 +36,18 @@
                   ToolTip.Tip="統合戦略テーマを切り替えます。検証用ではIS#2～IS#6を選択できます。" />
 
         <Button Grid.Column="3"
+                Classes="secondaryAction compactAction"
                 Command="{Binding SetWorkspaceCommand}"
                 CommandParameter="runtime"
                 Background="{Binding ConnectionStatusBackground}"
                 BorderBrush="{Binding ConnectionStatusBorder}"
                 BorderThickness="1"
-                CornerRadius="17"
-                Padding="12,6"
+                MaxWidth="320"
                 VerticalAlignment="Center"
                 ToolTip.Tip="クリックで接続画面を開きます">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="{Binding ConnectionStatusLabel}" FontSize="13" FontWeight="SemiBold" Foreground="{Binding ConnectionStatusForeground}" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding ConnectionStatusDetail}" FontFamily="Consolas" FontSize="11" Opacity="0.72" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding ConnectionStatusLabel}" Classes="denseLabel" Foreground="{Binding ConnectionStatusForeground}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding ConnectionStatusDetail}" Classes="mono" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxWidth="180" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
 
@@ -59,10 +56,11 @@
                 Content="取得して反映"
                 Command="{Binding RunAllOperationalRecognitionAndApplyCommand}"
                 ToolTip.Tip="現在テーマの共通値・固有値・オペレーター・秘宝を順に取得して反映します" />
-        <Button Grid.Column="5" Classes="tertiaryAction" Content="⋯" Width="48" ToolTip.Tip="接続設定・HUD・報告">
+        <Button Grid.Column="5" Classes="tertiaryAction iconAction" Content="⋯" Width="48"
+                AutomationProperties.Name="その他の操作" ToolTip.Tip="接続設定・HUD・報告">
           <Button.Flyout>
             <MenuFlyout>
-              <MenuItem Header="ADB接続設定" Command="{Binding SetWorkspaceCommand}" CommandParameter="runtime" />
+              <MenuItem Header="接続設定" Command="{Binding SetWorkspaceCommand}" CommandParameter="runtime" />
               <MenuItem Header="HUDを表示／非表示" Command="{Binding ToggleHudVisibilityCommand}" />
               <MenuItem Header="バグ報告ZIPを作成" Command="{Binding CreateBugReportBundleCommand}" />
             </MenuFlyout>
@@ -71,25 +69,25 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="190,*">
-      <Border Classes="appleSidebar">
+    <Grid Grid.Row="1" ColumnDefinitions="208,*">
+      <Border Classes="workbenchSidebar">
         <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
-          <TextBlock Text="ワークスペース" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource WorkbenchTextTertiary}" Margin="12,8,0,4" />
+          <TextBlock Text="操作" Classes="navHeading" Margin="0,8,0,8" />
           <ListBox Grid.Row="1"
                  Classes="navList"
                  ItemsSource="{Binding WorkspaceNav}"
                  SelectedItem="{Binding SelectedWorkspaceNavItem, Mode=TwoWay}">
           <ListBox.ItemTemplate>
             <DataTemplate>
-              <StackPanel Spacing="1">
-                <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding Subtitle}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource WorkbenchTextTertiary}" />
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Label}" Classes="h3" />
+                <TextBlock Text="{Binding Description}" Classes="navDescription" MaxLines="2" TextTrimming="CharacterEllipsis" />
               </StackPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>
           </ListBox>
-          <StackPanel Grid.Row="2" Spacing="6" Margin="8">
-            <Button Classes="tertiaryAction" Content="ADB接続設定" HorizontalContentAlignment="Left"
+          <StackPanel Grid.Row="2" Spacing="8" Margin="0,8,0,0">
+            <Button Classes="tertiaryAction" Content="接続設定" HorizontalContentAlignment="Left"
                     Command="{Binding SetWorkspaceCommand}" CommandParameter="runtime" />
             <Button Classes="tertiaryAction" Content="報告ZIP" HorizontalContentAlignment="Left"
                     Command="{Binding CreateBugReportBundleCommand}" />
@@ -97,7 +95,7 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" ClipToBounds="True" MinWidth="0" Classes="appleWorkspace">
+      <Border Grid.Column="1" ClipToBounds="True" MinWidth="0" Classes="workbenchWorkspace">
         <Grid>
           <workspaces:RunWorkspaceView IsVisible="{Binding IsRunWorkspaceVisible}" />
           <workspaces:SpecialWorkspaceView IsVisible="{Binding IsSpecialWorkspaceVisible}" />
@@ -111,13 +109,13 @@
     </Grid>
 
     <Border Grid.Row="2" Classes="statusBar">
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsBusy}">
           <ProgressBar IsIndeterminate="True" Width="70" Height="4" VerticalAlignment="Center" />
-          <TextBlock Text="処理中" FontSize="12" Opacity="0.75" VerticalAlignment="Center" />
+          <TextBlock Text="処理中" Classes="caption" VerticalAlignment="Center" />
         </StackPanel>
-        <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" FontSize="12" TextWrapping="Wrap" Opacity="0.8" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="2" Text="{Binding CaptureState}" FontFamily="Consolas" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="480" Opacity="0.55" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Classes="body" TextTrimming="CharacterEllipsis" MaxLines="1" ToolTip.Tip="{Binding StatusMessage}" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2" Text="{Binding CaptureState}" Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxLines="1" MaxWidth="480" VerticalAlignment="Center" />
       </Grid>
     </Border>
   </Grid>

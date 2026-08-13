@@ -3,62 +3,120 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:services="clr-namespace:RhodesSuki.Services">
   <!--
-    ワークベンチ共有テーマ。
-    MainWindowと分割後の各ワークスペースUserControlが同じ見た目を共有するため、
-    DataTemplate・コンバーター・共通スタイルをここへ集約する。
+    Hallmark · pre-emit critique: P5 H5 E4 S5 R4 V4
+    Hallmark · genre: modern-minimal · tone: Windows operator workbench · anchor: interaction blue · macrostructure: workbench
+    Hallmark · contrast: pass (40–41) · slop: pass (desktop-app gates) · tokens: pass
+    DADS v2.17を基準に、配色・余白・操作状態を一元管理するワークベンチ共有テーマ。
+    明度を抑えたライト作業面とニュートラル階調を基礎に、青は操作と選択、緑・黄・赤は状態表示だけに限定する。
   -->
   <Styles.Resources>
-    <SolidColorBrush x:Key="WorkbenchBase">#090C0E</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchSidebar">#101518</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchToolbar">#F012171A</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchContent">#0C1114</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchFloating">#171E22</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchHover">#222C31</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchPressed">#2B383E</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchSeparator">#303A3F</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchTextPrimary">#F4F7F6</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchTextSecondary">#B3BEBA</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchTextTertiary">#85928D</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchAccent">#62C7B6</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchAccentStrong">#177E6D</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchThemeAccent">#E7B94E</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchSuccess">#50D394</SolidColorBrush>
-    <SolidColorBrush x:Key="WorkbenchDanger">#FF7478</SolidColorBrush>
+    <!-- Primitive / semantic surface tokens: WindowsのライトUIに近い白・薄灰の三階層。 -->
+    <SolidColorBrush x:Key="WorkbenchBase">#E9ECEF</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchSidebar">#F1F2F4</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchToolbar">#F5F6F7</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchContent">#EDF0F2</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchFloating">#F8F9FA</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchSubtleSurface">#F1F2F4</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchHover">#DFEAF4</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchPressed">#CDDFEE</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchSelection">#D6E6F3</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchSeparator">#BAC1C9</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchControlBorder">#707B88</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchTextPrimary">#1B1F23</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchTextSecondary">#424A53</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchTextTertiary">#5C6672</SolidColorBrush>
+    <!-- Interaction tokens: Windowsで認知しやすい青を主操作・選択・フォーカスに統一。 -->
+    <SolidColorBrush x:Key="WorkbenchAccent">#155F99</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchAccentStrong">#0F527F</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchAccentForeground">#FFFFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchAccentHover">#0B466E</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchAccentPressed">#083A5B</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchThemeAccent">#155F99</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchFocus">#155F99</SolidColorBrush>
+    <!-- Semantic status tokens. 色だけに依存せず、ラベル・枠と必ず併用する。 -->
+    <SolidColorBrush x:Key="WorkbenchSuccess">#107C10</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchSuccessSurface">#E9F6E9</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchWarning">#8A5A00</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchWarningSurface">#FFF4CE</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchDanger">#C42B1C</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchDangerSurface">#FDE7E9</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchRejectionTarget">#6B3FA0</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchCandleTarget">#A4265E</SolidColorBrush>
+    <!-- Preview/capture surfaces remain dark so OBS transparency and ROI overlays stay legible. -->
+    <SolidColorBrush x:Key="WorkbenchPreviewBase">#0C1418</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchPreviewPanel">#162126</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchPreviewHeader">#26373E</SolidColorBrush>
+    <SolidColorBrush x:Key="WorkbenchPreviewAccent">#45D6BD</SolidColorBrush>
+    <FontFamily x:Key="WorkbenchUiFontFamily">avares://RhodesSuki/Assets/Fonts#Noto Sans JP</FontFamily>
+    <FontFamily x:Key="WorkbenchMonoFontFamily">Noto Sans Mono CJK JP, Noto Sans Mono, Cascadia Mono, Consolas</FontFamily>
+
+    <!--
+      DADS v2.17を参照した寸法トークン。8px基準で関連要素は8/16、
+      セクション境界は24、ボタンの操作領域は最低44pxに統一する。
+      操作画面は8px基準の密度を保ちつつ、面ではなく余白と区切り線で階層を作る。
+    -->
+    <x:Double x:Key="WorkbenchControlTargetMinHeight">44</x:Double>
+    <x:Double x:Key="WorkbenchPrimaryActionMinHeight">48</x:Double>
+    <Thickness x:Key="WorkbenchButtonPadding">16,8</Thickness>
+    <Thickness x:Key="WorkbenchCompactButtonPadding">12,6</Thickness>
+    <Thickness x:Key="WorkbenchCardPadding">16</Thickness>
+    <Thickness x:Key="WorkbenchPagePadding">24</Thickness>
+    <Thickness x:Key="WorkbenchToolbarPadding">24,12</Thickness>
+    <Thickness x:Key="WorkbenchSidebarPadding">16</Thickness>
+    <CornerRadius x:Key="WorkbenchCornerSmall">4</CornerRadius>
+    <CornerRadius x:Key="WorkbenchCornerMedium">6</CornerRadius>
+    <!--
+      DADS DenseをRHODESの運用画面へ調整した文字トークン。
+      操作・説明に使う本文は14pxを下限とし、12pxは補助的な短い情報だけに限定する。
+    -->
+    <x:Double x:Key="WorkbenchTypeWorkspaceTitleSize">22</x:Double>
+    <x:Double x:Key="WorkbenchTypeSectionTitleSize">18</x:Double>
+    <x:Double x:Key="WorkbenchTypeHeadingSize">16</x:Double>
+    <x:Double x:Key="WorkbenchTypeBodySize">14</x:Double>
+    <x:Double x:Key="WorkbenchTypeSupportingSize">14</x:Double>
+    <x:Double x:Key="WorkbenchTypeCaptionSize">12</x:Double>
+    <x:Double x:Key="WorkbenchTypeMonoSize">14</x:Double>
+
     <DataTemplate x:Key="PlainComboItemTemplate">
-      <TextBlock Text="{Binding}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding}" Foreground="{StaticResource WorkbenchTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
     </DataTemplate>
     <DataTemplate x:Key="CampaignComboItemTemplate">
-      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource WorkbenchTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
     </DataTemplate>
     <DataTemplate x:Key="ResourceProfileComboItemTemplate">
-      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource WorkbenchTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
     </DataTemplate>
     <DataTemplate x:Key="AdbPresetComboItemTemplate">
       <StackPanel Spacing="2">
-        <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" />
-        <TextBlock Text="{Binding PathSummary}" Foreground="#AAB6B8" FontSize="11" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource WorkbenchTextPrimary}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding PathSummary}" Classes="caption" TextTrimming="CharacterEllipsis" />
       </StackPanel>
     </DataTemplate>
     <DataTemplate x:Key="AdbPresetSelectionTemplate">
-      <TextBlock Text="{Binding DisplayName}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource WorkbenchTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
     </DataTemplate>
     <DataTemplate x:Key="OcrEngineComboItemTemplate">
-      <StackPanel Spacing="2">
-        <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" />
-        <TextBlock Text="{Binding Detail}" Foreground="#AAB6B8" FontSize="11" TextTrimming="CharacterEllipsis" />
-      </StackPanel>
+      <TextBlock Text="{Binding Label}" Foreground="{StaticResource WorkbenchTextPrimary}"
+                 TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
     </DataTemplate>
     <DataTemplate x:Key="OcrEngineSelectionTemplate">
-      <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding Label}" Foreground="{StaticResource WorkbenchTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
     </DataTemplate>
     <DataTemplate x:Key="AdbMethodComboItemTemplate">
-      <StackPanel Spacing="2">
-        <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" />
-        <TextBlock Text="{Binding Detail}" Foreground="#AAB6B8" FontSize="11" TextTrimming="CharacterEllipsis" />
-      </StackPanel>
+      <TextBlock Text="{Binding Label}" Foreground="{StaticResource WorkbenchTextPrimary}"
+                 TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
     </DataTemplate>
     <DataTemplate x:Key="AdbMethodSelectionTemplate">
-      <TextBlock Text="{Binding Label}" Foreground="#E8EFEF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding Label}" Foreground="{StaticResource WorkbenchTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate x:Key="OutputCssTemplateComboItemTemplate">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding DisplayName}" Classes="denseLabel" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding Description}" Classes="caption" TextTrimming="CharacterEllipsis" MaxLines="1" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="OutputCssTemplateSelectionTemplate">
+      <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource WorkbenchTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
     </DataTemplate>
     <services:RhodesBitmapPathConverter x:Key="BitmapPathConverter" />
   </Styles.Resources>
@@ -66,56 +124,65 @@
   <Style Selector="Window">
     <Setter Property="Background" Value="{StaticResource WorkbenchBase}" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
-    <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" />
+    <Setter Property="FontFamily" Value="{StaticResource WorkbenchUiFontFamily}" />
   </Style>
   <Style Selector="TextBlock">
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
     <Setter Property="LetterSpacing" Value="0" />
   </Style>
   <Style Selector="Button">
-    <Setter Property="MinHeight" Value="40" />
-    <Setter Property="Padding" Value="14,8" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="MinHeight" Value="{StaticResource WorkbenchControlTargetMinHeight}" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchButtonPadding}" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
     <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
-    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchControlBorder}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Medium" />
   </Style>
   <Style Selector="Button:pointerover">
     <Setter Property="Background" Value="{StaticResource WorkbenchHover}" />
-    <Setter Property="BorderBrush" Value="#56636A" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchTextTertiary}" />
   </Style>
   <Style Selector="Button:pressed">
     <Setter Property="Background" Value="{StaticResource WorkbenchPressed}" />
-    <Setter Property="Opacity" Value="0.78" />
   </Style>
   <Style Selector="Button:focus-visible">
-    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchFocus}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>
-  <Style Selector="ToggleButton">
-    <Setter Property="MinHeight" Value="40" />
-    <Setter Property="Padding" Value="14,8" />
-    <Setter Property="CornerRadius" Value="7" />
-    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+  <Style Selector="Button:disabled">
+    <Setter Property="Background" Value="{StaticResource WorkbenchBase}" />
     <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextTertiary}" />
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+  <Style Selector="ToggleButton">
+    <Setter Property="MinHeight" Value="{StaticResource WorkbenchControlTargetMinHeight}" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchButtonPadding}" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchControlBorder}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Medium" />
   </Style>
   <Style Selector="ToggleButton:checked">
-    <Setter Property="Background" Value="#16352F" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchSelection}" />
     <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
   </Style>
 
   <Style Selector="ComboBox, TextBox, NumericUpDown">
-    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="MinHeight" Value="{StaticResource WorkbenchControlTargetMinHeight}" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
     <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
-    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchControlBorder}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
+  </Style>
+  <Style Selector="ComboBox:focus-visible, TextBox:focus-visible, NumericUpDown:focus-visible">
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchFocus}" />
+    <Setter Property="BorderThickness" Value="2" />
   </Style>
   <Style Selector="ComboBox">
     <Setter Property="Padding" Value="10,6" />
@@ -124,7 +191,7 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="ComboBoxItem">
-    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="MinHeight" Value="{StaticResource WorkbenchControlTargetMinHeight}" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
     <Setter Property="Background" Value="{StaticResource WorkbenchContent}" />
     <Setter Property="Padding" Value="12,8" />
@@ -132,11 +199,11 @@
   </Style>
   <Style Selector="ComboBoxItem:pointerover">
     <Setter Property="Background" Value="{StaticResource WorkbenchHover}" />
-    <Setter Property="Foreground" Value="#FFFFFF" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
   </Style>
   <Style Selector="ComboBoxItem:selected">
-    <Setter Property="Background" Value="#34433F" />
-    <Setter Property="Foreground" Value="#FFFFFF" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchSelection}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
   </Style>
   <Style Selector="WrapPanel.runtimeActions Button">
     <Setter Property="Margin" Value="0,0,8,8" />
@@ -162,80 +229,140 @@
       </ItemsPanelTemplate>
     </Setter>
   </Style>
-  <!-- 主アクション。1画面に原則1つだけ使う。 -->
-  <Style Selector="Button.primary">
+  <!-- ボタン階層: secondary（標準）/ primary（主操作）/ tertiary（補助操作）。 -->
+  <Style Selector="Button.secondaryAction">
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchAccentStrong}" />
+  </Style>
+  <!-- 主アクション。1つの操作まとまりにつき原則1つだけ使う。 -->
+  <Style Selector="Button.primary, Button.primaryAction">
+    <Setter Property="MinHeight" Value="{StaticResource WorkbenchPrimaryActionMinHeight}" />
     <Setter Property="Background" Value="{StaticResource WorkbenchAccentStrong}" />
     <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Foreground" Value="#D9FFF3" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchAccentForeground}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Padding" Value="20,10" />
   </Style>
-  <Style Selector="Button.primary:pointerover">
-    <Setter Property="Background" Value="#21917D" />
+  <Style Selector="Button.primary:pointerover, Button.primaryAction:pointerover">
+    <Setter Property="Background" Value="{StaticResource WorkbenchAccentHover}" />
   </Style>
-  <Style Selector="Button.primary:pressed">
-    <Setter Property="Background" Value="#1A3E36" />
+  <Style Selector="Button.primary:pressed, Button.primaryAction:pressed">
+    <Setter Property="Background" Value="{StaticResource WorkbenchAccentPressed}" />
   </Style>
   <Style Selector="Button.danger">
-    <Setter Property="Background" Value="#351A1D" />
-    <Setter Property="BorderBrush" Value="#714048" />
-    <Setter Property="Foreground" Value="#FFB2B5" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchDangerSurface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchDanger}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchDanger}" />
   </Style>
-  <Style Selector="Button.tertiary">
+  <Style Selector="Button.tertiary, Button.tertiaryAction">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextSecondary}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchAccentStrong}" />
   </Style>
-  <Style Selector="Button.primaryAction">
-    <Setter Property="Background" Value="{StaticResource WorkbenchAccentStrong}" />
-    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
-    <Setter Property="Foreground" Value="#FFFFFF" />
-  </Style>
-  <Style Selector="Button.primaryAction:pointerover">
-    <Setter Property="Background" Value="#21917D" />
-  </Style>
-  <Style Selector="Button.tertiaryAction">
-    <Setter Property="Background" Value="Transparent" />
+  <Style Selector="Button.tertiary:pointerover, Button.tertiaryAction:pointerover">
+    <Setter Property="Background" Value="{StaticResource WorkbenchHover}" />
     <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextSecondary}" />
+  </Style>
+  <Style Selector="Button.compactAction">
+    <Setter Property="MinHeight" Value="{StaticResource WorkbenchControlTargetMinHeight}" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchCompactButtonPadding}" />
+  </Style>
+  <Style Selector="Button.iconAction">
+    <Setter Property="MinWidth" Value="{StaticResource WorkbenchControlTargetMinHeight}" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.helpIcon">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="MinWidth" Value="24" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchControlBorder}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchAccentStrong}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="ToolTip.ShowDelay" Value="350" />
+    <Setter Property="ToolTip.BetweenShowDelay" Value="100" />
+    <Setter Property="ToolTip.Placement" Value="Bottom" />
   </Style>
   <Style Selector="Button.dangerAction">
-    <Setter Property="Background" Value="#351A1D" />
-    <Setter Property="BorderBrush" Value="#714048" />
-    <Setter Property="Foreground" Value="#FFB2B5" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchDangerSurface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchDanger}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchDanger}" />
   </Style>
   <Style Selector="Button.catalogItem">
     <Setter Property="MinHeight" Value="72" />
     <Setter Property="Padding" Value="10" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="Background" Value="#12181B" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
   </Style>
   <Style Selector="Button.catalogItem.selected">
-    <Setter Property="Background" Value="#16352F" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchSelection}" />
     <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
   </Style>
   <Style Selector="Button.catalogItem.excluded">
     <Setter Property="Opacity" Value="0.45" />
   </Style>
+  <Style Selector="Button.choiceCard">
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.choiceCard.selected">
+    <Setter Property="Background" Value="{StaticResource WorkbenchSelection}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
   <Style Selector="RadioButton.segmented">
-    <Setter Property="MinHeight" Value="34" />
-    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="MinHeight" Value="{StaticResource WorkbenchControlTargetMinHeight}" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchCompactButtonPadding}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Border x:Name="SegmentSurface" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
-          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <Border x:Name="SegmentSurface"
+                Background="Transparent"
+                BorderBrush="Transparent"
+                BorderThickness="1"
+                CornerRadius="{StaticResource WorkbenchCornerSmall}"
+                Padding="{TemplateBinding Padding}">
+          <Grid ColumnDefinitions="20,*" ColumnSpacing="8">
+            <Border x:Name="SegmentRing" Width="18" Height="18" CornerRadius="9"
+                    BorderBrush="{StaticResource WorkbenchControlBorder}" BorderThickness="1"
+                    VerticalAlignment="Center">
+              <TextBlock x:Name="SegmentMark" Text="●" FontSize="8" Foreground="{StaticResource WorkbenchAccent}"
+                         Opacity="0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Grid>
         </Border>
       </ControlTemplate>
     </Setter>
   </Style>
   <Style Selector="RadioButton.segmented:pointerover /template/ Border#SegmentSurface">
-    <Setter Property="Background" Value="#273034" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchHover}" />
   </Style>
   <Style Selector="RadioButton.segmented:checked /template/ Border#SegmentSurface">
-    <Setter Property="Background" Value="#34433F" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchSelection}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+  </Style>
+  <Style Selector="RadioButton.segmented:checked /template/ Border#SegmentRing">
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+  </Style>
+  <Style Selector="RadioButton.segmented:checked /template/ TextBlock#SegmentMark">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="RadioButton.segmented:focus-visible /template/ Border#SegmentSurface">
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchFocus}" />
+    <Setter Property="BorderThickness" Value="2" />
   </Style>
 
   <!-- 左ナビ。選択中のワークスペースを常に可視化する。 -->
@@ -248,144 +375,280 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Padding" Value="12,8" />
-    <Setter Property="Margin" Value="0,2" />
-    <Setter Property="MinHeight" Value="54" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="MinHeight" Value="56" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="NavItemSurface"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                Padding="{TemplateBinding Padding}">
+          <ContentPresenter x:Name="NavItemContent"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
   </Style>
-  <Style Selector="ListBox.navList ListBoxItem:pointerover /template/ ContentPresenter">
+  <Style Selector="ListBox.navList ListBoxItem:selected">
+    <Setter Property="Background" Value="{StaticResource WorkbenchPressed}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:selected:focus, ListBox.navList ListBoxItem:selected:focus-visible">
+    <Setter Property="Background" Value="{StaticResource WorkbenchPressed}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchFocus}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:pointerover /template/ Border#NavItemSurface">
     <Setter Property="Background" Value="{StaticResource WorkbenchHover}" />
   </Style>
-  <Style Selector="ListBox.navList ListBoxItem:selected /template/ ContentPresenter">
-    <Setter Property="Background" Value="#1B3833" />
+  <Style Selector="ListBox.navList ListBoxItem:selected /template/ Border#NavItemSurface">
+    <Setter Property="Background" Value="{StaticResource WorkbenchPressed}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem /template/ ContentPresenter#NavItemContent">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:pointerover /template/ ContentPresenter#NavItemContent">
+    <Setter Property="Background" Value="{StaticResource WorkbenchHover}" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:selected /template/ ContentPresenter#NavItemContent">
+    <Setter Property="Background" Value="{StaticResource WorkbenchPressed}" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:selected:focus /template/ ContentPresenter#NavItemContent, ListBox.navList ListBoxItem:selected:focus-visible /template/ ContentPresenter#NavItemContent">
+    <Setter Property="Background" Value="{StaticResource WorkbenchPressed}" />
+  </Style>
+  <Style Selector="ListBox.navList ListBoxItem:focus-visible /template/ Border#NavItemSurface">
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchFocus}" />
+    <Setter Property="BorderThickness" Value="2" />
   </Style>
 
-  <!-- 文字階層は3段階に固定する。9-10pxは使わない。 -->
+  <!-- 操作画面の文字階層。意味に応じたclassを使い、局所的なFontSize指定を減らす。 -->
   <Style Selector="TextBlock.h1">
-    <Setter Property="FontSize" Value="25" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LineHeight" Value="31" />
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="32" />
   </Style>
   <Style Selector="TextBlock.displayTitle">
-    <Setter Property="FontSize" Value="25" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LineHeight" Value="31" />
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="32" />
+  </Style>
+  <Style Selector="TextBlock.workspaceTitle">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeWorkspaceTitleSize}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="28" />
   </Style>
   <Style Selector="TextBlock.sectionTitle">
-    <Setter Property="FontSize" Value="17" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LineHeight" Value="22" />
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeSectionTitleSize}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="24" />
   </Style>
   <Style Selector="TextBlock.metricValue">
     <Setter Property="FontSize" Value="24" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="LineHeight" Value="29" />
   </Style>
   <Style Selector="TextBlock.body">
-    <Setter Property="FontSize" Value="13" />
-    <Setter Property="LineHeight" Value="19" />
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeBodySize}" />
+    <Setter Property="LineHeight" Value="21" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextSecondary}" />
   </Style>
   <Style Selector="TextBlock.eyebrow">
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeCaptionSize}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="LineHeight" Value="16" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextTertiary}" />
   </Style>
-  <Style Selector="TextBlock.h2">
+  <Style Selector="TextBlock.wordmark">
+    <Setter Property="FontFamily" Value="{StaticResource WorkbenchUiFontFamily}" />
     <Setter Property="FontSize" Value="17" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="LineHeight" Value="22" />
   </Style>
-  <Style Selector="TextBlock.h3">
-    <Setter Property="FontSize" Value="15" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LineHeight" Value="20" />
+  <Style Selector="TextBlock.navHeading">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeBodySize}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextSecondary}" />
   </Style>
-  <Style Selector="TextBlock.caption">
-    <Setter Property="FontSize" Value="11" />
+  <Style Selector="TextBlock.navDescription">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeCaptionSize}" />
+    <Setter Property="LineHeight" Value="16" />
     <Setter Property="Foreground" Value="{StaticResource WorkbenchTextTertiary}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeSectionTitleSize}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="24" />
+  </Style>
+  <Style Selector="TextBlock.h3">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeHeadingSize}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="21" />
+  </Style>
+  <Style Selector="TextBlock.supporting">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeSupportingSize}" />
+    <Setter Property="LineHeight" Value="20" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextSecondary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.fieldLabel">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeBodySize}" />
+    <Setter Property="LineHeight" Value="18" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextSecondary}" />
+  </Style>
+  <Style Selector="TextBlock.denseLabel">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeBodySize}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="LineHeight" Value="18" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeCaptionSize}" />
+    <Setter Property="LineHeight" Value="17" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextTertiary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.compactHelp">
+    <Setter Property="MaxLines" Value="1" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
   <Style Selector="TextBlock.mono">
-    <Setter Property="FontFamily" Value="Consolas" />
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="Opacity" Value="0.72" />
+    <Setter Property="FontFamily" Value="{StaticResource WorkbenchMonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeMonoSize}" />
+    <Setter Property="LineHeight" Value="21" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextSecondary}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
   <Style Selector="Border.card">
-    <Setter Property="Background" Value="#13191C" />
-    <Setter Property="BorderBrush" Value="#2A353A" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="7" />
-    <Setter Property="Padding" Value="14" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerMedium}" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchCardPadding}" />
   </Style>
-  <Style Selector="Border.appleCard">
-    <Setter Property="Background" Value="#13191C" />
-    <Setter Property="BorderBrush" Value="#2A353A" />
+  <Style Selector="Border.surfaceCard">
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchControlBorder}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="7" />
-    <Setter Property="Padding" Value="14" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerMedium}" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchCardPadding}" />
+  </Style>
+  <Style Selector="Border.settingsCard">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="0,8,0,24" />
+  </Style>
+  <Style Selector="Border.settingsSubCard">
+    <Setter Property="Background" Value="{StaticResource WorkbenchSubtleSurface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <Style Selector="Border.connectionModeSelector">
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchControlBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchCardPadding}" />
   </Style>
   <Style Selector="Border.panel">
     <Setter Property="Background" Value="{StaticResource WorkbenchContent}" />
     <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
-    <Setter Property="Padding" Value="20" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchPagePadding}" />
   </Style>
-  <Style Selector="Border.appleToolbar">
+  <Style Selector="Border.workbenchToolbar">
     <Setter Property="Background" Value="{StaticResource WorkbenchToolbar}" />
-    <Setter Property="BorderBrush" Value="#273136" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="Padding" Value="18,10" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchToolbarPadding}" />
   </Style>
-  <Style Selector="Border.appleSidebar">
+  <Style Selector="Border.workbenchSidebar">
     <Setter Property="Background" Value="{StaticResource WorkbenchSidebar}" />
-    <Setter Property="BorderBrush" Value="#273136" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
     <Setter Property="BorderThickness" Value="0,0,1,0" />
-    <Setter Property="Padding" Value="10" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchSidebarPadding}" />
   </Style>
-  <Style Selector="Border.appleWorkspace">
+  <Style Selector="Border.workbenchWorkspace">
     <Setter Property="Background" Value="{StaticResource WorkbenchContent}" />
-    <Setter Property="Padding" Value="22" />
+    <Setter Property="Padding" Value="{StaticResource WorkbenchPagePadding}" />
   </Style>
   <Style Selector="Border.filterBar">
-    <Setter Property="Background" Value="#11171A" />
-    <Setter Property="BorderBrush" Value="#2A353A" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
     <Setter Property="Padding" Value="8" />
   </Style>
   <Style Selector="Border.metricBand">
-    <Setter Property="Background" Value="#101619" />
-    <Setter Property="BorderBrush" Value="#293439" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchContent}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
     <Setter Property="BorderThickness" Value="0,0,1,0" />
     <Setter Property="Padding" Value="15,11" />
   </Style>
   <Style Selector="Border.statusChip">
-    <Setter Property="Background" Value="#163329" />
-    <Setter Property="BorderBrush" Value="#347C68" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchSuccessSurface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSuccess}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="17" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
     <Setter Property="Padding" Value="12,6" />
   </Style>
   <Style Selector="Border.resultBanner">
-    <Setter Property="Background" Value="#123027" />
-    <Setter Property="BorderBrush" Value="#2F745F" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchSuccessSurface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSuccess}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
     <Setter Property="Padding" Value="12,9" />
   </Style>
   <Style Selector="Border.statusBar">
-    <Setter Property="Background" Value="#0D1214" />
-    <Setter Property="BorderBrush" Value="#273136" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchToolbar}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
     <Setter Property="Padding" Value="16,6" />
   </Style>
 
+  <Style Selector="ToolTip">
+    <Setter Property="MaxWidth" Value="420" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchTextPrimary}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
+    <Setter Property="FontFamily" Value="{StaticResource WorkbenchUiFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource WorkbenchTypeBodySize}" />
+  </Style>
+  <Style Selector="ToolTip /template/ ContentPresenter">
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxWidth" Value="396" />
+  </Style>
+
   <Style Selector="Expander">
     <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+  <Style Selector="Expander /template/ ToggleButton">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="Expander:expanded /template/ ToggleButton">
+    <Setter Property="Background" Value="{StaticResource WorkbenchSubtleSurface}" />
   </Style>
 </Styles>

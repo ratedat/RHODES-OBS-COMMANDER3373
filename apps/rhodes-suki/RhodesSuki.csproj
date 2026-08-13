@@ -17,7 +17,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AvaloniaResource Include="Assets\Fonts\NotoSansJP-*.otf" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="interface.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="interface_ja_jp.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="interface_en_us.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\docs\user\adb-connection-settings.html" Link="docs\adb-connection-settings.html">

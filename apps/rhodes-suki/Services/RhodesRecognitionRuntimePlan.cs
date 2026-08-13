@@ -13,7 +13,11 @@ public static class RhodesRecognitionRuntimePlan
         var selectedEntries = plan.ProfileId switch
         {
             "relicsFull" => plan.TaskEntries
-                .Where(entry => entry.Equals(RhodesRelicOwnedCountReader.Entry, StringComparison.Ordinal))
+                .Where(entry =>
+                    entry.Equals(RhodesRelicFooterAvailabilityReader.MapFooterEntry, StringComparison.Ordinal)
+                    || entry.Equals(RhodesRelicOwnedCountReader.Entry, StringComparison.Ordinal)
+                    || entry.Equals(RhodesOperatorOwnedCountReader.Entry, StringComparison.Ordinal)
+                    || entry.Equals(RhodesRelicFooterAvailabilityReader.CountMarkerEntry, StringComparison.Ordinal))
                 .Distinct(StringComparer.Ordinal)
                 .ToArray(),
             "operatorsFull" => plan.TaskEntries
@@ -204,6 +208,9 @@ public static class RhodesRecognitionRuntimePlan
             && (profileId != "operatorsFull"
                 || result.Algorithm.Equals("TemplateMatch", StringComparison.OrdinalIgnoreCase)));
     }
+
+    public static bool CanContinueAfterUnconfirmedTarget(string profileId) =>
+        profileId.Equals("is5AgeFull", StringComparison.Ordinal);
 
     public static bool HasReachedScrollEnd(
         int executedScrolls,

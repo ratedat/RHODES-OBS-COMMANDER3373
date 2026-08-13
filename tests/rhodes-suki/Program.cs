@@ -90,6 +90,10 @@ var tests = new (string Name, Action Run)[]
     ("Coin stability result hash is deterministic across input order", CoinStabilityResultHashDeterministic),
     ("Coin stability corpus discovers direct and bug report frames deterministically", CoinStabilityCorpusDiscovery),
     ("Coin stability report writer emits the Phase 0 report set", CoinStabilityReportWriterEmitsReports),
+    ("MAA development tool requests keep project paths local and explicit", MaaDevelopmentToolRequestsStayLocal),
+    ("MaaEvidenceKit inspect requests force offline execution and summarize evidence", MaaEvidenceKitRequestsStayOffline),
+    ("Recognition lab builds recognition-only MAA and Sui coin plans", RecognitionLabBuildsRecognitionOnlyPlans),
+    ("Recognition lab executes an OCR plan through the offline MAA tasker", RecognitionLabExecutesOfflineOcr),
     ("Local MAA candidate converter dispatches all profile task results", LocalCandidateConverterAllProfiles),
     ("ADB presets include MuMu and Google Play Games developer defaults", AdbPresets),
     ("ADB presets include current MuMu nx_main layouts", AdbPresetCurrentMumuLayouts),
@@ -121,9 +125,10 @@ var tests = new (string Name, Action Run)[]
     ("ADB touch test requires confirmation and stays inside 1280x720", AdbTouchTestRequiresSafeRectangle),
     ("Suki ADB runtime never invokes Android key input", SukiAdbRuntimeNeverInvokesAndroidKeys),
     ("MAA inference catalog exposes safe Auto CPU and DirectML choices", MaaInferenceCatalogExposesSafeChoices),
-    ("MAA runtime settings normalize inference and PC capture values", MaaRuntimeSettingsNormalizeSafeValues),
+    ("MAA runtime settings normalize inference and PC controller values", MaaRuntimeSettingsNormalizeSafeValues),
     ("MAA PC window catalog prioritizes localized Arknights windows", MaaPcWindowCatalogPrioritizesArknights),
-    ("MAA PC capture policy remains capture-only at 1280x720", MaaPcCapturePolicyIsCaptureOnly),
+    ("MAA PC controller policy uses released MAA defaults at 1280x720", MaaPcControllerPolicyUsesMaaDefaults),
+    ("MAA controller target never reuses the wrong connection kind", MaaControllerTargetMatchesSessionKind),
     ("User-facing runtime copy omits Android key implementation details", RuntimeUserCopyOmitsAndroidKeyDetails),
     ("ADB recovery runs enabled stages once and in order", AdbRecoveryRunsEnabledStagesInOrder),
     ("ADB process cleanup targets only the selected executable", AdbProcessCleanupMatchesExactPath),
@@ -138,10 +143,13 @@ var tests = new (string Name, Action Run)[]
     ("Suki settings store round-trips ADB and profile values", SukiSettingsStore),
     ("Suki settings store migrates unusable manual PATH adb settings", SukiSettingsStoreMigratesBareManualAdb),
     ("Suki settings store migrates legacy fast emulator options", SukiSettingsStoreMigratesLegacyFastEmulatorOptions),
+    ("ADB game package catalog exposes regional choices with JP as default", AdbGamePackageCatalogExposesRegionalChoices),
     ("Suki ADB connection settings normalize safe ranges and defaults", SukiAdbConnectionSettingsNormalizeSafeRanges),
     ("Suki ADB connection settings reject future schemas", SukiAdbConnectionSettingsRejectFutureSchema),
     ("Output profile JSON round-trips integrated and individual settings", OutputProfileRoundTrip),
+    ("Output profile schema 2 migrates its shared backgrounds without visual drift", OutputProfileMigratesSharedBackgrounds),
     ("Output profile accepts external CSS and rejects javascript URLs", OutputProfileCssPolicy),
+    ("Output CSS templates include safe title icon examples", OutputCssTemplatesIncludeSafeTitleIcons),
     ("Output profile import rejects future output schemas", OutputProfileRejectsFutureSchema),
     ("RHODES API status probe parses health and state payloads", RhodesApiStatusParsing),
     ("Tournament remote API status parses invitation metadata", TournamentRemoteApiStatusParsing),
@@ -173,6 +181,8 @@ var tests = new (string Name, Action Run)[]
     ("Recognition runtime plan removes legacy operator OCR and completes relic scans by owned count", RecognitionRuntimePlanUsesFocusedTasks),
     ("Recognition runtime plan excludes operator metadata from owned-card progress", RecognitionRuntimePlanCountsOperatorRosterOnly),
     ("Relic owned count reader extracts the footer count from MAA OCR evidence", RelicOwnedCountReaderExtractsFooterCount),
+    ("Relic footer availability distinguishes a disabled zero-count button from owned relics", RelicFooterAvailabilityDistinguishesDisabledButton),
+    ("Relic footer image detector distinguishes an empty thumbnail strip from owned relics", RelicFooterImageDetectorDistinguishesThumbnailStrip),
     ("Operator owned count reader accepts only exact high-confidence plausible digits", OperatorOwnedCountReaderRequiresStrongEvidence),
     ("Recognition retry policy retries only missing or low-confidence live frames", RecognitionRetryPolicyTargetsLowConfidenceFrames),
     ("Mizuki undetected policy preserves prior horde and rejection values", MizukiUndetectedPolicyPreservesPriorValues),
@@ -256,6 +266,7 @@ var tests = new (string Name, Action Run)[]
     ("Suki state sync workflow reports API failures without local state replacement", SukiStateSyncWorkflowSettingsFailure),
     ("Suki state sync workflow saves current IS context through API state", SukiStateSyncWorkflowRunContextSuccess),
     ("Suki state sync workflow reports IS context API failures without replacement", SukiStateSyncWorkflowRunContextFailure),
+    ("Suki state sync workflow describes an unavailable server without API jargon", SukiStateSyncWorkflowRunContextUnavailable),
     ("Suki state sync workflow imports API state into local storage", SukiStateSyncWorkflowImportSuccess),
     ("Suki state sync workflow reports API import failures without replacement", SukiStateSyncWorkflowImportFailure),
     ("State API client can apply Suki display preferences into current state JSON", StateApiSukiPreferencesApply),
@@ -275,6 +286,7 @@ var tests = new (string Name, Action Run)[]
     ("Recognition candidate applier persists reserve operator counts", CandidateReserveOperatorCountApply),
     ("Recognition candidate applier updates run-saving relic usage", CandidateRelicUsageApply),
     ("Recognition candidate applier preserves valid relic stack counts", CandidateRelicStackApplyPreservesAbsentOcr),
+    ("Recognition candidate applier clears relic state only for an explicit empty-footer candidate", CandidateRelicClearApply),
     ("Recognition candidate applier replaces stale Amiya forms", CandidateAmiyaRoleReplacementApply),
     ("Recognition candidate applier refreshes Amiya role and promotion without a roster count change", CandidateSameCountOperatorMetadataRefreshApply),
     ("Recognition candidate applier can apply IS5 thought and age candidates", CandidateIs5SpecialApply),
@@ -866,7 +878,7 @@ static void RecognitionWorkflowApplyCandidatesViaApi()
     Equal(false, result.LocalFallbackUsed, "workflow api apply avoids local fallback");
     Equal(true, result.ShouldReloadRunState, "workflow api apply reloads state");
     Equal("1件: ingot", result.LastCandidateApplySummary, "workflow api last summary");
-    Equal("状態へ反映し、APIへ同期しました: 1件 (ingot)", result.StatusMessage, "workflow api status message");
+    Equal("状態へ反映し、配信画面へ同期しました: 1件 (ingot)", result.StatusMessage, "workflow server status message");
     Equal(0, localFallbackCount, "workflow api local fallback calls");
     Equal(true, savedState.Contains("\"ingot\":20", StringComparison.Ordinal), "workflow api saved ingot");
     Equal(savedState, replacedState, "workflow api replaced local state");
@@ -970,9 +982,9 @@ static void RecognitionWorkflowApplyCandidatesApiFailure()
 
     Equal("同期失敗", result.ApiStatus?.State, "reachable API failure stays visible");
     Equal(
-        "状態へ反映しました: 1件 (ingot) / API同期失敗: 500 incompatible state schema",
+        "ローカル状態へ反映しました: 1件 (ingot) / 配信画面への反映に失敗しました。",
         result.StatusMessage,
-        "reachable API failure message");
+        "reachable server failure message");
 }
 
 static void RecognitionWorkflowApplyCandidatesEmpty()
@@ -5605,6 +5617,27 @@ static void SukiAdbConnectionSettingsNormalizeSafeRanges()
     Equal(false, migratedV1.LdPlayerScreenshotEnhancementEnabled, "schema v1 receives safe LDPlayer default");
 }
 
+static void AdbGamePackageCatalogExposesRegionalChoices()
+{
+    Equal("jp", SukiAdbGamePackageCatalog.DefaultId, "JP package option is the default");
+    Equal(
+        "jp|en|kr|cn-official|cn-bilibili|tw|custom",
+        string.Join("|", SukiAdbGamePackageCatalog.Options.Select(option => option.Id)),
+        "regional package option order");
+    Equal("com.YoStarJP.Arknights", SukiAdbGamePackageCatalog.Default.PackageName, "JP package name");
+    Equal("com.YoStarEN.Arknights", SukiAdbGamePackageCatalog.FindById("en").PackageName, "EN package name");
+    Equal("com.YoStarKR.Arknights", SukiAdbGamePackageCatalog.FindById("kr").PackageName, "KR package name");
+    Equal("com.hypergryph.arknights", SukiAdbGamePackageCatalog.FindById("cn-official").PackageName, "CN official package name");
+    Equal("com.hypergryph.arknights.bilibili", SukiAdbGamePackageCatalog.FindById("cn-bilibili").PackageName, "CN Bilibili package name");
+    Equal("tw.txwy.and.arknights", SukiAdbGamePackageCatalog.FindById("tw").PackageName, "Traditional Chinese package name");
+    Equal("custom", SukiAdbGamePackageCatalog.FindByPackage("com.example.future.Arknights").Id, "unknown package uses custom option");
+    Equal("jp", SukiAdbGamePackageCatalog.FindByPackage("  ").Id, "blank package falls back to JP");
+
+    var futurePackage = RhodesSukiSettingsStore.NormalizeAdbConnection(
+        new SukiAdbConnectionSettings(GamePackage: "  com.example.future.Arknights  "));
+    Equal("com.example.future.Arknights", futurePackage.GamePackage, "unknown existing package is preserved");
+}
+
 static void SukiAdbConnectionSettingsRejectFutureSchema()
 {
     try
@@ -6179,37 +6212,49 @@ static void OutputProfileRoundTrip()
                 "#334455",
                 "#445566",
                 125,
-                ".integrated-only { letter-spacing: 0; }"),
+                ".integrated-only { letter-spacing: 0; }",
+                CanvasBackgroundColor: "#556677"),
             IndividualAppearance: new SukiOutputAppearance(
                 "#AABBCC",
                 "#BBCCDD",
                 "#CCDDEE",
                 "#DDEEFF",
                 85,
-                ".individual-only { box-shadow: none; }"),
+                ".individual-only { box-shadow: none; }",
+                CanvasBackgroundColor: "#EEFF00"),
             IndividualTournamentMode: false,
             IndividualBackgroundEnabled: false,
             IndividualBackgroundOpacity: 21,
             IndividualShowPartTitles: false,
-            IndividualScrollSpeed: 19);
+            IndividualScrollSpeed: 19,
+            CanvasBackgroundEnabled: false,
+            CanvasBackgroundOpacity: 31,
+            IndividualCanvasBackgroundEnabled: true,
+            IndividualCanvasBackgroundOpacity: 44);
 
         RhodesOutputProfileService.ExportAsync(path, preferences).GetAwaiter().GetResult();
         var json = File.ReadAllText(path);
         Equal(true, json.Contains("\"kind\": \"rhodes-output-profile\"", StringComparison.Ordinal), "profile kind is camelCase");
 
         var imported = RhodesOutputProfileService.ImportAsync(path).GetAwaiter().GetResult();
-        Equal(2, imported.SchemaVersion, "output schema version");
+        Equal(3, imported.SchemaVersion, "output schema version");
         Equal("#112233", imported.IntegratedAppearance?.FontColor ?? "", "integrated font color");
         Equal(125, imported.IntegratedAppearance?.FontSizePercent ?? 0, "integrated font scale");
         Equal(".integrated-only { letter-spacing: 0; }", imported.IntegratedAppearance?.CustomCss ?? "", "integrated CSS");
+        Equal("#556677", imported.IntegratedAppearance?.CanvasBackgroundColor ?? "", "integrated canvas color");
         Equal("#AABBCC", imported.IndividualAppearance?.FontColor ?? "", "individual font color");
         Equal(85, imported.IndividualAppearance?.FontSizePercent ?? 0, "individual font scale");
         Equal(".individual-only { box-shadow: none; }", imported.IndividualAppearance?.CustomCss ?? "", "individual CSS");
+        Equal("#EEFF00", imported.IndividualAppearance?.CanvasBackgroundColor ?? "", "individual canvas color");
         Equal(false, imported.IndividualTournamentMode ?? true, "individual tournament mode");
         Equal(false, imported.IndividualBackgroundEnabled ?? true, "individual background enabled");
         Equal(21, imported.IndividualBackgroundOpacity ?? -1, "individual background opacity");
         Equal(false, imported.IndividualShowPartTitles ?? true, "individual title visibility");
         Equal(19, imported.IndividualScrollSpeed ?? -1, "individual scroll speed");
+        Equal(false, imported.CanvasBackgroundEnabled ?? true, "integrated canvas background enabled");
+        Equal(31, imported.CanvasBackgroundOpacity ?? -1, "integrated canvas background opacity");
+        Equal(true, imported.IndividualCanvasBackgroundEnabled ?? false, "individual canvas background enabled");
+        Equal(44, imported.IndividualCanvasBackgroundOpacity ?? -1, "individual canvas background opacity");
         Equal(2, imported.OverlayLayout?.Count ?? 0, "layout count");
         Equal(1460, imported.OverlayLayout?[1].X ?? -1, "layout position");
         Equal(420, imported.Parts[0].Width, "part width");
@@ -6218,6 +6263,30 @@ static void OutputProfileRoundTrip()
     {
         Directory.Delete(directory, true);
     }
+}
+
+static void OutputProfileMigratesSharedBackgrounds()
+{
+    var migrated = RhodesOutputProfileService.Normalize(new SukiOutputPreferences(
+        TournamentMode: false,
+        BackgroundEnabled: false,
+        BackgroundOpacity: 64,
+        ShowPartTitles: true,
+        ScrollSpeed: 13,
+        Parts: [],
+        SchemaVersion: 2,
+        IntegratedAppearance: new SukiOutputAppearance(BackgroundColor: "#112233"),
+        IndividualAppearance: new SukiOutputAppearance(BackgroundColor: "#AABBCC"),
+        IndividualBackgroundEnabled: true,
+        IndividualBackgroundOpacity: 37));
+
+    Equal(3, migrated.SchemaVersion, "migrated output schema");
+    Equal(false, migrated.CanvasBackgroundEnabled ?? true, "integrated canvas visibility inherits legacy background");
+    Equal(64, migrated.CanvasBackgroundOpacity ?? -1, "integrated canvas opacity inherits legacy background");
+    Equal("#112233", migrated.IntegratedAppearance?.CanvasBackgroundColor ?? "", "integrated canvas color inherits legacy background");
+    Equal(true, migrated.IndividualCanvasBackgroundEnabled ?? false, "individual canvas visibility inherits legacy background");
+    Equal(37, migrated.IndividualCanvasBackgroundOpacity ?? -1, "individual canvas opacity inherits legacy background");
+    Equal("#AABBCC", migrated.IndividualAppearance?.CanvasBackgroundColor ?? "", "individual canvas color inherits legacy background");
 }
 
 static void OutputProfileCssPolicy()
@@ -6265,6 +6334,23 @@ static void OutputProfileCssPolicy()
     {
         Directory.Delete(directory, true);
     }
+}
+
+static void OutputCssTemplatesIncludeSafeTitleIcons()
+{
+    var templates = RhodesOutputCssTemplateCatalog.DefaultTemplates;
+    Equal(true, templates.Count >= 4, "CSS template count");
+
+    var transparentCanvas = templates.Single(template => template.Id == "transparent-canvas-frame");
+    Equal(true, transparentCanvas.Css.Contains("--overlay-canvas-background-alpha: 0", StringComparison.Ordinal), "transparent canvas CSS variable");
+    Equal(true, transparentCanvas.Css.Contains("--overlay-background-alpha: 0.86", StringComparison.Ordinal), "visible frame CSS variable");
+
+    var titleIcon = templates.Single(template => template.Id == "title-icon-line");
+    Equal(true, titleIcon.Css.Contains(".overlay-card-header::before", StringComparison.Ordinal), "integrated title selector");
+    Equal(true, titleIcon.Css.Contains(".overlay-part-head::before", StringComparison.Ordinal), "individual title selector");
+    Equal(true, titleIcon.Css.Contains("mask-image", StringComparison.Ordinal), "CSS vector icon mask");
+    Equal(false, titleIcon.Css.Contains("javascript:", StringComparison.OrdinalIgnoreCase), "safe CSS URL policy");
+    Equal(true, titleIcon.Css.Length <= RhodesOutputProfileService.MaxCustomCssLength, "CSS template length");
 }
 
 static void OutputProfileRejectsFutureSchema()
@@ -7031,6 +7117,9 @@ static void RuntimeWorkspaceAdbGuideContract()
     Equal(true, guide.Contains("ADB接続設定ガイド", StringComparison.Ordinal), "guide title");
     Equal(true, guide.Contains("LDPlayer", StringComparison.Ordinal), "guide explains LDPlayer");
     Equal(true, guide.Contains("高速入力", StringComparison.Ordinal), "guide explains input support boundary");
+    Equal(true, guide.Contains("com.YoStarEN.Arknights", StringComparison.Ordinal), "guide lists EN package");
+    Equal(true, guide.Contains("tw.txwy.and.arknights", StringComparison.Ordinal), "guide lists TW package");
+    Equal(true, guide.Contains("この選択だけではOCR・認識言語は切り替わりません", StringComparison.Ordinal), "guide separates package and recognition language");
     Equal(true, guide.Contains("https://maafw.com/en/docs/2.4-ControlMethods/", StringComparison.Ordinal), "guide cites official control methods");
     Equal(true, RhodesBundledDocumentLocator.ResolveAdbConnectionGuidePath("C:\\app")
         .EndsWith(Path.Combine("docs", "adb-connection-settings.html"), StringComparison.OrdinalIgnoreCase), "bundled guide path");
@@ -7428,6 +7517,14 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
             [new MaaTaskRunResult("RhodesScreen_run_squad_info_panel", "Succeeded", true, "", "{}", "OCR", true)]),
         "squad panel confirms run status screen");
     Equal(false, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("is5AgeFull", []), "age scan requires opened age detail");
+    Equal(
+        true,
+        RhodesRecognitionRuntimePlan.CanContinueAfterUnconfirmedTarget("is5AgeFull"),
+        "a run without an active age keeps the operational acquisition moving");
+    Equal(
+        false,
+        RhodesRecognitionRuntimePlan.CanContinueAfterUnconfirmedTarget("operatorsFull"),
+        "a missing operator screen still stops before reading unrelated pixels");
     Equal(false, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("relicsFull", []), "relic scan requires opened relic list");
     Equal(false, RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed("is6CoinsFull", []), "held coin scan requires opened coin list");
     Equal(
@@ -7555,7 +7652,10 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
     var relicTasks = new[]
     {
         new MaaResourceTaskPreview("RhodesRelicButton", "button", ""),
+        new MaaResourceTaskPreview("RhodesScreen_run_map_footer", "map footer", ""),
         new MaaResourceTaskPreview("RhodesScreen_run_map_footer_relic", "count", ""),
+        new MaaResourceTaskPreview("RhodesOcrRegion_run_operator_count", "map roster anchor", ""),
+        new MaaResourceTaskPreview("RhodesOcrRegion_run_relic_count_marker", "count marker", ""),
         new MaaResourceTaskPreview("RhodesScreen_relic_list", "screen", ""),
         new MaaResourceTaskPreview("RhodesOcrRegion_relic_list_text", "list", ""),
         new MaaResourceTaskPreview("RhodesOcrRegion_relic_detail_name", "detail", ""),
@@ -7563,7 +7663,10 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
     var relicPlan = new MaaResourceExecutionPlan(
         "relicsFull", "relics", "test", relicTasks.Select(task => task.Entry).ToArray(), relicTasks, "");
     var relicPreNavigation = RhodesRecognitionRuntimePlan.PreparePreNavigation(relicPlan);
-    Equal("RhodesScreen_run_map_footer_relic", string.Join("|", relicPreNavigation.TaskEntries), "relic count runs before opening the list");
+    Equal(
+        "RhodesScreen_run_map_footer|RhodesScreen_run_map_footer_relic|RhodesOcrRegion_run_operator_count|RhodesOcrRegion_run_relic_count_marker",
+        string.Join("|", relicPreNavigation.TaskEntries),
+        "map anchors, legacy count, and narrow count marker run before opening the relic list");
     var focusedRelic = RhodesRecognitionRuntimePlan.PrepareInitial(relicPlan);
     Equal("RhodesScreen_relic_list|RhodesOcrRegion_relic_list_text|RhodesOcrRegion_relic_detail_name", string.Join("|", focusedRelic.TaskEntries), "relic list tasks exclude the map footer count");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipScroll("relicsFull", 9), "candidate count alone never skips relic scroll");
@@ -7699,6 +7802,96 @@ static void RelicOwnedCountReaderExtractsFooterCount()
     Equal(13, evidence!.Count, "relic footer count");
     Equal("13", evidence.RawText, "relic footer raw text");
     Equal(true, evidence.Confidence > 0.9, "relic footer confidence");
+}
+
+static void RelicFooterAvailabilityDistinguishesDisabledButton()
+{
+    var mapFooter = new MaaTaskRunResult(
+        RhodesRelicFooterAvailabilityReader.MapFooterEntry,
+        "Succeeded",
+        true,
+        "map footer",
+        "{\"filtered\":[{\"text\":\"秘宝\",\"score\":0.99}]}",
+        "OCR",
+        true);
+    var disabledMarker = new MaaTaskRunResult(
+        RhodesRelicFooterAvailabilityReader.CountMarkerEntry,
+        "Succeeded",
+        true,
+        "disabled marker",
+        "{\"all\":[{\"text\":\",C\",\"score\":0.67}]}",
+        "OCR",
+        true);
+    var activeMarker = disabledMarker with
+    {
+        Detail = "active marker",
+        RecognitionDetailJson = "{\"all\":[{\"text\":\":7\",\"score\":0.84}]}"
+    };
+    var mapRosterAnchor = new MaaTaskRunResult(
+        RhodesOperatorOwnedCountReader.Entry,
+        "Succeeded",
+        true,
+        "map roster count",
+        "{\"all\":[{\"text\":\"5\",\"score\":0.9999}]}",
+        "OCR",
+        true);
+    var emptyFrame = BuildRelicFooterFrame(hasThumbnail: false);
+    var ownedFrame = BuildRelicFooterFrame(hasThumbnail: true);
+
+    Equal(
+        RhodesRelicFooterAvailability.Empty,
+        RhodesRelicFooterAvailabilityReader.Evaluate([mapFooter, mapRosterAnchor, disabledMarker], emptyFrame),
+        "confirmed map plus a blank thumbnail strip is an empty disabled relic button");
+    Equal(
+        RhodesRelicFooterAvailability.HasOwnedRelics,
+        RhodesRelicFooterAvailabilityReader.Evaluate([mapFooter, mapRosterAnchor, activeMarker], ownedFrame),
+        "thumbnail content proves the relic button is active even when OCR drifts");
+    Equal(
+        RhodesRelicFooterAvailability.Unknown,
+        RhodesRelicFooterAvailabilityReader.Evaluate([disabledMarker], emptyFrame),
+        "missing map confirmation never clears relics");
+    Equal(
+        RhodesRelicFooterAvailability.HasOwnedRelics,
+        RhodesRelicFooterAvailabilityReader.Evaluate(
+            [mapRosterAnchor, activeMarker],
+            []),
+        "strong digit evidence may prove ownership when image decoding is unavailable");
+}
+
+static void RelicFooterImageDetectorDistinguishesThumbnailStrip()
+{
+    var empty = RhodesRelicFooterImageDetector.Inspect(BuildRelicFooterFrame(hasThumbnail: false));
+    var owned = RhodesRelicFooterImageDetector.Inspect(BuildRelicFooterFrame(hasThumbnail: true));
+    var invalid = RhodesRelicFooterImageDetector.Inspect([1, 2, 3]);
+
+    Equal(RhodesRelicFooterAvailability.Empty, empty.Availability, "blank thumbnail strip is empty");
+    Equal(RhodesRelicFooterAvailability.HasOwnedRelics, owned.Availability, "thumbnail pixels prove ownership");
+    Equal(RhodesRelicFooterAvailability.Unknown, invalid.Availability, "invalid image is unknown");
+    Equal(true, owned.BrightPixels > empty.BrightPixels, "owned strip has more bright pixels");
+    Equal(true, owned.EdgePixels > empty.EdgePixels, "owned strip has more edges");
+}
+
+static byte[] BuildRelicFooterFrame(bool hasThumbnail)
+{
+    using var bitmap = new SKBitmap(1280, 720);
+    bitmap.Erase(new SKColor(24, 24, 24));
+    if (hasThumbnail)
+    {
+        for (var y = 650; y < 704; y++)
+        {
+            for (var x = 228; x < 292; x++)
+            {
+                var accent = (x + y) % 7 < 3;
+                bitmap.SetPixel(x, y, accent
+                    ? new SKColor(190, 145, 80)
+                    : new SKColor(72, 78, 86));
+            }
+        }
+    }
+
+    using var image = SKImage.FromBitmap(bitmap);
+    using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+    return data.ToArray();
 }
 
 static void OperatorOwnedCountReaderRequiresStrongEvidence()
@@ -11645,6 +11838,26 @@ static void SukiStateSyncWorkflowRunContextFailure()
     Equal("接続失敗", result.ApiStatus.State, "run context failure api status");
 }
 
+static void SukiStateSyncWorkflowRunContextUnavailable()
+{
+    var result = RhodesSukiStateSyncWorkflow.SyncRunContextAsync(
+        "is4_sami",
+        _ => Task.FromResult(new RhodesStateApiResult(
+            "",
+            "対象のコンピューターによって拒否されたため、接続できませんでした。",
+            RhodesStateApiFailureKind.Unavailable)),
+        (_, _) => throw new InvalidOperationException("save should not run"),
+        (_, _) => throw new InvalidOperationException("replace should not run")).GetAwaiter().GetResult();
+
+    Equal(false, result.Succeeded, "unavailable server keeps sync unsuccessful");
+    Equal(RhodesStateApiFailureKind.Unavailable, result.FailureKind, "unavailable server failure kind");
+    Equal(true, result.IsUnavailable, "unavailable server classification");
+    Equal("未起動", result.ApiStatus.State, "unavailable server status");
+    Equal("IS切替: 配信サーバーは未起動です。", result.StatusMessage, "unavailable server user message");
+    Equal(false, result.StatusMessage.Contains("API", StringComparison.Ordinal), "unavailable server hides API jargon");
+    Equal(false, result.StatusMessage.Contains("対象のコンピューター", StringComparison.Ordinal), "unavailable server hides OS error");
+}
+
 static void SukiStateSyncWorkflowImportSuccess()
 {
     var apiState =
@@ -11732,14 +11945,18 @@ static void StateApiSukiPreferencesApply()
                 new SukiOverlayLayoutState("status", true, 40, 30, 1200, 120, 2),
                 new SukiOverlayLayoutState("operators", true, 1460, 300, 420, 620, 5),
             ],
-            SchemaVersion: 2,
-            IntegratedAppearance: new SukiOutputAppearance("#112233", "#223344", "#334455", "#445566", 120, ".integrated {}"),
-            IndividualAppearance: new SukiOutputAppearance("#AABBCC", "#BBCCDD", "#CCDDEE", "#DDEEFF", 90, ".individual {}"),
+            SchemaVersion: 3,
+            IntegratedAppearance: new SukiOutputAppearance("#112233", "#223344", "#334455", "#445566", 120, ".integrated {}", "#556677"),
+            IndividualAppearance: new SukiOutputAppearance("#AABBCC", "#BBCCDD", "#CCDDEE", "#DDEEFF", 90, ".individual {}", "#EEFF00"),
             IndividualTournamentMode: false,
             IndividualBackgroundEnabled: false,
             IndividualBackgroundOpacity: 24,
             IndividualShowPartTitles: true,
-            IndividualScrollSpeed: 17),
+            IndividualScrollSpeed: 17,
+            CanvasBackgroundEnabled: false,
+            CanvasBackgroundOpacity: 27,
+            IndividualCanvasBackgroundEnabled: true,
+            IndividualCanvasBackgroundOpacity: 46),
         "maa-ocr"))!.AsObject();
 
     Equal("casual", updated["mode"]!.GetValue<string>(), "output mode keeps run mode");
@@ -11754,17 +11971,22 @@ static void StateApiSukiPreferencesApply()
     Equal(true, preferences["sukiOutputTournamentMode"]!.GetValue<bool>(), "tournament output");
     Equal(true, preferences["sukiOutputBackgroundEnabled"]!.GetValue<bool>(), "background enabled");
     Equal(35, preferences["sukiOutputBackgroundOpacity"]!.GetValue<int>(), "background opacity");
+    Equal(false, preferences["sukiOutputCanvasBackgroundEnabled"]!.GetValue<bool>(), "canvas background enabled");
+    Equal(27, preferences["sukiOutputCanvasBackgroundOpacity"]!.GetValue<int>(), "canvas background opacity");
     Equal(false, preferences["sukiOutputShowPartTitles"]!.GetValue<bool>(), "part title visibility");
     Equal(false, preferences.ContainsKey("sukiOutputSeparateWindow"), "separate window removed");
     Equal(false, preferences.ContainsKey("sukiOutputTransparentBackground"), "legacy transparent background removed");
-    Equal(2, preferences["sukiOutputSchemaVersion"]!.GetValue<int>(), "output schema version");
+    Equal(3, preferences["sukiOutputSchemaVersion"]!.GetValue<int>(), "output schema version");
     Equal("#112233", preferences["sukiOutputIntegratedAppearance"]!.AsObject()["fontColor"]!.GetValue<string>(), "integrated font color");
     Equal(120, preferences["sukiOutputIntegratedAppearance"]!.AsObject()["fontSizePercent"]!.GetValue<int>(), "integrated font scale");
     Equal(".integrated {}", preferences["sukiOutputIntegratedAppearance"]!.AsObject()["customCss"]!.GetValue<string>(), "integrated CSS");
+    Equal("#556677", preferences["sukiOutputIntegratedAppearance"]!.AsObject()["canvasBackgroundColor"]!.GetValue<string>(), "integrated canvas color");
     Equal("#AABBCC", preferences["sukiOutputIndividualAppearance"]!.AsObject()["fontColor"]!.GetValue<string>(), "individual font color");
     Equal(false, preferences["sukiOutputIndividualTournamentMode"]!.GetValue<bool>(), "individual tournament mode");
     Equal(false, preferences["sukiOutputIndividualBackgroundEnabled"]!.GetValue<bool>(), "individual background");
     Equal(24, preferences["sukiOutputIndividualBackgroundOpacity"]!.GetValue<int>(), "individual background opacity");
+    Equal(true, preferences["sukiOutputIndividualCanvasBackgroundEnabled"]!.GetValue<bool>(), "individual canvas background");
+    Equal(46, preferences["sukiOutputIndividualCanvasBackgroundOpacity"]!.GetValue<int>(), "individual canvas background opacity");
     Equal(17, preferences["sukiOutputIndividualScrollSpeed"]!.GetValue<int>(), "individual scroll speed");
     Equal(3, preferences["sukiOutputParts"]!.AsArray().Count, "output parts count");
     var firstOutputPart = preferences["sukiOutputParts"]!.AsArray()[0]!.AsObject();
@@ -12354,6 +12576,45 @@ static void CandidateRelicStackApplyPreservesAbsentOcr()
         [candidate with { Count = 11 }],
         DateTimeOffset.Parse("2026-08-12T00:02:00Z"));
     Equal(9, state["relicStackCounts"]!.AsObject()[candidate.RelicId]!.GetValue<int>(), "known over-limit OCR preserves the prior count");
+}
+
+static void CandidateRelicClearApply()
+{
+    var state = JsonNode.Parse(
+        """
+        {
+          "run": { "campaignId": "is5_sarkaz" },
+          "operators": ["amiya"],
+          "relics": ["is5_sarkaz_relic_001", "is5_sarkaz_relic_287"],
+          "usedRelicIds": ["is5_sarkaz_relic_001"],
+          "relicStackCounts": { "is5_sarkaz_relic_287": 4 }
+        }
+        """)!.AsObject();
+
+    var summary = RhodesRecognitionCandidateApplier.Apply(
+        state,
+        [RhodesRecognitionCandidateApplier.CreateNoRelicsCandidate("is5_sarkaz")],
+        DateTimeOffset.Parse("2026-08-13T00:00:00Z"));
+
+    Equal(1, summary.AppliedCount, "explicit empty relic candidate applies once");
+    Equal(0, state["relics"]!.AsArray().Count, "owned relics are cleared");
+    Equal(0, state["usedRelicIds"]!.AsArray().Count, "used relic flags are cleared");
+    Equal(0, state["relicStackCounts"]!.AsObject().Count, "relic stack counts are cleared");
+    Equal("amiya", state["operators"]!.AsArray().Single()!.GetValue<string>(), "unrelated operators are preserved");
+
+    var otherCampaign = JsonNode.Parse(
+        """
+        {
+          "run": { "campaignId": "is5_sarkaz" },
+          "relics": ["is5_sarkaz_relic_001"]
+        }
+        """)!.AsObject();
+    var rejected = RhodesRecognitionCandidateApplier.Apply(
+        otherCampaign,
+        [RhodesRecognitionCandidateApplier.CreateNoRelicsCandidate("is4_sami")],
+        DateTimeOffset.Parse("2026-08-13T00:01:00Z"));
+    Equal(0, rejected.AppliedCount, "other-campaign empty candidate is rejected");
+    Equal(1, otherCampaign["relics"]!.AsArray().Count, "campaign mismatch never clears relics");
 }
 
 static void CandidateAmiyaRoleReplacementApply()
@@ -13223,27 +13484,45 @@ static void MaaInferenceCatalogExposesSafeChoices()
 static void MaaRuntimeSettingsNormalizeSafeValues()
 {
     var normalized = RhodesSukiSettingsStore.NormalizeMaaRuntime(new SukiMaaRuntimeSettings(
-        SchemaVersion: 1,
+        SchemaVersion: 2,
+        ConnectionTargetId: "windows",
         InferenceProviderId: "gpu",
         InferenceDeviceId: 99,
         PreferredWindowTitle: "  アークナイツ  ",
         PreferredWindowClass: "  UnityWndClass  ",
-        Win32ScreencapMethodId: "desktop-dup-window"));
+        Win32ScreencapMethodId: "desktop-dup-window",
+        Win32MouseMethodId: "send-with-window-pos",
+        Win32KeyboardMethodId: "postmsg"));
 
     Equal(SukiMaaRuntimeSettings.CurrentSchemaVersion, normalized.SchemaVersion, "MAA runtime schema");
+    Equal("pc", normalized.ConnectionTargetId, "Windows alias selects PC controller");
     Equal("directml", normalized.InferenceProviderId, "DirectML alias normalized");
     Equal(15, normalized.InferenceDeviceId, "adapter index clamped");
     Equal("アークナイツ", normalized.PreferredWindowTitle, "window title trimmed");
     Equal("UnityWndClass", normalized.PreferredWindowClass, "window class trimmed");
     Equal("dxgi-window", normalized.Win32ScreencapMethodId, "Win32 screencap alias normalized");
+    Equal("send-message-window", normalized.Win32MouseMethodId, "Win32 mouse alias normalized");
+    Equal("post-message", normalized.Win32KeyboardMethodId, "Win32 keyboard alias normalized");
 
     var defaults = RhodesSukiSettingsStore.NormalizeMaaRuntime(new SukiMaaRuntimeSettings(
+        SchemaVersion: 2,
+        ConnectionTargetId: "unknown",
         InferenceProviderId: "unknown",
         PreferredWindowTitle: "",
-        Win32ScreencapMethodId: "unknown"));
+        Win32ScreencapMethodId: "unknown",
+        Win32MouseMethodId: "unknown",
+        Win32KeyboardMethodId: "unknown"));
+    Equal("adb", defaults.ConnectionTargetId, "unknown controller defaults to ADB");
     Equal("auto", defaults.InferenceProviderId, "unknown provider defaults to Auto");
     Equal("アークナイツ", defaults.PreferredWindowTitle, "blank title uses Japanese candidate");
-    Equal("background", defaults.Win32ScreencapMethodId, "unknown capture defaults to background");
+    Equal("frame-pool", defaults.Win32ScreencapMethodId, "unknown capture defaults to released MAA FramePool");
+    Equal("send-message-cursor", defaults.Win32MouseMethodId, "unknown mouse defaults to released MAA cursor message input");
+    Equal("send-message", defaults.Win32KeyboardMethodId, "unknown keyboard defaults to released MAA message input");
+
+    var migrated = RhodesSukiSettingsStore.NormalizeMaaRuntime(new SukiMaaRuntimeSettings(
+        SchemaVersion: 1,
+        Win32ScreencapMethodId: "background"));
+    Equal("frame-pool", migrated.Win32ScreencapMethodId, "schema 1 background default migrates to FramePool");
 }
 
 static void MaaPcWindowCatalogPrioritizesArknights()
@@ -13263,24 +13542,57 @@ static void MaaPcWindowCatalogPrioritizesArknights()
     Equal((IntPtr)3, ranked[0].Handle, "preferred title and class first");
     Equal(true, ranked.Take(3).All(item => item.IsKnownArknightsTitle), "localized Arknights titles prioritized");
     Equal((IntPtr)1, ranked[^1].Handle, "unrelated window remains manually selectable");
+
+    var japaneseClientAndLauncher = RhodesMaaDesktopWindowCatalog.Rank(
+        [
+            new DesktopWindowInfo((IntPtr)10, "アークナイツ", "Chrome_WidgetWin_1", Win32ScreencapMethods.None, Win32InputMethod.None, Win32InputMethod.None),
+            new DesktopWindowInfo((IntPtr)20, "アークナイツ", "UnityWndClass", Win32ScreencapMethods.None, Win32InputMethod.None, Win32InputMethod.None),
+        ],
+        "アークナイツ",
+        "");
+
+    Equal((IntPtr)20, japaneseClientAndLauncher[0].Handle, "Unity game window wins over same-title launcher without a class override");
 }
 
-static void MaaPcCapturePolicyIsCaptureOnly()
+static void MaaPcControllerPolicyUsesMaaDefaults()
 {
     Equal(
-        "background|frame-pool|print-window|dxgi-window|screen-dc",
+        "frame-pool|print-window|dxgi-window|screen-dc|background",
         string.Join("|", SukiWin32ScreencapCatalog.Options.Select(option => option.Id)),
         "released MAA PC capture choices");
+    Equal(
+        "send-message-cursor|send-message-window|seize",
+        string.Join("|", SukiWin32InputCatalog.MouseOptions.Select(option => option.Id)),
+        "released MAA PC mouse choices");
+    Equal(
+        "send-message|post-message|seize",
+        string.Join("|", SukiWin32InputCatalog.KeyboardOptions.Select(option => option.Id)),
+        "released MAA PC keyboard choices");
     Equal(
         Win32ScreencapMethods.ScreenDC,
         SukiWin32ScreencapCatalog.Find("screendc").Value,
         "ScreenDC alias");
-    var plan = RhodesMaaPcConnectionPolicy.Resolve("background");
-    Equal(Win32ScreencapMethods.Background, plan.ScreencapMethod, "background capture methods");
-    Equal(Win32InputMethod.None, plan.MouseMethod, "PC mouse input disabled");
-    Equal(Win32InputMethod.None, plan.KeyboardMethod, "PC keyboard input disabled");
+    var plan = RhodesMaaPcConnectionPolicy.Resolve(null, null, null);
+    Equal(Win32ScreencapMethods.FramePool, plan.ScreencapMethod, "released MAA FramePool default");
+    Equal(Win32InputMethod.SendMessageWithCursorPos, plan.MouseMethod, "released MAA cursor message mouse default");
+    Equal(Win32InputMethod.SendMessage, plan.KeyboardMethod, "released MAA message keyboard default");
     Equal(1280, plan.TargetWidth, "PC target width");
     Equal(720, plan.TargetHeight, "PC target height");
+
+    var advanced = RhodesMaaPcConnectionPolicy.Resolve("screen", "send-with-window-pos", "postmsg");
+    Equal(Win32ScreencapMethods.ScreenDC, advanced.ScreencapMethod, "advanced capture alias");
+    Equal(Win32InputMethod.SendMessageWithWindowPos, advanced.MouseMethod, "advanced background mouse input");
+    Equal(Win32InputMethod.PostMessage, advanced.KeyboardMethod, "advanced keyboard input");
+    Equal(false, new[] { plan.MouseMethod, plan.KeyboardMethod }.Contains(Win32InputMethod.None), "PC plan never uses invalid None input");
+}
+
+static void MaaControllerTargetMatchesSessionKind()
+{
+    Equal(true, SukiMaaConnectionTargetPolicy.IsReady("pc", true, MaaSessionControllerKind.Win32), "PC target accepts a connected Win32 controller");
+    Equal(false, SukiMaaConnectionTargetPolicy.IsReady("pc", true, MaaSessionControllerKind.Adb), "PC target rejects a connected ADB controller");
+    Equal(true, SukiMaaConnectionTargetPolicy.IsReady("adb", true, MaaSessionControllerKind.Adb), "ADB target accepts a connected ADB controller");
+    Equal(false, SukiMaaConnectionTargetPolicy.IsReady("adb", true, MaaSessionControllerKind.Win32), "ADB target rejects a connected Win32 controller");
+    Equal(false, SukiMaaConnectionTargetPolicy.IsReady("pc", false, MaaSessionControllerKind.Win32), "disconnected controller is never ready");
 }
 
 static void RuntimeUserCopyOmitsAndroidKeyDetails()
@@ -13314,6 +13626,133 @@ static void RuntimeUserCopyOmitsAndroidKeyDetails()
         Equal(false, source.Contains("KEYCODE_BACK", StringComparison.OrdinalIgnoreCase), $"KEYCODE_BACK copy omitted: {Path.GetFileName(path)}");
         Equal(false, source.Contains("keyevent", StringComparison.OrdinalIgnoreCase), $"keyevent copy omitted: {Path.GetFileName(path)}");
     }
+}
+
+static void MaaDevelopmentToolRequestsStayLocal()
+{
+    var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "rhodes development root"));
+    var mse = RhodesMaaDevelopmentTools.BuildOpenRequest("mse", root);
+    Equal(false, mse.UseShellExecute, "MSE uses an explicit process boundary");
+    Equal("code", mse.FileName, "MSE uses VS Code command");
+    Equal("--reuse-window", mse.Arguments[0], "MSE reuses the developer window");
+    Equal(root, mse.Arguments[1], "MSE receives the repository root as one argument");
+
+    var generatedPipeline = Path.Combine(root, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json");
+    var mpe = RhodesMaaDevelopmentTools.BuildOpenRequest("mpe", root);
+    Equal(generatedPipeline, mpe.Arguments[^1], "MPE opens the generated pipeline through MSE");
+    Equal(false, mpe.Arguments.Any(argument => argument.Contains("http", StringComparison.OrdinalIgnoreCase)), "MPE does not upload the pipeline");
+
+    var materials = Path.Combine(root, "RHODES OBS COMMANDER3373 Debug Logs");
+    var analyzer = Path.Combine(root, "tools-local", "MaaLogAnalyzer.exe");
+    var mla = RhodesMaaDevelopmentTools.BuildLogAnalyzerRequest(analyzer, materials);
+    Equal(analyzer, mla.FileName, "MLA uses only the explicitly configured local executable");
+    Equal(materials, mla.Arguments[0], "MLA receives local materials as one argument");
+    Equal(false, mla.Arguments.Any(argument => argument.Contains("http", StringComparison.OrdinalIgnoreCase)), "MLA does not upload materials");
+    ThrowsInvalidOperation(
+        () => RhodesMaaDevelopmentTools.BuildLogAnalyzerRequest("https://example.invalid/analyzer", materials),
+        "remote MLA endpoint rejected");
+}
+
+static void MaaEvidenceKitRequestsStayOffline()
+{
+    var materials = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "RHODES materials"));
+    var output = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "RHODES evidence.json"));
+    var request = RhodesMaaEvidenceKit.BuildInspectRequest("maa-evidence", materials, output);
+
+    Equal("inspect", request.Arguments[0], "MEK inspect command");
+    Equal(materials, request.Arguments[1], "MEK materials remain one argument");
+    Equal("json", request.Arguments[3], "MEK JSON output");
+    Equal(output, request.Arguments[5], "MEK output path remains one argument");
+    Equal("0", request.Environment["MAA_EVIDENCE_AUTO_UPDATE"], "MEK auto update disabled");
+    Equal("0", request.Environment["MAA_EVIDENCE_TELEMETRY"], "MEK telemetry disabled");
+    Equal(false, request.Arguments.Any(argument => argument.Contains("feedback", StringComparison.OrdinalIgnoreCase)), "MEK feedback is never invoked");
+
+    var summary = RhodesMaaEvidenceKit.ParseSummary("""
+        {
+          "schemaVersion": "maa-evidence/v1",
+          "artifacts": [{"id":"artifact-1"}],
+          "evidence": [{"id":"evidence-1"},{"id":"evidence-2"}],
+          "missingEvidence": [{"kind":"mla"}],
+          "warnings": [{"code":"truncated"}],
+          "statistics": {"tasks": 3},
+          "details": {"source":"local"}
+        }
+        """);
+    Equal(true, summary.IsSupported, "MEK schema supported");
+    Equal(1, summary.ArtifactCount, "MEK artifact count");
+    Equal(2, summary.EvidenceCount, "MEK evidence count");
+    Equal(1, summary.MissingEvidenceCount, "MEK missing evidence remains distinct");
+    Equal(1, summary.WarningCount, "MEK warning count");
+}
+
+static void RecognitionLabBuildsRecognitionOnlyPlans()
+{
+    var ocr = RhodesRecognitionLab.BuildPlan(new RhodesRecognitionLabRequest(
+        "ocr",
+        "frame.png",
+        new MaaRoi(10, 20, 300, 80),
+        Expected: "123",
+        Threshold: 0.72,
+        OnlyRecognition: true));
+    Equal(true, ocr.IsValid, "OCR plan valid");
+    Equal(true, ocr.UsesMaaRecognition, "OCR uses MAA recognition");
+    Equal(true, ocr.PayloadJson.Contains("\"recognition\":\"OCR\"", StringComparison.Ordinal), "OCR payload type");
+    Equal(false, ocr.PayloadJson.Contains("\"action\"", StringComparison.Ordinal), "OCR plan has no action");
+
+    var color = RhodesRecognitionLab.BuildPlan(new RhodesRecognitionLabRequest(
+        "color-match",
+        "frame.png",
+        new MaaRoi(0, 0, 1280, 720),
+        ColorMethod: 40,
+        ColorLower: "0,80,100",
+        ColorUpper: "20,255,255",
+        ColorCount: 12,
+        ColorConnected: true));
+    Equal(true, color.IsValid, "ColorMatch plan valid");
+    Equal(true, color.PayloadJson.Contains("\"recognition\":\"ColorMatch\"", StringComparison.Ordinal), "ColorMatch payload type");
+    Equal(false, color.PayloadJson.Contains("Click", StringComparison.OrdinalIgnoreCase), "ColorMatch plan has no click");
+    Equal(false, color.PayloadJson.Contains("Swipe", StringComparison.OrdinalIgnoreCase), "ColorMatch plan has no swipe");
+    Equal(false, color.PayloadJson.Contains("Key", StringComparison.OrdinalIgnoreCase), "ColorMatch plan has no key");
+
+    var coin = RhodesRecognitionLab.BuildPlan(new RhodesRecognitionLabRequest(
+        "sui-owned-coins",
+        "frame.png",
+        new MaaRoi(0, 0, 1280, 720)));
+    Equal(true, coin.IsValid, "Sui owned coin plan valid");
+    Equal(false, coin.UsesMaaRecognition, "Sui coin plan uses the current native recognizer");
+    Equal("", coin.PayloadJson, "Sui coin plan emits no operation payload");
+
+    var invalid = RhodesRecognitionLab.BuildPlan(new RhodesRecognitionLabRequest(
+        "ocr",
+        "frame.png",
+        new MaaRoi(1270, 700, 20, 30)));
+    Equal(false, invalid.IsValid, "ROI outside 1280x720 rejected");
+}
+
+static void RecognitionLabExecutesOfflineOcr()
+{
+    using var session = new RhodesMaaSession();
+    var snapshot = session.InitializeOfflineAsync(RhodesMaaSession.DefaultAdbOptions()).GetAwaiter().GetResult();
+    Equal(true, snapshot.IsReady, $"recognition lab offline MAA ready: {snapshot.Detail}");
+
+    using var bitmap = new SKBitmap(1280, 720);
+    bitmap.Erase(SKColors.Black);
+    using var image = SKImage.FromBitmap(bitmap);
+    using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+    var bytes = encoded.ToArray();
+    var plan = RhodesRecognitionLab.BuildPlan(new RhodesRecognitionLabRequest(
+        "ocr",
+        "synthetic-frame.png",
+        new MaaRoi(0, 0, 1280, 720),
+        Threshold: 0.3,
+        OnlyRecognition: true));
+
+    var result = session.RunResourceRecognitionAsync(
+        "RhodesRecognitionLab_offline_ocr",
+        plan.PayloadJson,
+        bytes).GetAwaiter().GetResult();
+    Equal(true, plan.IsValid, "offline OCR plan valid");
+    Equal(true, result.Succeeded, $"offline OCR execution succeeds: {result.Detail}");
 }
 
 static void Equal<T>(T expected, T actual, string label)

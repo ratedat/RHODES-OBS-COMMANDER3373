@@ -5,6 +5,8 @@ namespace RhodesSuki.Services;
 
 public static class RhodesMaaDesktopWindowCatalog
 {
+    private const string ArknightsClientWindowClass = "UnityWndClass";
+
     private static readonly HashSet<string> KnownArknightsTitles =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -54,11 +56,14 @@ public static class RhodesMaaDesktopWindowCatalog
             && window.Title.Equals(preferredTitle, StringComparison.OrdinalIgnoreCase);
         var classMatches = !string.IsNullOrWhiteSpace(preferredClass)
             && window.ClassName.Equals(preferredClass, StringComparison.OrdinalIgnoreCase);
-        if (titleMatches && (string.IsNullOrWhiteSpace(preferredClass) || classMatches))
+        var defaultClientClassMatches = string.IsNullOrWhiteSpace(preferredClass)
+            && window.IsKnownArknightsTitle
+            && window.ClassName.Equals(ArknightsClientWindowClass, StringComparison.OrdinalIgnoreCase);
+        if (titleMatches && (classMatches || defaultClientClassMatches))
             return 0;
         if (titleMatches)
             return 1;
-        if (window.IsKnownArknightsTitle && classMatches)
+        if (window.IsKnownArknightsTitle && (classMatches || defaultClientClassMatches))
             return 2;
         if (window.IsKnownArknightsTitle)
             return 3;
@@ -70,13 +75,18 @@ public static class RhodesMaaDesktopWindowCatalog
 
 public static class RhodesMaaPcConnectionPolicy
 {
-    public static MaaPcConnectionPlan Resolve(string? screencapMethodId)
+    public static MaaPcConnectionPlan Resolve(
+        string? screencapMethodId,
+        string? mouseMethodId,
+        string? keyboardMethodId)
     {
         var screencap = SukiWin32ScreencapCatalog.Find(screencapMethodId);
+        var mouse = SukiWin32InputCatalog.FindMouse(mouseMethodId);
+        var keyboard = SukiWin32InputCatalog.FindKeyboard(keyboardMethodId);
         return new MaaPcConnectionPlan(
             screencap.Value,
-            Win32InputMethod.None,
-            Win32InputMethod.None,
+            mouse.Value,
+            keyboard.Value,
             1280,
             720);
     }

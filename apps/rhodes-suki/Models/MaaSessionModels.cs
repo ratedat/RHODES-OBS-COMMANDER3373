@@ -319,7 +319,11 @@ public sealed record SukiOutputPreferences(
     bool? IndividualBackgroundEnabled = null,
     int? IndividualBackgroundOpacity = null,
     bool? IndividualShowPartTitles = null,
-    int? IndividualScrollSpeed = null);
+    int? IndividualScrollSpeed = null,
+    bool? CanvasBackgroundEnabled = null,
+    int? CanvasBackgroundOpacity = null,
+    bool? IndividualCanvasBackgroundEnabled = null,
+    int? IndividualCanvasBackgroundOpacity = null);
 
 public sealed record SukiOutputAppearance(
     string FontColor = "#F2EFE6",
@@ -327,7 +331,8 @@ public sealed record SukiOutputAppearance(
     string BorderColor = "#2B3638",
     string AccentColor = "#55D6BE",
     int FontSizePercent = 100,
-    string CustomCss = "");
+    string CustomCss = "",
+    string? CanvasBackgroundColor = null);
 
 public sealed record SukiOutputProfile(
     string Kind,

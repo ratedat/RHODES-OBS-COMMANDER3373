@@ -34,6 +34,21 @@ function setEquals(left, right) {
   return true;
 }
 
+function collectTranslationKeys(value, keys = new Set()) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectTranslationKeys(item, keys);
+    return keys;
+  }
+  if (value && typeof value === "object") {
+    for (const item of Object.values(value)) collectTranslationKeys(item, keys);
+    return keys;
+  }
+  if (typeof value === "string" && value.startsWith("$") && value.length > 1) {
+    keys.add(value.slice(1));
+  }
+  return keys;
+}
+
 export function validateInterfaceContract(projectInterface, { pipelineEntries = new Set(), appDirectory = appRoot } = {}) {
   const errors = [];
   const controllers = new Set((projectInterface.controller ?? []).map((item) => item?.name).filter(Boolean));
@@ -42,6 +57,37 @@ export function validateInterfaceContract(projectInterface, { pipelineEntries = 
   const tasks = Array.isArray(projectInterface.task) ? projectInterface.task : [];
   const presets = Array.isArray(projectInterface.preset) ? projectInterface.preset : [];
   const taskNames = new Set(tasks.map((task) => task?.name).filter(Boolean));
+  const translationKeys = collectTranslationKeys(projectInterface);
+
+  if (projectInterface.interface_version !== 2) errors.push("interface_version must be 2");
+  if (projectInterface.telemetry !== undefined) errors.push("telemetry must remain unconfigured");
+  const languages = projectInterface.languages;
+  if (!languages || typeof languages !== "object" || Array.isArray(languages)) {
+    errors.push("languages must define ja_jp and en_us translation files");
+  } else {
+    for (const language of ["ja_jp", "en_us"]) {
+      const translationPath = languages[language];
+      if (typeof translationPath !== "string" || !translationPath.trim()) {
+        errors.push(`languages is missing ${language}`);
+        continue;
+      }
+      const absolutePath = path.resolve(appDirectory, translationPath);
+      if (!fs.existsSync(absolutePath)) {
+        errors.push(`translation file does not exist: ${translationPath}`);
+        continue;
+      }
+      try {
+        const translations = readJson(absolutePath);
+        for (const key of translationKeys) {
+          if (typeof translations?.[key] !== "string" || !translations[key].trim()) {
+            errors.push(`translation ${translationPath} is missing key ${key}`);
+          }
+        }
+      } catch (error) {
+        errors.push(`translation ${translationPath} is invalid: ${error.message}`);
+      }
+    }
+  }
 
   for (const entry of pipelineEntries) {
     if (isAbandonedRunMaaEntry(entry)) errors.push(`pipeline contains abandoned run target ${entry}`);
@@ -55,6 +101,9 @@ export function validateInterfaceContract(projectInterface, { pipelineEntries = 
   addDuplicateErrors(errors, presets.map((preset) => preset?.name), "preset");
 
   for (const resource of projectInterface.resource ?? []) {
+    if (typeof resource?.hash !== "string" || !resource.hash.trim()) {
+      errors.push(`resource ${resource?.name ?? "<unknown>"} is missing hash`);
+    }
     for (const controllerName of arrayOfStrings(resource?.controller)) {
       if (!controllers.has(controllerName)) errors.push(`resource ${resource.name} references unknown controller ${controllerName}`);
     }

@@ -143,6 +143,20 @@ export function normalizePreferences(value) {
     preferences.sukiOutputIndividualBackgroundOpacity,
     preferences.sukiOutputBackgroundOpacity,
   );
+  preferences.sukiOutputCanvasBackgroundEnabled = preferences.sukiOutputCanvasBackgroundEnabled == null
+    ? preferences.sukiOutputBackgroundEnabled
+    : normalizeBoolean(preferences.sukiOutputCanvasBackgroundEnabled);
+  preferences.sukiOutputCanvasBackgroundOpacity = clampOverlayBackgroundOpacity(
+    preferences.sukiOutputCanvasBackgroundOpacity,
+    preferences.sukiOutputBackgroundOpacity,
+  );
+  preferences.sukiOutputIndividualCanvasBackgroundEnabled = preferences.sukiOutputIndividualCanvasBackgroundEnabled == null
+    ? preferences.sukiOutputIndividualBackgroundEnabled
+    : normalizeBoolean(preferences.sukiOutputIndividualCanvasBackgroundEnabled);
+  preferences.sukiOutputIndividualCanvasBackgroundOpacity = clampOverlayBackgroundOpacity(
+    preferences.sukiOutputIndividualCanvasBackgroundOpacity,
+    preferences.sukiOutputIndividualBackgroundOpacity,
+  );
   preferences.sukiOutputIndividualShowPartTitles = preferences.sukiOutputIndividualShowPartTitles == null
     ? preferences.sukiOutputShowPartTitles
     : normalizeBoolean(preferences.sukiOutputIndividualShowPartTitles);
@@ -159,6 +173,6 @@ export function normalizePreferences(value) {
   for (const [key, fallback] of Object.entries(overlayScrollSpeedDefaults)) {
     preferences[key] = clampOverlayScrollSpeed(preferences[key], fallback);
   }
-  preferences.sukiOutputSchemaVersion = 2;
+  preferences.sukiOutputSchemaVersion = 3;
   return preferences;
 }

@@ -14,11 +14,14 @@ public sealed record RhodesSukiStateSyncResult(
     string Error,
     SukiOptionalRuntimeStatus ApiStatus,
     bool LocalStateReplaced,
-    string StatusMessage)
+    string StatusMessage,
+    RhodesStateApiFailureKind FailureKind = RhodesStateApiFailureKind.None)
 {
     public bool Succeeded => string.IsNullOrWhiteSpace(Error);
 
     public bool ShouldReloadRunState => Succeeded && LocalStateReplaced;
+
+    public bool IsUnavailable => !Succeeded && FailureKind == RhodesStateApiFailureKind.Unavailable;
 }
 
 public static class RhodesSukiStateSyncWorkflow
@@ -32,7 +35,7 @@ public static class RhodesSukiStateSyncWorkflow
     {
         var fetched = await fetchApiStateAsync(cancellationToken);
         if (!fetched.Succeeded)
-            return Failure(fetched.Error, "ADB API設定");
+            return Failure(fetched, "設定保存");
 
         var updated = RhodesStateApiClient.ApplyChoicesToStateJson(
             fetched.StateJson,
@@ -48,14 +51,14 @@ public static class RhodesSukiStateSyncWorkflow
 
         var saved = await saveApiStateAsync(updated, cancellationToken);
         if (!saved.Succeeded)
-            return Failure(saved.Error, "ADB API設定");
+            return Failure(saved, "設定保存");
 
         await replaceLocalStateJsonAsync(saved.StateJson, cancellationToken);
         return new RhodesSukiStateSyncResult(
             "",
             RhodesApiStatusProbe.ParseStateJson(saved.StateJson),
             true,
-            "Suki設定とADB API設定を同期しました。");
+            "Suki設定を配信画面へ同期しました。");
     }
 
     public static async Task<RhodesSukiStateSyncResult> SyncRunContextAsync(
@@ -67,19 +70,19 @@ public static class RhodesSukiStateSyncWorkflow
     {
         var fetched = await fetchApiStateAsync(cancellationToken);
         if (!fetched.Succeeded)
-            return Failure(fetched.Error, "IS切替");
+            return Failure(fetched, "IS切替");
 
         var updated = RhodesStateApiClient.ApplyRunContextToStateJson(fetched.StateJson, campaignId);
         var saved = await saveApiStateAsync(updated, cancellationToken);
         if (!saved.Succeeded)
-            return Failure(saved.Error, "IS切替");
+            return Failure(saved, "IS切替");
 
         await replaceLocalStateJsonAsync(saved.StateJson, cancellationToken);
         return new RhodesSukiStateSyncResult(
             "",
             RhodesApiStatusProbe.ParseStateJson(saved.StateJson),
             true,
-            "現在ISをAPIへ同期しました。");
+            "現在ISを配信画面へ同期しました。");
     }
 
     public static async Task<RhodesSukiStateSyncResult> SyncFromApiAsync(
@@ -89,22 +92,31 @@ public static class RhodesSukiStateSyncWorkflow
     {
         var fetched = await fetchApiStateAsync(cancellationToken);
         if (!fetched.Succeeded)
-            return Failure(fetched.Error, "API state取り込み");
+            return Failure(fetched, "状態取り込み");
 
         await replaceLocalStateJsonAsync(fetched.StateJson, cancellationToken);
         return new RhodesSukiStateSyncResult(
             "",
             RhodesApiStatusProbe.ParseStateJson(fetched.StateJson),
             true,
-            "API stateをローカルへ取り込みました。");
+            "配信画面の状態をローカルへ取り込みました。");
     }
 
-    private static RhodesSukiStateSyncResult Failure(string error, string label)
+    private static RhodesSukiStateSyncResult Failure(RhodesStateApiResult failure, string label)
     {
+        var isUnavailable = failure.FailureKind == RhodesStateApiFailureKind.Unavailable;
         return new RhodesSukiStateSyncResult(
-            error,
-            new SukiOptionalRuntimeStatus("RHODES API", "接続失敗", error, false, false),
+            failure.Error,
+            new SukiOptionalRuntimeStatus(
+                "配信サーバー",
+                isUnavailable ? "未起動" : "接続失敗",
+                failure.Error,
+                false,
+                false),
             false,
-            $"{label}の同期に失敗しました: {error}");
+            isUnavailable
+                ? $"{label}: 配信サーバーは未起動です。"
+                : $"{label}: 配信画面への反映に失敗しました。",
+            failure.FailureKind);
     }
 }

@@ -175,7 +175,7 @@
       "present": true
     }
   ],
-  "syncedAt": "2026-07-24T01:19:23.807Z",
+  "syncedAt": "2026-08-13T13:59:30.942Z",
   "downloaded": [
     {
       "id": "common.ocr_config",
@@ -199,19 +199,19 @@
       "id": "jp.tasks",
       "localPath": "third_party/maa/resource/global/YoStarJP/resource/tasks/tasks.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/tasks/tasks.json",
-      "bytes": 81876
+      "bytes": 82979
     },
     {
       "id": "common.tasks",
       "localPath": "third_party/maa/resource/tasks/tasks.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/tasks.json",
-      "bytes": 177072
+      "bytes": 177862
     },
     {
       "id": "roguelike.base.tasks",
       "localPath": "third_party/maa/resource/tasks/Roguelike/base.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/base.json",
-      "bytes": 68774
+      "bytes": 68797
     },
     {
       "id": "roguelike.sami.tasks",
@@ -223,7 +223,7 @@
       "id": "roguelike.sarkaz.tasks",
       "localPath": "third_party/maa/resource/tasks/Roguelike/Sarkaz.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/Roguelike/Sarkaz.json",
-      "bytes": 45230
+      "bytes": 45479
     },
     {
       "id": "roguelike.jie-garden.tasks",

@@ -58,7 +58,7 @@
       </Border>
 
       <Grid ColumnDefinitions="2*,1.15*" ColumnSpacing="16">
-        <Border Classes="appleCard">
+        <Border Classes="surfaceCard">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="2">
@@ -98,7 +98,7 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1" Classes="appleCard">
+        <Border Grid.Column="1" Classes="surfaceCard">
           <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
             <StackPanel Spacing="2">
               <TextBlock Text="現在の選択" Classes="sectionTitle" />
@@ -124,11 +124,12 @@
         </Border>
       </Grid>
 
-      <Border Classes="appleCard">
+      <Border Classes="surfaceCard">
         <StackPanel Spacing="12">
           <StackPanel Spacing="2">
             <TextBlock Text="ボス" Classes="sectionTitle" />
-            <TextBlock Text="最大4体を横並びで登録できます。選択内容はOBS出力へ即時反映されます。" Classes="caption" />
+            <TextBlock Text="最大4体。選択はOBSへ即時反映します。" Classes="caption compactHelp"
+                       ToolTip.Tip="最大4体を横並びで登録できます。選択内容はOBS出力へ即時反映されます。" />
           </StackPanel>
           <ItemsControl ItemsSource="{Binding BossSections}" HorizontalAlignment="Stretch">
             <ItemsControl.ItemsPanel>
@@ -146,7 +147,8 @@
                       </Border>
                       <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Helper}" Classes="caption" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Helper}" Classes="caption compactHelp"
+                                   ToolTip.Tip="{Binding Helper}" />
                       </StackPanel>
                     </Grid>
                     <ComboBox Grid.Row="1" ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption, Mode=TwoWay}"

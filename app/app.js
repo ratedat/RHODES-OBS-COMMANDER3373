@@ -27,7 +27,7 @@ import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
 import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
-import { isOverlayScrollSpeedField, isTournamentOverlay, overlayScrollSpeedLabels, resolveOverlayAppearance, resolveOverlayBackgroundAlpha, resolveOverlayBackgroundEnabled, resolveOverlayLayout, resolveOverlayPart, resolveOverlayScrollSpeed, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
+import { isOverlayScrollSpeedField, isTournamentOverlay, overlayScrollSpeedLabels, resolveOverlayAppearance, resolveOverlayBackgroundAlpha, resolveOverlayBackgroundEnabled, resolveOverlayCanvasBackgroundAlpha, resolveOverlayCanvasBackgroundEnabled, resolveOverlayLayout, resolveOverlayPart, resolveOverlayScrollSpeed, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
 import { normalizePreferences } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
@@ -635,6 +635,8 @@ function applyOverlayAppearance(preferences) {
     --overlay-font-color: ${appearance.fontColor};
     --overlay-background-rgb: ${overlayRgbChannels(appearance.backgroundColor)};
     --overlay-background-alpha: ${resolveOverlayBackgroundAlpha(preferences, overlayPart)};
+    --overlay-canvas-background-rgb: ${overlayRgbChannels(appearance.canvasBackgroundColor)};
+    --overlay-canvas-background-alpha: ${resolveOverlayCanvasBackgroundAlpha(preferences, overlayPart)};
     --overlay-border-color: ${appearance.borderColor};
     --overlay-accent-color: ${appearance.accentColor};
     --overlay-font-scale: ${appearance.fontSizePercent / 100};
@@ -648,6 +650,8 @@ function applyOverlayAppearance(preferences) {
     "--overlay-font-color",
     "--overlay-background-rgb",
     "--overlay-background-alpha",
+    "--overlay-canvas-background-rgb",
+    "--overlay-canvas-background-alpha",
     "--overlay-border-color",
     "--overlay-accent-color",
     "--overlay-font-scale",
@@ -1097,9 +1101,19 @@ function renderOverlay() {
   disposeOverlayLayoutEditor = null;
   app.dataset.loading = "false";
   applyOverlayAppearance(state.preferences);
+  const frameBackgroundEnabled = resolveOverlayBackgroundEnabled(state.preferences, overlayPart);
+  const canvasBackgroundEnabled = resolveOverlayCanvasBackgroundEnabled(state.preferences, overlayPart);
   document.documentElement.classList.toggle(
     "overlay-background-disabled",
-    !resolveOverlayBackgroundEnabled(state.preferences, overlayPart),
+    !frameBackgroundEnabled && !canvasBackgroundEnabled,
+  );
+  document.documentElement.classList.toggle(
+    "overlay-frame-background-disabled",
+    !frameBackgroundEnabled,
+  );
+  document.documentElement.classList.toggle(
+    "overlay-canvas-background-disabled",
+    !canvasBackgroundEnabled,
   );
   document.documentElement.classList.toggle(
     "overlay-tournament-mode",

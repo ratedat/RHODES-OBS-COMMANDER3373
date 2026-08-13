@@ -126,9 +126,7 @@ public static class RhodesSukiSettingsStore
             EmulatorExecutablePath = settings.EmulatorExecutablePath?.Trim() ?? "",
             MuMuInstanceIndex = Math.Clamp(settings.MuMuInstanceIndex, 0, 127),
             LdPlayerInstanceIndex = Math.Clamp(settings.LdPlayerInstanceIndex, 0, 127),
-            GamePackage = string.IsNullOrWhiteSpace(settings.GamePackage)
-                ? "com.YoStarJP.Arknights"
-                : settings.GamePackage.Trim(),
+            GamePackage = SukiAdbGamePackageCatalog.NormalizePackage(settings.GamePackage),
             GameCloneIndex = Math.Clamp(settings.GameCloneIndex, 0, 99),
             InputFallbackMethodId = inputFallback,
             ScreencapFallbackMethodId = screencapFallback,
@@ -146,16 +144,26 @@ public static class RhodesSukiSettingsStore
                 $"未対応のMAAランタイム設定schemaVersionです: {settings.SchemaVersion} > {SukiMaaRuntimeSettings.CurrentSchemaVersion}");
         }
 
+        var screencapMethodId = SukiWin32ScreencapCatalog.Normalize(settings.Win32ScreencapMethodId);
+        if (settings.SchemaVersion < 2
+            && screencapMethodId.Equals("background", StringComparison.Ordinal))
+        {
+            screencapMethodId = SukiWin32ScreencapCatalog.DefaultId;
+        }
+
         return settings with
         {
             SchemaVersion = SukiMaaRuntimeSettings.CurrentSchemaVersion,
+            ConnectionTargetId = SukiMaaConnectionTargetCatalog.Normalize(settings.ConnectionTargetId),
             InferenceProviderId = SukiMaaInferenceCatalog.Normalize(settings.InferenceProviderId),
             InferenceDeviceId = Math.Clamp(settings.InferenceDeviceId, 0, 15),
             PreferredWindowTitle = string.IsNullOrWhiteSpace(settings.PreferredWindowTitle)
                 ? "アークナイツ"
                 : settings.PreferredWindowTitle.Trim(),
             PreferredWindowClass = settings.PreferredWindowClass?.Trim() ?? "",
-            Win32ScreencapMethodId = SukiWin32ScreencapCatalog.Normalize(settings.Win32ScreencapMethodId),
+            Win32ScreencapMethodId = screencapMethodId,
+            Win32MouseMethodId = SukiWin32InputCatalog.NormalizeMouse(settings.Win32MouseMethodId),
+            Win32KeyboardMethodId = SukiWin32InputCatalog.NormalizeKeyboard(settings.Win32KeyboardMethodId),
         };
     }
 

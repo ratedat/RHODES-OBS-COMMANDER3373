@@ -323,7 +323,7 @@
       "浊心斯卡蒂"
     ],
     [
-      "リィ(ン|ソ)",
+      "^(リィ(ン|ソ)|アィン)",
       "令"
     ],
     [
@@ -567,7 +567,7 @@
       "远牙"
     ],
     [
-      "遊龍チェン",
+      "遊龍チェン?",
       "假日威龙陈"
     ],
     [
@@ -735,7 +735,7 @@
       "石棉"
     ],
     [
-      "^(ニ|ミ)ェ(ン|ソ)",
+      "^((ニ|ミ|=)ェ(ン|ソ|>)|王.{1,2}?不)",
       "年"
     ],
     [
@@ -975,7 +975,7 @@
       "伊桑"
     ],
     [
-      "エフイーター",
+      "エ(フ|ラ)イーター",
       "食铁兽"
     ],
     [
@@ -4103,7 +4103,7 @@
       "拟态物质"
     ],
     [
-      "携帯式アーツバリア",
+      "秘術法陣",
       "奥术法阵"
     ],
     [
@@ -4199,7 +4199,7 @@
       "“双眼皮”"
     ],
     [
-      "ヴィクトリアの鉄鎚・不動",
+      "ヴィクトリアの鉄鎚・堅牢",
       "坚固维式重锤"
     ],
     [
@@ -4215,11 +4215,11 @@
       "迅捷作战粮"
     ],
     [
-      "ヴィクトリアの鉄鎚",
+      "ヴィクトリアの鉄鎚$",
       "维式重锤"
     ],
     [
-      "幸運のコイン",
+      "盟約のコイン",
       "盟约之币"
     ],
     [
@@ -4239,7 +4239,7 @@
       "低温传导模块"
     ],
     [
-      "寒冷弾発射装置",
+      "[寒塞]冷弾発射装置",
       "冷爆机"
     ],
     [
@@ -4275,7 +4275,7 @@
       "演出望"
     ],
     [
-      "^「?印[」\\]]?",
+      "^(「印|印[」\\]]|印$)",
       "印字"
     ],
     [
@@ -4283,7 +4283,7 @@
       "岁用山"
     ],
     [
-      "^「?兵[」\\]]?",
+      "^(「兵|兵[」\\]]|兵$)",
       "兵字"
     ],
     [
@@ -4299,7 +4299,7 @@
       "山脊"
     ],
     [
-      "^「?山[」\\]]?",
+      "^(「山|山[」\\]])",
       "山字"
     ],
     [
@@ -4311,7 +4311,7 @@
       "棋子"
     ],
     [
-      "^「?財[」\\]]?",
+      "^(「財|財[」\\]]|財$)",
       "财字"
     ],
     [
@@ -4327,16 +4327,28 @@
       "断"
     ],
     [
-      "^「?友[」\\]]?",
+      "^(「友|友[」\\]]|友$)",
       "友字"
     ],
     [
-      "^「?食[」\\]]?",
+      "^(「食|食[」\\]]|食$)",
       "食字"
     ],
     [
-      "赤刃明霄チェン",
+      "赤刃明霄チェン?",
       "赤刃明霄陈"
+    ],
+    [
+      "^絆",
+      "牵绊"
+    ],
+    [
+      "ベッローネ",
+      "贝洛内"
+    ],
+    [
+      "リプレーザ",
+      "复奏"
     ]
   ],
   "rules": [
@@ -5117,6 +5129,14 @@
           "class": "補助",
           "branch": "緩速師",
           "hiddenByDefault": false
+        },
+        {
+          "id": "angelina2",
+          "name": "予願アンジェリーナ",
+          "rarity": 6,
+          "class": "特殊",
+          "branch": "巡空者",
+          "hiddenByDefault": true
         }
       ],
       "error": null
@@ -5157,7 +5177,7 @@
     },
     {
       "index": 47,
-      "pattern": "リィ(ン|ソ)",
+      "pattern": "^(リィ(ン|ソ)|アィン)",
       "maaReplacement": "令",
       "validRegex": true,
       "localMatches": [
@@ -6194,7 +6214,7 @@
     },
     {
       "index": 108,
-      "pattern": "遊龍チェン",
+      "pattern": "遊龍チェン?",
       "maaReplacement": "假日威龙陈",
       "validRegex": true,
       "localMatches": [
@@ -6908,7 +6928,7 @@
     },
     {
       "index": 150,
-      "pattern": "^(ニ|ミ)ェ(ン|ソ)",
+      "pattern": "^((ニ|ミ|=)ェ(ン|ソ|>)|王.{1,2}?不)",
       "maaReplacement": "年",
       "validRegex": true,
       "localMatches": [
@@ -7944,7 +7964,7 @@
     },
     {
       "index": 210,
-      "pattern": "エフイーター",
+      "pattern": "エ(フ|ラ)イーター",
       "maaReplacement": "食铁兽",
       "validRegex": true,
       "localMatches": [
@@ -15874,7 +15894,7 @@
     },
     {
       "index": 992,
-      "pattern": "携帯式アーツバリア",
+      "pattern": "秘術法陣",
       "maaReplacement": "奥术法阵",
       "validRegex": true,
       "localMatches": [],
@@ -16066,7 +16086,7 @@
     },
     {
       "index": 1016,
-      "pattern": "ヴィクトリアの鉄鎚・不動",
+      "pattern": "ヴィクトリアの鉄鎚・堅牢",
       "maaReplacement": "坚固维式重锤",
       "validRegex": true,
       "localMatches": [],
@@ -16098,7 +16118,7 @@
     },
     {
       "index": 1020,
-      "pattern": "ヴィクトリアの鉄鎚",
+      "pattern": "ヴィクトリアの鉄鎚$",
       "maaReplacement": "维式重锤",
       "validRegex": true,
       "localMatches": [],
@@ -16106,7 +16126,7 @@
     },
     {
       "index": 1021,
-      "pattern": "幸運のコイン",
+      "pattern": "盟約のコイン",
       "maaReplacement": "盟约之币",
       "validRegex": true,
       "localMatches": [],
@@ -16146,7 +16166,7 @@
     },
     {
       "index": 1026,
-      "pattern": "寒冷弾発射装置",
+      "pattern": "[寒塞]冷弾発射装置",
       "maaReplacement": "冷爆机",
       "validRegex": true,
       "localMatches": [],
@@ -16272,7 +16292,7 @@
     },
     {
       "index": 1035,
-      "pattern": "^「?印[」\\]]?",
+      "pattern": "^(「印|印[」\\]]|印$)",
       "maaReplacement": "印字",
       "validRegex": true,
       "localMatches": [],
@@ -16288,7 +16308,7 @@
     },
     {
       "index": 1037,
-      "pattern": "^「?兵[」\\]]?",
+      "pattern": "^(「兵|兵[」\\]]|兵$)",
       "maaReplacement": "兵字",
       "validRegex": true,
       "localMatches": [],
@@ -16320,7 +16340,7 @@
     },
     {
       "index": 1041,
-      "pattern": "^「?山[」\\]]?",
+      "pattern": "^(「山|山[」\\]])",
       "maaReplacement": "山字",
       "validRegex": true,
       "localMatches": [],
@@ -16353,7 +16373,7 @@
     },
     {
       "index": 1044,
-      "pattern": "^「?財[」\\]]?",
+      "pattern": "^(「財|財[」\\]]|財$)",
       "maaReplacement": "财字",
       "validRegex": true,
       "localMatches": [],
@@ -16403,7 +16423,7 @@
     },
     {
       "index": 1048,
-      "pattern": "^「?友[」\\]]?",
+      "pattern": "^(「友|友[」\\]]|友$)",
       "maaReplacement": "友字",
       "validRegex": true,
       "localMatches": [],
@@ -16411,7 +16431,7 @@
     },
     {
       "index": 1049,
-      "pattern": "^「?食[」\\]]?",
+      "pattern": "^(「食|食[」\\]]|食$)",
       "maaReplacement": "食字",
       "validRegex": true,
       "localMatches": [],
@@ -16419,7 +16439,7 @@
     },
     {
       "index": 1050,
-      "pattern": "赤刃明霄チェン",
+      "pattern": "赤刃明霄チェン?",
       "maaReplacement": "赤刃明霄陈",
       "validRegex": true,
       "localMatches": [
@@ -16429,6 +16449,48 @@
           "rarity": 6,
           "class": "前衛",
           "branch": "術戦士",
+          "hiddenByDefault": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "index": 1051,
+      "pattern": "^絆",
+      "maaReplacement": "牵绊",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1052,
+      "pattern": "ベッローネ",
+      "maaReplacement": "贝洛内",
+      "validRegex": true,
+      "localMatches": [
+        {
+          "id": "bellone",
+          "name": "ベッローネ",
+          "rarity": 6,
+          "class": "前衛",
+          "branch": "闘士",
+          "hiddenByDefault": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "index": 1053,
+      "pattern": "リプレーザ",
+      "maaReplacement": "复奏",
+      "validRegex": true,
+      "localMatches": [
+        {
+          "id": "ripresa",
+          "name": "リプレーザ",
+          "rarity": 5,
+          "class": "術師",
+          "branch": "拡散術師",
           "hiddenByDefault": false
         }
       ],
@@ -18199,10 +18261,10 @@
     }
   ],
   "summary": {
-    "rawRuleCount": 1051,
-    "localOperatorCount": 432,
-    "rulesWithLocalMatches": 406,
-    "uniqueMatchedLocalOperators": 409,
+    "rawRuleCount": 1054,
+    "localOperatorCount": 437,
+    "rulesWithLocalMatches": 408,
+    "uniqueMatchedLocalOperators": 412,
     "invalidRegexRules": 0,
     "publicRecruitmentOperatorCount": 156
   }

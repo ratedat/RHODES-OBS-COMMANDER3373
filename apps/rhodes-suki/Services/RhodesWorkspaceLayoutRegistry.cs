@@ -66,7 +66,7 @@ public static class RhodesWorkspaceLayoutRegistry
             new SukiWorkspaceSectionPreview(
                 "runtime",
                 "ランタイム",
-                "ADB検出、接続・撮影、MAA-OCR、任意GLM/Ollamaの状態と設定を管理します。"),
+                "ADB / AndroidまたはPC版への接続・撮影と、MAA-OCR、任意GLM/Ollamaの状態を管理します。"),
             [
                 new SukiWorkspaceSectionPreview("connection", "接続設定", "ADBプリセット、実行ファイル、serial、MAAの撮影方式と入力方式を設定します。"),
                 new SukiWorkspaceSectionPreview("detection", "検出結果", "自動検出したADB候補と接続済み端末から、実際に使う対象を選びます。"),
