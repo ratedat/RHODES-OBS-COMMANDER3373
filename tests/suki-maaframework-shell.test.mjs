@@ -87,6 +87,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(publicDebugPackager, /DISCORD_USAGE\.md/);
   assert.match(publicDebugPackager, /docs\/guides\/discord-public-debug-guide\.md/);
   assert.match(publicDebugPackager, /docs\/guides\/output-css-customization\.md/);
+  assert.match(publicDebugPackager, /OUTPUT_CSS_CUSTOMIZATION_GUIDE\.html/);
   assert.match(publicDebugPackager, /path\.join\(repoRoot, "app"\)/);
   assert.match(publicDebugPackager, /copyPortablePayload\(packageRoot\)/);
   assert.match(publicDebugPackager, /overlay-state\.example\.json/);
