@@ -39,7 +39,7 @@ const cssHexColorPattern = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i;
 const blockedCustomCssPattern = /javascript\s*:/i;
 
 const overlayLayouts = new Set(["compact", "vertical", "horizontal", "full", "custom"]);
-const overlayParts = new Set(["status", "relics", "operators", "effects", "bosses", "special"]);
+const overlayParts = new Set(["status", "relics", "operators", "effects", "bosses", "special", "tournament"]);
 
 export function resolveOverlayLayout(value) {
   return overlayLayouts.has(value) ? value : "compact";
@@ -168,6 +168,27 @@ export function isTournamentOverlay(preferences = {}, partId = null) {
     return preferences.sukiOutputIndividualTournamentMode;
   }
   return preferences.sukiOutputTournamentMode === true;
+}
+
+export function resolveOverlayRelicIconOnly(preferences = {}, partId = null) {
+  if (partId && typeof preferences.sukiOutputIndividualRelicIconOnly === "boolean") {
+    return preferences.sukiOutputIndividualRelicIconOnly;
+  }
+  return preferences.sukiOutputRelicIconOnly === true;
+}
+
+export function resolveOverlayOperatorIconOnly(preferences = {}, partId = null) {
+  if (partId && typeof preferences.sukiOutputIndividualOperatorIconOnly === "boolean") {
+    return preferences.sukiOutputIndividualOperatorIconOnly;
+  }
+  return preferences.sukiOutputOperatorIconOnly === true;
+}
+
+export function resolveOverlayOperatorRarities(preferences = {}, partId = null) {
+  const value = partId
+    ? preferences.sukiOutputIndividualOperatorRarities
+    : preferences.sukiOutputOperatorRarities;
+  return Array.isArray(value) ? [...value] : [6, 5, 4, 3, 2, 1];
 }
 
 export function resolveOverlayScrollSpeed(preferences = {}, field, partId = null) {

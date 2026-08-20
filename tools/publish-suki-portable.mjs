@@ -140,6 +140,10 @@ async function copyWebOverlayRuntime() {
     path.join(outputDir, "docs", "guides", "tournament-remote-input.md"),
   );
   await fs.copyFile(
+    path.join(repoRoot, "docs", "guides", "external-relay-server-setup.md"),
+    path.join(outputDir, "docs", "guides", "external-relay-server-setup.md"),
+  );
+  await fs.copyFile(
     path.join(repoRoot, "docs", "guides", "output-css-customization.md"),
     path.join(outputDir, "docs", "guides", "output-css-customization.md"),
   );

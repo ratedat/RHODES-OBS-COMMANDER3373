@@ -60,6 +60,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _adbRecoveryStatus = "段階回復は未実行です。";
     private string _adbBenchmarkStatus = "スクリーンショットベンチマークは未実行です。";
     private SukiMaaInferenceOption? _selectedMaaInferenceProvider;
+    private SukiMaaInferenceDeviceOption? _selectedMaaInferenceDevice;
     private int _maaInferenceDeviceId;
     private string _maaInferenceBenchmarkStatus = "保存FrameでCPUとDirectMLを比較できます。";
     private string _pcPreferredWindowTitle = "アークナイツ";
@@ -213,6 +214,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private int _outputCanvasBackgroundOpacity = 100;
     private bool _outputShowPartTitles = true;
     private int _outputScrollSpeed = 13;
+    private bool _outputRelicIconOnly;
+    private bool _outputOperatorIconOnly;
     private string _outputFontColor = "#F2EFE6";
     private string _outputBackgroundColor = "#080B0C";
     private string _outputCanvasBackgroundColor = "#080B0C";
@@ -227,6 +230,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private int _individualOutputCanvasBackgroundOpacity = 100;
     private bool _individualOutputShowPartTitles = true;
     private int _individualOutputScrollSpeed = 13;
+    private bool _individualOutputRelicIconOnly;
+    private bool _individualOutputOperatorIconOnly;
     private string _individualOutputFontColor = "#F2EFE6";
     private string _individualOutputBackgroundColor = "#080B0C";
     private string _individualOutputCanvasBackgroundColor = "#080B0C";
@@ -237,6 +242,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _liveCssScope = "integrated";
     private SukiOutputCssTemplate? _selectedOutputCssTemplate;
     private string _outputProfileStatus = "未エクスポート";
+    private int _manualTournamentScore;
+    private int _manualTournamentWithdrawals;
+    private string _manualTournamentMemo = "";
     private SukiOverlayLayoutPreview? _selectedOverlayLayoutItem;
     private bool _showRoiOverlay = true;
     private int _roiSnapStep = 1;
@@ -309,6 +317,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             outputPart.PropertyChanged += (_, _) => RefreshInspectorRows();
         }
+        OutputOperatorRarityOptions = new ObservableCollection<SukiOutputRarityOption>(
+            Enumerable.Range(1, 6).Reverse().Select(rarity => new SukiOutputRarityOption(rarity)));
+        IndividualOutputOperatorRarityOptions = new ObservableCollection<SukiOutputRarityOption>(
+            Enumerable.Range(1, 6).Reverse().Select(rarity => new SukiOutputRarityOption(rarity)));
         OutputCssTemplates = new ObservableCollection<SukiOutputCssTemplate>(
             RhodesOutputCssTemplateCatalog.DefaultTemplates);
         SelectedOutputCssTemplate = OutputCssTemplates.FirstOrDefault();
@@ -336,6 +348,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SukiAdbMethodCatalog.ScreencapOptions.Where(option => option.Id != SukiAdbMethodCatalog.FastEmulatorMethodId));
         AdbGamePackageOptions = new ObservableCollection<SukiAdbGamePackageOption>(SukiAdbGamePackageCatalog.Options);
         MaaInferenceProviderOptions = new ObservableCollection<SukiMaaInferenceOption>(SukiMaaInferenceCatalog.Options);
+        MaaInferenceDeviceOptions = new ObservableCollection<SukiMaaInferenceDeviceOption>(RhodesDxgiAdapterCatalog.Discover(_maaInferenceDeviceId));
         PcConnectionTargetOptions = new ObservableCollection<SukiMaaConnectionTargetOption>(SukiMaaConnectionTargetCatalog.Options);
         PcScreencapMethodOptions = new ObservableCollection<SukiWin32ScreencapOption>(SukiWin32ScreencapCatalog.Options);
         PcMouseMethodOptions = new ObservableCollection<SukiWin32InputOption>(SukiWin32InputCatalog.MouseOptions);
@@ -348,6 +361,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SelectedAdbScreencapFallbackMethod = SukiAdbMethodCatalog.FindScreencap("raw-gzip");
         SelectedAdbGamePackageOption = SukiAdbGamePackageCatalog.Default;
         SelectedMaaInferenceProvider = SukiMaaInferenceCatalog.Find(SukiMaaInferenceCatalog.DefaultId);
+        SelectedMaaInferenceDevice = MaaInferenceDeviceOptions.FirstOrDefault(option => option.DeviceId == _maaInferenceDeviceId)
+            ?? MaaInferenceDeviceOptions.FirstOrDefault();
         SelectedPcConnectionTarget = SukiMaaConnectionTargetCatalog.Find(SukiMaaConnectionTargetCatalog.DefaultId);
         SelectedPcScreencapMethod = SukiWin32ScreencapCatalog.Find(SukiWin32ScreencapCatalog.DefaultId);
         SelectedPcMouseMethod = SukiWin32InputCatalog.FindMouse(SukiWin32InputCatalog.DefaultMouseId);
@@ -429,8 +444,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RunAdbConnectionTestCommand = new AsyncRelayCommand(RunAdbConnectionTestAsync);
         RefreshEmulatorCapabilityCommand = new AsyncRelayCommand(() => RunBusyAsync(RefreshEmulatorCapabilityAsync));
         OpenAdbConnectionGuideCommand = new AsyncRelayCommand(OpenAdbConnectionGuideAsync);
+        OpenExternalRelayGuideCommand = new AsyncRelayCommand(OpenExternalRelayGuideAsync);
         RunAdbScreenshotBenchmarkCommand = new AsyncRelayCommand(RunAdbScreenshotBenchmarkAsync);
         RunMaaInferenceBenchmarkCommand = new AsyncRelayCommand(RunMaaInferenceBenchmarkAsync);
+        RefreshMaaInferenceDevicesCommand = new AsyncRelayCommand(() =>
+        {
+            RefreshMaaInferenceDeviceOptions();
+            return Task.CompletedTask;
+        });
         RefreshPcWindowsCommand = new AsyncRelayCommand(RefreshPcWindowsAsync);
         ConnectPcWindowAndCaptureCommand = new AsyncRelayCommand(ConnectPcWindowAndCaptureAsync);
         PrepareAdbTouchTestCommand = new AsyncRelayCommand(PrepareAdbTouchTestAsync);
@@ -489,6 +510,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RegenerateMaaResourceCommand = new AsyncRelayCommand(RegenerateMaaResourceAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ApplyManualRunValuesCommand = new AsyncRelayCommand(ApplyManualRunValuesAsync);
+        ApplyTournamentInfoCommand = new AsyncRelayCommand(ApplyTournamentInfoAsync);
         ApplyManualSarkazValuesCommand = new AsyncRelayCommand(ApplyManualSarkazValuesAsync);
         ApplyManualPhantomValuesCommand = new AsyncRelayCommand(ApplyManualPhantomValuesAsync);
         ApplyManualMizukiValuesCommand = new AsyncRelayCommand(ApplyManualMizukiValuesAsync);
@@ -618,6 +640,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<SukiOutputPartPreview> OutputParts { get; }
 
+    public ObservableCollection<SukiOutputRarityOption> OutputOperatorRarityOptions { get; }
+
+    public ObservableCollection<SukiOutputRarityOption> IndividualOutputOperatorRarityOptions { get; }
+
     public ObservableCollection<SukiOutputCssTemplate> OutputCssTemplates { get; }
 
     public ObservableCollection<SukiOverlayLayoutPreview> OverlayLayoutItems { get; }
@@ -653,6 +679,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<SukiAdbGamePackageOption> AdbGamePackageOptions { get; }
 
     public ObservableCollection<SukiMaaInferenceOption> MaaInferenceProviderOptions { get; }
+
+    public ObservableCollection<SukiMaaInferenceDeviceOption> MaaInferenceDeviceOptions { get; }
 
     public ObservableCollection<SukiMaaConnectionTargetOption> PcConnectionTargetOptions { get; }
 
@@ -1039,12 +1067,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set
         {
             if (SetProperty(ref _maaInferenceDeviceId, Math.Clamp(value, 0, 15)))
+            {
+                var matchingOption = MaaInferenceDeviceOptions.FirstOrDefault(option => option.DeviceId == _maaInferenceDeviceId);
+                if (matchingOption is not null && !ReferenceEquals(_selectedMaaInferenceDevice, matchingOption))
+                {
+                    _selectedMaaInferenceDevice = matchingOption;
+                    OnPropertyChanged(nameof(SelectedMaaInferenceDevice));
+                }
                 OnPropertyChanged(nameof(MaaInferenceSummary));
+            }
+        }
+    }
+
+    public SukiMaaInferenceDeviceOption? SelectedMaaInferenceDevice
+    {
+        get => _selectedMaaInferenceDevice;
+        set
+        {
+            if (!SetProperty(ref _selectedMaaInferenceDevice, value) || value is null)
+                return;
+            MaaInferenceDeviceId = value.DeviceId;
+            OnPropertyChanged(nameof(MaaInferenceSummary));
         }
     }
 
     public string MaaInferenceSummary => IsDirectMlInferenceSelected
-        ? $"DirectML / DXGI adapter {MaaInferenceDeviceId}"
+        ? $"DirectML / {SelectedMaaInferenceDevice?.DisplayName ?? $"GPU {MaaInferenceDeviceId}"}"
         : SelectedMaaInferenceProvider?.Label ?? "自動（推奨）";
 
     public string MaaInferenceBenchmarkStatus
@@ -1313,6 +1361,30 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _manualIdea;
         set => SetProperty(ref _manualIdea, Math.Clamp(value, 0, 999));
+    }
+
+    public int ManualTournamentScore
+    {
+        get => _manualTournamentScore;
+        set => SetProperty(ref _manualTournamentScore, Math.Clamp(value, -999_999, 999_999));
+    }
+
+    public int ManualTournamentWithdrawals
+    {
+        get => _manualTournamentWithdrawals;
+        set => SetProperty(ref _manualTournamentWithdrawals, Math.Clamp(value, 0, 9_999));
+    }
+
+    public string ManualTournamentMemo
+    {
+        get => _manualTournamentMemo;
+        set
+        {
+            var normalized = value ?? "";
+            if (normalized.Length > 160)
+                normalized = normalized[..160];
+            SetProperty(ref _manualTournamentMemo, normalized);
+        }
     }
 
     public int ManualMizukiKey
@@ -1976,6 +2048,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public bool OutputRelicIconOnly { get => _outputRelicIconOnly; set => SetProperty(ref _outputRelicIconOnly, value); }
+    public bool OutputOperatorIconOnly { get => _outputOperatorIconOnly; set => SetProperty(ref _outputOperatorIconOnly, value); }
+
     public string OutputFontColor { get => _outputFontColor; set => SetProperty(ref _outputFontColor, value); }
     public string OutputBackgroundColor { get => _outputBackgroundColor; set => SetProperty(ref _outputBackgroundColor, value); }
     public string OutputCanvasBackgroundColor { get => _outputCanvasBackgroundColor; set => SetProperty(ref _outputCanvasBackgroundColor, value); }
@@ -2004,6 +2079,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public int IndividualOutputCanvasBackgroundOpacity { get => _individualOutputCanvasBackgroundOpacity; set => SetProperty(ref _individualOutputCanvasBackgroundOpacity, Math.Clamp(value, 0, 100)); }
     public bool IndividualOutputShowPartTitles { get => _individualOutputShowPartTitles; set => SetProperty(ref _individualOutputShowPartTitles, value); }
     public int IndividualOutputScrollSpeed { get => _individualOutputScrollSpeed; set => SetProperty(ref _individualOutputScrollSpeed, Math.Clamp(value, 0, 30)); }
+    public bool IndividualOutputRelicIconOnly { get => _individualOutputRelicIconOnly; set => SetProperty(ref _individualOutputRelicIconOnly, value); }
+    public bool IndividualOutputOperatorIconOnly { get => _individualOutputOperatorIconOnly; set => SetProperty(ref _individualOutputOperatorIconOnly, value); }
     public string IndividualOutputFontColor { get => _individualOutputFontColor; set => SetProperty(ref _individualOutputFontColor, value); }
     public string IndividualOutputBackgroundColor { get => _individualOutputBackgroundColor; set => SetProperty(ref _individualOutputBackgroundColor, value); }
     public string IndividualOutputCanvasBackgroundColor { get => _individualOutputCanvasBackgroundColor; set => SetProperty(ref _individualOutputCanvasBackgroundColor, value); }
@@ -2723,9 +2800,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand OpenAdbConnectionGuideCommand { get; }
 
+    public ICommand OpenExternalRelayGuideCommand { get; }
+
     public ICommand RunAdbScreenshotBenchmarkCommand { get; }
 
     public ICommand RunMaaInferenceBenchmarkCommand { get; }
+
+    public ICommand RefreshMaaInferenceDevicesCommand { get; }
 
     public ICommand RefreshPcWindowsCommand { get; }
 
@@ -2844,6 +2925,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand SyncRunStateFromApiCommand { get; }
 
     public ICommand ApplyManualRunValuesCommand { get; }
+    public ICommand ApplyTournamentInfoCommand { get; }
     public ICommand ApplyManualSarkazValuesCommand { get; }
     public ICommand ApplyManualPhantomValuesCommand { get; }
     public ICommand ApplyManualMizukiValuesCommand { get; }
@@ -3645,10 +3727,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 var isSelected = state.SelectedRelicIds.Contains(item.Id);
                 var isUsed = isSelected && state.UsedRelicIds.Contains(item.Id);
-                var stackCount = isSelected && state.RelicStackCounts.TryGetValue(item.Id, out var count)
+                var explicitlyNonStack = RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(item.Id);
+                var stackCount = !explicitlyNonStack
+                    && isSelected
+                    && state.RelicStackCounts.TryGetValue(item.Id, out var count)
                     ? count
                     : 0;
-                if (stackCount > 0 && !item.SupportsRelicStackCount)
+                if (!explicitlyNonStack && stackCount > 0 && !item.SupportsRelicStackCount)
                     item.EnableRelicStackCount();
                 choicesChanged |= item.IsSelected != isSelected
                     || item.IsUsed != isUsed
@@ -3982,6 +4067,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         SelectedAdbScreencapMethod = SukiAdbMethodCatalog.FindScreencap(settings.AdbScreencapMethodId);
         SelectedMaaInferenceProvider = SukiMaaInferenceCatalog.Find(maaRuntime.InferenceProviderId);
         MaaInferenceDeviceId = maaRuntime.InferenceDeviceId;
+        RefreshMaaInferenceDeviceOptions();
         SelectedPcConnectionTarget = SukiMaaConnectionTargetCatalog.Find(maaRuntime.ConnectionTargetId);
         PcPreferredWindowTitle = maaRuntime.PreferredWindowTitle;
         PcPreferredWindowClass = maaRuntime.PreferredWindowClass;
@@ -4169,6 +4255,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OutputCanvasBackgroundOpacity = preferences.CanvasBackgroundOpacity ?? preferences.BackgroundOpacity;
         OutputShowPartTitles = preferences.ShowPartTitles;
         OutputScrollSpeed = preferences.ScrollSpeed;
+        OutputRelicIconOnly = preferences.RelicIconOnly;
+        OutputOperatorIconOnly = preferences.OperatorIconOnly;
+        ApplyRaritySelections(OutputOperatorRarityOptions, preferences.OperatorRarities);
         var integratedAppearance = preferences.IntegratedAppearance ?? new SukiOutputAppearance();
         OutputFontColor = integratedAppearance.FontColor;
         OutputBackgroundColor = integratedAppearance.BackgroundColor;
@@ -4189,6 +4278,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             ?? preferences.BackgroundOpacity;
         IndividualOutputShowPartTitles = preferences.IndividualShowPartTitles ?? preferences.ShowPartTitles;
         IndividualOutputScrollSpeed = preferences.IndividualScrollSpeed ?? preferences.ScrollSpeed;
+        IndividualOutputRelicIconOnly = preferences.IndividualRelicIconOnly ?? preferences.RelicIconOnly;
+        IndividualOutputOperatorIconOnly = preferences.IndividualOperatorIconOnly ?? preferences.OperatorIconOnly;
+        ApplyRaritySelections(
+            IndividualOutputOperatorRarityOptions,
+            preferences.IndividualOperatorRarities ?? preferences.OperatorRarities);
         var individualAppearance = preferences.IndividualAppearance ?? new SukiOutputAppearance();
         IndividualOutputFontColor = individualAppearance.FontColor;
         IndividualOutputBackgroundColor = individualAppearance.BackgroundColor;
@@ -4757,6 +4851,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return OpenExternalUrlAsync(path, "ADB接続設定ガイド");
     }
 
+    private Task OpenExternalRelayGuideAsync()
+    {
+        var path = RhodesBundledDocumentLocator.FindExternalRelayGuidePath();
+        if (!File.Exists(path))
+        {
+            StatusMessage = $"外部中継サーバー導入ガイドが見つかりません: {path}";
+            return Task.CompletedTask;
+        }
+        return OpenExternalUrlAsync(path, "外部中継サーバー導入ガイド");
+    }
+
     private async Task<RhodesAdbRecoveryResult> ConnectWithRecoveryAsync()
     {
         await RefreshEmulatorCapabilityAsync();
@@ -4835,6 +4940,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         StatusMessage = capture.Succeeded
             ? "PCクライアントのウィンドウを1280x720座標系で撮影しました。"
             : $"PCクライアントの撮影に失敗しました: {capture.Detail}";
+    }
+
+    private void RefreshMaaInferenceDeviceOptions()
+    {
+        var preservedDeviceId = MaaInferenceDeviceId;
+        var options = RhodesDxgiAdapterCatalog.Discover(preservedDeviceId);
+        MaaInferenceDeviceOptions.Clear();
+        foreach (var option in options)
+            MaaInferenceDeviceOptions.Add(option);
+
+        SelectedMaaInferenceDevice = MaaInferenceDeviceOptions.FirstOrDefault(option => option.DeviceId == preservedDeviceId)
+            ?? MaaInferenceDeviceOptions.FirstOrDefault(option => option.IsRecommended)
+            ?? MaaInferenceDeviceOptions.FirstOrDefault();
+        MaaInferenceBenchmarkStatus = MaaInferenceDeviceOptions.Any(option => !option.IsFallback)
+            ? $"GPUを{MaaInferenceDeviceOptions.Count(option => !option.IsFallback)}件検出しました。保存FrameでCPUと比較できます。"
+            : $"GPU名を取得できません。保存済みのDirectML device ID {preservedDeviceId}を保持します。";
     }
 
     private async Task RunMaaInferenceBenchmarkAsync()
@@ -6312,7 +6433,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             cancellationToken => RhodesStateApiClient.FetchAsync(RhodesApiUrl, cancellationToken: cancellationToken),
             (stateJson, cancellationToken) => RhodesStateApiClient.SaveAsync(RhodesApiUrl, stateJson, cancellationToken: cancellationToken),
             (stateJson, _) => RhodesRunStateStore.ReplaceStateJsonAsync(stateJson),
-            (localCandidates, _) => RhodesRunStateStore.SaveCandidatesAsync(localCandidates));
+            (localCandidates, _) => RhodesRunStateStore.SaveCandidatesAsync(localCandidates),
+            apiAvailable: _rhodesApiStatus.Installed);
 
         if (result.ApiStatus is not null)
         {
@@ -6351,6 +6473,48 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             await ApplyCandidatesPipelineAsync(candidates);
             RefreshInspectorRows();
+        });
+    }
+
+    private async Task ApplyTournamentInfoAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var info = new SukiTournamentRunInfo(
+                ManualTournamentScore,
+                ManualTournamentWithdrawals,
+                ManualTournamentMemo);
+            if (!_rhodesApiStatus.Installed)
+            {
+                await RhodesRunStateStore.SaveTournamentInfoAsync(info);
+            }
+            else
+            {
+                var api = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
+                if (api.Succeeded)
+                {
+                    var updatedJson = RhodesStateApiClient.ApplyTournamentInfoToStateJson(api.StateJson, info);
+                    var saved = await RhodesStateApiClient.SaveAsync(RhodesApiUrl, updatedJson);
+                    if (saved.Succeeded)
+                    {
+                        await RhodesRunStateStore.ReplaceStateJsonAsync(
+                            string.IsNullOrWhiteSpace(saved.StateJson) ? updatedJson : saved.StateJson);
+                    }
+                    else
+                    {
+                        await RhodesRunStateStore.SaveTournamentInfoAsync(info);
+                    }
+                }
+                else
+                {
+                    await RhodesRunStateStore.SaveTournamentInfoAsync(info);
+                }
+            }
+
+            ReloadRunStateFromStore();
+            RefreshManualRunEditors();
+            RefreshInspectorRows();
+            StatusMessage = "大会情報を保存し、OBS出力へ反映しました。";
         });
     }
 
@@ -6839,6 +7003,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             && option.Name.Equals(_runState.Squad, StringComparison.Ordinal))
             ?? SukiSquadOption.KeepCurrent;
         ManualIdea = _runState.Idea;
+        ManualTournamentScore = _runState.TournamentInfo?.Score ?? 0;
+        ManualTournamentWithdrawals = _runState.TournamentInfo?.Withdrawals ?? 0;
+        ManualTournamentMemo = _runState.TournamentInfo?.Memo ?? "";
         RefreshManualSarkazEditors();
         RefreshManualPhantomEditors();
         RefreshManualMizukiEditors();
@@ -8087,6 +8254,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return true;
         }
 
+        var shouldRestoreTarget = false;
         var openResult = await RhodesRecognitionNavigation.ExecuteAsync(
             navigation.OpenSteps,
             _session.TapAsync);
@@ -8095,15 +8263,39 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusMessage = $"認識画面を開けません: {openResult.Detail}";
             return false;
         }
+        if (plan.ProfileId.Equals("is6SeasonalHours", StringComparison.Ordinal))
+            shouldRestoreTarget = true;
 
-        var shouldRestoreTarget = false;
         _lastResourceExecutionPlan = plan;
         using var diagnosticsDeferral = _resourceTaskDiagnosticsGate.Defer();
         try
         {
             StatusMessage = $"MAA実行計画: {plan.Summary} / {openResult.Detail}";
-            if (!await ForceCaptureAsync())
-                return false;
+            var runtimePlan = RhodesRecognitionRuntimePlan.PrepareInitial(plan);
+            RhodesRecognitionTaskExecutionResult execution;
+            if (plan.ProfileId.Equals("is6SeasonalHours", StringComparison.Ordinal))
+            {
+                execution = await RunSuiSeasonalHourTemporalRecognitionAsync(runtimePlan);
+            }
+            else
+            {
+                if (!await ForceCaptureAsync())
+                    return false;
+                execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
+                    runtimePlan,
+                    (entry, cancellationToken) =>
+                    {
+                        var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                        return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, cancellationToken);
+                    },
+                    result =>
+                    {
+                        ResourceTaskResults.Add(result);
+                        RefreshResourceTaskDiagnostics();
+                        StatusMessage = $"{result.Entry}: {result.Status}";
+                    });
+            }
+
             if (_lastCapture.Length == 0)
             {
                 StatusMessage = "認識に渡すスクリーンショットがありません。";
@@ -8111,20 +8303,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return false;
             }
 
-            var runtimePlan = RhodesRecognitionRuntimePlan.PrepareInitial(plan);
-            var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
-                runtimePlan,
-                (entry, cancellationToken) =>
-                {
-                    var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                    return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, cancellationToken);
-                },
-                result =>
-                {
-                    ResourceTaskResults.Add(result);
-                    RefreshResourceTaskDiagnostics();
-                    StatusMessage = $"{result.Entry}: {result.Status}";
-                });
             if (!execution.Succeeded)
             {
                 StatusMessage = execution.Error;
@@ -8138,7 +8316,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 await RunTemplateOcrExpansionsAsync(
                     execution.TaskResults,
-                    _lastCapture);
+                    _lastCapture,
+                    includeOwnedCoinStatusRecognition: !RhodesRecognitionRuntimePlan.ShouldDeferInitialCoinStatusRecognition(plan.ProfileId));
             }
 
             if (!RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
@@ -8185,8 +8364,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var operatorScanTracker = plan.ProfileId == "operatorsFull"
                 ? new RhodesOperatorScanTracker()
                 : null;
+            var activeCoinScanTracker = plan.ProfileId == "is6ActiveCoinsFull"
+                ? new RhodesSuiActiveCoinScanTracker()
+                : null;
+            activeCoinScanTracker?.SetExpectedCount(
+                RhodesSuiActiveCoinCountReader.FromTaskResults(ResourceTaskResults)?.Count);
             if (!expandedInitialTargetFrame)
             {
+                // The active-coin tracker must start only after the list has been normalized
+                // to its top edge; the panel can reopen at a retained bottom scroll position.
                 await RunTemplateOcrExpansionsAsync(
                     execution.TaskResults,
                     _lastCapture,
@@ -8199,7 +8385,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 CancellationToken.None);
             await RetryLowConfidenceInitialFrameAsync(plan, runtimePlan, operatorScanTracker);
             FlushResourceTaskDiagnostics();
-            await RunScrollRecognitionFramesAsync(plan, operatorScanTracker);
+            await RunScrollRecognitionFramesAsync(plan, operatorScanTracker, activeCoinScanTracker);
             await RunSuiCatchWindDetailProbeAsync(plan);
             RefreshInspectorRows();
             if (ResourceTaskResults.Any())
@@ -8232,6 +8418,137 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
         }
     }
+
+    private async Task<RhodesRecognitionTaskExecutionResult> RunSuiSeasonalHourTemporalRecognitionAsync(
+        MaaResourceExecutionPlan plan)
+    {
+        var headerTasks = plan.Tasks
+            .Where(task => IsSuiSeasonalHourPrimaryEntry(task.Entry))
+            .ToArray();
+        if (headerTasks.Length == 0)
+            return new RhodesRecognitionTaskExecutionResult(plan, [], "歳時の名称・Lv認識taskが見つかりません。");
+
+        var captures = new List<MaaCaptureResult>(3);
+        MaaCaptureResult? lastFailure = null;
+        for (var index = 0; index < 3; index++)
+        {
+            if (index > 0)
+                await Task.Delay(90);
+            var capture = await _session.CaptureEncodedAsync();
+            if (capture.Succeeded && capture.EncodedImage.Length > 0)
+                captures.Add(capture);
+            else
+                lastFailure = capture;
+        }
+
+        if (captures.Count == 0)
+        {
+            if (lastFailure is not null)
+                await AcceptCaptureAsync(lastFailure);
+            return new RhodesRecognitionTaskExecutionResult(
+                plan,
+                [],
+                lastFailure?.Detail ?? "歳時の安定化Frameを撮影できませんでした。");
+        }
+
+        var headerPlan = plan with
+        {
+            TaskEntries = headerTasks.Select(task => task.Entry).ToArray(),
+            Tasks = headerTasks,
+        };
+        var samples = new List<SuiSeasonalHourFrameSample>(captures.Count);
+        foreach (var capture in captures)
+        {
+            var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
+                headerPlan,
+                (entry, cancellationToken) =>
+                {
+                    var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                    return _session.RunResourceRecognitionAsync(entry, payload, capture.EncodedImage, cancellationToken);
+                });
+            var candidates = execution.Succeeded
+                ? RhodesMaaLocalCandidateConverter.FromTaskResults(
+                    plan.ProfileId,
+                    execution.TaskResults,
+                    SelectedCampaign?.Id ?? _runState.CampaignId)
+                : [];
+            samples.Add(new SuiSeasonalHourFrameSample(capture, execution, candidates));
+        }
+
+        var selection = RhodesSuiSeasonalHourTemporalConsensus.SelectBest(
+            samples.Select(sample => sample.Candidates).ToArray());
+        if (selection.IsAmbiguous)
+        {
+            await AcceptCaptureAsync(captures[^1]);
+            return new RhodesRecognitionTaskExecutionResult(
+                plan,
+                [],
+                $"{selection.Summary} 現在の歳時は変更しません。少し待ってから再取得してください。");
+        }
+
+        var usedDescriptionFallback = selection.FrameIndex < 0;
+        var selectedIndex = usedDescriptionFallback
+            ? samples.Count - 1
+            : Math.Clamp(selection.FrameIndex, 0, samples.Count - 1);
+        var selected = samples[selectedIndex];
+        await AcceptCaptureAsync(selected.Capture);
+
+        var selectedResults = selected.Execution.TaskResults.ToList();
+        var requiresDetailFallback = RhodesSuiSeasonalHourTemporalConsensus.RequiresDetailFallback(selected.Candidates);
+        var detailTasks = plan.Tasks
+            .Where(task => !IsSuiSeasonalHourPrimaryEntry(task.Entry))
+            .ToArray();
+        if (requiresDetailFallback && detailTasks.Length > 0)
+        {
+            var detailPlan = plan with
+            {
+                TaskEntries = detailTasks.Select(task => task.Entry).ToArray(),
+                Tasks = detailTasks,
+            };
+            var detailExecution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
+                detailPlan,
+                (entry, cancellationToken) =>
+                {
+                    var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                    return _session.RunResourceRecognitionAsync(entry, payload, selected.Capture.EncodedImage, cancellationToken);
+                });
+            if (!detailExecution.Succeeded)
+                return new RhodesRecognitionTaskExecutionResult(plan, selectedResults, detailExecution.Error);
+            selectedResults.AddRange(detailExecution.TaskResults);
+        }
+
+        if (usedDescriptionFallback)
+        {
+            var fallbackCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+                plan.ProfileId,
+                selectedResults,
+                SelectedCampaign?.Id ?? _runState.CampaignId);
+            if (!fallbackCandidates.Any(candidate => candidate.FieldId.Equals("seasonalHours", StringComparison.Ordinal)))
+            {
+                return new RhodesRecognitionTaskExecutionResult(
+                    plan,
+                    selectedResults,
+                    "歳時を名称・Lvでも補助説明文でも確定できません。現在値は変更しません。");
+            }
+        }
+
+        foreach (var result in selectedResults)
+        {
+            ResourceTaskResults.Add(result);
+            RefreshResourceTaskDiagnostics();
+        }
+        StatusMessage = usedDescriptionFallback
+            ? "歳時は名称・Lvで確定できず、採用Frameの説明文から補助判定しました。"
+            : requiresDetailFallback
+                ? $"{selection.Summary} / 戌絵の対象職分だけ説明文で補助確認"
+                : $"{selection.Summary} / 説明文OCRは省略";
+        return new RhodesRecognitionTaskExecutionResult(plan, selectedResults, "");
+    }
+
+    private static bool IsSuiSeasonalHourPrimaryEntry(string entry) =>
+        entry.Equals("RhodesOcrRegion_is6_seasonal_hour_header", StringComparison.Ordinal)
+        || entry.Equals("RhodesOcrRegion_is6_seasonal_hour_name", StringComparison.Ordinal)
+        || entry.Equals("RhodesOcrRegion_is6_seasonal_hour_level", StringComparison.Ordinal);
 
     private async Task<RhodesRelicFooterAvailability> RunPreNavigationResourceTasksAsync(MaaResourceExecutionPlan plan)
     {
@@ -8279,7 +8596,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IEnumerable<MaaTaskRunResult> templateResults,
         byte[] encodedImage,
         CancellationToken cancellationToken = default,
-        RhodesOperatorScanTracker? operatorScanTracker = null)
+        RhodesOperatorScanTracker? operatorScanTracker = null,
+        RhodesSuiActiveCoinScanTracker? activeCoinScanTracker = null,
+        bool activeCoinViewportMoved = false,
+        bool includeOwnedCoinStatusRecognition = true)
     {
         var frameResults = templateResults as MaaTaskRunResult[] ?? templateResults.ToArray();
         var profileId = CandidateApiProfileId();
@@ -8321,6 +8641,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (string.Equals(profileId, "is6ActiveCoinsFull", StringComparison.Ordinal))
         {
             var candidateFrameResults = frameResults.ToList();
+            activeCoinScanTracker?.SetExpectedCount(
+                RhodesSuiActiveCoinCountReader.FromTaskResults(candidateFrameResults)?.Count);
             var visibleRowCount = 0;
             var fallbackOcrCount = 0;
             if (encodedImage.Length > 0)
@@ -8359,7 +8681,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 .Where(candidate => candidate.Kind.Equals("coin", StringComparison.Ordinal))
                 .ToArray();
             var recognizedRowCount = frameOcrCandidates.Sum(candidate => Math.Max(1, candidate.Count));
-            StatusMessage = $"有効銭: 画像で{visibleRowCount}行 / MAA-OCRで{recognizedRowCount}枚・{frameOcrCandidates.Length}種 / 行別補完{fallbackOcrCount}件";
+            if (activeCoinScanTracker is not null)
+            {
+                var viewportRows = RhodesMaaLocalCandidateConverter.ResolveSuiActiveCoinViewport(candidateFrameResults);
+                var snapshot = activeCoinScanTracker.RecordViewport(viewportRows, activeCoinViewportMoved);
+                if (snapshot.Rows.Count > 0)
+                    ResourceTaskResults.Add(activeCoinScanTracker.CreateConsolidatedResult());
+                var expected = snapshot.ExpectedCount?.ToString(CultureInfo.InvariantCulture) ?? "?";
+                StatusMessage = snapshot.IsComplete
+                    ? $"有効銭: 表示総数{expected}枚を順序付きで取得しました。"
+                    : $"有効銭: 順序付き{snapshot.Rows.Count}/{expected}枚 / 表示{viewportRows.Count}行";
+            }
+            else
+            {
+                StatusMessage = $"有効銭: 画像で{visibleRowCount}行 / MAA-OCRで{recognizedRowCount}枚・{frameOcrCandidates.Length}種 / 行別補完{fallbackOcrCount}件";
+            }
             RefreshResourceTaskDiagnostics();
         }
         else if (string.Equals(profileId, "is6CoinsFull", StringComparison.Ordinal))
@@ -8369,14 +8705,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             IReadOnlyList<RhodesSuiCoinImageDetection> inspections = [];
             if (encodedImage.Length > 0)
             {
-                inspections = RhodesSuiCoinImageRecognizer.InspectOwned(encodedImage);
-                var statusProbes = RhodesSuiCoinStatusRecognizer.ProbeOwnedStatusSlots(
-                    encodedImage,
-                    inspections);
+                inspections = await Task.Run(
+                    () => RhodesSuiCoinImageRecognizer.InspectOwned(encodedImage),
+                    cancellationToken);
                 var missingNameRequests = RhodesSuiCoinImageRecognizer.PlanMissingOwnedNameOcrRequests(
                     inspections,
-                    frameResults,
-                    statusProbes.Select(probe => probe.SlotIndex).ToHashSet());
+                    frameResults);
                 foreach (var request in missingNameRequests)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -8394,12 +8728,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             MaaTaskRunResult? statusResult = null;
-            if (encodedImage.Length > 0)
+            if (includeOwnedCoinStatusRecognition && encodedImage.Length > 0)
             {
-                statusResult = RhodesSuiCoinStatusRecognizer.RecognizeOwned(
-                    encodedImage,
-                    candidateFrameResults,
-                    imageInspections: inspections);
+                statusResult = await Task.Run(
+                    () => RhodesSuiCoinStatusRecognizer.RecognizeOwned(
+                        encodedImage,
+                        candidateFrameResults,
+                        imageInspections: inspections),
+                    cancellationToken);
                 ResourceTaskResults.Add(statusResult);
             }
             var candidateSource = statusResult is null
@@ -8414,7 +8750,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 && RhodesSuiCoinImageRecognizer.TryRead(statusResult, out _, out var detections)
                     ? detections.Count(detection => !string.IsNullOrWhiteSpace(detection.StatusId))
                     : 0;
-            StatusMessage = $"保有銭MAA-OCR: この画面から{frameOcrCandidateCount}種 / 欠落枠補完{missingNameOcrCount}件 / 状態{statusCount}件を候補化";
+            StatusMessage = includeOwnedCoinStatusRecognition
+                ? $"保有銭MAA-OCR: この画面から{frameOcrCandidateCount}種 / 欠落枠補完{missingNameOcrCount}件 / 状態{statusCount}件を候補化"
+                : $"保有銭MAA-OCR: 画面確認用に{frameOcrCandidateCount}種を取得 / 状態判定は左端へ揃えた後に実行";
             RefreshResourceTaskDiagnostics();
         }
 
@@ -8628,6 +8966,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private async Task RunScrollRecognitionFramesAsync(
         MaaResourceExecutionPlan plan,
         RhodesOperatorScanTracker? operatorScanTracker = null,
+        RhodesSuiActiveCoinScanTracker? activeCoinScanTracker = null,
         CancellationToken cancellationToken = default)
     {
         if (!RhodesRecognitionRuntimePlan.IsScrollProfile(plan.ProfileId))
@@ -8648,6 +8987,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             "operatorsFull" => RhodesOperatorOwnedCountReader.FromTaskResults(
                 ResourceTaskResults,
                 CurrentSelectedOperatorCount())?.Count,
+            "is6ActiveCoinsFull" => RhodesSuiActiveCoinCountReader.FromTaskResults(ResourceTaskResults)?.Count,
             _ => null,
         };
         var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
@@ -8696,8 +9036,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var previousPassScrolls = 0;
         var completedPassCount = 0;
         var reachedExpectedCandidateCount = false;
-        foreach (var pass in passes)
+        for (var passIndex = 0; passIndex < passes.Count; passIndex++)
         {
+            var pass = passes[passIndex];
             var maxScrolls = pass.MirrorPreviousPassScrolls
                 ? Math.Min(pass.MaxScrolls, previousPassScrolls)
                 : pass.MaxScrolls;
@@ -8744,7 +9085,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         taskEntries,
                         _lastCapture,
                         cancellationToken,
-                        operatorScanTracker);
+                        operatorScanTracker,
+                        activeCoinScanTracker,
+                        viewportMoved: fingerprintDistance > 2);
+                    if (plan.ProfileId == "is6ActiveCoinsFull")
+                    {
+                        expectedCandidateCount ??= RhodesSuiActiveCoinCountReader
+                            .FromTaskResults(ResourceTaskResults)
+                            ?.Count;
+                    }
                 }
 
                 var candidateCount = CurrentLocalCandidateCount(plan.ProfileId);
@@ -8801,6 +9150,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             previousPassScrolls = executedScrolls;
             completedPassCount++;
+            var nextPassCollects = passIndex + 1 < passes.Count
+                && passes[passIndex + 1].CollectCandidates;
+            if (executedScrolls > 0
+                && RhodesRecognitionRuntimePlan.ShouldCollectNormalizedEndpoint(
+                    plan.ProfileId,
+                    pass.CollectCandidates,
+                    nextPassCollects))
+            {
+                StatusMessage = plan.ProfileId == "is6ActiveCoinsFull"
+                    ? "有効銭リストの上端を確認しました。表示順を保って下方向へ取得します。"
+                    : "保有銭の左端を確認しました。左端の表示から一回走査を開始します。";
+                await RunScrollFrameTasksAsync(
+                    plan.ProfileId,
+                    taskEntries,
+                    _lastCapture,
+                    cancellationToken,
+                    operatorScanTracker,
+                    activeCoinScanTracker,
+                    viewportMoved: executedScrolls > 0);
+                if (plan.ProfileId == "is6ActiveCoinsFull")
+                {
+                    expectedCandidateCount ??= RhodesSuiActiveCoinCountReader
+                        .FromTaskResults(ResourceTaskResults)
+                        ?.Count;
+                }
+            }
             if (reachedExpectedCandidateCount)
             {
                 var candidateLabel = plan.ProfileId == "operatorsFull" ? "オペレーター候補" : "秘宝候補";
@@ -9031,6 +9406,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 entry.Equals("RhodesOcrRegion_is6_coin_list_text", StringComparison.Ordinal));
         }
 
+        if (plan.ProfileId == "is6ActiveCoinsFull")
+        {
+            return plan.TaskEntries.Where(entry =>
+                entry.Equals(RhodesSuiActiveCoinCountReader.Entry, StringComparison.Ordinal)
+                || entry.Equals("RhodesOcrRegion_is6_active_coin_list_text", StringComparison.Ordinal));
+        }
+
         return [];
     }
 
@@ -9039,7 +9421,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         IEnumerable<string> taskEntries,
         byte[] encodedImage,
         CancellationToken cancellationToken,
-        RhodesOperatorScanTracker? operatorScanTracker)
+        RhodesOperatorScanTracker? operatorScanTracker,
+        RhodesSuiActiveCoinScanTracker? activeCoinScanTracker = null,
+        bool viewportMoved = false)
     {
         var frameResults = new List<MaaTaskRunResult>();
         foreach (var entry in taskEntries)
@@ -9056,7 +9440,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             frameResults,
             encodedImage,
             cancellationToken,
-            operatorScanTracker);
+            operatorScanTracker,
+            activeCoinScanTracker,
+            viewportMoved);
         await RunThoughtLoadOcrExpansionsAsync(frameResults, encodedImage, cancellationToken);
         var visibleFrameResults = frameResults
             .Concat(ResourceTaskResults.Skip(derivedResultStartIndex))
@@ -9074,6 +9460,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             profileId,
             ResourceTaskResults,
             SelectedCampaign?.Id ?? _runState.CampaignId);
+        if (profileId.Equals("is6ActiveCoinsFull", StringComparison.Ordinal))
+        {
+            return candidates
+                .Where(candidate => candidate.Kind.Equals("coin", StringComparison.Ordinal))
+                .Sum(candidate => Math.Max(1, candidate.Count));
+        }
         if (!profileId.Equals("operatorsFull", StringComparison.Ordinal))
             return candidates.Count;
 
@@ -9096,15 +9488,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         var profileId = CandidateApiProfileId();
         var evidencePlan = CurrentEvidencePlan(profileId);
-        var apiResult = await RhodesMaaCandidateApiClient.ConvertAsync(
-            RhodesApiUrl,
+        var conversion = await RhodesRecognitionWorkflow.ConvertCandidatesLocalFirstAsync(
             profileId,
-            ResourceTaskResults);
-        var conversion = RhodesRecognitionWorkflow.ConvertCandidates(
-            profileId,
-            ResourceTaskResults,
-            apiResult,
-            SelectedCampaign?.Id ?? _runState.CampaignId);
+            ResourceTaskResults.ToArray(),
+            () => RhodesMaaCandidateApiClient.ConvertAsync(
+                RhodesApiUrl,
+                profileId,
+                ResourceTaskResults),
+            SelectedCampaign?.Id ?? _runState.CampaignId,
+            _rhodesApiStatus.Installed);
 
         CandidateResults.Clear();
         foreach (var candidate in conversion.Candidates)
@@ -9635,7 +10027,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             CanvasBackgroundEnabled: OutputCanvasBackgroundEnabled,
             CanvasBackgroundOpacity: OutputCanvasBackgroundOpacity,
             IndividualCanvasBackgroundEnabled: IndividualOutputCanvasBackgroundEnabled,
-            IndividualCanvasBackgroundOpacity: IndividualOutputCanvasBackgroundOpacity));
+            IndividualCanvasBackgroundOpacity: IndividualOutputCanvasBackgroundOpacity,
+            RelicIconOnly: OutputRelicIconOnly,
+            OperatorIconOnly: OutputOperatorIconOnly,
+            OperatorRarities: OutputOperatorRarityOptions
+                .Where(option => option.IsSelected)
+                .Select(option => option.Rarity)
+                .ToArray(),
+            IndividualRelicIconOnly: IndividualOutputRelicIconOnly,
+            IndividualOperatorIconOnly: IndividualOutputOperatorIconOnly,
+            IndividualOperatorRarities: IndividualOutputOperatorRarityOptions
+                .Where(option => option.IsSelected)
+                .Select(option => option.Rarity)
+                .ToArray()));
+    }
+
+    private static void ApplyRaritySelections(
+        IEnumerable<SukiOutputRarityOption> options,
+        IReadOnlyList<int>? selectedRarities)
+    {
+        var selected = (selectedRarities ?? [6, 5, 4, 3, 2, 1]).ToHashSet();
+        foreach (var option in options)
+            option.IsSelected = selected.Contains(option.Rarity);
     }
 
     private SukiChoiceCatalogFilterState OperatorChoiceFilterState()
@@ -10372,6 +10785,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private async Task<MaaCaptureResult> CaptureCoreAsync()
     {
         var capture = await _session.CaptureEncodedAsync();
+        return await AcceptCaptureAsync(capture);
+    }
+
+    private async Task<MaaCaptureResult> AcceptCaptureAsync(MaaCaptureResult capture)
+    {
         CaptureState = capture.Succeeded ? $"取得済み: {capture.Detail}" : $"失敗: {capture.Detail}";
         _adbDiagnosticsCaptureSucceeded = capture.Succeeded;
         _adbDiagnosticsCaptureDetail = capture.Detail;
@@ -10655,4 +11073,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         public static MaaInferenceBenchmarkPass Failed(string error, TimeSpan initialization) =>
             new(false, initialization, TimeSpan.Zero, "", false, error);
     }
+
+    private sealed record SuiSeasonalHourFrameSample(
+        MaaCaptureResult Capture,
+        RhodesRecognitionTaskExecutionResult Execution,
+        IReadOnlyList<MaaCandidatePreview> Candidates);
 }

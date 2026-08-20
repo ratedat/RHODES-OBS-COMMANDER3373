@@ -6,6 +6,18 @@
 
 ユーザーCSSは、簡易設定だけでは足りない場合に使う上級者向け機能です。
 
+## 同梱HTMLで編集してから貼り付ける
+
+リポジトリまたは配布ZIPに同梱された `出力CSSカスタマイズガイド.html`（公開デバッグ版では `OUTPUT_CSS_CUSTOMIZATION_GUIDE.html`）をブラウザで開くと、CSSを直接編集できます。
+
+1. 統合Overlayまたは個別ウィンドウの見本を選びます。
+2. 簡易設定またはプリセットで土台を作ります。
+3. リアルタイムCSSエディターへ追加CSSを記述します。
+4. 見本と警告表示を確認します。
+5. 「CSSを3373用にコピー」を押し、3373の対象ユーザーCSS欄へ貼り付けます。
+
+簡易設定を変更しても、`RHODES BASIC SETTINGS` の管理ブロック外へ追記したCSSは保持されます。`javascript:`を含むCSSはプレビューとコピーを止め、65,536文字を上限とします。
+
 ## CSSを設定する場所
 
 1. アプリの「出力」を開きます。
@@ -66,6 +78,12 @@
 | `--overlay-border-color` | 枠線色 | `#4A5658` |
 | `--overlay-accent-color` | 強調色 | `#55D6BE` |
 | `--overlay-font-scale` | 全体文字倍率 | `1.1` |
+| `--overlay-item-background-rgb` | 秘宝・オペレーター・数値など、内側カード背景のRGBチャンネル | `8 11 12` |
+| `--overlay-item-background-alpha` | 内側カード背景の不透明度 | `0.58` |
+| `--overlay-item-border-color` | 内側カードの枠色 | `#4A5658` |
+| `--overlay-strong-font-color` | 名前・数値など、強い文字の色 | `#FFFFFF` |
+| `--overlay-muted-font-color` | ラベル・補足など、弱い文字の色 | `#A7B4B5` |
+| `--overlay-shadow` | 統合枠・個別枠の影。無効化は `none` | `0 12px 36px rgb(0 0 0 / 30%)` |
 
 `--overlay-background-rgb` は `rgb()` の引数として使われるため、カンマを入れずに空白で区切ります。
 
@@ -79,12 +97,20 @@
   --overlay-border-color: #4a5658;
   --overlay-accent-color: #55d6be;
   --overlay-font-scale: 1.05;
+  --overlay-item-background-rgb: 8 11 12;
+  --overlay-item-background-alpha: 0.58;
+  --overlay-item-border-color: #4a5658;
+  --overlay-strong-font-color: #ffffff;
+  --overlay-muted-font-color: #a7b4b5;
+  --overlay-shadow: 0 12px 36px rgb(0 0 0 / 30%);
 }
 ```
 
 互換用に `--text`、`--accent`、`--accent-2`、`--line` も設定されますが、新しいCSSでは上表の `--overlay-*` 変数を優先してください。
 
-`--overlay-background-*` はカード・部品枠、`--overlay-canvas-background-*` はBrowser Source全体へ適用されます。
+`--overlay-background-*` は統合Overlayや個別ウィンドウの外枠、`--overlay-item-background-*` はその内側にある秘宝・オペレーター・数値などのカード、`--overlay-canvas-background-*` はBrowser Source全体へ適用されます。
+
+不透明度は0から1です。完全不透明は `1` であり、`1.8` や `1.80` は180%という意味にはなりません。
 
 背景を完全に消す場合は、画面上の「全体背景」または「枠背景」の表示をOFFにしてください。
 
@@ -146,6 +172,38 @@
 長期利用するCSSでは、細かい子要素の階層ではなく、上表のクラスとCSS変数を優先してください。
 
 ## 使用例
+
+### 白背景＋シアン枠＋赤アクセント
+
+内側カードまで同じ色で揃える場合も、個別の `div` を列挙する必要はありません。
+
+```css
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap");
+
+:root {
+  --overlay-font-color: #0a0a0a;
+  --overlay-canvas-background-rgb: 255 255 255;
+  --overlay-canvas-background-alpha: 1;
+  --overlay-background-rgb: 255 255 255;
+  --overlay-background-alpha: 1;
+  --overlay-border-color: #00ffff;
+  --overlay-accent-color: #c8001e;
+  --overlay-font-scale: 1;
+  --overlay-item-background-rgb: 255 255 255;
+  --overlay-item-background-alpha: 1;
+  --overlay-item-border-color: #00ffff;
+  --overlay-strong-font-color: #111111;
+  --overlay-muted-font-color: #333333;
+  --overlay-shadow: none;
+}
+
+.overlay-app,
+.overlay-part {
+  font-family: "Noto Sans JP", sans-serif;
+}
+```
+
+この例では、秘宝・オペレーター・特殊値・数値カードの背景と枠も安定変数から変更されます。標準CSSより強いセレクターや大量の `!important` は不要です。
 
 ### 透明キャンバス＋半透明枠
 
@@ -349,7 +407,7 @@ CSSの一部だけを確認する場合は、対象範囲を `/*` と `*/` で�
 | 個別ウィンドウだけ変化しない | 個別ウィンドウ用CSSへ入力したか確認します。 |
 | 一部パーツだけ崩れる | ルートクラスで対象を限定し、固定幅や絶対配置を減らします。 |
 | 全体に背景が残る | 「全体背景」をOFFにするか、`--overlay-canvas-background-alpha`を確認します。 |
-| カード内に背景が残る | 「枠背景」をOFFにするか、`--overlay-background-alpha`を確認します。 |
+| カード内に背景が残る | `--overlay-item-background-alpha`を確認します。外枠は`--overlay-background-alpha`で別に調整できます。 |
 | 外部フォントや画像が出ない | URLをブラウザで直接開けるか、HTTPSか、フォント配信元がCORSを許可しているか確認します。OBS Browser Sourceも再読み込みしてください。 |
 | 設定を戻せない | CSS欄を空にするか、正常なJSONプロファイルをインポートします。 |
 

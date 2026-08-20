@@ -50,7 +50,9 @@ public static class RhodesRelicStackOcrPlanner
                     continue;
 
                 var relic = RhodesMaaLocalCandidateConverter.ResolveRelicName(row.Text, campaignId);
-                if (relic is null || !emitted.Add(relic.Id))
+                if (relic is null
+                    || RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(relic.Id)
+                    || !emitted.Add(relic.Id))
                     continue;
 
                 var probe = new SKRectI(

@@ -100,10 +100,15 @@ test("scan profiles own MAA interface group labels and descriptions", async () =
 
 test("Sui seasonal hour profile opens and closes the detail panel with randomized tap areas", async () => {
   const profiles = await profilesById();
+  const tasks = await recognitionTasks();
   const profile = profiles.get("is6SeasonalHours");
 
   assert.equal(profile.campaignId, "is6_sui");
-  assert.deepEqual(profile.ocrRegionIds, ["is6.seasonal_hour_detail_text"]);
+  assert.deepEqual(profile.ocrRegionIds, ["is6.seasonal_hour_name", "is6.seasonal_hour_level", "is6.seasonal_hour_detail_text"]);
+  assert.deepEqual(tasks.ocrRegions.find((region) => region.id === "is6.seasonal_hour_name")?.roi, [480, 98, 320, 45]);
+  assert.deepEqual(tasks.ocrRegions.find((region) => region.id === "is6.seasonal_hour_level")?.roi, [795, 100, 135, 42]);
+  assert.deepEqual(tasks.ocrRegions.find((region) => region.id === "is6.seasonal_hour_detail_text")?.roi, [383, 100, 563, 135]);
+  assert.deepEqual(profile.scanRegion, { x: 383, y: 100, width: 563, height: 135 });
   assert.equal(profile.openSteps[0].type, "tap");
   assert.ok(profile.openSteps[0].area.width > 1);
   assert.ok(profile.openSteps[0].area.height > 1);
@@ -472,6 +477,26 @@ test("ADB scan profiles restore overlays with tap actions instead of Android Bac
 });
 
 
+test("Sui active coin scan reads the displayed total and scrolls from top to bottom", async () => {
+  const profiles = await profilesById();
+  const tasks = await recognitionTasks();
+  const profile = profiles.get("is6ActiveCoinsFull");
+  const countRegion = tasks.ocrRegions.find((region) => region.id === "is6.active_coin_count");
+
+  assert.deepEqual(countRegion?.roi, [592, 115, 65, 60]);
+  assert.deepEqual(countRegion?.profileIds, ["is6ActiveCoinsFull"]);
+  assert.equal(profile.scrollAxis, "vertical");
+  assert.deepEqual(profile.scanRegion, { x: 532, y: 175, width: 560, height: 440 });
+  assert.equal(profile.scrollPasses.length, 2);
+  assert.deepEqual(profile.scrollPasses.map((pass) => pass.direction), ["up", "down"]);
+  assert.deepEqual(profile.scrollPasses.map((pass) => pass.collectCandidates), [false, true]);
+  const [normalizeTop, collectBottom] = profile.scrollPasses;
+  assert.ok(normalizeTop.scroll.startArea.y < normalizeTop.scroll.endArea.y, "top normalization drags downward");
+  assert.ok(collectBottom.scroll.startArea.y > collectBottom.scroll.endArea.y, "downward collection drags upward");
+  assert.ok(collectBottom.scroll.startArea.x >= 900, "active coin swipe stays inside the detail panel");
+});
+
+
 test("Sui held coin scan opens and closes the coin box with a randomized tap area", async () => {
   const profiles = await profilesById();
   const profile = profiles.get("is6CoinsFull");
@@ -479,18 +504,19 @@ test("Sui held coin scan opens and closes the coin box with a randomized tap are
   const closer = (profile.restoreSteps || []).find((step) => step.type === "tap");
 
   assert.deepEqual(profile.targetScreenIds, ["sui-coin-list"]);
-  assert.deepEqual(opener?.point, { x: 747, y: 684 });
-  assert.deepEqual(opener?.area, { x: 710, y: 664, width: 75, height: 40 });
+  assert.deepEqual(opener?.point, { x: 838, y: 684 });
+  assert.deepEqual(opener?.area, { x: 812, y: 664, width: 52, height: 40 });
+  assert.ok(opener.area.x >= 800, "held coin tap must stay on the right-hand coin-box label and outside the rolled-coin icons");
   assert.deepEqual(closer?.point, opener?.point);
   assert.deepEqual(closer?.area, opener?.area);
   assert.equal(profile.scrollPasses.length, 2);
   assert.deepEqual(profile.scrollPasses.map((pass) => pass.axis), ["horizontal", "horizontal"]);
-  assert.deepEqual(profile.scrollPasses.map((pass) => pass.direction), ["right", "left"]);
-  const [right, left] = profile.scrollPasses;
-  assert.ok(right.scroll.startArea.x > right.scroll.endArea.x, "right pass should drag left");
-  assert.ok(left.scroll.startArea.x < left.scroll.endArea.x, "left pass should drag right");
-  assert.equal(right.collectCandidates, true);
-  assert.equal(left.collectCandidates, true, "reverse pass must collect coins hidden before the initial viewport");
+  assert.deepEqual(profile.scrollPasses.map((pass) => pass.direction), ["left", "right"]);
+  const [normalizeLeft, collectRight] = profile.scrollPasses;
+  assert.ok(normalizeLeft.scroll.startArea.x < normalizeLeft.scroll.endArea.x, "normalization pass should drag toward the left edge");
+  assert.ok(collectRight.scroll.startArea.x > collectRight.scroll.endArea.x, "collection pass should drag toward the right edge");
+  assert.equal(normalizeLeft.collectCandidates, false, "normalization must not repeat OCR or status matching");
+  assert.equal(collectRight.collectCandidates, true, "the full list is collected once after reaching a known edge");
   for (const pass of profile.scrollPasses) {
     assert.equal(pass.maxScrolls, 10, "held coin scan should cover the catalog without an excessive fixed sweep");
     assert.equal(pass.endFingerprintStableCount, 1, "held coin scan should stop after the first unchanged endpoint frame");

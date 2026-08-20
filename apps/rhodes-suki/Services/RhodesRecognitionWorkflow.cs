@@ -66,7 +66,8 @@ public static class RhodesRecognitionWorkflow
         string? profileId,
         IEnumerable<MaaTaskRunResult> taskResults,
         RhodesMaaCandidateApiResult apiResult,
-        string? activeCampaignId = null)
+        string? activeCampaignId = null,
+        bool apiAttempted = true)
     {
         var results = taskResults as IReadOnlyList<MaaTaskRunResult> ?? taskResults.ToArray();
         if (results.Count == 0)
@@ -121,7 +122,9 @@ public static class RhodesRecognitionWorkflow
             return new RhodesRecognitionCandidateConversionResult(
                 previewCandidates,
                 "preview",
-                string.IsNullOrWhiteSpace(apiResult.Error)
+                !apiAttempted
+                    ? $"ローカルMAAプレビューを表示しました: {previewCandidates.Count}件"
+                    : string.IsNullOrWhiteSpace(apiResult.Error)
                     ? $"候補化APIは0件だったためローカルMAAプレビューを表示しました: {previewCandidates.Count}件"
                     : $"候補化APIに接続できないためローカルMAAプレビューを表示しました: {previewCandidates.Count}件",
                 apiResult.Candidates.Count,
@@ -134,7 +137,9 @@ public static class RhodesRecognitionWorkflow
         return new RhodesRecognitionCandidateConversionResult(
             [],
             "empty",
-            string.IsNullOrWhiteSpace(apiResult.Error)
+            !apiAttempted
+                ? "ローカル候補は0件です。"
+                : string.IsNullOrWhiteSpace(apiResult.Error)
                 ? "候補は0件です。"
                 : $"候補化API失敗: {apiResult.Error}",
             apiResult.Candidates.Count,
@@ -144,13 +149,38 @@ public static class RhodesRecognitionWorkflow
             apiResult.Error);
     }
 
+    public static async Task<RhodesRecognitionCandidateConversionResult> ConvertCandidatesLocalFirstAsync(
+        string? profileId,
+        IReadOnlyList<MaaTaskRunResult> taskResults,
+        Func<Task<RhodesMaaCandidateApiResult>> convertApiAsync,
+        string? activeCampaignId = null,
+        bool apiAvailable = true)
+    {
+        var localCandidateCount = RhodesMaaLocalCandidateConverter.FromTaskResults(
+                profileId,
+                taskResults,
+                activeCampaignId)
+            .Count;
+        var apiAttempted = apiAvailable && localCandidateCount == 0;
+        var apiResult = apiAttempted
+            ? await convertApiAsync()
+            : new RhodesMaaCandidateApiResult([], "");
+        return ConvertCandidates(
+            profileId,
+            taskResults,
+            apiResult,
+            activeCampaignId,
+            apiAttempted);
+    }
+
     public static async Task<RhodesCandidateApplyWorkflowResult> ApplyCandidatesAsync(
         IReadOnlyList<MaaCandidatePreview> candidates,
         Func<CancellationToken, Task<RhodesStateApiResult>> fetchApiStateAsync,
         Func<string, CancellationToken, Task<RhodesStateApiResult>> saveApiStateAsync,
         Func<string, CancellationToken, Task> replaceLocalStateJsonAsync,
         Func<IReadOnlyList<MaaCandidatePreview>, CancellationToken, Task<SukiCandidateApplySummary>> saveLocalCandidatesAsync,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool apiAvailable = true)
     {
         if (candidates.Count == 0)
         {
@@ -161,6 +191,18 @@ public static class RhodesRecognitionWorkflow
                 null,
                 "反映なし: 候補0件",
                 "反映する候補がありません。");
+        }
+
+        if (!apiAvailable)
+        {
+            return await ApplyLocalFallbackAsync(
+                candidates,
+                new RhodesStateApiResult(
+                    "",
+                    "配信サーバーは未起動です。",
+                    RhodesStateApiFailureKind.Unavailable),
+                saveLocalCandidatesAsync,
+                cancellationToken);
         }
 
         var fetched = await fetchApiStateAsync(cancellationToken);

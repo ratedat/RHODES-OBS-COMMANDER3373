@@ -218,12 +218,38 @@ public static class RhodesStateApiClient
         preferences["sukiOutputIndividualShowPartTitles"] = outputPreferences.IndividualShowPartTitles;
         preferences["sukiOutputIndividualScrollSpeed"] = outputPreferences.IndividualScrollSpeed;
         preferences["sukiOutputIndividualAppearance"] = ToOutputAppearanceJson(outputPreferences.IndividualAppearance);
+        preferences["sukiOutputRelicIconOnly"] = outputPreferences.RelicIconOnly;
+        preferences["sukiOutputOperatorIconOnly"] = outputPreferences.OperatorIconOnly;
+        preferences["sukiOutputOperatorRarities"] = ToIntArray(outputPreferences.OperatorRarities ?? []);
+        preferences["sukiOutputIndividualRelicIconOnly"] = outputPreferences.IndividualRelicIconOnly;
+        preferences["sukiOutputIndividualOperatorIconOnly"] = outputPreferences.IndividualOperatorIconOnly;
+        preferences["sukiOutputIndividualOperatorRarities"] = ToIntArray(outputPreferences.IndividualOperatorRarities ?? []);
         preferences["sukiOutputParts"] = ToOutputPartsJson(outputPreferences.Parts);
         preferences["sukiOverlayLayout"] = ToOverlayLayoutJson(
             RhodesOverlayLayoutCatalog.Normalize(outputPreferences.OverlayLayout));
         ApplySarkazSpecialOverlayPreference(root, outputPreferences.Parts);
 
         RhodesRunStateStore.PruneAbandonedRunValues(root);
+        root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
+        return root.ToJsonString(IndentedWriteOptions);
+    }
+
+    public static string ApplyTournamentInfoToStateJson(
+        string stateJson,
+        SukiTournamentRunInfo tournamentInfo)
+    {
+        ArgumentNullException.ThrowIfNull(tournamentInfo);
+        var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson) as JsonObject
+            ?? new JsonObject { ["version"] = 1 };
+        var run = root["run"] as JsonObject ?? new JsonObject();
+        root["run"] = run;
+        var normalized = NormalizeTournamentInfo(tournamentInfo);
+        run["tournamentInfo"] = new JsonObject
+        {
+            ["score"] = normalized.Score,
+            ["withdrawals"] = normalized.Withdrawals,
+            ["memo"] = normalized.Memo,
+        };
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
         return root.ToJsonString(IndentedWriteOptions);
     }
@@ -267,7 +293,7 @@ public static class RhodesStateApiClient
         foreach (var propertyName in new[]
         {
             "squad", "squadId", "squadRandomEffect", "squadRandomEffectOptionId",
-            "difficulty", "difficultyTierId", "ingot", "idea", "special"
+            "difficulty", "difficultyTierId", "ingot", "idea", "special", "tournamentInfo"
         }.Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {
             run.Remove(propertyName);
@@ -336,6 +362,27 @@ public static class RhodesStateApiClient
         }
 
         return array;
+    }
+
+    private static JsonArray ToIntArray(IEnumerable<int> values)
+    {
+        var array = new JsonArray();
+        foreach (var value in values)
+            array.Add(value);
+        return array;
+    }
+
+    private static SukiTournamentRunInfo NormalizeTournamentInfo(SukiTournamentRunInfo value)
+    {
+        var memo = (value.Memo ?? "").Trim();
+        if (memo.Length > 160)
+            memo = memo[..160];
+        return value with
+        {
+            Score = value.Score is null ? null : Math.Clamp(value.Score.Value, -999_999, 999_999),
+            Withdrawals = value.Withdrawals is null ? null : Math.Clamp(value.Withdrawals.Value, 0, 9_999),
+            Memo = memo,
+        };
     }
 
     private static JsonObject ToOutputAppearanceJson(SukiOutputAppearance? appearance)

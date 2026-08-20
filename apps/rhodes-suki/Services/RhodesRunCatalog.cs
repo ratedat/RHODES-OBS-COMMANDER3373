@@ -219,6 +219,9 @@ public static class RhodesRunCatalog
 
         var stackRules = RhodesRelicStackRuleCatalog.LoadDefault(dataRoot)
             .ToDictionary(rule => rule.RelicId, StringComparer.Ordinal);
+        var nonStackRelicIds = RhodesRelicStackRuleCatalog.LoadExplicitNonStackRelics(dataRoot)
+            .Select(rule => rule.RelicId)
+            .ToHashSet(StringComparer.Ordinal);
 
         return relics.EnumerateArray()
             .Select((item, index) =>
@@ -230,7 +233,8 @@ public static class RhodesRunCatalog
                 var name = JsonString(item, "name");
                 var effect = JsonString(item, "effect");
                 stackRules.TryGetValue(id, out var stackRule);
-                var persistedStackCount = state.RelicStackCounts.GetValueOrDefault(id);
+                var explicitlyNonStack = nonStackRelicIds.Contains(id);
+                var persistedStackCount = explicitlyNonStack ? 0 : state.RelicStackCounts.GetValueOrDefault(id);
                 var choice = new SukiChoiceItem(
                     "relic",
                     id,
@@ -247,7 +251,7 @@ public static class RhodesRunCatalog
                     $"{id} {number} {name} {category} {effect}",
                     ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")),
                     supportsUsedFlag: RhodesRelicUsagePolicy.SupportsUsedFlag(name),
-                    supportsRelicStackCount: stackRule is not null || persistedStackCount > 0,
+                    supportsRelicStackCount: !explicitlyNonStack && (stackRule is not null || persistedStackCount > 0),
                     relicStackMaximum: stackRule?.Maximum);
                 choice.IsSelected = state.SelectedRelicIds.Contains(id);
                 choice.RelicStackCount = persistedStackCount;
@@ -327,13 +331,32 @@ public static class RhodesRunCatalog
             SukiOcrEngineCatalog.Normalize(JsonString(preferences, "ocrEngine", SukiOcrEngineCatalog.DefaultId)),
             ReadBossSelections(root, campaignId),
             performanceId,
-            ResolvePerformanceDisplayName(dataRoot, campaignId, performanceId))
+            ResolvePerformanceDisplayName(dataRoot, campaignId, performanceId),
+            ReadTournamentInfo(run))
         {
             UsedRelicIds = ReadStringSet(root, "usedRelicIds"),
             OperatorCounts = ReadPositiveIntMap(root, "operatorCounts", selectedOperatorIds),
             OperatorPromotionLevels = ReadOperatorPromotionLevels(root, selectedOperatorIds),
             RelicStackCounts = ReadRelicStackCounts(root, selectedRelicIds, dataRoot),
         };
+    }
+
+    private static SukiTournamentRunInfo? ReadTournamentInfo(JsonElement run)
+    {
+        if (run.ValueKind != JsonValueKind.Object
+            || !run.TryGetProperty("tournamentInfo", out var info)
+            || info.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var memo = JsonString(info, "memo").Trim();
+        if (memo.Length > 160)
+            memo = memo[..160];
+        return new SukiTournamentRunInfo(
+            JsonNullableInt(info, "score") is { } score ? Math.Clamp(score, -999_999, 999_999) : null,
+            JsonNullableInt(info, "withdrawals") is { } withdrawals ? Math.Clamp(withdrawals, 0, 9_999) : null,
+            memo);
     }
 
     private static IReadOnlyList<SukiSpecialEffectOption> LoadPerformanceOptions(string dataRoot, string campaignId)
@@ -1227,9 +1250,13 @@ public static class RhodesRunCatalog
 
         var rules = RhodesRelicStackRuleCatalog.LoadDefault(dataRoot)
             .ToDictionary(rule => rule.RelicId, StringComparer.Ordinal);
+        var nonStackRelicIds = RhodesRelicStackRuleCatalog.LoadExplicitNonStackRelics(dataRoot)
+            .Select(rule => rule.RelicId)
+            .ToHashSet(StringComparer.Ordinal);
         foreach (var entry in property.EnumerateObject())
         {
             if (!selectedRelicIds.Contains(entry.Name)
+                || nonStackRelicIds.Contains(entry.Name)
                 || entry.Value.ValueKind != JsonValueKind.Number
                 || !entry.Value.TryGetInt32(out var count)
                 || count <= 0)

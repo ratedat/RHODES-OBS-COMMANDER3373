@@ -26,6 +26,7 @@ public static class RhodesSuiCoinImageRecognizer
     internal const string OwnedNameEntryPrefix = "RhodesDynamic_is6.coin_list_text.slot";
 
     public const string ActiveEntry = "RhodesSuiCoinImage_activeCoins";
+    public const string ActiveConsolidatedEntry = "RhodesSuiCoinImage_activeCoins_consolidated";
     public const string ActiveFieldId = "activeCoins";
     public const string OwnedEntry = "RhodesSuiCoinImage_ownedCoins";
     public const string OwnedFieldId = "coins";
@@ -53,11 +54,11 @@ public static class RhodesSuiCoinImageRecognizer
     private const int CoinListRoiX = 120;
     private const int CoinListRoiY = 96;
     private const double CoinListOcrScale = 2;
-    private const int MaximumMissingNameOcrRequests = 4;
     private const int OwnedShortlistSize = 12;
 
     private static readonly ActivePanelSlot[] ActivePanelSlots =
     [
+        // 実画面で確認済みの3枠だけを定義する。ゲーム上の上限ではなく、4枠以上は次回証跡で拡張する。
         new(0, 532, 207, 620, 180, 470, 130),
         new(1, 532, 327, 620, 305, 470, 145),
         new(2, 532, 467, 620, 445, 470, 165),
@@ -99,6 +100,10 @@ public static class RhodesSuiCoinImageRecognizer
     internal static MaaTaskRunResult CreateOwnedResult(
         IReadOnlyList<RhodesSuiCoinImageDetection> detections) =>
         BuildResult(OwnedEntry, OwnedFieldId, "ownedCoins", detections);
+
+    public static MaaTaskRunResult CreateActiveConsolidatedResult(
+        IReadOnlyList<RhodesSuiCoinImageDetection> detections) =>
+        BuildResult(ActiveConsolidatedEntry, ActiveFieldId, "activeCoinsConsolidated", detections);
 
     public static RhodesSuiOwnedCoinRecognition RecognizeOwnedWithOcrFallback(
         byte[] encodedImage,
@@ -285,7 +290,7 @@ public static class RhodesSuiCoinImageRecognizer
             .OrderByDescending(detection => prioritizedSlots?.Contains(detection.SlotIndex) == true)
             .ThenByDescending(detection => detection.VisualStrength)
             .ThenBy(detection => detection.SlotIndex)
-            .Take(MaximumMissingNameOcrRequests)
+            .Take(OwnedSlots.Length)
             .Select(detection => BuildOwnedNameOcrRequest(detection.SlotIndex, detection.VisualStrength))
             .Where(request => request is not null)
             .Cast<MaaDynamicOcrRequest>()
@@ -418,6 +423,7 @@ public static class RhodesSuiCoinImageRecognizer
         var expectedFieldId = taskResult.Entry switch
         {
             ActiveEntry => ActiveFieldId,
+            ActiveConsolidatedEntry => ActiveFieldId,
             OwnedEntry => OwnedFieldId,
             _ => "",
         };

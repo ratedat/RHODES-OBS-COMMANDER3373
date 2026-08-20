@@ -1,10 +1,18 @@
 {
   "schemaVersion": 1,
   "meta": {
-    "updatedAt": "2026-08-12",
+    "updatedAt": "2026-08-14",
     "source": "User-provided verified working list",
-    "note": "maximum=null means no known in-game upper limit. The list may be incomplete; generic badge OCR remains available for unlisted relics."
+    "note": "maximum=null means no known in-game upper limit. The list may be incomplete; generic badge OCR remains available for unlisted relics unless explicitly excluded below."
   },
+  "nonStackRelics": [
+    {
+      "relicId": "is6_sui_relic_099",
+      "campaignId": "is6_sui",
+      "name": "賞善郎",
+      "reason": "Confirmed non-stack relic; its card artwork can be mistaken for a stack badge."
+    }
+  ],
   "rules": [
     {
       "relicId": "is3_mizuki_relic_261",

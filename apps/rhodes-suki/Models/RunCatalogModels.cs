@@ -943,6 +943,40 @@ public sealed class SukiOutputPartPreview : INotifyPropertyChanged
     }
 }
 
+public sealed record SukiTournamentRunInfo(
+    int? Score = null,
+    int? Withdrawals = null,
+    string Memo = "");
+
+public sealed class SukiOutputRarityOption : INotifyPropertyChanged
+{
+    private bool _isSelected;
+
+    public SukiOutputRarityOption(int rarity, bool isSelected = true)
+    {
+        Rarity = Math.Clamp(rarity, 1, 6);
+        _isSelected = isSelected;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public int Rarity { get; }
+
+    public string Label => $"★{Rarity}";
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value)
+                return;
+            _isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
+}
+
 public sealed record SukiRunStateSnapshot(
     string CampaignId,
     IReadOnlySet<string> SelectedOperatorIds,
@@ -966,7 +1000,8 @@ public sealed record SukiRunStateSnapshot(
     string OcrEngine = "maa-ocr",
     IReadOnlyDictionary<string, IReadOnlyList<string>>? BossSelections = null,
     string PerformanceId = "",
-    string Performance = "")
+    string Performance = "",
+    SukiTournamentRunInfo? TournamentInfo = null)
 {
     public IReadOnlySet<string> UsedRelicIds { get; init; } = new HashSet<string>(StringComparer.Ordinal);
 

@@ -110,6 +110,40 @@ public static class RhodesRunStateStore
         }
     }
 
+    public static async Task SaveTournamentInfoAsync(
+        SukiTournamentRunInfo tournamentInfo,
+        string? statePath = null,
+        DateTimeOffset? now = null)
+    {
+        ArgumentNullException.ThrowIfNull(tournamentInfo);
+        var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
+        await WriteLock.WaitAsync();
+        try
+        {
+            var state = await LoadStateNodeAsync(path);
+            var run = EnsureObject(state, "run");
+            var memo = (tournamentInfo.Memo ?? "").Trim();
+            if (memo.Length > 160)
+                memo = memo[..160];
+            run["tournamentInfo"] = new JsonObject
+            {
+                ["score"] = tournamentInfo.Score is null
+                    ? null
+                    : Math.Clamp(tournamentInfo.Score.Value, -999_999, 999_999),
+                ["withdrawals"] = tournamentInfo.Withdrawals is null
+                    ? null
+                    : Math.Clamp(tournamentInfo.Withdrawals.Value, 0, 9_999),
+                ["memo"] = memo,
+            };
+            state["updatedAt"] = (now ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("O");
+            await WriteJsonAtomicAsync(path, state);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
+    }
+
     public static async Task<SukiCandidateApplySummary> SaveCandidatesAsync(
         IEnumerable<MaaCandidatePreview> candidates,
         string? statePath = null,
@@ -273,6 +307,7 @@ public static class RhodesRunStateStore
         foreach (var item in relicItems.Where(item =>
             item.IsSelected
             && item.SupportsRelicStackCount
+            && !RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(item.Id)
             && item.RelicStackCount > 0
             && (item.RelicStackMaximum is null || item.RelicStackCount <= item.RelicStackMaximum)))
         {
@@ -453,6 +488,7 @@ public static class RhodesRunStateStore
                 "ingot",
                 "idea",
                 "special",
+                "tournamentInfo",
             }
             .Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {

@@ -6,6 +6,7 @@ import {
 } from "./overlay-config.js";
 import { normalizeChoiceFilterIds } from "../domain/choice-filters.js";
 import { normalizeCustomOverlayLayout } from "./overlay-layout-state.js";
+import { normalizeTournamentOperatorRarities } from "../domain/tournament-output.js";
 
 export const gridColumnOptions = [1, 2, 3, 4, 5, 6];
 
@@ -123,6 +124,11 @@ export function normalizePreferences(value) {
     );
   }
   preferences.sukiOutputTournamentMode = normalizeBoolean(preferences.sukiOutputTournamentMode);
+  preferences.sukiOutputRelicIconOnly = normalizeBoolean(preferences.sukiOutputRelicIconOnly);
+  preferences.sukiOutputOperatorIconOnly = normalizeBoolean(preferences.sukiOutputOperatorIconOnly);
+  preferences.sukiOutputOperatorRarities = normalizeTournamentOperatorRarities(
+    preferences.sukiOutputOperatorRarities,
+  );
   preferences.sukiOutputShowPartTitles = preferences.sukiOutputShowPartTitles == null
     ? true
     : normalizeBoolean(preferences.sukiOutputShowPartTitles);
@@ -136,6 +142,15 @@ export function normalizePreferences(value) {
   preferences.sukiOutputIndividualTournamentMode = preferences.sukiOutputIndividualTournamentMode == null
     ? preferences.sukiOutputTournamentMode
     : normalizeBoolean(preferences.sukiOutputIndividualTournamentMode);
+  preferences.sukiOutputIndividualRelicIconOnly = preferences.sukiOutputIndividualRelicIconOnly == null
+    ? preferences.sukiOutputRelicIconOnly
+    : normalizeBoolean(preferences.sukiOutputIndividualRelicIconOnly);
+  preferences.sukiOutputIndividualOperatorIconOnly = preferences.sukiOutputIndividualOperatorIconOnly == null
+    ? preferences.sukiOutputOperatorIconOnly
+    : normalizeBoolean(preferences.sukiOutputIndividualOperatorIconOnly);
+  preferences.sukiOutputIndividualOperatorRarities = preferences.sukiOutputIndividualOperatorRarities == null
+    ? [...preferences.sukiOutputOperatorRarities]
+    : normalizeTournamentOperatorRarities(preferences.sukiOutputIndividualOperatorRarities);
   preferences.sukiOutputIndividualBackgroundEnabled = preferences.sukiOutputIndividualBackgroundEnabled == null
     ? preferences.sukiOutputBackgroundEnabled
     : normalizeBoolean(preferences.sukiOutputIndividualBackgroundEnabled);
@@ -173,6 +188,6 @@ export function normalizePreferences(value) {
   for (const [key, fallback] of Object.entries(overlayScrollSpeedDefaults)) {
     preferences[key] = clampOverlayScrollSpeed(preferences[key], fallback);
   }
-  preferences.sukiOutputSchemaVersion = 3;
+  preferences.sukiOutputSchemaVersion = 4;
   return preferences;
 }

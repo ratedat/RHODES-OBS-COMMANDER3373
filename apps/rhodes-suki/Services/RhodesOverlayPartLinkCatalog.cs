@@ -15,6 +15,7 @@ public static class RhodesOverlayPartLinkCatalog
         ("effects", "発動効果", "左サイド向け / 目安 520x360"),
         ("bosses", "ボスフラグ", "フラグ枠向け / 目安 520x220"),
         ("special", "特殊値 (思案・啓示など)", "目安 520x180"),
+        ("tournament", "大会情報", "点数・引き出し・メモ / 目安 760x130"),
     ];
 
     public static IReadOnlyList<SukiOverlayPartLink> Build(string apiUrl)

@@ -3,6 +3,10 @@ import { renderRelicUsedBadge } from "./relic-used-badge.js";
 import { renderRelicStackBadge } from "./relic-stack-badge.js";
 import { renderOperatorPortrait } from "./operator-promotion-badge.js";
 import { operatorRosterCount } from "../domain/operator-counts.js";
+import {
+  prepareTournamentOverlayArgs,
+  tournamentPresentationClassNames,
+} from "../domain/tournament-output.js";
 
 function operatorNameClass(item) {
   if (item.isCandleBearerTarget) return "candle-bearer-operator-name";
@@ -10,21 +14,25 @@ function operatorNameClass(item) {
   return "";
 }
 
-export function renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run }, context) {
+export function renderOverlayCompact(args, context) {
+  const prepared = prepareTournamentOverlayArgs(args);
+  const { campaign, squad, option, performance, activeEffects, relics, operators, allOperators, specialFields, special, difficultyGrade, run } = prepared;
+  const presentationClasses = tournamentPresentationClassNames(prepared.presentation);
   const specialTags = context.getSpecialTags(specialFields, special, { overlay: true });
   const runStats = context.runStatDisplayItems(run);
   const specialItems = context.getOverlaySpecialEffects(campaign.id, specialFields, special);
   const flags = context.getBossFlagEntries(campaign.id);
   const operatorCount = operatorRosterCount(operators);
+  const rosterCount = operatorRosterCount(allOperators);
   return `
-    <section class="compact-overlay-shell">
+    <section class="compact-overlay-shell${presentationClasses ? ` ${presentationClasses}` : ""}">
       <header class="compact-head">
         <div class="compact-title-block">
           <div class="compact-kicker">IS#${html(campaign.number)}</div>
           <div class="compact-title">${html(campaign.title)}</div>
         </div>
         <div class="compact-counts">
-          <span>秘宝 ${relics.length}</span><span>招集 ${operatorCount}</span><span>Boss ${flags.length}</span>
+          <span>秘宝 ${relics.length}</span><span>招集 ${rosterCount}</span><span>Boss ${flags.length}</span>
         </div>
       </header>
       <div class="compact-row"><span>分隊</span><strong>${html(squad?.name || "未選択")}</strong></div>
@@ -47,14 +55,14 @@ export function renderOverlayCompact({ campaign, squad, option, performance, act
         <div class="compact-section-head"><span>Relics</span><span>${relics.length}</span></div>
         <div class="stream-scroll compact-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("compactRelicScrollSpeed")}">
           <div class="compact-relic-strip">
-            ${relics.length ? relics.map((item) => `<div class="compact-relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" />${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<span class="compact-empty">なし</span>`}
+            ${relics.length ? relics.map((item) => `<div class="compact-relic-tile ${item.used ? "used" : ""}" title="${html(item.name)}" aria-label="${html(item.name)}" data-effect="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" />${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<span class="compact-empty">なし</span>`}
           </div>
         </div>
       </section>
       <section class="compact-section">
         <div class="compact-section-head"><span>Operators</span><span>${operatorCount}</span></div>
         <div class="compact-operator-strip">
-          ${operators.length ? operators.slice(0, 8).map((item) => `<div class="compact-operator">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<span class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</span><strong>${stars(item.rarity)}</strong></div>`).join("") : `<span class="compact-empty">なし</span>`}
+          ${operators.length ? operators.slice(0, 8).map((item) => `<div class="compact-operator" title="${html(item.name)}" aria-label="${html(item.name)}">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<span class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</span><strong>${stars(item.rarity)}</strong></div>`).join("") : `<span class="compact-empty">なし</span>`}
           ${operators.length > 8 ? `<span class="compact-more">+${operators.length - 8}</span>` : ""}
         </div>
       </section>
@@ -63,12 +71,16 @@ export function renderOverlayCompact({ campaign, squad, option, performance, act
   `;
 }
 
-export function renderOverlayDense({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run, orientation }, context) {
+export function renderOverlayDense(args, context) {
+  const prepared = prepareTournamentOverlayArgs(args);
+  const { campaign, squad, option, performance, activeEffects, relics, operators, allOperators, specialFields, special, difficultyGrade, run, orientation } = prepared;
+  const presentationClasses = tournamentPresentationClassNames(prepared.presentation);
   const specialTags = context.getSpecialTags(specialFields, special, { overlay: true });
   const runStats = context.runStatDisplayItems(run);
   const specialItems = context.getOverlaySpecialEffects(campaign.id, specialFields, special);
   const flags = context.getBossFlagEntries(campaign.id);
   const operatorCount = operatorRosterCount(operators);
+  const rosterCount = operatorRosterCount(allOperators);
   const isHorizontal = orientation === "horizontal";
   const inlineBosses = isHorizontal ? "" : flags.map((flag) => context.renderBossChip(flag)).join("");
   const inlineEffects = !isHorizontal && activeEffects.length ? `<div class="stream-scroll stream-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
@@ -90,7 +102,7 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
           <div class="stream-title">${html(campaign.title)}</div>
         </div>
         <div class="stream-counts">
-          <span>秘宝 ${relics.length}</span><span>招集 ${operatorCount}</span><span>Boss ${flags.length}</span>
+          <span>秘宝 ${relics.length}</span><span>招集 ${rosterCount}</span><span>Boss ${flags.length}</span>
         </div>
       </header>`;
   const runPanel = `<section class="stream-run">
@@ -111,7 +123,7 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
         <div class="stream-section-head"><span>Relics</span><strong>${relics.length}</strong></div>
         <div class="stream-scroll stream-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
           <div class="stream-relic-grid">
-            ${relics.length ? relics.map((item) => `<div class="stream-relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><strong>${html(item.name)}</strong>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="stream-empty">秘宝なし</div>`}
+            ${relics.length ? relics.map((item) => `<div class="stream-relic-tile ${item.used ? "used" : ""}" title="${html(item.name)}" aria-label="${html(item.name)}" data-effect="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><strong>${html(item.name)}</strong>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="stream-empty">秘宝なし</div>`}
           </div>
         </div>
       </section>`;
@@ -119,14 +131,14 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
         <div class="stream-section-head"><span>Operators</span><strong>${operatorCount}</strong></div>
         <div class="stream-scroll stream-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}OperatorScrollSpeed`)}">
           <div class="stream-operator-grid">
-            ${operators.length ? operators.map((item) => `<div class="stream-operator-tile">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${stars(item.rarity)} / ${html(item.class || "-")}</span></div></div>`).join("") : `<div class="stream-empty">未招集</div>`}
+            ${operators.length ? operators.map((item) => `<div class="stream-operator-tile" title="${html(item.name)}" aria-label="${html(item.name)}">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${stars(item.rarity)} / ${html(item.class || "-")}</span></div></div>`).join("") : `<div class="stream-empty">未招集</div>`}
           </div>
         </div>
       </section>`;
 
   if (isHorizontal) {
     return `
-      <section class="stream-overlay-shell stream-horizontal stream-broadcast">
+      <section class="stream-overlay-shell stream-horizontal stream-broadcast${presentationClasses ? ` ${presentationClasses}` : ""}">
         <div class="stream-broadcast-status">
           ${head}
           ${runPanel}
@@ -140,7 +152,7 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
   }
 
   return `
-    <section class="stream-overlay-shell stream-${orientation}">
+    <section class="stream-overlay-shell stream-${orientation}${presentationClasses ? ` ${presentationClasses}` : ""}">
       ${head}
       ${runPanel}
       ${relicPanel}
@@ -148,12 +160,16 @@ export function renderOverlayDense({ campaign, squad, option, performance, activ
     </section>
   `;
 }
-export function renderOverlayDefault({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run, mode, runDifficulty, updatedAt, bossFlagCount }, context) {
+export function renderOverlayDefault(args, context) {
+  const prepared = prepareTournamentOverlayArgs(args);
+  const { campaign, squad, option, performance, activeEffects, relics, operators, allOperators, specialFields, special, difficultyGrade, run, mode, runDifficulty, updatedAt, bossFlagCount } = prepared;
+  const presentationClasses = tournamentPresentationClassNames(prepared.presentation);
   const bossEntries = context.getBossFlagEntries();
   const runStats = context.runStatDisplayItems(run);
   const operatorCount = operatorRosterCount(operators);
+  const rosterCount = operatorRosterCount(allOperators);
   return `
-    <header class="overlay-top">
+    <header class="overlay-top${presentationClasses ? ` ${presentationClasses}` : ""}">
       <section class="overlay-card">
         <div class="overlay-card-header"><span>Campaign</span><span>IS#${campaign.number}</span></div>
         <div class="overlay-card-body">
@@ -175,12 +191,12 @@ export function renderOverlayDefault({ campaign, squad, option, performance, act
         <div class="overlay-card-header"><span>Count</span><span>${html(new Date(updatedAt || Date.now()).toLocaleTimeString("ja-JP"))}</span></div>
         <div class="overlay-card-body overlay-kpis">
           <div class="kpi"><div class="kpi-label">秘宝</div><div class="kpi-value">${relics.length}</div></div>
-          <div class="kpi"><div class="kpi-label">招集</div><div class="kpi-value">${operatorCount}</div></div>
+          <div class="kpi"><div class="kpi-label">招集</div><div class="kpi-value">${rosterCount}</div></div>
           <div class="kpi"><div class="kpi-label">Flag</div><div class="kpi-value">${bossFlagCount}</div></div>
         </div>
       </section>
     </header>
-    <main class="overlay-main">
+    <main class="overlay-main${presentationClasses ? ` ${presentationClasses}` : ""}">
       <div class="overlay-left">
         <section class="overlay-card">
           <div class="overlay-card-header"><span>Squad</span><span>${squad ? "selected" : "none"}</span></div>
@@ -200,7 +216,7 @@ export function renderOverlayDefault({ campaign, squad, option, performance, act
         <section class="overlay-card">
           <div class="overlay-card-header"><span>Relics</span><span>${relics.length}</span></div>
           <div class="overlay-card-body relic-grid">
-            ${relics.length ? relics.map((item) => `<div class="relic-tile ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div>${html(item.name)}</div>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="empty-state">秘宝なし</div>`}
+            ${relics.length ? relics.map((item) => `<div class="relic-tile ${item.used ? "used" : ""}" title="${html(item.name)}" aria-label="${html(item.name)}" data-effect="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><div>${html(item.name)}</div>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="empty-state">秘宝なし</div>`}
           </div>
         </section>
       </div>
@@ -214,7 +230,7 @@ export function renderOverlayDefault({ campaign, squad, option, performance, act
         <section class="overlay-card">
           <div class="overlay-card-header"><span>Operators</span><span>${operatorCount}</span></div>
           <div class="overlay-card-body operator-list">
-            ${operators.length ? operators.slice(0, 14).map((item) => `<div class="operator-row">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><div class="operator-name ${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</div><div class="operator-meta">${html(item.class)} / ${html(item.branch)}</div></div><div class="stars">${stars(item.rarity)}</div></div>`).join("") : `<div class="empty-state">未招集</div>`}
+            ${operators.length ? operators.slice(0, 14).map((item) => `<div class="operator-row" title="${html(item.name)}" aria-label="${html(item.name)}">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><div class="operator-name ${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</div><div class="operator-meta">${html(item.class)} / ${html(item.branch)}</div></div><div class="stars">${stars(item.rarity)}</div></div>`).join("") : `<div class="empty-state">未招集</div>`}
           </div>
         </section>
         <div class="footer-note">Manual state / OCR suggestions require confirmation</div>

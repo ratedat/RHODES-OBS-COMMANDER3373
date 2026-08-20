@@ -278,6 +278,10 @@ function renderState() {
     metric("源石錐", run.ingot ?? 0),
     metric("等級", run.difficulty),
     metric("分隊", labelOf(squad)),
+    ...(run.tournamentInfo ? [
+      metric("大会点数", run.tournamentInfo.score),
+      metric("引き出し", run.tournamentInfo.withdrawals),
+    ] : []),
   );
 
   elements.operatorCount.textContent = String(operators.reduce((total, item) =>
@@ -333,6 +337,7 @@ function operationLabel(operation = {}) {
   if (operation.type === "batch") return `${operation.operations?.length || 0}件の入力を一括変更`;
   if (operation.type === "campaign.set") return "統合戦略を変更";
   if (operation.type === "run.set") return `ラン項目 ${operation.field} を変更`;
+  if (operation.type === "tournament-info.set") return "大会情報を変更";
   if (operation.type === "special.set") return `特殊値 ${operation.field} を変更`;
   if (operation.type === "operator.set") return "オペレーターを変更";
   if (operation.type === "relic.set") return "秘宝を変更";
@@ -394,6 +399,23 @@ function renderRunEditor() {
   const tier = selectControl(difficultyTierEntries(master, currentCampaign?.id), run.difficultyTierId, "Tierを選択");
   const performances = (master.performances || []).filter((item) => !item.campaignId || item.campaignId === currentCampaign?.id);
   const performance = selectControl(performances, run.performanceId, "演目を選択");
+  const tournamentInfo = run.tournamentInfo || {};
+  const tournamentScore = node("input", {
+    type: "number", min: -999999, max: 999999, value: tournamentInfo.score ?? "",
+  });
+  const tournamentWithdrawals = node("input", {
+    type: "number", min: 0, max: 9999, value: tournamentInfo.withdrawals ?? "",
+  });
+  const tournamentMemo = node("textarea", {
+    maxLength: 160,
+    value: tournamentInfo.memo || "",
+    placeholder: "対戦名、走者情報、注意事項など",
+  });
+  const tournamentEditor = node("div", { className: "tournament-info-fields" }, [
+    node("label", {}, [node("span", { text: "点数" }), tournamentScore]),
+    node("label", {}, [node("span", { text: "引き出し数" }), tournamentWithdrawals]),
+    node("label", { className: "tournament-info-memo" }, [node("span", { text: "自由メモ" }), tournamentMemo]),
+  ]);
 
   elements.editor.replaceChildren(node("div", { className: "form-grid" }, [
     field("統合戦略", campaignSelect),
@@ -417,6 +439,14 @@ function renderRunEditor() {
     field("演目", performance, submitButton("反映", () => sendOperation({
       type: "run.set", field: "performanceId", value: performance.value,
     }))),
+    field("大会情報", tournamentEditor, submitButton("反映", () => sendOperation({
+      type: "tournament-info.set",
+      value: {
+        score: tournamentScore.value,
+        withdrawals: tournamentWithdrawals.value,
+        memo: tournamentMemo.value,
+      },
+    })), "点数・引き出し数・自由メモをまとめて更新します。"),
   ]));
 }
 

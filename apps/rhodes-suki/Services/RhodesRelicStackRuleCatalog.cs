@@ -8,12 +8,22 @@ public sealed record RhodesRelicStackRule(
     string Name,
     int? Maximum);
 
+public sealed record RhodesRelicNonStackRule(
+    string RelicId,
+    string CampaignId,
+    string Name,
+    string Reason);
+
 public static class RhodesRelicStackRuleCatalog
 {
     private static readonly Lazy<IReadOnlyList<RhodesRelicStackRule>> DefaultRules =
         new(() => LoadFromPath(Path.Combine(RhodesRunCatalog.ResolveDataRoot(), "relic-stack-rules.json")));
     private static readonly Lazy<IReadOnlyDictionary<string, RhodesRelicStackRule>> DefaultById =
         new(() => DefaultRules.Value.ToDictionary(rule => rule.RelicId, StringComparer.Ordinal));
+    private static readonly Lazy<IReadOnlyList<RhodesRelicNonStackRule>> DefaultNonStackRelics =
+        new(() => LoadNonStackRelicsFromPath(Path.Combine(RhodesRunCatalog.ResolveDataRoot(), "relic-stack-rules.json")));
+    private static readonly Lazy<IReadOnlySet<string>> DefaultNonStackIds =
+        new(() => DefaultNonStackRelics.Value.Select(rule => rule.RelicId).ToHashSet(StringComparer.Ordinal));
 
     public static IReadOnlyList<RhodesRelicStackRule> LoadDefault(string dataRootOverride = "")
     {
@@ -31,9 +41,31 @@ public static class RhodesRelicStackRuleCatalog
                 : null;
     }
 
+    public static IReadOnlyList<RhodesRelicNonStackRule> LoadExplicitNonStackRelics(string dataRootOverride = "")
+    {
+        if (string.IsNullOrWhiteSpace(dataRootOverride))
+            return DefaultNonStackRelics.Value;
+
+        return LoadNonStackRelicsFromPath(Path.Combine(dataRootOverride, "relic-stack-rules.json"));
+    }
+
+    public static bool IsExplicitlyNonStack(string relicId, string dataRootOverride = "")
+    {
+        if (string.IsNullOrWhiteSpace(relicId))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(dataRootOverride))
+            return DefaultNonStackIds.Value.Contains(relicId);
+
+        return LoadExplicitNonStackRelics(dataRootOverride)
+            .Any(rule => rule.RelicId.Equals(relicId, StringComparison.Ordinal));
+    }
+
     public static bool IsWithinKnownLimit(string relicId, int count)
     {
         if (count <= 0)
+            return false;
+        if (IsExplicitlyNonStack(relicId))
             return false;
 
         var rule = Find(relicId);
@@ -43,6 +75,8 @@ public static class RhodesRelicStackRuleCatalog
     public static int ClampManualCount(string relicId, int count)
     {
         if (count <= 0)
+            return 0;
+        if (IsExplicitlyNonStack(relicId))
             return 0;
 
         var maximum = Find(relicId)?.Maximum;
@@ -71,6 +105,32 @@ public static class RhodesRelicStackRuleCatalog
                 && !string.IsNullOrWhiteSpace(rule.CampaignId)
                 && !string.IsNullOrWhiteSpace(rule.Name)
                 && (rule.Maximum is null || rule.Maximum > 0))
+            .GroupBy(rule => rule.RelicId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    private static IReadOnlyList<RhodesRelicNonStackRule> LoadNonStackRelicsFromPath(string path)
+    {
+        if (!File.Exists(path))
+            return [];
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        if (!document.RootElement.TryGetProperty("nonStackRelics", out var relics)
+            || relics.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return relics.EnumerateArray()
+            .Select(item => new RhodesRelicNonStackRule(
+                JsonString(item, "relicId"),
+                JsonString(item, "campaignId"),
+                JsonString(item, "name"),
+                JsonString(item, "reason")))
+            .Where(rule => !string.IsNullOrWhiteSpace(rule.RelicId)
+                && !string.IsNullOrWhiteSpace(rule.CampaignId)
+                && !string.IsNullOrWhiteSpace(rule.Name))
             .GroupBy(rule => rule.RelicId, StringComparer.Ordinal)
             .Select(group => group.First())
             .ToArray();

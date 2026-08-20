@@ -32,8 +32,12 @@ public static class RhodesMaaLocalCandidateConverter
             ["早熱"] = "旱熱",
             ["弱氷"] = "霧氷",
             ["西の睡真"] = "西の廉貞",
+            ["西の睡"] = "西の廉貞",
             ["西の寵真"] = "西の廉貞",
             ["西の麻真"] = "西の廉貞",
+            ["西の麻員"] = "西の廉貞",
+            ["西の廃具レ"] = "西の廉貞",
+            ["西の廃員レ"] = "西の廉貞",
             ["苦寒へ"] = "苦寒",
             ["録義即睛"] = "錦囊即購",
             ["録壺即購"] = "錦囊即購",
@@ -1249,14 +1253,38 @@ public static class RhodesMaaLocalCandidateConverter
             .Where(group => !string.IsNullOrWhiteSpace(group.Key) && !string.IsNullOrWhiteSpace(group.ParentName))
             .ToArray();
         var emitted = new HashSet<string>(StringComparer.Ordinal);
+        var emittedTargets = new HashSet<string>(StringComparer.Ordinal);
+        var resolvedHeaderVariants = new List<SelectableEffectCandidate>();
         var order = 0;
+        var relevantResults = taskResults
+            .Where(taskResult => taskResult.Succeeded && IsSuiSeasonalHourEntry(taskResult.Entry))
+            .ToArray();
+        var mergedHeaderRows = relevantResults
+            .Where(taskResult => IsSuiSeasonalHourHeaderEntry(taskResult.Entry))
+            .SelectMany(taskResult => PrimaryTextResults(taskResult.RecognitionDetailJson)
+                .Select(row => IsSuiSeasonalHourSplitHeaderEntry(taskResult.Entry)
+                    ? row with { X = -1, Y = -1 }
+                    : row))
+            .Where(row => !string.IsNullOrWhiteSpace(row.Text))
+            .ToArray();
+        var headerHandled = false;
 
-        foreach (var taskResult in taskResults)
+        foreach (var taskResult in relevantResults)
         {
-            if (!taskResult.Succeeded || !IsSuiSeasonalHourEntry(taskResult.Entry))
-                continue;
+            IReadOnlyList<OcrTextResult> sourceRows;
+            if (IsSuiSeasonalHourHeaderEntry(taskResult.Entry))
+            {
+                if (headerHandled)
+                    continue;
+                headerHandled = true;
+                sourceRows = mergedHeaderRows;
+            }
+            else
+            {
+                sourceRows = PrimaryTextResults(taskResult.RecognitionDetailJson);
+            }
 
-            var rows = PrimaryTextResults(taskResult.RecognitionDetailJson)
+            var rows = sourceRows
                 .Where(row => !string.IsNullOrWhiteSpace(row.Text))
                 .OrderBy(row => row.Y < 0 ? int.MaxValue : row.Y)
                 .ThenBy(row => row.X < 0 ? int.MaxValue : row.X)
@@ -1283,19 +1311,40 @@ public static class RhodesMaaLocalCandidateConverter
                 var inferred = ResolveSuiSeasonalHourVariantFromSegment(
                     fullText,
                     groups);
-                if (inferred is not null && emitted.Add(inferred.Id))
+                if (inferred is not null)
                 {
-                    yield return SuiSeasonalHourCandidate(
-                        inferred,
-                        fullText,
-                        rows.Max(row => row.Confidence ?? 0),
-                        order++);
+                    if (IsSuiSeasonalHourHeaderEntry(taskResult.Entry)
+                        && resolvedHeaderVariants.All(item => !item.Id.Equals(inferred.Id, StringComparison.Ordinal)))
+                    {
+                        resolvedHeaderVariants.Add(inferred);
+                    }
+                    if (emitted.Add(inferred.Id))
+                    {
+                        yield return SuiSeasonalHourCandidate(
+                            inferred,
+                            fullText,
+                            rows.Max(row => row.Confidence ?? 0),
+                            order++);
+                    }
                     foreach (var target in SuiSeasonalHourTargetCandidates(
                         inferred,
                         fullText,
                         rows.Max(row => row.Confidence ?? 0)))
                     {
-                        yield return target;
+                        if (emittedTargets.Add($"{target.FieldId}|{target.EffectId}"))
+                            yield return target;
+                    }
+                }
+                else if (!IsSuiSeasonalHourHeaderEntry(taskResult.Entry)
+                    && resolvedHeaderVariants.Count == 1)
+                {
+                    foreach (var target in SuiSeasonalHourTargetCandidates(
+                        resolvedHeaderVariants[0],
+                        fullText,
+                        rows.Max(row => row.Confidence ?? 0)))
+                    {
+                        if (emittedTargets.Add($"{target.FieldId}|{target.EffectId}"))
+                            yield return target;
                     }
                 }
                 continue;
@@ -1305,34 +1354,45 @@ public static class RhodesMaaLocalCandidateConverter
             {
                 var startY = segmentStarts[index];
                 var nextY = index + 1 < segmentStarts.Length ? segmentStarts[index + 1] : int.MaxValue;
+                var segmentEndY = Math.Min(nextY, startY + 480);
                 var segmentRows = rows
-                    .Where(row => row.Y < 0 || (row.Y >= startY && row.Y < nextY))
+                    .Where(row => row.Y < 0 || (row.Y >= startY && row.Y < segmentEndY))
                     .ToArray();
                 if (segmentRows.Length == 0)
                     continue;
 
                 var rawText = string.Join("\n", segmentRows.Select(row => row.Text));
                 var segmentGroup = nameRows
-                    .Where(item => item.Row.Y < 0 || (item.Row.Y >= startY && item.Row.Y < nextY))
+                    .Where(item => item.Row.Y < 0 || (item.Row.Y >= startY && item.Row.Y < segmentEndY))
                     .Select(item => item.Group)
                     .FirstOrDefault();
                 var variant = segmentGroup is null
                     ? ResolveSuiSeasonalHourVariantFromSegment(rawText, groups)
                     : ResolveSuiSeasonalHourVariant(rawText, segmentGroup.Variants);
-                if (variant is null || !emitted.Add(variant.Id))
+                if (variant is null)
                     continue;
 
-                yield return SuiSeasonalHourCandidate(
-                    variant,
-                    rawText,
-                    segmentRows.Max(row => row.Confidence ?? 0),
-                    order++);
+                if (IsSuiSeasonalHourHeaderEntry(taskResult.Entry)
+                    && resolvedHeaderVariants.All(item => !item.Id.Equals(variant.Id, StringComparison.Ordinal)))
+                {
+                    resolvedHeaderVariants.Add(variant);
+                }
+
+                if (emitted.Add(variant.Id))
+                {
+                    yield return SuiSeasonalHourCandidate(
+                        variant,
+                        rawText,
+                        segmentRows.Max(row => row.Confidence ?? 0),
+                        order++);
+                }
                 foreach (var target in SuiSeasonalHourTargetCandidates(
                     variant,
                     rawText,
                     segmentRows.Max(row => row.Confidence ?? 0)))
                 {
-                    yield return target;
+                    if (emittedTargets.Add($"{target.FieldId}|{target.EffectId}"))
+                        yield return target;
                 }
             }
         }
@@ -1342,6 +1402,9 @@ public static class RhodesMaaLocalCandidateConverter
         IReadOnlyList<OcrTextResult> rows,
         IReadOnlyList<OcrTextResult> nameRows)
     {
+        if (nameRows.Count > 0 && rows.All(row => row.Y < 0))
+            return [-1];
+
         var levelAnchors = rows
             .Where(row => row.Y >= 0 && IsSuiSeasonalHourLevelAnchor(row.Text))
             .Select(row => row.Y)
@@ -1393,7 +1456,8 @@ public static class RhodesMaaLocalCandidateConverter
         IReadOnlyList<SuiSeasonalHourGroup> groups)
     {
         var group = ResolveSuiSeasonalHourGroup(text, groups)
-            ?? ResolveSuiSeasonalHourGroupByEvidence(text, groups);
+            ?? ResolveSuiSeasonalHourGroupByEvidence(text, groups)
+            ?? ResolveSuiSeasonalHourGroupByAwakeningAlias(text, groups);
         if (group is not null)
         {
             var groupedVariant = ResolveSuiSeasonalHourVariant(text, group.Variants);
@@ -1550,6 +1614,45 @@ public static class RhodesMaaLocalCandidateConverter
             ? effectVariant.ParentName
             : effectVariant.ParentKey;
         return groups.FirstOrDefault(group => group.Key.Equals(key, StringComparison.Ordinal));
+    }
+
+    private static SuiSeasonalHourGroup? ResolveSuiSeasonalHourGroupByAwakeningAlias(
+        string text,
+        IReadOnlyList<SuiSeasonalHourGroup> groups)
+    {
+        var normalized = NormalizeChoiceName(text);
+        if (!normalized.Contains("醒覚", StringComparison.Ordinal)
+            || !normalized.Contains("名を承けて", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var matches = groups
+            .Select(group => new
+            {
+                Group = group,
+                Aliases = group.Variants
+                    .Where(variant => variant.VariantRank.Equals("awakening", StringComparison.Ordinal))
+                    .Select(variant => SuiSeasonalHourAwakeningAlias(variant.FlavorText))
+                    .Where(alias => !string.IsNullOrWhiteSpace(alias))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray(),
+            })
+            .Where(item => item.Aliases.Any(alias =>
+                normalized.Contains($"名を承けて{alias}", StringComparison.Ordinal)))
+            .Take(2)
+            .ToArray();
+        return matches.Length == 1 ? matches[0].Group : null;
+    }
+
+    private static string SuiSeasonalHourAwakeningAlias(string flavorText)
+    {
+        var normalized = NormalizeChoiceName(flavorText);
+        var match = Regex.Match(
+            normalized,
+            "名を承けて(?<alias>.)と為",
+            RegexOptions.CultureInvariant);
+        return match.Success ? match.Groups["alias"].Value : "";
     }
 
     private static string SuiSeasonalHourFlavorAnchor(string flavorText)
@@ -2752,7 +2855,15 @@ public static class RhodesMaaLocalCandidateConverter
     {
         var results = taskResults as MaaTaskRunResult[] ?? taskResults.ToArray();
         var merged = new Dictionary<string, MaaCandidatePreview>(StringComparer.Ordinal);
+        var consolidatedActiveResults = fieldId.Equals("activeCoins", StringComparison.Ordinal)
+            ? results
+                .Where(result => result.Succeeded
+                    && result.Entry.Equals(RhodesSuiCoinImageRecognizer.ActiveConsolidatedEntry, StringComparison.Ordinal))
+                .TakeLast(1)
+                .ToArray()
+            : [];
         var activeSlotOcrResults = fieldId.Equals("activeCoins", StringComparison.Ordinal)
+            && consolidatedActiveResults.Length == 0
             ? results
                 .Where(result => result.Succeeded && IsActiveCoinSlotOcrEntry(result.Entry))
                 .ToArray()
@@ -2761,8 +2872,16 @@ public static class RhodesMaaLocalCandidateConverter
         var imageEntry = fieldId.Equals("activeCoins", StringComparison.Ordinal)
             ? RhodesSuiCoinImageRecognizer.ActiveEntry
             : RhodesSuiCoinImageRecognizer.OwnedEntry;
-        var imageResults = (preferActiveSlotOcr ? [] : results)
-            .Where(result => result.Entry.Equals(imageEntry, StringComparison.Ordinal))
+        var imageSource = consolidatedActiveResults.Length > 0
+            ? consolidatedActiveResults
+            : preferActiveSlotOcr
+                ? []
+                : results;
+        var acceptedImageEntry = consolidatedActiveResults.Length > 0
+            ? RhodesSuiCoinImageRecognizer.ActiveConsolidatedEntry
+            : imageEntry;
+        var imageResults = imageSource
+            .Where(result => result.Entry.Equals(acceptedImageEntry, StringComparison.Ordinal))
             .Select(result => RhodesSuiCoinImageRecognizer.TryRead(result, out var detectedFieldId, out var detections)
                 && detectedFieldId.Equals(fieldId, StringComparison.Ordinal)
                     ? detections
@@ -2968,6 +3087,142 @@ public static class RhodesMaaLocalCandidateConverter
         return normalizedText.Length <= normalizedCoinName.Length + 3;
     }
 
+    public static IReadOnlyList<RhodesSuiActiveCoinViewportRow> ResolveSuiActiveCoinViewport(
+        IEnumerable<MaaTaskRunResult> taskResults)
+    {
+        var results = taskResults
+            .Where(result => result.Succeeded && result.Hit)
+            .ToArray();
+        var coins = LoadSelectableEffects()
+            .Where(effect => effect.Slot == "coin" && effect.CampaignId == "is6_sui")
+            .ToArray();
+        var byNormalizedName = coins
+            .GroupBy(item => NormalizeChoiceName(item.Name), StringComparer.Ordinal)
+            .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+        var byNormalizedStatusName = LoadSelectableEffects()
+            .Where(effect => effect.Slot == "coinStatus" && effect.CampaignId == "is6_sui")
+            .GroupBy(item => NormalizeChoiceName(item.Name), StringComparer.Ordinal)
+            .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+
+        var wholePanel = results
+            .Where(result => result.Entry.Equals(
+                "RhodesOcrRegion_is6_active_coin_list_text",
+                StringComparison.Ordinal))
+            .TakeLast(1)
+            .SelectMany(result => ResolveActiveCoinViewportRows(
+                result,
+                coins,
+                byNormalizedName,
+                byNormalizedStatusName,
+                sourcePosition: null))
+            .OrderBy(row => row.SourcePosition)
+            .ToArray();
+        var focusedRows = results
+            .Where(result => IsActiveCoinSlotOcrEntry(result.Entry))
+            .SelectMany(result => ResolveActiveCoinViewportRows(
+                result,
+                coins,
+                byNormalizedName,
+                byNormalizedStatusName,
+                ActiveCoinSlotIndex(result.Entry)))
+            .GroupBy(row => row.SourcePosition)
+            .Select(group => group.OrderByDescending(row => row.Confidence).First())
+            .OrderBy(row => row.SourcePosition)
+            .ToArray();
+
+        return wholePanel.Length > focusedRows.Length ? wholePanel : focusedRows;
+    }
+
+    private static IReadOnlyList<RhodesSuiActiveCoinViewportRow> ResolveActiveCoinViewportRows(
+        MaaTaskRunResult taskResult,
+        IReadOnlyList<SelectableEffectCandidate> coins,
+        IReadOnlyDictionary<string, SelectableEffectCandidate> byNormalizedName,
+        IReadOnlyDictionary<string, SelectableEffectCandidate> byNormalizedStatusName,
+        int? sourcePosition)
+    {
+        var textResults = PrimaryTextResults(taskResult.RecognitionDetailJson)
+            .OrderBy(result => result.Y)
+            .ThenBy(result => result.X)
+            .ToArray();
+        var headingRows = textResults
+            .Where(result => LooksLikeCoinHeading(result.Text, byNormalizedName))
+            .Select(result => result.Y)
+            .Distinct()
+            .OrderBy(y => y)
+            .ToArray();
+        var resolvedRows = new List<(SelectableEffectCandidate Coin, double Confidence, int Y)>();
+        foreach (var textResult in textResults)
+        {
+            var resolved = ChoiceNameTokens(textResult.Text)
+                .Select(token => new
+                {
+                    Token = token,
+                    Coin = ResolveCoin(token.Normalized, byNormalizedName)
+                        ?? ResolveDirectionalActiveCoin(
+                            token.Normalized,
+                            textResult,
+                            textResults,
+                            coins,
+                            byNormalizedName),
+                })
+                .FirstOrDefault(item => item.Coin is not null);
+            if (resolved?.Coin is null
+                || !LooksLikeActiveCoinNameRow(
+                    resolved.Token.Normalized,
+                    NormalizeChoiceName(resolved.Coin.Name)))
+            {
+                continue;
+            }
+
+            resolvedRows.Add((
+                resolved.Coin,
+                Math.Max(0.68, textResult.Confidence ?? 0),
+                textResult.Y));
+        }
+
+        var statusRows = textResults
+            .Select(result => new
+            {
+                Result = result,
+                Status = ResolveCoinStatus(NormalizeChoiceName(result.Text), byNormalizedStatusName),
+            })
+            .Where(item => item.Status is not null)
+            .ToArray();
+        return resolvedRows
+            .Select((row, index) =>
+            {
+                var nextY = headingRows
+                    .Where(y => y > row.Y)
+                    .DefaultIfEmpty(int.MaxValue)
+                    .Min();
+                var status = statusRows
+                    .Where(item => item.Result.Y >= row.Y - 12 && item.Result.Y < nextY)
+                    .OrderBy(item => Math.Abs(item.Result.Y - row.Y))
+                    .Select(item => item.Status)
+                    .FirstOrDefault();
+                return new RhodesSuiActiveCoinViewportRow(
+                    row.Coin.Id,
+                    row.Coin.Name,
+                    status?.Id ?? "",
+                    row.Confidence,
+                    sourcePosition ?? row.Y + index);
+            })
+            .GroupBy(row => row.SourcePosition)
+            .Select(group => group.OrderByDescending(row => row.Confidence).First())
+            .OrderBy(row => row.SourcePosition)
+            .ToArray();
+    }
+
+    private static int ActiveCoinSlotIndex(string entry)
+    {
+        var suffix = entry["RhodesDynamic_is6.active_coin_list_text.slot".Length..];
+        return int.TryParse(suffix, NumberStyles.None, CultureInfo.InvariantCulture, out var slot)
+            ? slot
+            : int.MaxValue;
+    }
+
     private static SelectableEffectCandidate? ResolveDirectionalActiveCoin(
         string normalizedHeading,
         OcrTextResult headingRow,
@@ -3060,10 +3315,21 @@ public static class RhodesMaaLocalCandidateConverter
             foreach (var observation in observations)
                 merged.Remove(observation.Key);
 
+            var statusFrameSupport = imageResults
+                .SelectMany(frame => frame
+                    .Where(detection => detection.CoinId.Equals(coinId, StringComparison.Ordinal)
+                        && !string.IsNullOrWhiteSpace(detection.StatusId))
+                    .Select(detection => detection.StatusId)
+                    .Distinct(StringComparer.Ordinal))
+                .GroupBy(statusId => statusId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
             var remaining = maximumVisibleCount;
             foreach (var observation in observations
                          .Where(pair => !string.IsNullOrWhiteSpace(pair.Value.StatusId))
-                         .OrderByDescending(pair => pair.Value.Confidence ?? 0))
+                         .OrderByDescending(pair => statusFrameSupport.TryGetValue(pair.Value.StatusId, out var support)
+                             ? support
+                             : 0)
+                         .ThenByDescending(pair => pair.Value.Confidence ?? 0))
             {
                 var count = Math.Min(Math.Max(1, observation.Value.Count), remaining);
                 if (count <= 0)
@@ -3112,6 +3378,13 @@ public static class RhodesMaaLocalCandidateConverter
                 .FirstOrDefault(item => item.Coin is not null);
             if (resolved?.Coin is null)
                 continue;
+            if (taskResult.Entry.Equals("RhodesOcrRegion_is6_coin_list_text", StringComparison.Ordinal)
+                && !LooksLikeActiveCoinNameRow(
+                    resolved.Token.Normalized,
+                    NormalizeChoiceName(resolved.Coin.Name)))
+            {
+                continue;
+            }
 
             matches.Add(new RhodesSuiCoinOcrMatch(
                 resolved.Coin.Id,
@@ -3215,8 +3488,32 @@ public static class RhodesMaaLocalCandidateConverter
 
     private static bool IsSuiSeasonalHourEntry(string entry)
     {
-        return entry.Equals("RhodesOcrRegion_is6_seasonal_hour_detail_text", StringComparison.Ordinal)
+        return entry.Equals("RhodesOcrRegion_is6_seasonal_hour_header", StringComparison.Ordinal)
+            || entry.Equals("RhodesOcrRegion_is6_seasonal_hour_name", StringComparison.Ordinal)
+            || entry.Equals("RhodesOcrRegion_is6_seasonal_hour_level", StringComparison.Ordinal)
+            || entry.Equals("RhodesOcrRegion_is6_seasonal_hour_detail_text", StringComparison.Ordinal)
+            || entry.Contains("is6.seasonal_hour_header", StringComparison.OrdinalIgnoreCase)
+            || entry.Contains("is6.seasonal_hour_name", StringComparison.OrdinalIgnoreCase)
+            || entry.Contains("is6.seasonal_hour_level", StringComparison.OrdinalIgnoreCase)
             || entry.Contains("is6.seasonal_hour_detail_text", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSuiSeasonalHourHeaderEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is6_seasonal_hour_header", StringComparison.Ordinal)
+            || entry.Equals("RhodesOcrRegion_is6_seasonal_hour_name", StringComparison.Ordinal)
+            || entry.Equals("RhodesOcrRegion_is6_seasonal_hour_level", StringComparison.Ordinal)
+            || entry.Contains("is6.seasonal_hour_header", StringComparison.OrdinalIgnoreCase)
+            || entry.Contains("is6.seasonal_hour_name", StringComparison.OrdinalIgnoreCase)
+            || entry.Contains("is6.seasonal_hour_level", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSuiSeasonalHourSplitHeaderEntry(string entry)
+    {
+        return entry.Equals("RhodesOcrRegion_is6_seasonal_hour_name", StringComparison.Ordinal)
+            || entry.Equals("RhodesOcrRegion_is6_seasonal_hour_level", StringComparison.Ordinal)
+            || entry.Contains("is6.seasonal_hour_name", StringComparison.OrdinalIgnoreCase)
+            || entry.Contains("is6.seasonal_hour_level", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsHallucinationEntry(string entry)

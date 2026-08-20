@@ -55,7 +55,18 @@ public static class RhodesRecognitionRuntimePlan
     }
 
     public static bool IsScrollProfile(string profileId) =>
-        profileId is "operatorsFull" or "relicsFull" or "is4RevelationFull" or "is4ParadigmLost" or "is5ThoughtFull" or "is6CoinsFull";
+        profileId is "operatorsFull" or "relicsFull" or "is4RevelationFull" or "is4ParadigmLost" or "is5ThoughtFull" or "is6ActiveCoinsFull" or "is6CoinsFull";
+
+    public static bool ShouldDeferInitialCoinStatusRecognition(string profileId) =>
+        profileId.Equals("is6CoinsFull", StringComparison.Ordinal);
+
+    public static bool ShouldCollectNormalizedEndpoint(
+        string profileId,
+        bool currentPassCollects,
+        bool nextPassCollects) =>
+        (profileId is "is6ActiveCoinsFull" or "is6CoinsFull")
+        && !currentPassCollects
+        && nextPassCollects;
 
     public static bool ShouldSkipScroll(
         string profileId,
@@ -122,6 +133,9 @@ public static class RhodesRecognitionRuntimePlan
         }
 
         if (profileId == "relicsFull")
+            return true;
+
+        if (profileId == "is6ActiveCoinsFull")
             return true;
 
         return profileId == "operatorsFull"

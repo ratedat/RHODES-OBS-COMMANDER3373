@@ -264,9 +264,9 @@
             <TextBlock Text="OCR" Classes="fieldLabel" />
             <ComboBox Grid.Row="1" ItemsSource="{Binding OcrEngineOptions}" SelectedItem="{Binding SelectedOcrEngine, Mode=TwoWay}" ItemTemplate="{StaticResource OcrEngineComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource OcrEngineSelectionTemplate}" />
           </Grid>
-          <Grid ColumnDefinitions="*,170,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+          <Grid ColumnDefinitions="*,2*,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="4">
             <TextBlock Text="推論provider" Classes="fieldLabel" />
-            <TextBlock Grid.Column="1" IsVisible="{Binding IsDirectMlInferenceSelected}" Text="DXGI adapter index" Classes="fieldLabel" />
+            <TextBlock Grid.Column="1" IsVisible="{Binding IsDirectMlInferenceSelected}" Text="使用GPU" Classes="fieldLabel" />
             <ComboBox Grid.Row="1" ItemsSource="{Binding MaaInferenceProviderOptions}" SelectedItem="{Binding SelectedMaaInferenceProvider, Mode=TwoWay}"
                       ToolTip.Tip="{Binding SelectedMaaInferenceProvider.Detail}">
               <ComboBox.ItemTemplate>
@@ -276,10 +276,20 @@
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <NumericUpDown Grid.Row="1" Grid.Column="1" IsVisible="{Binding IsDirectMlInferenceSelected}"
-                           Minimum="0" Maximum="15" Increment="1" FormatString="0" Value="{Binding MaaInferenceDeviceId, Mode=TwoWay}"
-                           ToolTip.Tip="MaaFrameworkがDXGI EnumAdapters1で数えるGPU番号です。複数GPU環境では保存Frame比較で選択を確認してください。" />
-            <Button Grid.Row="1" Grid.Column="2" Content="保存FrameでCPU/GPU比較" Command="{Binding RunMaaInferenceBenchmarkCommand}"
+            <ComboBox Grid.Row="1" Grid.Column="1" IsVisible="{Binding IsDirectMlInferenceSelected}"
+                      ItemsSource="{Binding MaaInferenceDeviceOptions}" SelectedItem="{Binding SelectedMaaInferenceDevice, Mode=TwoWay}"
+                      ToolTip.Tip="{Binding SelectedMaaInferenceDevice.Detail}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{Binding Detail}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Row="1" Grid.Column="2" IsVisible="{Binding IsDirectMlInferenceSelected}"
+                    Content="GPU再検出" Command="{Binding RefreshMaaInferenceDevicesCommand}"
+                    ToolTip.Tip="WindowsのDXGI列挙順でGPU名・種類・メモリ容量を読み直します。保存済みのdevice IDは自動変更しません。" />
+            <Button Grid.Row="1" Grid.Column="3" Content="保存FrameでCPU/GPU比較" Command="{Binding RunMaaInferenceBenchmarkCommand}"
                     ToolTip.Tip="現在読み込まれているFrameへ同じOCR taskを2回ずつ実行し、CPUとDirectMLの結果と処理時間を比較します。" />
           </Grid>
           <TextBlock Text="{Binding MaaInferenceBenchmarkStatus}" Classes="mono" TextWrapping="Wrap" />
@@ -416,9 +426,10 @@
         </Border>
       </Expander>
 
-      <Expander Header="接続検証（撮影ベンチマーク／確認付きタッチ）" IsVisible="{Binding IsAdbConnectionTargetSelected}" IsExpanded="False">
+      <Expander Header="接続検証（撮影／確認付きタッチ）" IsExpanded="False">
         <Border Classes="settingsCard">
           <StackPanel Spacing="12">
+            <TextBlock Text="PC版・ADBのうち、選択中の接続先だけへ送信します。" Classes="supporting" TextWrapping="Wrap" />
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
               <Button Content="スクリーンショット10回計測" Command="{Binding RunAdbScreenshotBenchmarkCommand}" />
               <TextBlock Grid.Column="1" Text="{Binding AdbBenchmarkStatus}" Classes="mono" TextWrapping="Wrap" VerticalAlignment="Center" />

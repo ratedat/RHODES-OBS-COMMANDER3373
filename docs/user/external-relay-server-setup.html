@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+  <title>外部中継サーバー導入ガイド | RHODES OBS COMMANDER3373</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #e9edf1;
+      --surface: #f8f9fa;
+      --surface-strong: #ffffff;
+      --text: #17212b;
+      --muted: #536273;
+      --line: #c4ccd4;
+      --line-strong: #8c99a6;
+      --accent: #135f92;
+      --accent-soft: #e3f0f8;
+      --warning: #8a4b08;
+      --warning-soft: #fff1dc;
+      --danger: #9b2c2c;
+      --danger-soft: #fdeaea;
+      --success: #176a45;
+      --code: #eef1f4;
+      font-family: "Noto Sans JP", "Segoe UI", "Yu Gothic UI", sans-serif;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--canvas);
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    a { color: var(--accent); text-underline-offset: 0.18em; }
+    a:hover { text-decoration-thickness: 2px; }
+    a:focus-visible, summary:focus-visible {
+      outline: 3px solid rgba(19, 95, 146, 0.35);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 10;
+      top: 12px;
+      left: 12px;
+      padding: 8px 12px;
+      color: #fff;
+      background: var(--accent);
+      transform: translateY(-160%);
+    }
+
+    .skip-link:focus { transform: translateY(0); }
+
+    header {
+      color: #fff;
+      background: #263746;
+      border-bottom: 4px solid var(--accent);
+    }
+
+    .header-inner,
+    .layout {
+      width: min(1180px, calc(100% - 40px));
+      margin-inline: auto;
+    }
+
+    .header-inner { padding: 34px 0 30px; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #bcd8ea;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    h1, h2, h3 { line-height: 1.35; }
+    h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.7rem); text-wrap: balance; }
+    header p { max-width: 760px; margin: 12px 0 0; color: #e2e8ed; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+      padding: 24px 0 56px;
+    }
+
+    nav,
+    main {
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(25, 37, 49, 0.08);
+    }
+
+    nav {
+      position: sticky;
+      top: 16px;
+      padding: 18px;
+    }
+
+    nav strong { display: block; margin-bottom: 8px; }
+    nav ol { margin: 0; padding-left: 1.4rem; }
+    nav li { margin: 5px 0; }
+    nav a { color: var(--text); font-size: 0.9rem; }
+
+    main { min-width: 0; padding: clamp(22px, 4vw, 48px); }
+    section + section { margin-top: 48px; }
+    h2 { margin: 0 0 16px; padding-bottom: 9px; border-bottom: 2px solid var(--line); font-size: 1.55rem; }
+    h3 { margin: 28px 0 10px; font-size: 1.16rem; }
+    p { margin: 10px 0; }
+    ul, ol { padding-left: 1.5rem; }
+    li + li { margin-top: 6px; }
+
+    .lead {
+      margin: 0 0 28px;
+      padding: 18px 20px;
+      background: var(--accent-soft);
+      border-left: 5px solid var(--accent);
+      border-radius: 5px;
+    }
+
+    .callout {
+      margin: 18px 0;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-left-width: 5px;
+      border-radius: 5px;
+      background: var(--surface);
+    }
+
+    .callout strong { display: block; margin-bottom: 3px; }
+    .callout.warning { border-left-color: var(--warning); background: var(--warning-soft); }
+    .callout.danger { border-left-color: var(--danger); background: var(--danger-soft); }
+    .callout.success { border-left-color: var(--success); }
+
+    .route {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .route div {
+      position: relative;
+      padding: 16px;
+      text-align: center;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .route div:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -19px;
+      top: 50%;
+      z-index: 1;
+      width: 24px;
+      color: var(--accent);
+      font-weight: 700;
+      transform: translateY(-50%);
+    }
+
+    .route small { display: block; color: var(--muted); }
+
+    table {
+      width: 100%;
+      margin: 16px 0;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    th, td { padding: 10px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: var(--code); }
+
+    code, pre { font-family: "Cascadia Mono", "Consolas", monospace; }
+    code { padding: 0.1em 0.3em; background: var(--code); border-radius: 3px; }
+    :not(pre) > code { overflow-wrap: anywhere; word-break: break-word; }
+    pre {
+      overflow-x: auto;
+      margin: 12px 0 20px;
+      padding: 15px;
+      color: #eff4f8;
+      background: #202b35;
+      border: 1px solid #101820;
+      border-radius: 6px;
+      font-size: 0.86rem;
+      line-height: 1.6;
+      tab-size: 2;
+    }
+    pre code { padding: 0; color: inherit; background: transparent; }
+
+    .checklist { list-style: none; padding-left: 0; }
+    .checklist li { position: relative; padding-left: 1.8rem; }
+    .checklist li::before { content: "□"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
+    details {
+      margin: 10px 0;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--surface);
+    }
+
+    summary { cursor: pointer; padding: 12px 14px; font-weight: 700; }
+    details > div { padding: 0 14px 14px; }
+
+    footer {
+      padding: 22px 20px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.86rem;
+    }
+
+    @media (max-width: 820px) {
+      .header-inner, .layout { width: min(calc(100% - 24px), 720px); }
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; }
+      nav ol { columns: 2; }
+      .route { grid-template-columns: 1fr; }
+      .route div:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -25px; transform: translateX(50%); }
+      table { display: block; overflow-x: auto; }
+    }
+
+    @media (max-width: 520px) {
+      body { font-size: 15px; }
+      .header-inner { padding: 26px 0 24px; }
+      .eyebrow { font-size: 0.68rem; overflow-wrap: anywhere; }
+      h1 { font-size: 1.65rem; }
+      main { padding: 20px 16px; }
+      nav ol { columns: 1; }
+    }
+
+    @media print {
+      body { background: #fff; font-size: 10.5pt; }
+      header { color: #000; background: #fff; border-bottom: 2px solid #000; }
+      header p, .eyebrow { color: #333; }
+      .layout { display: block; width: 100%; padding: 0; }
+      nav, .skip-link { display: none; }
+      main { padding: 12mm; border: 0; box-shadow: none; }
+      section { break-inside: avoid; }
+      pre { white-space: pre-wrap; color: #000; background: #f1f1f1; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">本文へ移動</a>
+  <header>
+    <div class="header-inner">
+      <p class="eyebrow">RHODES OBS COMMANDER3373 / TOURNAMENT RELAY</p>
+      <h1>外部中継サーバー導入ガイド</h1>
+      <p>独自ドメインとHTTPSを使い、大会向け遠隔入力を常設運用するための手順です。</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav aria-label="目次">
+      <strong>目次</strong>
+      <ol>
+        <li><a href="#overview">使い分け</a></li>
+        <li><a href="#limits">現行版の制約</a></li>
+        <li><a href="#prepare">事前準備</a></li>
+        <li><a href="#linux">Linuxで常設</a></li>
+        <li><a href="#proxy">HTTPS公開</a></li>
+        <li><a href="#windows">Windowsで検証</a></li>
+        <li><a href="#app">3373の設定</a></li>
+        <li><a href="#check">公開前確認</a></li>
+        <li><a href="#trouble">トラブル対応</a></li>
+        <li><a href="#security">安全上の注意</a></li>
+      </ol>
+    </nav>
+
+    <main id="main" tabindex="-1">
+      <p class="lead"><strong>先に結論：</strong>短時間の大会や検証なら3373の「簡易公開」が適しています。独自ドメイン、常設URL、通信経路の管理が必要な場合だけ、外部中継サーバーを導入してください。</p>
+
+      <section id="overview">
+        <h2>1. 構成と使い分け</h2>
+        <p>外部中継サーバーは、配信PCと入力担当者の間で表示用snapshotと操作を受け渡します。ADB、MAAFramework、3373の設定ファイルを外部公開するものではありません。</p>
+        <div class="route" role="img" aria-label="配信PCの3373からHTTPSリバースプロキシを経由し、RHODES Tournament Relayへ接続する構成。入力担当者もHTTPSで接続する。">
+          <div><strong>配信PC</strong><small>3373 / HTTPS接続</small></div>
+          <div><strong>公開サーバー</strong><small>443 TLS → loopback</small></div>
+          <div><strong>Relay</strong><small>127.0.0.1:5180</small></div>
+        </div>
+        <p>入力担当者のブラウザーも、同じ公開URLへHTTPSで接続します。内部ポート5180はインターネットへ直接公開しません。</p>
+        <h3>構成を選ぶ実例</h3>
+        <table>
+          <thead><tr><th>利用場面</th><th>選ぶ構成</th><th>理由</th></tr></thead>
+          <tbody>
+            <tr><td>2時間だけのDiscord大会。入力担当者は1人で、URLが毎回変わってもよい。</td><td>3373の簡易公開</td><td>VPS、独自ドメイン、HTTPS証明書を管理せずに開始できます。</td></tr>
+            <tr><td>毎月開催する定例大会。固定URLと運営管理下の通信先が必要。</td><td>外部中継サーバー</td><td>独自ドメインを使い、運営側で稼働と更新時期を管理できます。</td></tr>
+          </tbody>
+        </table>
+        <p>外部中継サーバーを選んだ場合も、入力担当者へ渡すのは試合ごとに発行されるURLです。管理トークンは渡しません。</p>
+      </section>
+
+      <section id="limits">
+        <h2>2. 現行版の制約</h2>
+        <ul>
+          <li>セッション、snapshot、操作履歴はプロセスのメモリだけに保持します。</li>
+          <li>relayを再起動すると、進行中のセッションは失われます。</li>
+          <li>セッションの有効期限は、最後の正常な操作から12時間です。</li>
+          <li>操作履歴は1セッション最大500件、入力画面へ返す履歴は直近100件です。</li>
+          <li>1リクエストの上限は8 MiBです。</li>
+          <li>複数プロセス間で共有する永続ストアは未実装です。</li>
+        </ul>
+        <div class="callout warning"><strong>単一プロセスで運用してください</strong>現行版はロードバランサーによる複数台分散、無停止更新、永続監査保管には対応していません。</div>
+      </section>
+
+      <section id="prepare">
+        <h2>3. 事前準備</h2>
+        <h3>用意するもの</h3>
+        <ul>
+          <li>公開用のLinuxサーバーまたはWindows Server</li>
+          <li>専用サブドメイン（例：<code>relay.example.com</code>）</li>
+          <li>HTTPS証明書を管理できるリバースプロキシ</li>
+          <li>Node.js v24系と3373のソース一式</li>
+          <li>十分に長い管理トークン</li>
+        </ul>
+        <p>公開デバッグ版で検証しているNode.jsはv24.18.0です。relayはNode.js標準ライブラリだけを使うため、<code>npm install</code>は不要です。</p>
+
+        <h3>管理トークンを生成する</h3>
+        <pre><code>node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"</code></pre>
+        <p>出力値はパスワード管理ソフトへ保存します。入力担当者には渡しません。</p>
+
+        <h3>環境変数</h3>
+        <table>
+          <thead><tr><th>変数</th><th>推奨値</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>TOURNAMENT_RELAY_HOST</code></td><td><code>127.0.0.1</code></td><td>relayの待受先</td></tr>
+            <tr><td><code>TOURNAMENT_RELAY_PORT</code></td><td><code>5180</code></td><td>外部公開しない内部ポート</td></tr>
+            <tr><td><code>TOURNAMENT_RELAY_PUBLIC_URL</code></td><td><code>https://relay.example.com</code></td><td>入力担当者URLの公開基点</td></tr>
+            <tr><td><code>TOURNAMENT_RELAY_ADMIN_TOKEN</code></td><td>生成した値</td><td>セッション作成要求の認証</td></tr>
+          </tbody>
+        </table>
+        <div class="callout danger"><strong>直接公開しないでください</strong><code>TOURNAMENT_RELAY_HOST=0.0.0.0</code>だけでは通信を暗号化できません。relayはloopbackで待ち受け、公開側をHTTPSリバースプロキシにします。</div>
+        <h3>このガイドで使う完成例</h3>
+        <table>
+          <thead><tr><th>項目</th><th>例示する値</th></tr></thead>
+          <tbody>
+            <tr><td>公開サーバーのIPアドレス</td><td><code>203.0.113.10</code></td></tr>
+            <tr><td>公開URL</td><td><code>https://relay.example.com</code></td></tr>
+            <tr><td>relayの内部待受</td><td><code>127.0.0.1:5180</code></td></tr>
+            <tr><td>3373のプレイヤー表示名</td><td><code>第1試合 Player A</code></td></tr>
+            <tr><td>管理トークン</td><td><code>&lt;実際に生成した管理トークン&gt;</code></td></tr>
+          </tbody>
+        </table>
+        <div class="callout warning"><strong>例示値はそのまま使えません</strong><code>203.0.113.10</code>と<code>example.com</code>は説明用の予約値です。実際のサーバーIPアドレスと取得済みドメインへ置き換えてください。管理トークンのプレースホルダーも本番用の値ではありません。</div>
+      </section>
+
+      <section id="linux">
+        <h2>4. Linuxで常設する</h2>
+        <h3>ソースを配置する</h3>
+        <pre><code>sudo useradd --system --home-dir /opt/rhodes-relay --shell /usr/sbin/nologin rhodes-relay
+sudo git clone --depth 1 https://github.com/ratedat/RHODES-OBS-COMMANDER3373.git /opt/rhodes-relay
+sudo chown -R rhodes-relay:rhodes-relay /opt/rhodes-relay
+node --version</code></pre>
+
+        <h3>秘密情報を分離する</h3>
+        <pre><code>sudo install -m 600 -o root -g root /dev/null /etc/rhodes-relay.env
+sudoedit /etc/rhodes-relay.env</code></pre>
+        <pre><code>TOURNAMENT_RELAY_HOST=127.0.0.1
+TOURNAMENT_RELAY_PORT=5180
+TOURNAMENT_RELAY_PUBLIC_URL=https://relay.example.com
+TOURNAMENT_RELAY_ADMIN_TOKEN=ここを生成した管理トークンに置き換える</code></pre>
+
+        <h3>systemdへ登録する</h3>
+        <p><code>/etc/systemd/system/rhodes-relay.service</code>を作成します。</p>
+        <pre><code>[Unit]
+Description=RHODES OBS COMMANDER3373 Tournament Relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rhodes-relay
+Group=rhodes-relay
+WorkingDirectory=/opt/rhodes-relay
+EnvironmentFile=/etc/rhodes-relay.env
+ExecStart=/usr/bin/node services/tournament-relay/server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+        <p><code>node</code>が別の場所にある場合は、<code>command -v node</code>で確認して<code>ExecStart</code>を変更します。</p>
+        <pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now rhodes-relay
+sudo systemctl status rhodes-relay
+curl --fail http://127.0.0.1:5180/api/health</code></pre>
+        <p>正常時は<code>{"ok":true,"service":"rhodes-tournament-relay"}</code>が返ります。</p>
+        <h3>内部接続を確認する実例</h3>
+        <p>サーバー内部では、リバースプロキシを通さずrelayへ接続します。</p>
+        <pre><code>curl --fail http://127.0.0.1:5180/api/health</code></pre>
+        <p>ここで<code>Connection refused</code>になる場合は、DNSやCaddyを調べる前に<code>systemctl status</code>と<code>journalctl</code>でrelayの起動失敗を確認します。</p>
+      </section>
+
+      <section id="proxy">
+        <h2>5. HTTPSで公開する</h2>
+        <p>Caddyを使う場合の最小構成です。</p>
+        <pre><code>relay.example.com {
+    reverse_proxy 127.0.0.1:5180
+}</code></pre>
+        <ul>
+          <li>DNSのAまたはAAAAレコードを公開サーバーへ向けます。</li>
+          <li>公開側はHTTPS 443、転送先は<code>http://127.0.0.1:5180</code>とします。</li>
+          <li>request body上限を8 MiB以上にします。</li>
+          <li>内部ポート5180はファイアウォールで外部へ開けません。</li>
+        </ul>
+        <div class="callout warning"><strong>URLのquery stringをログへ残さない</strong>入力担当者URLには入力コードが含まれます。relay用ホストではquery stringを除外するか、アクセスログを無効化してください。</div>
+        <h3>外部接続を確認する実例</h3>
+        <p>DNSとCaddyを設定した後、配信PCなどサーバー外の端末から確認します。</p>
+        <pre><code>curl --fail https://relay.example.com/api/health</code></pre>
+        <p>内部確認と同じJSONが返れば、DNS、TLS、リバースプロキシ、relayまで接続できています。</p>
+        <p>続いて、管理トークンなしではセッションを作れないことを確認します。</p>
+        <pre><code>curl -i -X POST https://relay.example.com/api/sessions \
+  -H 'content-type: application/json' \
+  --data '{"playerLabel":"接続確認"}'</code></pre>
+        <p>正常に保護されている場合はHTTP 401となり、次のresponse bodyが返ります。</p>
+        <pre><code>{"error":"中継サーバーの管理認証に失敗しました。","code":"admin_auth_failed"}</code></pre>
+        <div class="callout success"><strong>401は期待結果です</strong>管理トークンを持たない第三者がセッションを作れないことを示しています。</div>
+      </section>
+
+      <section id="windows">
+        <h2>6. Windowsで動作を検証する</h2>
+        <p>リポジトリ直下でPowerShellを開き、現在のプロセスだけに環境変数を設定します。</p>
+        <pre><code>$env:TOURNAMENT_RELAY_HOST = '127.0.0.1'
+$env:TOURNAMENT_RELAY_PORT = '5180'
+$env:TOURNAMENT_RELAY_PUBLIC_URL = 'https://relay.example.com'
+$env:TOURNAMENT_RELAY_ADMIN_TOKEN = '生成した管理トークン'
+node .\services\tournament-relay\server.mjs</code></pre>
+        <p>常設時は専用Windowsアカウントとサービス管理手段を用意し、relayはloopbackだけで待ち受けます。共有PCでは管理トークンをPowerShell履歴へ残さないでください。</p>
+        <h3>同じPCだけで事前確認する実例</h3>
+        <p>DNSとHTTPSを設定する前に、relayと3373の接続だけを1台のWindows PCで確認できます。PowerShellをリポジトリ直下で開きます。</p>
+        <pre><code>$relayToken = Read-Host '管理トークン' -AsSecureString
+$env:TOURNAMENT_RELAY_HOST = '127.0.0.1'
+$env:TOURNAMENT_RELAY_PORT = '5180'
+$env:TOURNAMENT_RELAY_PUBLIC_URL = 'http://127.0.0.1:5180'
+$env:TOURNAMENT_RELAY_ADMIN_TOKEN = [System.Net.NetworkCredential]::new('', $relayToken).Password
+node .\services\tournament-relay\server.mjs</code></pre>
+        <p>別のPowerShellで<code>Invoke-RestMethod 'http://127.0.0.1:5180/api/health'</code>を実行します。</p>
+        <table>
+          <thead><tr><th>3373の項目</th><th>入力例</th></tr></thead>
+          <tbody>
+            <tr><td>プレイヤー表示名</td><td><code>ローカル接続確認</code></td></tr>
+            <tr><td>Relay URL</td><td><code>http://127.0.0.1:5180</code></td></tr>
+            <tr><td>Relay管理トークン</td><td>PowerShellへ入力したものと同じトークン</td></tr>
+          </tbody>
+        </table>
+        <p>「開始」を押して<code>http://127.0.0.1:5180/input/...</code>形式のURLが表示されれば、3373とrelayの接続は成功です。この確認だけでは外部のDNSとHTTPSを検証できないため、公開前に別端末から公開URLを開きます。</p>
+      </section>
+
+      <section id="app">
+        <h2>7. 3373から接続する</h2>
+        <ol>
+          <li>「出力」を開き、ローカル配信サーバーを起動します。</li>
+          <li>「大会入力」へプレイヤー表示名を入力します。</li>
+          <li>「外部中継サーバー（上級者向け）」を開きます。</li>
+          <li><code>Relay URL</code>へ公開HTTPS URLを入力します。</li>
+          <li><code>Relay管理トークン</code>へサーバーと同じ値を入力します。</li>
+          <li>「開始」を押し、入力担当者URLを本人へ個別に共有します。</li>
+          <li>別ブラウザーでURLを開き、現在のラン状態と変更反映を確認します。</li>
+          <li>大会終了時に「停止」を押し、セッションを削除します。</li>
+        </ol>
+        <p>管理トークンは開始要求にだけ使われ、開始成功後は3373の画面から消去されます。設定ファイルには保存されません。</p>
+        <p>3373はrelayを約750ミリ秒間隔で確認します。3373を終了すると、入力内容の検証とローカルstateへの反映も停止します。</p>
+        <h3>大会当日の反映実例</h3>
+        <p>配信中のOBSに源石錐24個が表示され、同じタイミングで秘宝が1個増えた場面を考えます。</p>
+        <ol>
+          <li>3373のプレイヤー表示名へ<code>第1試合 Player A</code>を入力し、外部中継セッションを開始します。</li>
+          <li>運営担当者は<code>https://relay.example.com/input/&lt;session-id&gt;?code=&lt;6文字コード&gt;</code>形式のURLを入力担当者へ個別に送ります。</li>
+          <li>入力担当者は源石錐を24から31へ変更し、追加された秘宝を選んで「変更を送信」を押します。</li>
+          <li>relayは変更を<code>pending</code>として保持し、3373が次の確認周期で取得します。</li>
+          <li>3373は源石錐の範囲と秘宝IDを検証し、問題がなければ一度のstate更新として反映します。</li>
+          <li>入力履歴が<code>applied</code>となり、OBSにも源石錐31個と追加された秘宝が表示されます。</li>
+        </ol>
+        <div class="callout warning"><strong>不正な項目が混ざった場合</strong>複数項目のうち1項目でも不正なら全体が<code>rejected</code>となります。源石錐だけが変わるような部分反映は行いません。</div>
+      </section>
+
+      <section id="check">
+        <h2>8. 公開前の確認</h2>
+        <ul class="checklist">
+          <li><code>https://relay.example.com/api/health</code>が200を返す。</li>
+          <li>HTTPがHTTPSへ転送される。</li>
+          <li>インターネットから5180番ポートへ直接接続できない。</li>
+          <li>管理トークンなしのセッション作成要求が401になる。</li>
+          <li>3373が生成した入力担当者URLが公開ドメインになっている。</li>
+          <li>入力画面で現在値が表示され、テスト変更が3373で検証・反映される。</li>
+          <li>「停止」後、同じ入力担当者URLを再利用できない。</li>
+          <li>プロキシログへquery stringと認証headerが保存されない。</li>
+        </ul>
+      </section>
+
+      <section id="trouble">
+        <h2>9. トラブル対応</h2>
+        <details open><summary>502 Bad Gateway</summary><div>relayプロセスと<code>127.0.0.1:5180/api/health</code>を確認します。Linuxでは<code>sudo systemctl status rhodes-relay</code>を使います。</div></details>
+        <details><summary>管理認証に失敗する</summary><div>サーバーの<code>TOURNAMENT_RELAY_ADMIN_TOKEN</code>と3373へ入力した値が一致しているか確認します。</div></details>
+        <details><summary>入力URLがlocalhostになる</summary><div><code>TOURNAMENT_RELAY_PUBLIC_URL</code>と3373の<code>Relay URL</code>を公開HTTPS URLへ直します。</div></details>
+        <details><summary>セッションが見つからない</summary><div>relayの再起動、12時間の期限切れ、または「停止」の実行によってセッションが削除されていないか確認します。</div></details>
+        <details><summary>URLは開くが表示が古い</summary><div>3373で「現在値を同期」を押し、3373、ローカル配信サーバー、relayの接続状態を確認します。</div></details>
+        <h3>502を切り分ける実例</h3>
+        <p>外部の<code>https://relay.example.com/api/health</code>が502でも、サーバー内の<code>http://127.0.0.1:5180/api/health</code>が成功する場合、relayは動いています。Caddyの転送先、サービス起動順、ローカルファイアウォールを確認します。</p>
+        <p>内部のhealth checkも失敗する場合は、先にrelayの起動ログを確認します。</p>
+        <h3>管理認証だけ失敗する実例</h3>
+        <p>公開health checkは成功するのに3373の「開始」だけが失敗する場合、通信経路は通っています。環境変数の変更後にrelayを再起動していない、または3373へ古い管理トークンを入力した可能性を確認します。</p>
+        <h3>再起動後にURLが無効になる実例</h3>
+        <p>大会中にrelayを再起動すると、以前の入力担当者URLは<code>session_not_found</code>になります。3373から新しいセッションを開始し、新しいURLを入力担当者へ送り直します。</p>
+        <p>Linuxの直近ログは次のコマンドで確認できます。</p>
+        <pre><code>sudo journalctl -u rhodes-relay -n 200 --no-pager</code></pre>
+        <p>ログを共有するときは、管理トークン、hostToken、入力担当者URLのquery stringを削除してください。</p>
+      </section>
+
+      <section id="security">
+        <h2>10. 更新と安全上の注意</h2>
+        <p>更新は大会が行われていない時間に実施します。relayの再起動で進行中のセッションが失われるためです。</p>
+        <pre><code>cd /opt/rhodes-relay
+sudo -u rhodes-relay git pull --ff-only
+sudo systemctl restart rhodes-relay
+curl --fail http://127.0.0.1:5180/api/health</code></pre>
+        <ul>
+          <li>relayをTLSなしでインターネットへ公開しません。</li>
+          <li>管理トークンをURL、ソース、設定共有、Discordへ貼り付けません。</li>
+          <li>入力担当者にはセッションごとのURLだけを個別に渡します。</li>
+          <li>入力担当者URLを知る第三者も操作を送れるため、公開チャンネルへ貼りません。</li>
+          <li>relayはセッションをディスク保存しませんが、OS、プロキシ、ホスティング事業者が通常の接続情報を記録する場合があります。</li>
+        </ul>
+        <div class="callout success"><strong>漏えい時の対応</strong>新しい管理トークンを生成し、環境変数ファイルを更新してrelayを再起動します。その後、3373から新しいセッションを開始してください。</div>
+      </section>
+    </main>
+  </div>
+
+  <footer>この文書は同梱されたrelay実装に基づくオフラインマニュアルです。更新後は環境変数、期限、保存方式を再確認してください。</footer>
+</body>
+</html>

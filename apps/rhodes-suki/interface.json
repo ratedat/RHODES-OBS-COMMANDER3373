@@ -30,7 +30,7 @@
       "controller": [
         "android_adb"
       ],
-      "hash": "4ae67899c1c9d326"
+      "hash": "cb3c021ca68c4541"
     }
   ],
   "group": [
@@ -593,6 +593,21 @@
       ]
     },
     {
+      "name": "rhodes_ocr_region_is6_active_coin_count",
+      "label": "$task.rhodes_ocr_region_is6_active_coin_count.label",
+      "entry": "RhodesOcrRegion_is6_active_coin_count",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "$task.rhodes_ocr_region_is6_active_coin_count.description",
+      "group": [
+        "is6ActiveCoinsFull"
+      ]
+    },
+    {
       "name": "rhodes_ocr_region_is6_active_coin_list_text",
       "label": "$task.rhodes_ocr_region_is6_active_coin_list_text.label",
       "entry": "RhodesOcrRegion_is6_active_coin_list_text",
@@ -605,6 +620,36 @@
       "description": "$task.rhodes_ocr_region_is6_active_coin_list_text.description",
       "group": [
         "is6ActiveCoinsFull"
+      ]
+    },
+    {
+      "name": "rhodes_ocr_region_is6_seasonal_hour_name",
+      "label": "$task.rhodes_ocr_region_is6_seasonal_hour_name.label",
+      "entry": "RhodesOcrRegion_is6_seasonal_hour_name",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "$task.rhodes_ocr_region_is6_seasonal_hour_name.description",
+      "group": [
+        "is6SeasonalHours"
+      ]
+    },
+    {
+      "name": "rhodes_ocr_region_is6_seasonal_hour_level",
+      "label": "$task.rhodes_ocr_region_is6_seasonal_hour_level.label",
+      "entry": "RhodesOcrRegion_is6_seasonal_hour_level",
+      "controller": [
+        "android_adb"
+      ],
+      "resource": [
+        "base"
+      ],
+      "description": "$task.rhodes_ocr_region_is6_seasonal_hour_level.description",
+      "group": [
+        "is6SeasonalHours"
       ]
     },
     {
@@ -1954,6 +1999,12 @@
           }
         },
         {
+          "name": "rhodes_ocr_region_is6_active_coin_count",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
           "name": "rhodes_ocr_region_is6_active_coin_list_text",
           "option": {
             "enabled": true
@@ -1968,6 +2019,18 @@
       "task": [
         {
           "name": "rhodes_screen_run_map_footer",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is6_seasonal_hour_name",
+          "option": {
+            "enabled": true
+          }
+        },
+        {
+          "name": "rhodes_ocr_region_is6_seasonal_hour_level",
           "option": {
             "enabled": true
           }

@@ -33,7 +33,12 @@
     "squadRandomEffectOptionId": null,
     "difficultyTierId": null,
     "performanceId": null,
-    "ingot": null
+    "ingot": null,
+    "tournamentInfo": {
+      "score": null,
+      "withdrawals": null,
+      "memo": ""
+    }
   },
   "relics": [],
   "relicStackCounts": {},

@@ -5,6 +5,7 @@ function clone(value) {
 export function operationKey(operation = {}) {
   if (operation.type === "campaign.set") return "campaign";
   if (operation.type === "run.set") return `run:${operation.field || ""}`;
+  if (operation.type === "tournament-info.set") return "tournament-info";
   if (operation.type === "special.set") return `special:${operation.field || ""}`;
   if (operation.type === "operator.set") return `operator:${operation.operatorId || ""}`;
   if (operation.type === "relic.set") return `relic:${operation.relicId || ""}`;
@@ -49,6 +50,7 @@ function clearRunState(state) {
     squadRandomEffectOptionId: null,
     special: { ...(next.run?.special || {}), [campaignId]: {} },
   };
+  delete next.run.tournamentInfo;
   next.operators = [];
   next.operatorCounts = {};
   next.operatorPromotionLevels = {};
@@ -107,6 +109,10 @@ export function applyDraftOperation(state, operation, master) {
         next.run.squad = null;
         next.run.squadRandomEffectOptionId = null;
       }
+      break;
+    }
+    case "tournament-info.set": {
+      next.run.tournamentInfo = clone(operation.value || {});
       break;
     }
     case "special.set": {

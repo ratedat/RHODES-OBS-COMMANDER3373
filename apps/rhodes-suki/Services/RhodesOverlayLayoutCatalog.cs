@@ -17,6 +17,7 @@ public static class RhodesOverlayLayoutCatalog
         new("effects", true, 40, 420, 520, 320, 3),
         new("bosses", true, 600, 420, 760, 220, 4),
         new("special", true, 1280, 36, 600, 180, 2),
+        new("tournament", false, 600, 680, 760, 130, 7),
     ];
 
     public static IReadOnlyList<SukiOverlayLayoutState> BuildDefaultStates()
@@ -92,6 +93,7 @@ public static class RhodesOverlayLayoutCatalog
             "effects" => "発動効果",
             "bosses" => "ボス",
             "special" => "特殊値",
+            "tournament" => "大会情報",
             _ => id,
         };
     }

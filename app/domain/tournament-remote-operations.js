@@ -9,6 +9,7 @@ import {
 } from "./special-loadouts.js";
 import { getSelectableEffectsForField } from "./selectable-effects.js";
 import { asSpecialArray, asSpecialObject, clampSpecialNumber } from "./special-values.js";
+import { normalizeTournamentInfo } from "./tournament-output.js";
 
 const RUN_FIELDS = new Set([
   "ingot",
@@ -206,6 +207,7 @@ function normalizeRunValue(state, master, field, value) {
 function operationSummary(operation, state, master) {
   if (operation.type === "campaign.set") return `統合戦略を${currentCampaign(state, master).shortTitle || currentCampaign(state, master).title}に変更`;
   if (operation.type === "run.set") return `${operation.field}を更新`;
+  if (operation.type === "tournament-info.set") return "大会情報を更新";
   if (operation.type === "special.set") return `特殊値 ${operation.field} を更新`;
   if (operation.type === "operator.set") return `オペレーター ${operation.operatorId} を更新`;
   if (operation.type === "relic.set") return `秘宝 ${operation.relicId} を更新`;
@@ -229,6 +231,7 @@ function clearEditableRunState(state) {
     squadRandomEffectOptionId: null,
     special: { ...(next.run?.special || {}), [campaignId]: {} },
   };
+  delete next.run.tournamentInfo;
   next.operators = [];
   next.operatorCounts = {};
   next.operatorPromotionLevels = {};
@@ -277,6 +280,10 @@ export function applyTournamentRemoteOperation(state, master, operation) {
         next.run.squad = null;
         next.run.squadRandomEffectOptionId = null;
       }
+      break;
+    }
+    case "tournament-info.set": {
+      next.run.tournamentInfo = normalizeTournamentInfo(operation.value);
       break;
     }
     case "special.set": {

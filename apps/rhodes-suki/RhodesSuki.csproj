@@ -33,6 +33,9 @@
     <Content Include="..\..\docs\user\adb-connection-settings.html" Link="docs\adb-connection-settings.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\docs\user\external-relay-server-setup.html" Link="docs\external-relay-server-setup.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="resource\base\pipeline\rhodes.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

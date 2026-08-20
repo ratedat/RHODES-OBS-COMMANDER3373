@@ -22,6 +22,14 @@ test("portable publisher includes local-image master data and assets", () => {
   );
   assert.match(
     source,
+    /path\.join\(repoRoot, "docs", "guides", "external-relay-server-setup\.md"\)/,
+  );
+  assert.match(
+    source,
+    /path\.join\(outputDir, "docs", "guides", "external-relay-server-setup\.md"\)/,
+  );
+  assert.match(
+    source,
     /path\.join\(repoRoot, "docs", "guides", "output-css-customization\.md"\)/,
   );
   assert.match(
@@ -65,16 +73,65 @@ test("interactive HTML CSS guide is self-contained and shows concrete overlay ex
   assert.match(guide, /<html lang="ja">/u);
   assert.match(guide, /実際の表示を見ながらCSSを作る/u);
   assert.match(guide, /id="overlay-demo"/u);
-  assert.match(guide, /id="generated-css"/u);
+  assert.match(guide, /id="live-css-editor"/u);
   assert.match(guide, /--overlay-font-color/);
   assert.match(guide, /--overlay-canvas-background-rgb/);
   assert.match(guide, /透明キャンバス.*半透明枠/u);
-  assert.match(guide, /setProperty\("--overlay-canvas-background-alpha"/);
-  assert.match(guide, /setProperty\("--overlay-background-alpha"/);
+  assert.match(guide, /id="item-background-alpha"/u);
+  assert.match(guide, /id="item-border-color"/u);
   assert.match(guide, /\.overlay-part-operators/);
   assert.match(guide, /@font-face/);
   assert.match(guide, /background-image: url/u);
   assert.match(guide, /navigator\.clipboard\.writeText/);
   assert.doesNotMatch(guide, /<script[^>]+src=/u);
   assert.doesNotMatch(guide, /<link[^>]+rel=["']stylesheet/u);
+});
+
+test("interactive HTML CSS guide provides a safe live editor for copying into 3373", () => {
+  const guide = readFileSync(
+    new URL("../出力CSSカスタマイズガイド.html", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(guide, /<textarea id="live-css-editor"(?![^>]*readonly)[^>]*>/u);
+  assert.match(guide, /id="live-css-character-count"/u);
+  assert.match(guide, /id="live-css-validation"[^>]+aria-live="polite"/u);
+  assert.match(guide, /id="live-preview-css"/u);
+  assert.match(guide, /livePreviewStyle\.textContent = draft/u);
+  assert.match(guide, /addEventListener\("input", scheduleLivePreview\)/u);
+  assert.match(guide, /CSSを3373用にコピー/u);
+  assert.match(guide, /javascript:/u);
+  assert.match(guide, /65,536/u);
+  assert.match(guide, /不透明度は0から1/u);
+});
+
+test("overlay CSS exposes stable tokens for nested cards and text", () => {
+  const styles = readFileSync(new URL("../app/styles.css", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../app/app.js", import.meta.url), "utf8");
+  const guide = readFileSync(
+    new URL("../docs/guides/output-css-customization.md", import.meta.url),
+    "utf8",
+  );
+
+  for (const token of [
+    "--overlay-item-background-rgb",
+    "--overlay-item-background-alpha",
+    "--overlay-item-border-color",
+    "--overlay-strong-font-color",
+    "--overlay-muted-font-color",
+    "--overlay-shadow",
+  ]) {
+    assert.match(app, new RegExp(token));
+    assert.match(styles, new RegExp(`var\\(${token}`));
+    assert.match(guide, new RegExp(token));
+  }
+
+  assert.match(
+    styles,
+    /\.overlay-part-relic[\s\S]+background: rgb\(var\(--overlay-item-background-rgb/u,
+  );
+  assert.match(
+    styles,
+    /\.overlay-part-operator[\s\S]+border: 1px solid var\(--overlay-item-border-color/u,
+  );
 });

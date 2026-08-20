@@ -17,6 +17,20 @@
       --accent: #4fd1b5;
       --accent-strong: #15967f;
       --warning: #e0b24e;
+      --overlay-font-color: #ffffff;
+      --overlay-canvas-background-rgb: 0 0 0;
+      --overlay-canvas-background-alpha: 0;
+      --overlay-background-rgb: 8 11 12;
+      --overlay-background-alpha: .88;
+      --overlay-border-color: #4a5658;
+      --overlay-accent-color: #55d6be;
+      --overlay-font-scale: 1;
+      --overlay-item-background-rgb: 8 11 12;
+      --overlay-item-background-alpha: .58;
+      --overlay-item-border-color: #4a5658;
+      --overlay-strong-font-color: #ffffff;
+      --overlay-muted-font-color: #a7b4b5;
+      --overlay-shadow: 0 12px 36px rgb(0 0 0 / 30%);
       font-family: "Segoe UI", "Noto Sans JP", sans-serif;
     }
 
@@ -261,14 +275,6 @@
     }
 
     .overlay-demo {
-      --overlay-font-color: #ffffff;
-      --overlay-background-rgb: 8 11 12;
-      --overlay-background-alpha: .88;
-      --overlay-canvas-background-rgb: 0 0 0;
-      --overlay-canvas-background-alpha: 0;
-      --overlay-border-color: #4a5658;
-      --overlay-accent-color: #55d6be;
-      --overlay-font-scale: 1;
       width: min(100%, 920px);
       padding: 12px;
       color: var(--overlay-font-color);
@@ -282,7 +288,7 @@
       border: 1px solid var(--overlay-border-color);
       border-radius: 5px;
       background: rgb(var(--overlay-background-rgb) / var(--overlay-background-alpha));
-      box-shadow: 0 12px 30px rgb(0 0 0 / 22%);
+      box-shadow: var(--overlay-shadow);
     }
 
     .overlay-demo.no-frame-background .demo-surface {
@@ -319,6 +325,7 @@
       font-weight: 800;
       text-overflow: ellipsis;
       white-space: nowrap;
+      color: var(--overlay-strong-font-color);
     }
 
     .demo-grid {
@@ -343,8 +350,8 @@
       display: grid;
       place-items: center;
       min-height: 58px;
-      border: 1px solid var(--overlay-border-color);
-      background: rgb(255 255 255 / 6%);
+      border: 1px solid var(--overlay-item-border-color);
+      background: rgb(var(--overlay-item-background-rgb) / var(--overlay-item-background-alpha));
       font-size: 1.6em;
     }
 
@@ -361,8 +368,8 @@
       align-items: center;
       min-height: 42px;
       padding: 4px 7px;
-      border: 1px solid var(--overlay-border-color);
-      background: rgb(255 255 255 / 5%);
+      border: 1px solid var(--overlay-item-border-color);
+      background: rgb(var(--overlay-item-background-rgb) / var(--overlay-item-background-alpha));
     }
 
     .operator-avatar {
@@ -381,6 +388,7 @@
       font-weight: 750;
       text-overflow: ellipsis;
       white-space: nowrap;
+      color: var(--overlay-strong-font-color);
     }
 
     .stars { color: #e4b94e; font-size: .72em; }
@@ -394,10 +402,10 @@
 
     .special-overlay-chip {
       padding: 5px 9px;
-      border: 1px solid var(--overlay-border-color);
+      border: 1px solid var(--overlay-item-border-color);
       border-radius: 999px;
       color: var(--overlay-font-color);
-      background: rgb(var(--overlay-background-rgb) / .58);
+      background: rgb(var(--overlay-item-background-rgb) / var(--overlay-item-background-alpha));
     }
 
     .special-overlay-chip strong { color: var(--overlay-accent-color); }
@@ -419,9 +427,30 @@
       margin-top: 18px;
     }
 
+    .editor-heading {
+      display: flex;
+      gap: 16px;
+      align-items: end;
+      justify-content: space-between;
+    }
+
+    .editor-heading p {
+      max-width: 760px;
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    #live-css-character-count {
+      flex: none;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+    }
+
     textarea {
       width: 100%;
-      min-height: 190px;
+      min-height: 320px;
       resize: vertical;
       padding: 14px;
       border: 1px solid var(--line);
@@ -431,6 +460,17 @@
       line-height: 1.5;
     }
 
+    textarea[aria-invalid="true"] { border-color: #e26d62; }
+
+    .validation-message {
+      min-height: 24px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .validation-message[data-level="warning"] { color: #f1c760; }
+    .validation-message[data-level="error"] { color: #ff8d83; }
+
     .copy-row {
       display: flex;
       gap: 12px;
@@ -438,7 +478,7 @@
       justify-content: flex-end;
     }
 
-    #copy-status { min-height: 24px; color: var(--accent); }
+    #copy-status { min-height: 24px; margin-right: auto; color: var(--accent); }
 
     .reference-grid {
       display: grid;
@@ -533,6 +573,9 @@
       .relic-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .checklist { columns: 1; }
       .preview-toolbar { align-items: flex-start; flex-direction: column; }
+      .editor-heading,
+      .copy-row { align-items: stretch; flex-direction: column; }
+      #copy-status { margin-right: 0; }
     }
 
     @media print {
@@ -551,6 +594,7 @@
       html { scroll-behavior: auto; }
     }
   </style>
+  <style id="live-preview-css"></style>
 </head>
 <body>
   <header class="site-header">
@@ -617,12 +661,32 @@
             <div class="color-row"><input id="canvas-background-color" type="color" value="#000000"><output id="canvas-background-color-value">#000000</output></div>
           </div>
           <div class="control-group">
+            <label for="canvas-background-alpha">全体背景の不透明度 <output id="canvas-background-alpha-value">0.88</output></label>
+            <input id="canvas-background-alpha" type="range" min="0" max="1" value="0.88" step="0.01">
+          </div>
+          <div class="control-group">
             <label for="frame-background-color">枠背景色</label>
             <div class="color-row"><input id="frame-background-color" type="color" value="#080b0c"><output id="frame-background-color-value">#080B0C</output></div>
           </div>
           <div class="control-group">
+            <label for="frame-background-alpha">枠背景の不透明度 <output id="frame-background-alpha-value">0.88</output></label>
+            <input id="frame-background-alpha" type="range" min="0" max="1" value="0.88" step="0.01">
+          </div>
+          <div class="control-group">
+            <label for="item-background-color">内側カード背景色</label>
+            <div class="color-row"><input id="item-background-color" type="color" value="#080b0c"><output id="item-background-color-value">#080B0C</output></div>
+          </div>
+          <div class="control-group">
+            <label for="item-background-alpha">内側カードの不透明度 <output id="item-background-alpha-value">0.58</output></label>
+            <input id="item-background-alpha" type="range" min="0" max="1" value="0.58" step="0.01">
+          </div>
+          <div class="control-group">
             <label for="border-color">枠色</label>
             <div class="color-row"><input id="border-color" type="color" value="#4a5658"><output id="border-color-value">#4A5658</output></div>
+          </div>
+          <div class="control-group">
+            <label for="item-border-color">内側カード枠色</label>
+            <div class="color-row"><input id="item-border-color" type="color" value="#4a5658"><output id="item-border-color-value">#4A5658</output></div>
           </div>
           <div class="control-group">
             <label for="accent-color">強調色</label>
@@ -640,10 +704,15 @@
             <input id="frame-background-enabled" type="checkbox" checked>
             枠背景を表示
           </label>
+          <label class="toggle-row toggle-label" for="shadow-enabled">
+            <input id="shadow-enabled" type="checkbox" checked>
+            枠の影を表示
+          </label>
           <div class="control-group">
             <span class="toggle-label">プリセット</span>
             <div class="preset-row">
               <button class="button" type="button" data-preset="standard">標準</button>
+              <button class="button" type="button" data-preset="white">白＋シアン枠</button>
               <button class="button" type="button" data-preset="contrast">高コントラスト</button>
               <button class="button" type="button" data-preset="gold">大会ゴールド</button>
               <button class="button" type="button" data-preset="clear">透明＋枠</button>
@@ -694,20 +763,33 @@
                   </div>
                 </div>
                 <div class="demo-surface part-demo overlay-part overlay-part-operators">
+                  <div class="section-label">Relics 2</div>
+                  <div class="relic-list" aria-label="個別ウィンドウの秘宝表示見本">
+                    <div class="relic-tile overlay-part-relic"><span aria-hidden="true">📕</span><span>知識の橋</span></div>
+                    <div class="relic-tile overlay-part-relic"><span aria-hidden="true">🪙</span><span>生還者の契約</span></div>
+                  </div>
                   <div class="section-label">Operators 3</div>
-                  <div class="operator-row"><span class="operator-avatar">W</span><span class="operator-name">ウィシャデル</span><span class="stars">★★★★★★</span></div>
-                  <div class="operator-row"><span class="operator-avatar">M</span><span class="operator-name">メイ</span><span class="stars">★★★★</span></div>
-                  <div class="operator-row"><span class="operator-avatar">R</span><span class="operator-name">予備隊員</span><span class="stars">★★★</span></div>
+                  <div class="operator-row overlay-part-operator"><span class="operator-avatar">W</span><span class="operator-name">ウィシャデル</span><span class="stars">★★★★★★</span></div>
+                  <div class="operator-row overlay-part-operator"><span class="operator-avatar">M</span><span class="operator-name">メイ</span><span class="stars">★★★★</span></div>
+                  <div class="operator-row overlay-part-operator"><span class="operator-avatar">R</span><span class="operator-name">予備隊員</span><span class="stars">★★★</span></div>
                 </div>
               </div>
             </div>
           </div>
           <div class="code-output">
-            <label for="generated-css"><strong>生成されたCSS</strong></label>
-            <textarea id="generated-css" readonly spellcheck="false"></textarea>
+            <div class="editor-heading">
+              <div>
+                <label for="live-css-editor"><strong>リアルタイムCSSエディター</strong></label>
+                <p>ここへCSSを直接入力すると、上の統合Overlay／個別ウィンドウ見本へ反映します。簡易設定を動かしても、管理ブロック外へ追記したCSSは保持されます。</p>
+              </div>
+              <output id="live-css-character-count" for="live-css-editor">0 / 65,536</output>
+            </div>
+            <textarea id="live-css-editor" maxlength="65536" spellcheck="false" aria-describedby="live-css-validation"></textarea>
+            <div class="validation-message" id="live-css-validation" role="status" aria-live="polite"></div>
             <div class="copy-row">
               <span id="copy-status" role="status" aria-live="polite"></span>
-              <button class="button primary" id="copy-css" type="button">CSSをコピー</button>
+              <button class="button" id="reset-live-css" type="button">標準CSSに戻す</button>
+              <button class="button primary" id="copy-css" type="button">CSSを3373用にコピー</button>
             </div>
           </div>
         </div>
@@ -726,6 +808,12 @@
         <article class="reference-item"><code>--overlay-border-color</code><p>カードと部品の枠色。</p></article>
         <article class="reference-item"><code>--overlay-accent-color</code><p>見出しや重要値の強調色。</p></article>
         <article class="reference-item"><code>--overlay-font-scale</code><p>Overlay全体の文字倍率。</p></article>
+        <article class="reference-item"><code>--overlay-item-background-rgb</code><p>秘宝・オペレーター・数値など、内側カードの背景色。</p></article>
+        <article class="reference-item"><code>--overlay-item-background-alpha</code><p>内側カード背景の不透明度。0から1。</p></article>
+        <article class="reference-item"><code>--overlay-item-border-color</code><p>内側カード専用の枠色。</p></article>
+        <article class="reference-item"><code>--overlay-strong-font-color</code><p>名前や数値など、強い文字の色。</p></article>
+        <article class="reference-item"><code>--overlay-muted-font-color</code><p>ラベルや補足など、弱い文字の色。</p></article>
+        <article class="reference-item"><code>--overlay-shadow</code><p>統合枠・個別枠の影。消す場合はnone。</p></article>
         <article class="reference-item"><code>.overlay-app</code><p>すべての統合Overlay。</p></article>
         <article class="reference-item"><code>.overlay-part-operators</code><p>オペレーター個別ウィンドウのみ。</p></article>
         <article class="reference-item"><code>.overlay-part-special</code><p>特殊値個別ウィンドウのみ。</p></article>
@@ -738,6 +826,31 @@
   --overlay-background-rgb: 8 11 12;
   --overlay-background-alpha: .86;
 }</code></pre>
+      <h3>白背景＋シアン枠＋赤アクセント</h3>
+      <p>上の「白＋シアン枠」プリセットと同じ構成です。内側カードも変数だけで揃うため、各divへの高詳細度セレクターは不要です。</p>
+      <pre><code>@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&amp;display=swap");
+
+:root {
+  --overlay-font-color: #0a0a0a;
+  --overlay-canvas-background-rgb: 255 255 255;
+  --overlay-canvas-background-alpha: 1;
+  --overlay-background-rgb: 255 255 255;
+  --overlay-background-alpha: 1;
+  --overlay-border-color: #00ffff;
+  --overlay-accent-color: #c8001e;
+  --overlay-item-background-rgb: 255 255 255;
+  --overlay-item-background-alpha: 1;
+  --overlay-item-border-color: #00ffff;
+  --overlay-strong-font-color: #111111;
+  --overlay-muted-font-color: #333333;
+  --overlay-shadow: none;
+}
+
+.overlay-app,
+.overlay-part {
+  font-family: "Noto Sans JP", sans-serif;
+}</code></pre>
+      <div class="notice">不透明度は0から1です。完全不透明は1で、1.8や1.80ではありません。エディターは範囲外の値を検出して警告します。</div>
       <div class="notice">CSS側で追加した画像や影まで消したい場合は、全体背景・枠背景それぞれのOFF用クラスで明示的に解除します。</div>
       <pre><code>html.overlay-canvas-background-disabled .overlay-app,
 html.overlay-frame-background-disabled .overlay-part-shell {
@@ -809,71 +922,150 @@ html.overlay-frame-background-disabled .overlay-part-shell {
 
   <script>
     (() => {
+      const MAX_CSS_LENGTH = 65_536;
+      const BASIC_START = "/* RHODES BASIC SETTINGS START */";
+      const BASIC_END = "/* RHODES BASIC SETTINGS END */";
       const inputs = {
         font: document.querySelector("#font-color"),
         canvasBackground: document.querySelector("#canvas-background-color"),
+        canvasAlpha: document.querySelector("#canvas-background-alpha"),
         frameBackground: document.querySelector("#frame-background-color"),
+        frameAlpha: document.querySelector("#frame-background-alpha"),
+        itemBackground: document.querySelector("#item-background-color"),
+        itemAlpha: document.querySelector("#item-background-alpha"),
         border: document.querySelector("#border-color"),
+        itemBorder: document.querySelector("#item-border-color"),
         accent: document.querySelector("#accent-color"),
         scale: document.querySelector("#font-scale"),
         canvasEnabled: document.querySelector("#canvas-background-enabled"),
         frameEnabled: document.querySelector("#frame-background-enabled"),
+        shadowEnabled: document.querySelector("#shadow-enabled"),
       };
       const demo = document.querySelector("#overlay-demo");
       const stage = document.querySelector("#overlay-stage");
-      const output = document.querySelector("#generated-css");
+      const output = document.querySelector("#live-css-editor");
+      const characterCount = document.querySelector("#live-css-character-count");
+      const validation = document.querySelector("#live-css-validation");
+      const livePreviewStyle = document.querySelector("#live-preview-css");
       const status = document.querySelector("#copy-status");
       const integratedMode = document.querySelector("#integrated-mode");
       const partMode = document.querySelector("#part-mode");
+      let previewTimer = 0;
 
       const hexToChannels = (hex) => {
         const value = hex.replace("#", "");
         return `${parseInt(value.slice(0, 2), 16)} ${parseInt(value.slice(2, 4), 16)} ${parseInt(value.slice(4, 6), 16)}`;
       };
 
+      const buildBasicCss = () => {
+        const canvasBackgroundEnabled = inputs.canvasEnabled.checked;
+        const frameBackgroundEnabled = inputs.frameEnabled.checked;
+        return `${BASIC_START}\n:root {\n  --overlay-font-color: ${inputs.font.value};\n  --overlay-canvas-background-rgb: ${hexToChannels(inputs.canvasBackground.value)};\n  --overlay-canvas-background-alpha: ${canvasBackgroundEnabled ? inputs.canvasAlpha.value : "0"};\n  --overlay-background-rgb: ${hexToChannels(inputs.frameBackground.value)};\n  --overlay-background-alpha: ${frameBackgroundEnabled ? inputs.frameAlpha.value : "0"};\n  --overlay-border-color: ${inputs.border.value};\n  --overlay-accent-color: ${inputs.accent.value};\n  --overlay-font-scale: ${inputs.scale.value};\n  --overlay-item-background-rgb: ${hexToChannels(inputs.itemBackground.value)};\n  --overlay-item-background-alpha: ${inputs.itemAlpha.value};\n  --overlay-item-border-color: ${inputs.itemBorder.value};\n  --overlay-strong-font-color: var(--overlay-font-color);\n  --overlay-muted-font-color: color-mix(in srgb, var(--overlay-font-color) 68%, transparent);\n  --overlay-shadow: ${inputs.shadowEnabled.checked ? "0 12px 36px rgb(0 0 0 / 30%)" : "none"};\n}\n${BASIC_END}`;
+      };
+
+      const replaceBasicBlock = (draft, block) => {
+        const start = draft.indexOf(BASIC_START);
+        const end = draft.indexOf(BASIC_END);
+        if (start >= 0 && end > start) {
+          return `${draft.slice(0, start)}${block}${draft.slice(end + BASIC_END.length)}`;
+        }
+        return draft.trim() ? `${draft.trimEnd()}\n\n${block}` : block;
+      };
+
+      const validateDraft = (draft) => {
+        const messages = [];
+        let allowed = true;
+        if (draft.length > MAX_CSS_LENGTH) {
+          messages.push("CSSは65,536文字以内にしてください。");
+          allowed = false;
+        }
+        if (/javascript\s*:/iu.test(draft)) {
+          messages.push("3373が拒否するjavascript:を含むため、プレビューとコピーを停止しました。");
+          allowed = false;
+        }
+
+        const alphaPattern = /--overlay-(?:canvas-background|background|item-background)-alpha\s*:\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+))/giu;
+        const invalidAlpha = [...draft.matchAll(alphaPattern)].some((match) => {
+          const value = Number(match[1]);
+          return !Number.isFinite(value) || value < 0 || value > 1;
+        });
+        if (invalidAlpha) {
+          messages.push("不透明度は0から1です。完全不透明は1で、1.8や1.80ではありません。");
+        }
+
+        return { allowed, messages, level: allowed ? (messages.length ? "warning" : "ok") : "error" };
+      };
+
+      const applyLivePreview = () => {
+        const draft = output.value;
+        const result = validateDraft(draft);
+        characterCount.value = `${draft.length.toLocaleString("ja-JP")} / ${MAX_CSS_LENGTH.toLocaleString("ja-JP")}`;
+        validation.textContent = result.messages.join(" ") || "入力内容を見本へリアルタイムで反映しています。";
+        validation.dataset.level = result.level;
+        output.setAttribute("aria-invalid", result.allowed ? "false" : "true");
+        if (!result.allowed) {
+          livePreviewStyle.textContent = "";
+          return;
+        }
+        livePreviewStyle.textContent = draft;
+      };
+
+      const scheduleLivePreview = () => {
+        window.clearTimeout(previewTimer);
+        previewTimer = window.setTimeout(applyLivePreview, 120);
+      };
+
       const render = () => {
         const canvasBackgroundEnabled = inputs.canvasEnabled.checked;
         const frameBackgroundEnabled = inputs.frameEnabled.checked;
-        demo.style.setProperty("--overlay-font-color", inputs.font.value);
-        demo.style.setProperty("--overlay-canvas-background-rgb", hexToChannels(inputs.canvasBackground.value));
-        demo.style.setProperty("--overlay-canvas-background-alpha", canvasBackgroundEnabled ? "0.88" : "0");
-        demo.style.setProperty("--overlay-background-rgb", hexToChannels(inputs.frameBackground.value));
-        demo.style.setProperty("--overlay-background-alpha", frameBackgroundEnabled ? "0.88" : "0");
-        demo.style.setProperty("--overlay-border-color", inputs.border.value);
-        demo.style.setProperty("--overlay-accent-color", inputs.accent.value);
-        demo.style.setProperty("--overlay-font-scale", inputs.scale.value);
         demo.classList.toggle("no-canvas-background", !canvasBackgroundEnabled);
         demo.classList.toggle("no-frame-background", !frameBackgroundEnabled);
 
         document.querySelector("#font-color-value").value = inputs.font.value.toUpperCase();
         document.querySelector("#canvas-background-color-value").value = inputs.canvasBackground.value.toUpperCase();
+        document.querySelector("#canvas-background-alpha-value").value = Number(inputs.canvasAlpha.value).toFixed(2);
         document.querySelector("#frame-background-color-value").value = inputs.frameBackground.value.toUpperCase();
+        document.querySelector("#frame-background-alpha-value").value = Number(inputs.frameAlpha.value).toFixed(2);
+        document.querySelector("#item-background-color-value").value = inputs.itemBackground.value.toUpperCase();
+        document.querySelector("#item-background-alpha-value").value = Number(inputs.itemAlpha.value).toFixed(2);
         document.querySelector("#border-color-value").value = inputs.border.value.toUpperCase();
+        document.querySelector("#item-border-color-value").value = inputs.itemBorder.value.toUpperCase();
         document.querySelector("#accent-color-value").value = inputs.accent.value.toUpperCase();
         document.querySelector("#font-scale-value").value = Number(inputs.scale.value).toFixed(2);
 
-        output.value = `:root {\n  --overlay-font-color: ${inputs.font.value};\n  --overlay-canvas-background-rgb: ${hexToChannels(inputs.canvasBackground.value)};\n  --overlay-canvas-background-alpha: ${canvasBackgroundEnabled ? "0.88" : "0"};\n  --overlay-background-rgb: ${hexToChannels(inputs.frameBackground.value)};\n  --overlay-background-alpha: ${frameBackgroundEnabled ? "0.88" : "0"};\n  --overlay-border-color: ${inputs.border.value};\n  --overlay-accent-color: ${inputs.accent.value};\n  --overlay-font-scale: ${inputs.scale.value};\n}`;
+        output.value = replaceBasicBlock(output.value, buildBasicCss());
+        status.textContent = "";
+        scheduleLivePreview();
       };
 
       const presets = {
-        standard: { font: "#ffffff", canvasBackground: "#080b0c", frameBackground: "#080b0c", border: "#4a5658", accent: "#55d6be", scale: "1", canvasEnabled: true, frameEnabled: true },
-        contrast: { font: "#ffffff", canvasBackground: "#000000", frameBackground: "#000000", border: "#ffffff", accent: "#6fffe2", scale: "1.15", canvasEnabled: true, frameEnabled: true },
-        gold: { font: "#fff8e8", canvasBackground: "#090704", frameBackground: "#12100a", border: "#8d7336", accent: "#e5bc54", scale: "1.05", canvasEnabled: true, frameEnabled: true },
-        clear: { font: "#ffffff", canvasBackground: "#000000", frameBackground: "#080b0c", border: "#4a5658", accent: "#55d6be", scale: "1.1", canvasEnabled: false, frameEnabled: true },
+        standard: { font: "#ffffff", canvasBackground: "#080b0c", canvasAlpha: "0.88", frameBackground: "#080b0c", frameAlpha: "0.88", itemBackground: "#080b0c", itemAlpha: "0.58", border: "#4a5658", itemBorder: "#4a5658", accent: "#55d6be", scale: "1", canvasEnabled: true, frameEnabled: true, shadowEnabled: true },
+        white: { font: "#0a0a0a", canvasBackground: "#ffffff", canvasAlpha: "1", frameBackground: "#ffffff", frameAlpha: "1", itemBackground: "#ffffff", itemAlpha: "1", border: "#00ffff", itemBorder: "#00ffff", accent: "#c8001e", scale: "1", canvasEnabled: true, frameEnabled: true, shadowEnabled: false },
+        contrast: { font: "#ffffff", canvasBackground: "#000000", canvasAlpha: "1", frameBackground: "#000000", frameAlpha: "1", itemBackground: "#000000", itemAlpha: "0.8", border: "#ffffff", itemBorder: "#ffffff", accent: "#6fffe2", scale: "1.15", canvasEnabled: true, frameEnabled: true, shadowEnabled: false },
+        gold: { font: "#fff8e8", canvasBackground: "#090704", canvasAlpha: "0.9", frameBackground: "#12100a", frameAlpha: "0.9", itemBackground: "#12100a", itemAlpha: "0.72", border: "#8d7336", itemBorder: "#8d7336", accent: "#e5bc54", scale: "1.05", canvasEnabled: true, frameEnabled: true, shadowEnabled: true },
+        clear: { font: "#ffffff", canvasBackground: "#000000", canvasAlpha: "0", frameBackground: "#080b0c", frameAlpha: "0.88", itemBackground: "#080b0c", itemAlpha: "0.58", border: "#4a5658", itemBorder: "#4a5658", accent: "#55d6be", scale: "1.1", canvasEnabled: false, frameEnabled: true, shadowEnabled: true },
       };
 
       Object.values(inputs).forEach((input) => input.addEventListener("input", render));
+      output.addEventListener("input", scheduleLivePreview);
+      output.addEventListener("input", () => { status.textContent = ""; });
       document.querySelectorAll("[data-preset]").forEach((button) => {
         button.addEventListener("click", () => {
           const preset = presets[button.dataset.preset];
           inputs.font.value = preset.font;
           inputs.canvasBackground.value = preset.canvasBackground;
+          inputs.canvasAlpha.value = preset.canvasAlpha;
           inputs.frameBackground.value = preset.frameBackground;
+          inputs.frameAlpha.value = preset.frameAlpha;
+          inputs.itemBackground.value = preset.itemBackground;
+          inputs.itemAlpha.value = preset.itemAlpha;
           inputs.border.value = preset.border;
+          inputs.itemBorder.value = preset.itemBorder;
           inputs.accent.value = preset.accent;
           inputs.scale.value = preset.scale;
           inputs.canvasEnabled.checked = preset.canvasEnabled;
           inputs.frameEnabled.checked = preset.frameEnabled;
+          inputs.shadowEnabled.checked = preset.shadowEnabled;
           render();
         });
       });
@@ -890,6 +1082,12 @@ html.overlay-frame-background-disabled .overlay-part-shell {
       });
 
       document.querySelector("#copy-css").addEventListener("click", async () => {
+        const result = validateDraft(output.value);
+        if (!result.allowed) {
+          status.textContent = "エラーを修正してからコピーしてください。";
+          output.focus();
+          return;
+        }
         try {
           await navigator.clipboard.writeText(output.value);
           status.textContent = "CSSをコピーしました。";
@@ -899,6 +1097,18 @@ html.overlay-frame-background-disabled .overlay-part-shell {
           const copied = document.execCommand("copy");
           status.textContent = copied ? "CSSをコピーしました。" : "CSSを選択しました。Ctrl+Cでコピーしてください。";
         }
+      });
+
+      document.querySelector("#reset-live-css").addEventListener("click", () => {
+        output.value = "";
+        const preset = presets.standard;
+        for (const [key, value] of Object.entries(preset)) {
+          if (!(key in inputs)) continue;
+          if (typeof value === "boolean") inputs[key].checked = value;
+          else inputs[key].value = value;
+        }
+        render();
+        status.textContent = "標準CSSへ戻しました。";
       });
 
       render();

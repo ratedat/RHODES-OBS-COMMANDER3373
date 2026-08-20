@@ -125,6 +125,36 @@
       </Grid>
 
       <Border Classes="surfaceCard">
+        <Grid RowDefinitions="Auto,Auto" RowSpacing="12">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="2">
+              <TextBlock Text="大会メモ" Classes="sectionTitle" />
+              <TextBlock Text="点数・引き出し数・任意メモを独立したOBS部品へ送ります。" Classes="caption" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="primaryAction" Content="大会情報を反映"
+                    Command="{Binding ApplyTournamentInfoCommand}" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="180,180,*" ColumnSpacing="12">
+            <StackPanel Spacing="5">
+              <TextBlock Text="点数" Classes="eyebrow" />
+              <NumericUpDown Minimum="-999999" Maximum="999999" Increment="1" FormatString="0"
+                             Value="{Binding ManualTournamentScore, Mode=TwoWay}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="5">
+              <TextBlock Text="引き出し数" Classes="eyebrow" />
+              <NumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0"
+                             Value="{Binding ManualTournamentWithdrawals, Mode=TwoWay}" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="5">
+              <TextBlock Text="配信用メモ" Classes="eyebrow" />
+              <TextBox Text="{Binding ManualTournamentMemo, Mode=TwoWay}"
+                       MaxLength="160" PlaceholderText="例: 決勝 第2試合 / 投資目標 300" />
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <Border Classes="surfaceCard">
         <StackPanel Spacing="12">
           <StackPanel Spacing="2">
             <TextBlock Text="ボス" Classes="sectionTitle" />

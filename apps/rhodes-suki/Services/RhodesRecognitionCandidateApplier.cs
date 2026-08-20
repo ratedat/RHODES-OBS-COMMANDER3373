@@ -1636,8 +1636,20 @@ public static class RhodesRecognitionCandidateApplier
         string relicId,
         ICollection<string> applied)
     {
-        if (string.IsNullOrWhiteSpace(relicId)
-            || candidate.Count <= 0
+        if (string.IsNullOrWhiteSpace(relicId))
+            return false;
+
+        if (RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(relicId))
+        {
+            var existingCounts = EnsureObject(state, "relicStackCounts");
+            if (!existingCounts.Remove(relicId))
+                return false;
+
+            applied.Add($"relic-stack-clear:{relicId}");
+            return true;
+        }
+
+        if (candidate.Count <= 0
             || !RhodesRelicStackRuleCatalog.IsWithinKnownLimit(relicId, candidate.Count))
         {
             return false;
@@ -2151,6 +2163,7 @@ public static class RhodesRecognitionCandidateApplier
                 "ingot",
                 "idea",
                 "special",
+                "tournamentInfo",
             }
             .Concat(RhodesMaaRecognitionPolicy.AbandonedRunFields))
         {

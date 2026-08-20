@@ -8,7 +8,7 @@ public static partial class RhodesOutputProfileService
 {
     public const string ProfileKind = "rhodes-output-profile";
     public const int ProfileSchemaVersion = 1;
-    public const int OutputSchemaVersion = 3;
+    public const int OutputSchemaVersion = 4;
     public const int MaxCustomCssLength = 65_536;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -48,6 +48,10 @@ public static partial class RhodesOutputProfileService
             .GroupBy(part => part.Id, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.Last())
             .ToArray();
+        var operatorRarities = NormalizeOperatorRarities(preferences.OperatorRarities);
+        var individualOperatorRarities = preferences.IndividualOperatorRarities is null
+            ? operatorRarities.ToArray()
+            : NormalizeOperatorRarities(preferences.IndividualOperatorRarities);
 
         return preferences with
         {
@@ -73,6 +77,12 @@ public static partial class RhodesOutputProfileService
                     ?? individualBackgroundOpacity,
                 0,
                 100),
+            OperatorRarities = operatorRarities,
+            IndividualRelicIconOnly = preferences.IndividualRelicIconOnly
+                ?? preferences.RelicIconOnly,
+            IndividualOperatorIconOnly = preferences.IndividualOperatorIconOnly
+                ?? preferences.OperatorIconOnly,
+            IndividualOperatorRarities = individualOperatorRarities,
         };
     }
 
@@ -145,6 +155,16 @@ public static partial class RhodesOutputProfileService
     {
         var trimmed = value?.Trim() ?? "";
         return CssHexColorRegex().IsMatch(trimmed) ? trimmed.ToUpperInvariant() : fallback;
+    }
+
+    private static IReadOnlyList<int> NormalizeOperatorRarities(IReadOnlyList<int>? values)
+    {
+        int[] allRarities = [6, 5, 4, 3, 2, 1];
+        if (values is null)
+            return allRarities;
+
+        var selected = values.ToHashSet();
+        return allRarities.Where(selected.Contains).ToArray();
     }
 
     private static string NormalizeCustomCss(string? value)

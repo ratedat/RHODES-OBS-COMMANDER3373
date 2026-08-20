@@ -9,6 +9,7 @@ export const defaultCustomOverlayLayout = Object.freeze([
   { id: "effects", enabled: true, x: 40, y: 420, width: 520, height: 320, zIndex: 3 },
   { id: "bosses", enabled: true, x: 600, y: 420, width: 760, height: 220, zIndex: 4 },
   { id: "special", enabled: true, x: 1280, y: 36, width: 600, height: 180, zIndex: 2 },
+  { id: "tournament", enabled: false, x: 600, y: 680, width: 760, height: 130, zIndex: 7 },
 ]);
 
 function clampInteger(value, minimum, maximum, fallback) {

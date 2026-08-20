@@ -18,6 +18,7 @@ import { normalizeOperatorCounts, operatorCountFor, operatorRosterCount } from "
 import { normalizeOperatorPromotionLevels, operatorPromotionLevelFor } from "./domain/operator-promotions.js";
 import { prioritizeOwnedRelics, supportsRelicUsedFlag } from "./domain/relic-usage.js";
 import { normalizeRelicStackCounts, relicStackCountFor, relicStackMaximum, relicSupportsStackCount } from "./domain/relic-stacks.js";
+import { normalizeTournamentInfo, tournamentPresentationClassNames } from "./domain/tournament-output.js";
 import { buildStartTemplateSummary, getEffectiveRelicIds, mergeEffectiveSpecial, phaseLabel } from "./domain/start-templates.js";
 import { controlModeOptions, getControlMode, normalizeControlMode } from "./domain/ui-modes.js";
 import { apiJson, masterUrl, resetStateUrl, stateUrl } from "./lib/api.js";
@@ -27,7 +28,7 @@ import * as selectableEffects from "./domain/selectable-effects.js";
 import * as specialLoadouts from "./domain/special-loadouts.js";
 import * as specialDisplay from "./domain/special-display.js";
 import { assetUrl, html, stableOverlayStateJson, stars } from "./lib/format.js";
-import { isOverlayScrollSpeedField, isTournamentOverlay, overlayScrollSpeedLabels, resolveOverlayAppearance, resolveOverlayBackgroundAlpha, resolveOverlayBackgroundEnabled, resolveOverlayCanvasBackgroundAlpha, resolveOverlayCanvasBackgroundEnabled, resolveOverlayLayout, resolveOverlayPart, resolveOverlayScrollSpeed, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
+import { isOverlayScrollSpeedField, isTournamentOverlay, overlayScrollSpeedLabels, resolveOverlayAppearance, resolveOverlayBackgroundAlpha, resolveOverlayBackgroundEnabled, resolveOverlayCanvasBackgroundAlpha, resolveOverlayCanvasBackgroundEnabled, resolveOverlayLayout, resolveOverlayOperatorIconOnly, resolveOverlayOperatorRarities, resolveOverlayPart, resolveOverlayRelicIconOnly, resolveOverlayScrollSpeed, resolveOverlaySize, shouldShowOverlayPartTitles } from "./lib/overlay-config.js";
 import { mediaUrl } from "./lib/media.js";
 import { normalizePreferences } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
@@ -79,6 +80,10 @@ const saveRequestTracker = createSaveRequestTracker();
 
 function buildMaps() {
   maps = createLookupMaps(master, isActiveManualRule);
+}
+
+function getRelicStackConfig() {
+  return master?.relicStackConfig || master?.relicStackRules || [];
 }
 
 function getCampaign() {
@@ -640,6 +645,12 @@ function applyOverlayAppearance(preferences) {
     --overlay-border-color: ${appearance.borderColor};
     --overlay-accent-color: ${appearance.accentColor};
     --overlay-font-scale: ${appearance.fontSizePercent / 100};
+    --overlay-item-background-rgb: var(--overlay-background-rgb);
+    --overlay-item-background-alpha: 0.58;
+    --overlay-item-border-color: var(--overlay-border-color);
+    --overlay-strong-font-color: var(--overlay-font-color);
+    --overlay-muted-font-color: color-mix(in srgb, var(--overlay-font-color) 68%, transparent);
+    --overlay-shadow: 0 12px 36px rgb(0 0 0 / 30%);
     --text: ${appearance.fontColor};
     --accent: ${appearance.accentColor};
     --accent-2: ${appearance.accentColor};
@@ -655,6 +666,12 @@ function applyOverlayAppearance(preferences) {
     "--overlay-border-color",
     "--overlay-accent-color",
     "--overlay-font-scale",
+    "--overlay-item-background-rgb",
+    "--overlay-item-background-alpha",
+    "--overlay-item-border-color",
+    "--overlay-strong-font-color",
+    "--overlay-muted-font-color",
+    "--overlay-shadow",
     "--text",
     "--accent",
     "--accent-2",
@@ -733,6 +750,7 @@ function ensureStateShape() {
   state.run.campaignId ||= "is5_sarkaz";
   state.run.performanceId ??= null;
   normalizeRunStats(state.run);
+  state.run.tournamentInfo = normalizeTournamentInfo(state.run.tournamentInfo);
   state.run.special ||= {};
   for (const campaign of master.campaigns) state.run.special[campaign.id] ||= {};
   if (state.run.performanceId && !getCampaignPerformances(state.run.campaignId).some((item) => item.id === state.run.performanceId)) state.run.performanceId = null;
@@ -741,7 +759,7 @@ function ensureStateShape() {
   state.usedRelicIds = Array.isArray(state.usedRelicIds)
     ? state.usedRelicIds.filter((id) => state.relics.includes(id))
     : [];
-  state.relicStackCounts = normalizeRelicStackCounts(state.relicStackCounts, state.relics, master.relicStackRules);
+  state.relicStackCounts = normalizeRelicStackCounts(state.relicStackCounts, state.relics, getRelicStackConfig());
   state.operators = Array.isArray(state.operators) ? state.operators : [];
   state.operatorCounts = normalizeOperatorCounts(state.operatorCounts, state.operators);
   state.operatorPromotionLevels = normalizeOperatorPromotionLevels(state.operatorPromotionLevels, state.operators);
@@ -901,9 +919,9 @@ function renderRelicControlRow(item, active, excludedOrOptions = false) {
     template,
     used,
     supportsUsedFlag: supportsRelicUsedFlag(item),
-    supportsStackCount: relicSupportsStackCount(item.id, state.relicStackCounts, master.relicStackRules),
+    supportsStackCount: relicSupportsStackCount(item.id, state.relicStackCounts, getRelicStackConfig()),
     stackCount,
-    stackMaximum: relicStackMaximum(item.id, master.relicStackRules),
+    stackMaximum: relicStackMaximum(item.id, getRelicStackConfig()),
     ...options,
   });
 }
@@ -1137,25 +1155,32 @@ function renderOverlay() {
   const difficultyGrade = getSelectedDifficultyGrade();
   const performance = getSelectedPerformance();
   const activeEffects = getActiveEffects({ overlay: true });
+  const presentation = {
+    relicIconOnly: resolveOverlayRelicIconOnly(state.preferences, overlayPart),
+    operatorIconOnly: resolveOverlayOperatorIconOnly(state.preferences, overlayPart),
+    operatorRarities: resolveOverlayOperatorRarities(state.preferences, overlayPart),
+  };
+  const presentationClasses = tournamentPresentationClassNames(presentation);
+  if (presentationClasses) app.className += ` ${presentationClasses}`;
   if (overlayPart) {
-    app.innerHTML = renderOverlayPart({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, runDifficulty: state.run.difficulty, updatedAt: state.updatedAt });
+    app.innerHTML = renderOverlayPart({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, runDifficulty: state.run.difficulty, updatedAt: state.updatedAt, presentation });
     setupOverlayAutoScroll(app);
     return;
   }
   if (overlayLayout === "compact") {
-    app.innerHTML = renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run });
+    app.innerHTML = renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, presentation });
     setupOverlayAutoScroll(app);
     return;
   }
   if (overlayLayout === "vertical" || overlayLayout === "horizontal") {
-    app.innerHTML = renderOverlayDense({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, orientation: overlayLayout });
+    app.innerHTML = renderOverlayDense({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, orientation: overlayLayout, presentation });
     setupOverlayAutoScroll(app);
     return;
   }
   if (overlayLayout === "custom") {
     app.innerHTML = renderCustomOverlayLayoutComponent(
       state.preferences.sukiOverlayLayout,
-      { campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, runDifficulty: state.run.difficulty, updatedAt: state.updatedAt },
+      { campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, runDifficulty: state.run.difficulty, updatedAt: state.updatedAt, presentation },
       renderOverlayContext(),
     );
     setupOverlayAutoScroll(app);

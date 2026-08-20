@@ -198,7 +198,9 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
     ["docs/guides/discord-public-debug-guide.md", "DISCORD_USAGE.md"],
     ["docs/guides/sarkaz-test-guide.md", "docs/guides/sarkaz-test-guide.md"],
     ["docs/guides/tournament-remote-input.md", "docs/guides/tournament-remote-input.md"],
+    ["docs/guides/external-relay-server-setup.md", "docs/guides/external-relay-server-setup.md"],
     ["docs/guides/output-css-customization.md", "docs/guides/output-css-customization.md"],
+    ["docs/user/external-relay-server-setup.html", "EXTERNAL_RELAY_SERVER_GUIDE.html"],
     ["出力CSSカスタマイズガイド.html", "OUTPUT_CSS_CUSTOMIZATION_GUIDE.html"],
   ];
   for (const [source, target] of copies) {
@@ -239,8 +241,9 @@ ${runtimeBundleDescription}
 - タップとスワイプは指定矩形内でランダム化されます。
 
 Discordへ貼り付ける短い手順は \`DISCORD_USAGE.md\` にあります。
+外部中継サーバーを導入する場合は、EXEと同じ場所の \`EXTERNAL_RELAY_SERVER_GUIDE.html\` をブラウザで開いてください。
 出力CSSの具体的な表示見本は、EXEと同じ場所の \`OUTPUT_CSS_CUSTOMIZATION_GUIDE.html\` をブラウザで開いてください。
-詳細は \`docs/guides/discord-public-debug-guide.md\`、\`docs/guides/debugger-adb-report-guide.md\`、\`docs/guides/adb-setup.md\`、\`docs/guides/output-css-customization.md\` を参照してください。サルカズの個別確認項目は \`docs/guides/sarkaz-test-guide.md\` にあります。
+詳細は \`docs/guides/discord-public-debug-guide.md\`、\`docs/guides/debugger-adb-report-guide.md\`、\`docs/guides/adb-setup.md\`、\`docs/guides/external-relay-server-setup.md\`、\`docs/guides/output-css-customization.md\` を参照してください。サルカズの個別確認項目は \`docs/guides/sarkaz-test-guide.md\` にあります。
 
 Source: https://github.com/ratedat/RHODES-OBS-COMMANDER3373
 Revision: ${sourceRevision}${sourceStatus ? ` (${sourceStatus})` : ""}

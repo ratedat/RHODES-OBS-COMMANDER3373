@@ -52,6 +52,8 @@ public static class RhodesSuiCoinStatusRecognizer
     private const double MinimumOverlayDifference = 0.035;
     private const double MinimumOverlayBodyDifference = 0.04;
     private const double MinimumStructuralEdgeDensity = 0.10;
+    private const double SelectedCoinBodyDifference = 0.15;
+    private const double SelectedCoinMinimumStatusScore = 0.77;
     private const double LowChromaMinimumScore = 0.73;
     private const double LowChromaShapeRescueMinimumScore = 0.67;
     private const double LowChromaShapeRescueMinimumMargin = 0.02;
@@ -64,7 +66,9 @@ public static class RhodesSuiCoinStatusRecognizer
     private const double BroadImageRescueMinimumLead = 0.04;
     private const double ResidualBroadConfirmationMaximumMargin = 0.012;
     private const double ResidualBroadConfirmationMaximumScore = 0.77;
-    private const double RaisedStatusImageMinimumScore = 0.69;
+    private const double RaisedStatusImageMinimumScore = 0.72;
+    private const double RaisedStatusImageMinimumMargin = 0.02;
+    private const double NormalStatusMaximumDistanceToExpected = 9;
     private const double ClearAbsenceMaximumOverlayDifference = 0.03;
     private const double ClearAbsenceMaximumEdgeDensity = 0.04;
     private const double ClearAbsenceMaximumChromaDensity = 0.06;
@@ -75,7 +79,10 @@ public static class RhodesSuiCoinStatusRecognizer
     private const double ShapeScoreWeight = 0.75;
     private const byte ShapeAlphaFloor = 160;
     private static readonly int[] StatusTemplateWidths = [28, 32, 36, 40, 44, 48];
-    private static readonly HashSet<int> FastStatusTemplateWidths = [28, 32, 36];
+    // Frames are normalized to 1280x720 before matching, so the regular coin
+    // list uses the canonical 32px status icon. Other scales remain available
+    // to the broad fallback for exceptional frames.
+    private static readonly HashSet<int> FastStatusTemplateWidths = [32];
     private static readonly int[] CoinTemplateSizes = [100, 106, 112];
     private static readonly Lazy<IReadOnlyList<StatusTemplate>> DefaultStatusTemplates =
         new(() => BuildStatusTemplates(RhodesRunCatalog.LoadSpecialEffectOptions("is6_sui", "coinStatus")));
@@ -333,13 +340,31 @@ public static class RhodesSuiCoinStatusRecognizer
             {
                 foreach (var match in matches)
                 {
+                    var wholeListSlotIndex = RhodesSuiCoinImageRecognizer.MatchOwnedSlot(match.OcrBox) ?? -1;
+                    var textCenterX = ScreenTextCenterX(match.OcrBox);
+                    var textCenterY = ScreenTextCenterY(match.OcrBox);
+                    var wholeListCenterX = textCenterX;
+                    var wholeListCenterY = textCenterY - CoinCenterOffsetFromText;
+                    var anchorDistance = double.MaxValue;
+                    if (wholeListSlotIndex >= 0
+                        && RhodesSuiCoinImageRecognizer.TryGetOwnedSlotCenter(
+                            wholeListSlotIndex,
+                            out var slotCenterX,
+                            out var slotCenterY))
+                    {
+                        anchorDistance = Math.Sqrt(
+                            Math.Pow(textCenterX - slotCenterX, 2)
+                            + Math.Pow(textCenterY - (slotCenterY + CoinCenterOffsetFromText), 2));
+                    }
+
                     anchored.Add(new AnchoredCoinMatch(
                         match.CoinId,
                         match.Label,
                         match.Confidence,
-                        RhodesSuiCoinImageRecognizer.MatchOwnedSlot(match.OcrBox) ?? -1,
-                        ScreenTextCenterX(match.OcrBox),
-                        ScreenTextCenterY(match.OcrBox) - CoinCenterOffsetFromText));
+                        wholeListSlotIndex,
+                        wholeListCenterX,
+                        wholeListCenterY,
+                        anchorDistance));
                 }
                 continue;
             }
@@ -359,7 +384,8 @@ public static class RhodesSuiCoinStatusRecognizer
                 match.Confidence,
                 slotIndex,
                 centerX,
-                centerY)));
+                centerY,
+                0)));
         }
 
         for (var index = 0; index < anchored.Count; index++)
@@ -402,19 +428,29 @@ public static class RhodesSuiCoinStatusRecognizer
                 inspection.Score,
                 inspection.SlotIndex,
                 inspection.Roi.X + (inspection.Roi.Width / 2d),
-                inspection.Roi.Y + (inspection.Roi.Height / 2d)));
+                inspection.Roi.Y + (inspection.Roi.Height / 2d),
+                0));
         }
 
-        var resolved = anchored
+        var resolvedSlots = anchored
+            .Where(match => match.SlotIndex >= 0)
+            .GroupBy(match => match.SlotIndex)
+            .Select(group => group
+                .OrderBy(match => match.AnchorDistance)
+                .ThenByDescending(match => match.Confidence)
+                .First());
+        var unresolvedSlots = anchored
+            .Where(match => match.SlotIndex < 0)
             .GroupBy(
                 match => (
                     match.CoinId,
-                    match.SlotIndex,
                     CenterX: (int)Math.Round(match.CenterX),
                     CenterY: (int)Math.Round(match.CenterY)))
             .Select(group => group
                 .OrderByDescending(match => match.Confidence)
-                .First())
+                .First());
+        var resolved = resolvedSlots
+            .Concat(unresolvedSlots)
             .OrderBy(match => match.CenterY)
             .ThenBy(match => match.CenterX)
             .ToArray();
@@ -495,6 +531,11 @@ public static class RhodesSuiCoinStatusRecognizer
                 allowLowChroma: false)
             ? retainedStatus
             : residual;
+        if (residual is not null
+            && IsAcceptedStatus(residual, evidence, allowLowChroma: true))
+        {
+            return residual;
+        }
         if (fallback is null
             || (
                 residual is not null
@@ -518,6 +559,10 @@ public static class RhodesSuiCoinStatusRecognizer
                 imageExtendsAboveResidual
                     ? RaisedStatusImageMinimumScore
                     : MinimumScore
+            )
+            && (
+                !imageExtendsAboveResidual
+                || image.Score - image.RunnerUpScore >= RaisedStatusImageMinimumMargin
             )
             && (
                 imageExtendsAboveResidual
@@ -548,6 +593,9 @@ public static class RhodesSuiCoinStatusRecognizer
         var verticalDown = FastStatusSearchVerticalRadius;
         var residualAspectRatio = ResidualGlobalAspectRatio(evidence);
         var ranked = new List<StatusMatch>();
+        var rawObservations = new Dictionary<(int X, int Y, int Width, int Height), RawStatusObservation>();
+        var residualMoments = new Dictionary<(int X, int Y, int Width, int Height), CoreMoments>();
+        var residualCoverages = new Dictionary<(int X, int Y, int Width, int Height), double>();
         foreach (var statusGroup in templates.GroupBy(template => template.Option.Id, StringComparer.Ordinal))
         {
             StatusMatch? best = null;
@@ -568,15 +616,31 @@ public static class RhodesSuiCoinStatusRecognizer
                         var residualShapeScore = ResidualShapeSimilarity(evidence, roi, template);
                         var residualColorScore = ResidualColorSimilarity(evidence, roi, template);
                         var residualEdgeScore = ResidualEdgeSimilarity(evidence, roi, template);
-                        var residualMomentScore = ResidualMomentSimilarity(evidence, roi, template);
-                        var residualGlobalAspectScore = ResidualGlobalAspectSimilarity(evidence, template);
-                        var rawCoreScore = RawCoreSimilarity(frame, roi, template);
-                        var projectionScore = RawProjectionSimilarity(frame, roi, template);
-                        var momentScore = RawMomentSimilarity(frame, roi, template);
-                        var hueScore = RawHueSimilarity(frame, roi, template);
-                        var coverageScore = broad
-                            ? ResidualCoverageSimilarity(evidence, roi)
-                            : 1;
+                        var observationKey = (roi.X, roi.Y, roi.Width, roi.Height);
+                        if (!residualMoments.TryGetValue(observationKey, out var residualMoment))
+                        {
+                            residualMoment = MeasureResidualMoments(evidence, roi);
+                            residualMoments[observationKey] = residualMoment;
+                        }
+                        var residualMomentScore = ResidualMomentSimilarity(residualMoment, template);
+                        var residualGlobalAspectScore = ResidualGlobalAspectSimilarity(
+                            residualAspectRatio,
+                            template);
+                        if (!rawObservations.TryGetValue(observationKey, out var rawObservation))
+                        {
+                            rawObservation = BuildRawStatusObservation(frame, roi);
+                            rawObservations[observationKey] = rawObservation;
+                        }
+                        var rawCoreScore = RawCoreSimilarity(rawObservation, template);
+                        var projectionScore = RawProjectionSimilarity(rawObservation, template);
+                        var momentScore = RawMomentSimilarity(rawObservation, template);
+                        var hueScore = RawHueSimilarity(rawObservation, template);
+                        var coverageScore = 1d;
+                        if (broad && !residualCoverages.TryGetValue(observationKey, out coverageScore))
+                        {
+                            coverageScore = ResidualCoverageSimilarity(evidence, roi);
+                            residualCoverages[observationKey] = coverageScore;
+                        }
                         if (residualShapeScore <= 0
                             || residualColorScore <= 0
                             || residualEdgeScore <= 0
@@ -910,23 +974,18 @@ public static class RhodesSuiCoinStatusRecognizer
         return Math.Clamp(dot / denominator, 0, 1);
     }
 
-    private static double ResidualMomentSimilarity(
+    private static CoreMoments MeasureResidualMoments(
         StatusPresenceEvidence evidence,
-        MaaRoi statusRoi,
-        StatusTemplate template)
+        MaaRoi statusRoi)
     {
-        var expected = MeasureCoreMoments(
-            template.Width,
-            template.Height,
-            (x, y) => ShapeMaskValue(template.AlphaMask[(y * template.Width) + x]));
         var coinRoi = evidence.CoinRoi;
-        var actual = MeasureCoreMoments(
-            template.Width,
-            template.Height,
+        return MeasureCoreMoments(
+            statusRoi.Width,
+            statusRoi.Height,
             (x, y) =>
             {
-                var screenX = statusRoi.X + ((x + 0.5) * statusRoi.Width / template.Width);
-                var screenY = statusRoi.Y + ((y + 0.5) * statusRoi.Height / template.Height);
+                var screenX = statusRoi.X + x + 0.5;
+                var screenY = statusRoi.Y + y + 0.5;
                 if (screenX < coinRoi.X
                     || screenX >= coinRoi.X + coinRoi.Width
                     || screenY < coinRoi.Y
@@ -948,6 +1007,13 @@ public static class RhodesSuiCoinStatusRecognizer
                     0,
                     1);
             });
+    }
+
+    private static double ResidualMomentSimilarity(
+        CoreMoments actual,
+        StatusTemplate template)
+    {
+        var expected = template.ResidualMoments;
         if (expected.Weight <= 0 || actual.Weight <= 0)
             return 0;
 
@@ -961,30 +1027,15 @@ public static class RhodesSuiCoinStatusRecognizer
     }
 
     private static double ResidualGlobalAspectSimilarity(
-        StatusPresenceEvidence evidence,
+        double actualAspectRatio,
         StatusTemplate template)
     {
-        var expected = MeasurePixelMoments(
-            template.Width,
-            template.Height,
-            (x, y) => ShapeMaskValue(template.AlphaMask[(y * template.Width) + x]));
-        var actual = MeasurePixelMoments(
-            FeatureSize,
-            FeatureSize,
-            (x, y) =>
-            {
-                if (!IsStatusResidualPixel(x, y))
-                    return 0;
-                return Math.Clamp(
-                    (evidence.ResidualMagnitude[(y * FeatureSize) + x] - 0.035) / 0.20,
-                    0,
-                    1);
-            });
-        if (expected.Weight <= 0 || actual.Weight <= 0)
+        if (template.ResidualGlobalMoments.Weight <= 0 || actualAspectRatio <= 0)
             return 0;
 
         return Math.Exp(-Math.Abs(Math.Log(
-            Math.Max(0.02, actual.AspectRatio) / Math.Max(0.02, expected.AspectRatio))));
+            Math.Max(0.02, actualAspectRatio)
+            / Math.Max(0.02, template.ResidualGlobalMoments.AspectRatio))));
     }
 
     private static double ResidualGlobalAspectRatio(StatusPresenceEvidence evidence)
@@ -1051,53 +1102,104 @@ public static class RhodesSuiCoinStatusRecognizer
             varianceX / Math.Max(0.000001, varianceY));
     }
 
-    private static double RawCoreSimilarity(
+    private static RawStatusObservation BuildRawStatusObservation(
         SKBitmap frame,
-        MaaRoi statusRoi,
+        MaaRoi statusRoi)
+    {
+        const int projectionBins = 16;
+        var count = statusRoi.Width * statusRoi.Height;
+        var coreValues = new double[count];
+        var momentValues = new double[count];
+        var coreRows = new double[projectionBins];
+        var coreColumns = new double[projectionBins];
+        var framePixels = frame.GetPixelSpan();
+        var rowBytes = frame.RowBytes;
+        double hueRed = 0;
+        double hueGreen = 0;
+        double hueBlue = 0;
+        double hueWeight = 0;
+        for (var y = 0; y < statusRoi.Height; y++)
+        {
+            var projectionRow = Math.Min(projectionBins - 1, y * projectionBins / statusRoi.Height);
+            for (var x = 0; x < statusRoi.Width; x++)
+            {
+                var index = (y * statusRoi.Width) + x;
+                var offset = ((statusRoi.Y + y) * rowBytes) + ((statusRoi.X + x) * 4);
+                var blue = framePixels[offset];
+                var green = framePixels[offset + 1];
+                var red = framePixels[offset + 2];
+                var minimum = Math.Min(red, Math.Min(green, blue));
+                var core = Math.Clamp(
+                    (minimum - 112d) / 143d,
+                    0,
+                    1);
+                coreValues[index] = core;
+                momentValues[index] = Math.Clamp(
+                    (minimum - 144d) / 111d,
+                    0,
+                    1);
+                var projectionColumn = Math.Min(
+                    projectionBins - 1,
+                    x * projectionBins / statusRoi.Width);
+                coreRows[projectionRow] += core;
+                coreColumns[projectionColumn] += core;
+
+                var maximum = Math.Max(red, Math.Max(green, blue));
+                var chroma = (maximum - minimum) / 255d;
+                var brightness = maximum / 255d;
+                var weight = chroma * brightness;
+                if (weight <= 0.02)
+                    continue;
+                var mean = (red + green + blue) / 3d;
+                hueRed += weight * (red - mean);
+                hueGreen += weight * (green - mean);
+                hueBlue += weight * (blue - mean);
+                hueWeight += weight;
+            }
+        }
+
+        var hue = hueWeight <= 0
+            ? new HueVector(0, 0, 0)
+            : new HueVector(hueRed / hueWeight, hueGreen / hueWeight, hueBlue / hueWeight);
+        return new RawStatusObservation(
+            coreValues,
+            coreRows,
+            coreColumns,
+            MeasureCoreMoments(
+                statusRoi.Width,
+                statusRoi.Height,
+                (x, y) => momentValues[(y * statusRoi.Width) + x]),
+            hue);
+    }
+
+    private static double RawCoreSimilarity(
+        RawStatusObservation observation,
         StatusTemplate template)
     {
-        var expectedValues = new List<double>(template.Width * template.Height);
-        var actualValues = new List<double>(template.Width * template.Height);
         double foregroundSignal = 0;
         double foregroundWeight = 0;
         double backgroundSignal = 0;
         double backgroundWeight = 0;
-        for (var y = 0; y < template.Height; y++)
+        for (var index = 0; index < template.RawCoreValues.Count; index++)
         {
-            for (var x = 0; x < template.Width; x++)
+            var templateCore = template.RawCoreValues[index];
+            var actualCore = observation.CoreValues[index];
+            if (templateCore >= 0.20)
             {
-                var index = (y * template.Width) + x;
-                var templatePixel = template.ColorPixels[index];
-                var alpha = templatePixel.Alpha / 255d;
-                var templateCore = alpha * Math.Clamp(
-                    (Math.Min(templatePixel.Red, Math.Min(templatePixel.Green, templatePixel.Blue)) - 72d) / 183d,
-                    0,
-                    1);
-                var actual = frame.GetPixel(statusRoi.X + x, statusRoi.Y + y);
-                var actualCore = Math.Clamp(
-                    (Math.Min(actual.Red, Math.Min(actual.Green, actual.Blue)) - 112d) / 143d,
-                    0,
-                    1);
-                expectedValues.Add(templateCore);
-                actualValues.Add(actualCore);
-
-                if (templateCore >= 0.20)
-                {
-                    foregroundSignal += templateCore * actualCore;
-                    foregroundWeight += templateCore;
-                }
-                else
-                {
-                    var weight = 1 - templateCore;
-                    backgroundSignal += weight * actualCore;
-                    backgroundWeight += weight;
-                }
+                foregroundSignal += templateCore * actualCore;
+                foregroundWeight += templateCore;
+            }
+            else
+            {
+                var weight = 1 - templateCore;
+                backgroundSignal += weight * actualCore;
+                backgroundWeight += weight;
             }
         }
         if (foregroundWeight <= 0)
             return 0;
 
-        var correlation = NormalizedCorrelation(expectedValues, actualValues);
+        var correlation = NormalizedCorrelation(template.RawCoreValues, observation.CoreValues);
         var foregroundMean = foregroundSignal / foregroundWeight;
         var backgroundMean = backgroundWeight <= 0 ? 0 : backgroundSignal / backgroundWeight;
         var contrast = Math.Clamp((foregroundMean - backgroundMean) / 0.45, 0, 1);
@@ -1106,72 +1208,20 @@ public static class RhodesSuiCoinStatusRecognizer
     }
 
     private static double RawProjectionSimilarity(
-        SKBitmap frame,
-        MaaRoi statusRoi,
+        RawStatusObservation observation,
         StatusTemplate template)
     {
-        const int projectionBins = 16;
-        var expectedRows = new double[projectionBins];
-        var expectedColumns = new double[projectionBins];
-        var actualRows = new double[projectionBins];
-        var actualColumns = new double[projectionBins];
-        for (var y = 0; y < template.Height; y++)
-        {
-            var row = Math.Min(projectionBins - 1, y * projectionBins / template.Height);
-            for (var x = 0; x < template.Width; x++)
-            {
-                var column = Math.Min(projectionBins - 1, x * projectionBins / template.Width);
-                var index = (y * template.Width) + x;
-                var templatePixel = template.ColorPixels[index];
-                var expectedCore = (templatePixel.Alpha / 255d) * Math.Clamp(
-                    (Math.Min(templatePixel.Red, Math.Min(templatePixel.Green, templatePixel.Blue)) - 72d) / 183d,
-                    0,
-                    1);
-                var actual = frame.GetPixel(statusRoi.X + x, statusRoi.Y + y);
-                var actualCore = Math.Clamp(
-                    (Math.Min(actual.Red, Math.Min(actual.Green, actual.Blue)) - 112d) / 143d,
-                    0,
-                    1);
-                expectedRows[row] += expectedCore;
-                expectedColumns[column] += expectedCore;
-                actualRows[row] += actualCore;
-                actualColumns[column] += actualCore;
-            }
-        }
-
-        var rowScore = NormalizedCorrelation(expectedRows, actualRows);
-        var columnScore = NormalizedCorrelation(expectedColumns, actualColumns);
+        var rowScore = NormalizedCorrelation(template.RawCoreRows, observation.CoreRows);
+        var columnScore = NormalizedCorrelation(template.RawCoreColumns, observation.CoreColumns);
         return (rowScore + columnScore) / 2;
     }
 
     private static double RawMomentSimilarity(
-        SKBitmap frame,
-        MaaRoi statusRoi,
+        RawStatusObservation observation,
         StatusTemplate template)
     {
-        var expected = MeasureCoreMoments(
-            template.Width,
-            template.Height,
-            (x, y) =>
-            {
-                var pixel = template.ColorPixels[(y * template.Width) + x];
-                var alpha = pixel.Alpha / 255d;
-                return alpha * Math.Clamp(
-                    (Math.Min(pixel.Red, Math.Min(pixel.Green, pixel.Blue)) - 96d) / 159d,
-                    0,
-                    1);
-            });
-        var actual = MeasureCoreMoments(
-            template.Width,
-            template.Height,
-            (x, y) =>
-            {
-                var pixel = frame.GetPixel(statusRoi.X + x, statusRoi.Y + y);
-                return Math.Clamp(
-                    (Math.Min(pixel.Red, Math.Min(pixel.Green, pixel.Blue)) - 144d) / 111d,
-                    0,
-                    1);
-            });
+        var expected = template.RawMoments;
+        var actual = observation.Moments;
         if (expected.Weight <= 0 || actual.Weight <= 0)
             return 0;
 
@@ -1232,26 +1282,11 @@ public static class RhodesSuiCoinStatusRecognizer
     }
 
     private static double RawHueSimilarity(
-        SKBitmap frame,
-        MaaRoi statusRoi,
+        RawStatusObservation observation,
         StatusTemplate template)
     {
-        var expected = MeasureDominantHue(
-            template.Width,
-            template.Height,
-            (x, y) =>
-            {
-                var pixel = template.ColorPixels[(y * template.Width) + x];
-                return (pixel.Red, pixel.Green, pixel.Blue, pixel.Alpha / 255d);
-            });
-        var actual = MeasureDominantHue(
-            template.Width,
-            template.Height,
-            (x, y) =>
-            {
-                var pixel = frame.GetPixel(statusRoi.X + x, statusRoi.Y + y);
-                return (pixel.Red, pixel.Green, pixel.Blue, 1d);
-            });
+        var expected = template.RawHue;
+        var actual = observation.Hue;
         var denominator = Math.Sqrt(
             ((expected.Red * expected.Red)
                 + (expected.Green * expected.Green)
@@ -1329,6 +1364,20 @@ public static class RhodesSuiCoinStatusRecognizer
         StatusPresenceEvidence evidence,
         bool allowLowChroma)
     {
+        var isRaisedImageMatch = status.Roi.Y < evidence.CoinRoi.Y - 4
+            && status.Score >= RaisedStatusImageMinimumScore
+            && status.Score - status.RunnerUpScore >= RaisedStatusImageMinimumMargin;
+        if (status.DistanceToExpected > NormalStatusMaximumDistanceToExpected
+            && !isRaisedImageMatch)
+        {
+            return false;
+        }
+        if (evidence.BodyDifference >= SelectedCoinBodyDifference
+            && status.Score < SelectedCoinMinimumStatusScore)
+        {
+            return false;
+        }
+
         if (allowLowChroma
             && IsVerticalStatusCandidate(status)
             && evidence.OverlayDifference >= 0.06
@@ -1513,52 +1562,60 @@ public static class RhodesSuiCoinStatusRecognizer
     private static double ColorSimilarity(SKBitmap frame, MaaRoi roi, StatusTemplate template)
     {
         double difference = 0;
-        double weight = 0;
+        var framePixels = frame.GetPixelSpan();
+        var rowBytes = frame.RowBytes;
         foreach (var pixel in template.Pixels)
         {
-            var actual = frame.GetPixel(roi.X + pixel.X, roi.Y + pixel.Y);
+            var offset = ((roi.Y + pixel.Y) * rowBytes) + ((roi.X + pixel.X) * 4);
             difference += pixel.Weight * (
-                Math.Abs(actual.Red - pixel.Red)
-                + Math.Abs(actual.Green - pixel.Green)
-                + Math.Abs(actual.Blue - pixel.Blue));
-            weight += pixel.Weight;
+                Math.Abs(framePixels[offset + 2] - pixel.Red)
+                + Math.Abs(framePixels[offset + 1] - pixel.Green)
+                + Math.Abs(framePixels[offset] - pixel.Blue));
         }
-        return weight <= 0 ? 0 : 1 - (difference / (weight * 3 * 255));
+        return template.PixelWeight <= 0
+            ? 0
+            : 1 - (difference / (template.PixelWeight * 3 * 255));
     }
 
     private static double ShapeSimilarity(SKBitmap frame, MaaRoi roi, StatusTemplate template)
     {
-        var count = template.AlphaMask.Count;
+        var count = template.ShapeValues.Count;
         if (count == 0)
             return 0;
 
-        double expectedSum = 0;
+        var framePixels = frame.GetPixelSpan();
+        var rowBytes = frame.RowBytes;
         double actualSum = 0;
         for (var index = 0; index < count; index++)
         {
             var x = index % template.Width;
             var y = index / template.Width;
-            expectedSum += ShapeMaskValue(template.AlphaMask[index]);
-            actualSum += Luminance(frame.GetPixel(roi.X + x, roi.Y + y)) / 255d;
+            var offset = ((roi.Y + y) * rowBytes) + ((roi.X + x) * 4);
+            actualSum += (
+                (0.2126 * framePixels[offset + 2])
+                + (0.7152 * framePixels[offset + 1])
+                + (0.0722 * framePixels[offset])) / 255d;
         }
 
-        var expectedMean = expectedSum / count;
         var actualMean = actualSum / count;
         double covariance = 0;
-        double expectedVariance = 0;
         double actualVariance = 0;
         for (var index = 0; index < count; index++)
         {
             var x = index % template.Width;
             var y = index / template.Width;
-            var expected = ShapeMaskValue(template.AlphaMask[index]) - expectedMean;
-            var actual = (Luminance(frame.GetPixel(roi.X + x, roi.Y + y)) / 255d) - actualMean;
+            var offset = ((roi.Y + y) * rowBytes) + ((roi.X + x) * 4);
+            var expected = template.ShapeValues[index] - template.ShapeMean;
+            var actual = ((
+                    (0.2126 * framePixels[offset + 2])
+                    + (0.7152 * framePixels[offset + 1])
+                    + (0.0722 * framePixels[offset])) / 255d)
+                - actualMean;
             covariance += expected * actual;
-            expectedVariance += expected * expected;
             actualVariance += actual * actual;
         }
 
-        var denominator = Math.Sqrt(expectedVariance * actualVariance);
+        var denominator = Math.Sqrt(template.ShapeVariance * actualVariance);
         if (denominator <= 0.000001)
             return 0;
 
@@ -1776,10 +1833,18 @@ public static class RhodesSuiCoinStatusRecognizer
 
     private static bool ShouldUseBroadStatusSearch(StatusPresenceEvidence? evidence) =>
         evidence is null
-        || evidence.ChromaDensity >= 0.04
         || (
-            evidence.OverlayDifference >= 0.04
-            && evidence.EdgeDensity >= 0.10
+            HasStructuralStatusEvidence(evidence)
+            && (
+                evidence.ChromaDensity >= 0.04
+                || evidence.OverlayDifference - evidence.BodyDifference >= MinimumOverlayBodyDifference
+                || (
+                    evidence.ChromaDensity < 0.04
+                    && evidence.OverlayDifference >= 0.04
+                    && evidence.EdgeDensity >= MinimumStructuralEdgeDensity
+                    && evidence.BodyDifference <= 0.04
+                )
+            )
         );
 
     private static bool NeedsBroadStatusConfirmation(
@@ -1971,7 +2036,75 @@ public static class RhodesSuiCoinStatusRecognizer
                         }
                     }
                     if (pixels.Count >= 24)
-                        templates.Add(new StatusTemplate(option, width, height, pixels, alphaMask, colorPixels));
+                    {
+                        var shapeValues = alphaMask
+                            .Select(ShapeMaskValue)
+                            .ToArray();
+                        var shapeMean = shapeValues.Average();
+                        var shapeVariance = shapeValues.Sum(value => Math.Pow(value - shapeMean, 2));
+                        var rawCoreValues = colorPixels
+                            .Select(pixel => (pixel.Alpha / 255d) * Math.Clamp(
+                                (Math.Min(pixel.Red, Math.Min(pixel.Green, pixel.Blue)) - 72d) / 183d,
+                                0,
+                                1))
+                            .ToArray();
+                        const int projectionBins = 16;
+                        var rawCoreRows = new double[projectionBins];
+                        var rawCoreColumns = new double[projectionBins];
+                        for (var y = 0; y < height; y++)
+                        {
+                            var row = Math.Min(projectionBins - 1, y * projectionBins / height);
+                            for (var x = 0; x < width; x++)
+                            {
+                                var column = Math.Min(projectionBins - 1, x * projectionBins / width);
+                                var rawCore = rawCoreValues[(y * width) + x];
+                                rawCoreRows[row] += rawCore;
+                                rawCoreColumns[column] += rawCore;
+                            }
+                        }
+                        templates.Add(new StatusTemplate(
+                            option,
+                            width,
+                            height,
+                            pixels,
+                            alphaMask,
+                            colorPixels,
+                            shapeValues,
+                            shapeMean,
+                            shapeVariance,
+                            pixels.Sum(pixel => pixel.Weight),
+                            rawCoreValues,
+                            rawCoreRows,
+                            rawCoreColumns,
+                            MeasureCoreMoments(
+                                width,
+                                height,
+                                (x, y) =>
+                                {
+                                    var pixel = colorPixels[(y * width) + x];
+                                    var alpha = pixel.Alpha / 255d;
+                                    return alpha * Math.Clamp(
+                                        (Math.Min(pixel.Red, Math.Min(pixel.Green, pixel.Blue)) - 96d) / 159d,
+                                        0,
+                                        1);
+                                }),
+                            MeasureDominantHue(
+                                width,
+                                height,
+                                (x, y) =>
+                                {
+                                    var pixel = colorPixels[(y * width) + x];
+                                    return (pixel.Red, pixel.Green, pixel.Blue, pixel.Alpha / 255d);
+                                }),
+                            MeasureCoreMoments(
+                                width,
+                                height,
+                                (x, y) => shapeValues[(y * width) + x]),
+                            MeasurePixelMoments(
+                                width,
+                                height,
+                                (x, y) => shapeValues[(y * width) + x])));
+                    }
                 }
             }
         }
@@ -2030,7 +2163,7 @@ public static class RhodesSuiCoinStatusRecognizer
     private static SKBitmap NormalizeFrame(SKBitmap source)
     {
         if (source.Width == BaseWidth && source.Height == BaseHeight)
-            return source.Copy();
+            return source.Copy(SKColorType.Bgra8888);
         return Resize(source, BaseWidth, BaseHeight);
     }
 
@@ -2048,7 +2181,18 @@ public static class RhodesSuiCoinStatusRecognizer
         int Height,
         IReadOnlyList<StatusPixel> Pixels,
         IReadOnlyList<byte> AlphaMask,
-        IReadOnlyList<StatusColorPixel> ColorPixels);
+        IReadOnlyList<StatusColorPixel> ColorPixels,
+        IReadOnlyList<double> ShapeValues,
+        double ShapeMean,
+        double ShapeVariance,
+        double PixelWeight,
+        IReadOnlyList<double> RawCoreValues,
+        IReadOnlyList<double> RawCoreRows,
+        IReadOnlyList<double> RawCoreColumns,
+        CoreMoments RawMoments,
+        HueVector RawHue,
+        CoreMoments ResidualMoments,
+        CoreMoments ResidualGlobalMoments);
 
     private sealed record StatusColorPixel(
         byte Red,
@@ -2075,6 +2219,13 @@ public static class RhodesSuiCoinStatusRecognizer
         double Green,
         double Blue);
 
+    private sealed record RawStatusObservation(
+        IReadOnlyList<double> CoreValues,
+        IReadOnlyList<double> CoreRows,
+        IReadOnlyList<double> CoreColumns,
+        CoreMoments Moments,
+        HueVector Hue);
+
     private sealed record StatusMatch(
         StatusTemplate Template,
         double Score,
@@ -2100,7 +2251,8 @@ public static class RhodesSuiCoinStatusRecognizer
         double Confidence,
         int SlotIndex,
         double CenterX,
-        double CenterY);
+        double CenterY,
+        double AnchorDistance);
 
     private sealed record CoinBaselineTemplate(IReadOnlyList<BaselinePixel> Pixels);
 

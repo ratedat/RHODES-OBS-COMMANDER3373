@@ -12,6 +12,14 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   const discordGuide = await fs.readFile("docs/guides/discord-public-debug-guide.md", "utf8");
   const sarkazGuide = await fs.readFile("docs/guides/sarkaz-test-guide.md", "utf8");
   const outputCssGuide = await fs.readFile("docs/guides/output-css-customization.md", "utf8");
+  const externalRelayGuide = await fs.readFile(
+    "docs/guides/external-relay-server-setup.md",
+    "utf8",
+  );
+  const externalRelayHtml = await fs.readFile(
+    "docs/user/external-relay-server-setup.html",
+    "utf8",
+  );
   const server = await fs.readFile("app/server.mjs", "utf8");
   const outputWorkspace = await fs.readFile(
     "apps/rhodes-suki/Views/Workspaces/OutputWorkspaceView.axaml",
@@ -40,6 +48,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(csproj, /data\\selectable-effects\.json/);
   assert.match(csproj, /data\\recognition\\maa-tasks\.json/);
   assert.match(csproj, /data\\recognition\\scan-profiles\.json/);
+  assert.match(csproj, /docs\\user\\external-relay-server-setup\.html/);
+  assert.match(csproj, /docs\\external-relay-server-setup\.html/);
   assert.match(packageJson, /"maa:resource:generate": "node tools\/generate-maa-resource\.mjs"/);
   assert.match(packageJson, /"maa:resource:check": "node tools\/generate-maa-resource\.mjs --check"/);
   assert.match(packageJson, /"suki:test": "dotnet run --project tests\/rhodes-suki\/RhodesSuki\.ServiceTests\.csproj"/);
@@ -88,6 +98,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(publicDebugPackager, /docs\/guides\/discord-public-debug-guide\.md/);
   assert.match(publicDebugPackager, /docs\/guides\/output-css-customization\.md/);
   assert.match(publicDebugPackager, /OUTPUT_CSS_CUSTOMIZATION_GUIDE\.html/);
+  assert.match(publicDebugPackager, /EXTERNAL_RELAY_SERVER_GUIDE\.html/);
+  assert.match(publicDebugPackager, /docs\/guides\/external-relay-server-setup\.md/);
   assert.match(publicDebugPackager, /path\.join\(repoRoot, "app"\)/);
   assert.match(publicDebugPackager, /copyPortablePayload\(packageRoot\)/);
   assert.match(publicDebugPackager, /overlay-state\.example\.json/);
@@ -107,6 +119,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(outputWorkspace, /OCRモデル、インストーラー、管理者権限は不要/u);
   assert.match(outputWorkspace, /未導入の場合.*SHA-256/u);
   assert.match(outputWorkspace, /外部中継サーバー（上級者向け）/u);
+  assert.match(outputWorkspace, /OpenExternalRelayGuideCommand/u);
   assert.ok(discordGuide.length <= 2000, "Discord guide fits in one standard message");
   assert.match(discordGuide, /ZIPをすべて展開/u);
   assert.match(discordGuide, /ADB取得・認識・反映/u);
@@ -122,6 +135,25 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(outputCssGuide, /全体背景.*枠背景/u);
   assert.match(outputCssGuide, /全体背景/u);
   assert.match(outputCssGuide, /枠背景/u);
+  assert.match(externalRelayGuide, /TOURNAMENT_RELAY_ADMIN_TOKEN/u);
+  assert.match(externalRelayGuide, /TOURNAMENT_RELAY_PUBLIC_URL/u);
+  assert.match(externalRelayGuide, /127\.0\.0\.1:5180/u);
+  assert.match(externalRelayGuide, /12時間/u);
+  assert.match(externalRelayGuide, /メモリ/u);
+  assert.match(externalRelayGuide, /systemd/u);
+  assert.match(externalRelayGuide, /HTTPS/u);
+  assert.match(externalRelayGuide, /203\.0\.113\.10/u);
+  assert.match(externalRelayGuide, /admin_auth_failed/u);
+  assert.match(externalRelayGuide, /第1試合 Player A/u);
+  assert.match(externalRelayGuide, /源石錐を24から31/u);
+  assert.match(externalRelayHtml, /外部中継サーバー導入ガイド/u);
+  assert.match(externalRelayHtml, /Content-Security-Policy/u);
+  assert.match(externalRelayHtml, /TOURNAMENT_RELAY_ADMIN_TOKEN/u);
+  assert.match(externalRelayHtml, /203\.0\.113\.10/u);
+  assert.match(externalRelayHtml, /admin_auth_failed/u);
+  assert.match(externalRelayHtml, /第1試合 Player A/u);
+  assert.match(externalRelayHtml, /源石錐を24から31/u);
+  assert.match(externalRelayHtml, /overflow-wrap: anywhere/u);
   assert.match(server, /state\.run\.campaignId = "is2_phantom"/);
   assert.match(server, /next\.run\.campaignId = next\.run\.campaignId \|\| "is2_phantom"/);
 });
@@ -1270,6 +1302,14 @@ test("Suki runtime switches exclusively between retained ADB and PC settings", a
   assert.doesNotMatch(runtimeWorkspace, /ItemsSource="\{Binding PcConnectionTargetOptions\}"/);
   assert.match(runtimeWorkspace, /Header="PC版ウィンドウ接続・操作"[^>]+IsVisible="\{Binding IsPcConnectionTargetSelected\}"/);
   assert.match(runtimeWorkspace, /Header="エミュレーター接続強化（MuMu \/ LDPlayer）"[^>]+IsVisible="\{Binding IsAdbConnectionTargetSelected\}"/);
+  assert.match(
+    runtimeWorkspace,
+    /<Expander Header="接続検証（撮影／確認付きタッチ）" IsExpanded="False">/,
+  );
+  assert.match(
+    runtimeWorkspace,
+    /PC版・ADBのうち、選択中の接続先だけへ送信します。/u,
+  );
   assert.match(runtimeWorkspace, /Header="接続回復・高度なADB設定"[^>]+IsVisible="\{Binding IsAdbConnectionTargetSelected\}"/);
 
   assert.match(viewModel, /public bool IsAdbConnectionTargetSelected => !IsPcConnectionTargetSelected;/);
@@ -1886,7 +1926,11 @@ test("Sui held coin scrolling supplements full-list MAA OCR only for missing vis
   assert.match(viewModel, /PlanMissingOwnedNameOcrRequests\(/);
   assert.match(
     viewModel,
-    /RhodesSuiCoinStatusRecognizer\.RecognizeOwned\(\s*encodedImage,\s*candidateFrameResults,\s*imageInspections:\s*inspections\)/,
+    /await Task\.Run\(\s*\(\) => RhodesSuiCoinImageRecognizer\.InspectOwned\(encodedImage\),\s*cancellationToken\)/,
+  );
+  assert.match(
+    viewModel,
+    /await Task\.Run\(\s*\(\) => RhodesSuiCoinStatusRecognizer\.RecognizeOwned\(\s*encodedImage,\s*candidateFrameResults,\s*imageInspections:\s*inspections\),\s*cancellationToken\)/,
   );
   assert.doesNotMatch(viewModel, /RecognizeOwnedWithOcrFallback\(/);
   assert.doesNotMatch(viewModel, /useOwnedCoinImageClassifier/);

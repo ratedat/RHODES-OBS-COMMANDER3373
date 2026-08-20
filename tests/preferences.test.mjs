@@ -5,6 +5,9 @@ import fs from "node:fs/promises";
 import { normalizeOcrEngine, normalizePreferences, ocrEngineOptions } from "../app/lib/preferences.js";
 import {
   isTournamentOverlay,
+  resolveOverlayOperatorIconOnly,
+  resolveOverlayOperatorRarities,
+  resolveOverlayRelicIconOnly,
   normalizeOverlayAppearance,
   resolveOverlayAppearance,
   resolveOverlayBackgroundAlpha,
@@ -210,6 +213,29 @@ test("individual overlay settings override the integrated defaults", () => {
   assert.equal(isTournamentOverlay(preferences, "relics"), false);
 });
 
+test("tournament presentation keeps integrated and individual overlay choices independent", () => {
+  const preferences = normalizePreferences({
+    sukiOutputRelicIconOnly: true,
+    sukiOutputOperatorIconOnly: false,
+    sukiOutputOperatorRarities: [6, 4, 6, 9],
+    sukiOutputIndividualRelicIconOnly: false,
+    sukiOutputIndividualOperatorIconOnly: true,
+    sukiOutputIndividualOperatorRarities: [6],
+  });
+
+  assert.equal(resolveOverlayRelicIconOnly(preferences), true);
+  assert.equal(resolveOverlayOperatorIconOnly(preferences), false);
+  assert.deepEqual(resolveOverlayOperatorRarities(preferences), [6, 4]);
+  assert.equal(resolveOverlayRelicIconOnly(preferences, "relics"), false);
+  assert.equal(resolveOverlayOperatorIconOnly(preferences, "operators"), true);
+  assert.deepEqual(resolveOverlayOperatorRarities(preferences, "operators"), [6]);
+
+  const defaults = normalizePreferences({});
+  assert.equal(resolveOverlayRelicIconOnly(defaults), false);
+  assert.equal(resolveOverlayOperatorIconOnly(defaults), false);
+  assert.deepEqual(resolveOverlayOperatorRarities(defaults), [6, 5, 4, 3, 2, 1]);
+});
+
 test("individual overlay titles default to visible and can be hidden", () => {
   assert.equal(shouldShowOverlayPartTitles(normalizePreferences({})), true);
   assert.equal(shouldShowOverlayPartTitles(normalizePreferences({
@@ -217,7 +243,7 @@ test("individual overlay titles default to visible and can be hidden", () => {
   })), false);
 });
 
-test("legacy output settings migrate to schema 3 without coupling integrated and individual appearance", () => {
+test("legacy output settings migrate to schema 4 without coupling integrated and individual appearance", () => {
   const preferences = normalizePreferences({
     sukiOutputTournamentMode: false,
     sukiOutputBackgroundEnabled: true,
@@ -239,7 +265,7 @@ test("legacy output settings migrate to schema 3 without coupling integrated and
     }],
   });
 
-  assert.equal(preferences.sukiOutputSchemaVersion, 3);
+  assert.equal(preferences.sukiOutputSchemaVersion, 4);
   assert.equal(preferences.sukiOutputIndividualTournamentMode, false);
   assert.equal(preferences.sukiOutputIndividualBackgroundEnabled, true);
   assert.equal(preferences.sukiOutputIndividualBackgroundOpacity, 72);

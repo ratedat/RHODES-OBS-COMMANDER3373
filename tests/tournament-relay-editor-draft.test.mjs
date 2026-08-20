@@ -57,6 +57,19 @@ test("editor draft combines run, operator, and relic changes without mutating li
   assert.deepEqual(live.operators, []);
 });
 
+test("editor draft previews tournament score, withdrawals, and memo as one change", () => {
+  const live = baseState();
+  const operation = {
+    type: "tournament-info.set",
+    value: { score: 500, withdrawals: 2, memo: "準決勝" },
+  };
+  const draft = buildDraftState(live, [operation]);
+
+  assert.equal(operationKey(operation), "tournament-info");
+  assert.deepEqual(draft.run.tournamentInfo, operation.value);
+  assert.equal(live.run.tournamentInfo, undefined);
+});
+
 test("editor draft keeps explicit operator promotion changes and removes them with selection", () => {
   const live = baseState();
   let draft = buildDraftState(live, [{
@@ -126,6 +139,7 @@ test("run clear becomes the new draft baseline and later edits are retained", ()
   assert.deepEqual(operations.map(operationKey), ["run:clear", "run:ingot"]);
   assert.equal(draft.run.ingot, 7);
   assert.deepEqual(draft.operators, []);
+  assert.equal(draft.run.tournamentInfo, undefined);
 });
 
 test("editor draft writes canonical squad state and derives difficulty tier", () => {

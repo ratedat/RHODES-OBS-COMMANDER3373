@@ -323,7 +323,13 @@ public sealed record SukiOutputPreferences(
     bool? CanvasBackgroundEnabled = null,
     int? CanvasBackgroundOpacity = null,
     bool? IndividualCanvasBackgroundEnabled = null,
-    int? IndividualCanvasBackgroundOpacity = null);
+    int? IndividualCanvasBackgroundOpacity = null,
+    bool RelicIconOnly = false,
+    bool OperatorIconOnly = false,
+    IReadOnlyList<int>? OperatorRarities = null,
+    bool? IndividualRelicIconOnly = null,
+    bool? IndividualOperatorIconOnly = null,
+    IReadOnlyList<int>? IndividualOperatorRarities = null);
 
 public sealed record SukiOutputAppearance(
     string FontColor = "#F2EFE6",

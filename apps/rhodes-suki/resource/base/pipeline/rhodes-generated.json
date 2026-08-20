@@ -543,6 +543,31 @@
       "scale": 1
     }
   },
+  "RhodesOcrRegion_is6_active_coin_count": {
+    "recognition": "OCR",
+    "roi": [
+      592,
+      115,
+      65,
+      60
+    ],
+    "only_rec": true,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is6.active_coin_count",
+      "profileIds": [
+        "is6ActiveCoinsFull"
+      ],
+      "scale": 3,
+      "numericFallback": {
+        "min": 1,
+        "max": 99
+      }
+    }
+  },
   "RhodesOcrRegion_is6_active_coin_list_text": {
     "recognition": "OCR",
     "roi": [
@@ -564,13 +589,55 @@
       "scale": 2
     }
   },
+  "RhodesOcrRegion_is6_seasonal_hour_name": {
+    "recognition": "OCR",
+    "roi": [
+      480,
+      98,
+      320,
+      45
+    ],
+    "only_rec": false,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is6.seasonal_hour_name",
+      "profileIds": [
+        "is6SeasonalHours"
+      ],
+      "scale": 4
+    }
+  },
+  "RhodesOcrRegion_is6_seasonal_hour_level": {
+    "recognition": "OCR",
+    "roi": [
+      795,
+      100,
+      135,
+      42
+    ],
+    "only_rec": false,
+    "threshold": 0.3,
+    "action": "DoNothing",
+    "attach": {
+      "generated": true,
+      "source": "maa-tasks.ocrRegions",
+      "id": "is6.seasonal_hour_level",
+      "profileIds": [
+        "is6SeasonalHours"
+      ],
+      "scale": 3
+    }
+  },
   "RhodesOcrRegion_is6_seasonal_hour_detail_text": {
     "recognition": "OCR",
     "roi": [
       383,
-      80,
+      100,
       563,
-      500
+      135
     ],
     "only_rec": false,
     "threshold": 0.3,

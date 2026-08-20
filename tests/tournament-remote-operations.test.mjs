@@ -83,6 +83,30 @@ test("remote operations update only allowed state fields", async () => {
   assert.deepEqual(relicResult.state.preferences, state.preferences);
 });
 
+test("remote tournament information is normalized as one run-scoped edit", async () => {
+  const master = await loadMaster();
+  const state = baseState();
+  const result = applyTournamentRemoteOperation(state, master, {
+    type: "tournament-info.set",
+    value: {
+      score: 1280,
+      withdrawals: 3,
+      memo: "決勝 第2試合",
+    },
+  });
+
+  assert.deepEqual(result.state.run.tournamentInfo, {
+    score: 1280,
+    withdrawals: 3,
+    memo: "決勝 第2試合",
+  });
+  assert.equal(state.run.tournamentInfo, undefined);
+  assert.match(result.summary, /大会情報/);
+
+  const cleared = applyTournamentRemoteOperation(result.state, master, { type: "run.clear" });
+  assert.equal(cleared.state.run.tournamentInfo, undefined);
+});
+
 test("operator promotion updates are retained only for selected elite-two capable operators", async () => {
   const master = await loadMaster();
   const fourStarOrHigher = master.operators.find((item) => Number(item.rarity) >= 4);

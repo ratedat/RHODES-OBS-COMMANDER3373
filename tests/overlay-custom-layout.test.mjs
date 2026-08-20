@@ -21,6 +21,15 @@ test("custom overlay layout keeps every known part and clamps persisted geometry
 
   assert.equal(layout.length, defaultCustomOverlayLayout.length);
   assert.deepEqual(layout.map((item) => item.id), defaultCustomOverlayLayout.map((item) => item.id));
+  assert.deepEqual(layout.find((item) => item.id === "tournament"), {
+    id: "tournament",
+    enabled: false,
+    x: 600,
+    y: 680,
+    width: 760,
+    height: 130,
+    zIndex: 7,
+  });
   assert.deepEqual(layout.find((item) => item.id === "status"), {
     id: "status",
     enabled: false,
@@ -28,7 +37,7 @@ test("custom overlay layout keeps every known part and clamps persisted geometry
     y: 1000,
     width: 1920,
     height: 80,
-    zIndex: 6,
+    zIndex: 7,
   });
   assert.equal(layout.some((item) => item.id === "unknown"), false);
 });

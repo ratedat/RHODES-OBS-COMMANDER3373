@@ -1027,8 +1027,8 @@ a:hover { text-decoration: underline; }
   justify-items: center;
   gap: 3px;
   padding: 4px;
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgb(var(--overlay-item-background-rgb, var(--overlay-background-rgb, 8 11 12)) / var(--overlay-item-background-alpha, 0.58));
+  border: 1px solid var(--overlay-item-border-color, var(--overlay-border-color, rgba(255, 255, 255, 0.1)));
 }
 .overlay-part-relic img { width: 42px; height: 42px; object-fit: contain; }
 .overlay-part-relic span { max-width: 100%; color: #e6ded2; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1093,14 +1093,85 @@ a:hover { text-decoration: underline; }
   gap: 6px;
   align-items: center;
   padding: 5px;
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgb(var(--overlay-item-background-rgb, var(--overlay-background-rgb, 8 11 12)) / var(--overlay-item-background-alpha, 0.58));
+  border: 1px solid var(--overlay-item-border-color, var(--overlay-border-color, rgba(255, 255, 255, 0.1)));
 }
 .overlay-part-operator > .operator-portrait { width: 32px; height: 32px; }
 .overlay-part-operator strong,
 .overlay-part-operator span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .overlay-part-operator strong { color: #fff7e2; font-size: 11px; }
 .overlay-part-operator span { color: var(--muted); font-size: 9px; }
+.overlay-relic-icon-only .overlay-part-relic-grid {
+  grid-template-columns: repeat(auto-fill, minmax(42px, 56px));
+  justify-content: start;
+}
+.overlay-relic-icon-only .overlay-part-relic { padding: 3px; }
+.overlay-relic-icon-only .overlay-part-relic > span:not(.relic-stack-badge):not(.relic-used-badge) { display: none; }
+.overlay-operator-icon-only .overlay-part-operator-groups { gap: 4px; }
+.overlay-operator-icon-only .overlay-part-operator-group { display: contents; }
+.overlay-operator-icon-only .overlay-part-operator-group > h3 { display: none; }
+.overlay-operator-icon-only .overlay-part-operator-grid {
+  grid-template-columns: repeat(auto-fill, minmax(38px, 48px));
+  justify-content: start;
+}
+.overlay-operator-icon-only .overlay-part-operator {
+  display: block;
+  padding: 3px;
+}
+.overlay-operator-icon-only .overlay-part-operator > div:not(.operator-portrait) { display: none; }
+.overlay-operator-icon-only .overlay-part-operator > .operator-portrait { width: 38px; height: 38px; }
+.overlay-part-tournament-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(100px, 0.35fr)) minmax(180px, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+.overlay-part-tournament-value,
+.overlay-part-tournament-memo {
+  min-width: 0;
+  margin: 0;
+  padding: 8px 10px;
+  background: rgb(var(--overlay-item-background-rgb, var(--overlay-background-rgb, 8 11 12)) / var(--overlay-item-background-alpha, 0.58));
+  border: 1px solid var(--overlay-item-border-color, var(--overlay-border-color, rgba(255, 255, 255, 0.1)));
+}
+.overlay-part-tournament-value { display: grid; align-content: center; gap: 2px; }
+.overlay-part-tournament-value span { color: var(--overlay-muted-font-color, var(--muted)); font-size: 10px; }
+.overlay-part-tournament-value strong { color: var(--overlay-strong-font-color, #fff7e2); font-size: 22px; }
+.overlay-part-tournament-memo {
+  display: flex;
+  align-items: center;
+  color: var(--overlay-font-color, #f2efe6);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: hidden;
+}
+.overlay-relic-icon-only .stream-relic-grid,
+.overlay-relic-icon-only .relic-grid {
+  grid-template-columns: repeat(auto-fill, minmax(44px, 56px));
+  justify-content: start;
+}
+.overlay-relic-icon-only .stream-relic-tile,
+.overlay-relic-icon-only .relic-tile { min-width: 44px; padding: 3px; }
+.overlay-relic-icon-only .stream-relic-tile > strong,
+.overlay-relic-icon-only .relic-tile > div { display: none; }
+.overlay-operator-icon-only .compact-operator-strip,
+.overlay-operator-icon-only .stream-operator-grid,
+.overlay-operator-icon-only .operator-list {
+  grid-template-columns: repeat(auto-fill, minmax(38px, 48px));
+  justify-content: start;
+}
+.overlay-operator-icon-only .compact-operator,
+.overlay-operator-icon-only .stream-operator-tile,
+.overlay-operator-icon-only .operator-row { display: block; min-width: 38px; padding: 3px; }
+.overlay-operator-icon-only .compact-operator > span,
+.overlay-operator-icon-only .compact-operator > strong,
+.overlay-operator-icon-only .stream-operator-tile > div:not(.operator-portrait),
+.overlay-operator-icon-only .operator-row > div:not(.operator-portrait),
+.overlay-operator-icon-only .operator-row > .stars { display: none; }
+.overlay-operator-icon-only .compact-operator > .operator-portrait,
+.overlay-operator-icon-only .stream-operator-tile > .operator-portrait,
+.overlay-operator-icon-only .operator-row > .operator-portrait { width: 38px; height: 38px; }
 .operator-portrait {
   position: relative;
   display: block;
@@ -1764,6 +1835,75 @@ a:hover { text-decoration: underline; }
 .overlay-app .squad-option-effect,
 .overlay-app .boss-card-title { font-size: calc(12px * var(--overlay-font-scale, 1)); }
 
+/* Stable output-theme hooks. Keep user CSS independent from internal markup depth. */
+.overlay-app .overlay-part-status-main,
+.overlay-app .overlay-part-status-cell,
+.overlay-app .overlay-part-relic,
+.overlay-app .overlay-part-operator,
+.overlay-app .compact-counts span,
+.overlay-app .compact-more,
+.overlay-app .compact-operator,
+.overlay-app .stream-head,
+.overlay-app .stream-run,
+.overlay-app .stream-panel,
+.overlay-app .stream-counts span,
+.overlay-app .stream-relic-tile,
+.overlay-app .stream-operator-tile,
+.overlay-app .kpi,
+.overlay-app .relic-tile,
+.overlay-app .operator-row,
+.overlay-app .effect-row,
+.overlay-app .boss-card,
+.overlay-app .boss-chip,
+.overlay-app .special-overlay-chip {
+  background: rgb(var(--overlay-item-background-rgb, var(--overlay-background-rgb, 8 11 12)) / var(--overlay-item-background-alpha, 0.58));
+  border-color: var(--overlay-item-border-color, var(--overlay-border-color, rgba(255, 255, 255, 0.12)));
+}
+.overlay-app .overlay-part-shell,
+.overlay-app .compact-overlay-shell,
+.overlay-app .stream-overlay-shell,
+.overlay-app .overlay-card {
+  box-shadow: var(--overlay-shadow, 0 12px 36px rgb(0 0 0 / 30%));
+}
+.overlay-app .overlay-part-status-main strong,
+.overlay-app .overlay-part-status-cell strong,
+.overlay-app .overlay-part-relic span,
+.overlay-app .overlay-part-operator strong,
+.overlay-app .compact-title,
+.overlay-app .compact-row strong,
+.overlay-app .stream-title,
+.overlay-app .stream-line strong,
+.overlay-app .stream-relic-tile strong,
+.overlay-app .stream-operator-tile strong,
+.overlay-app .special-overlay-chip strong,
+.overlay-app .campaign-title,
+.overlay-app .squad-name,
+.overlay-app .operator-name,
+.overlay-app .boss-card-title,
+.overlay-app .boss-chip strong {
+  color: var(--overlay-strong-font-color, var(--overlay-font-color, var(--text)));
+}
+.overlay-app .overlay-part-head,
+.overlay-app .overlay-part-status-main span,
+.overlay-app .overlay-part-status-cell span,
+.overlay-app .overlay-part-operator span,
+.overlay-app .compact-row span,
+.overlay-app .compact-section-head,
+.overlay-app .stream-line span,
+.overlay-app .stream-section-head,
+.overlay-app .stream-relic-tile span,
+.overlay-app .stream-operator-tile span,
+.overlay-app .special-overlay-chip span,
+.overlay-app .special-overlay-chip small,
+.overlay-app .overlay-card-header,
+.overlay-app .campaign-sub,
+.overlay-app .squad-effect,
+.overlay-app .squad-option-effect,
+.overlay-app .kpi-label,
+.overlay-app .boss-chip span {
+  color: var(--overlay-muted-font-color, var(--muted));
+}
+
 /* Background OFF removes every neutral overlay surface while preserving content and state colors. */
 .overlay-background-disabled .compact-overlay-shell,
 .overlay-background-disabled .stream-overlay-shell,
@@ -2122,4 +2262,15 @@ a:hover { text-decoration: underline; }
   color: var(--accent-2, #7ee6d2);
   font-weight: 700;
   white-space: nowrap;
+}
+
+/* Layout-specific rules are declared later in this file, so keep tournament
+   icon grids last to prevent horizontal/vertical presets from widening them. */
+.overlay-relic-icon-only.stream-overlay-shell .stream-relic-grid {
+  grid-template-columns: repeat(auto-fill, minmax(44px, 56px));
+  justify-content: start;
+}
+.overlay-operator-icon-only.stream-overlay-shell .stream-operator-grid {
+  grid-template-columns: repeat(auto-fill, minmax(38px, 48px));
+  justify-content: start;
 }

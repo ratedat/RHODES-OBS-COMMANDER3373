@@ -3,6 +3,11 @@ import { renderRelicUsedBadge } from "./relic-used-badge.js";
 import { renderRelicStackBadge } from "./relic-stack-badge.js";
 import { renderOperatorPortrait } from "./operator-promotion-badge.js";
 import { operatorRosterCount } from "../domain/operator-counts.js";
+import {
+  normalizeTournamentInfo,
+  prepareTournamentOverlayArgs,
+  tournamentPresentationClassNames,
+} from "../domain/tournament-output.js";
 
 function operatorNameClass(item) {
   if (item.isCandleBearerTarget) return "candle-bearer-operator-name";
@@ -17,11 +22,13 @@ export const overlayPartOptions = [
   { id: "effects", title: "Effects", label: "効果", hint: "左サイド / 520x360" },
   { id: "bosses", title: "Boss Flags", label: "ボス", hint: "フラグ枠 / 520x220" },
   { id: "special", title: "Special", label: "特殊値", hint: "啓示・思案など / 520x180" },
+  { id: "tournament", title: "Tournament", label: "大会情報", hint: "点数・引き出し・メモ / 760x130" },
 ];
 
 
-function section(part, title, count, body) {
-  return `<section class="overlay-part-shell overlay-part-${part}">
+function section(part, title, count, body, presentation = {}) {
+  const presentationClasses = tournamentPresentationClassNames(presentation);
+  return `<section class="overlay-part-shell overlay-part-${part}${presentationClasses ? ` ${presentationClasses}` : ""}">
     <header class="overlay-part-head"><span>${html(title)}</span><strong>${html(count)}</strong></header>
     <div class="overlay-part-body">${body}</div>
   </section>`;
@@ -44,7 +51,7 @@ function renderStatusPart(args, context) {
       <div class="overlay-part-status-cell"><span>等級</span><strong>${html(args.difficultyGrade?.label || args.runDifficulty || "-")}</strong></div>
       <div class="overlay-part-status-cell"><span>分隊</span><strong>${html(args.squad?.name || "未選択")}</strong></div>
       <div class="overlay-part-status-cell"><span>秘宝</span><strong>${args.relics.length}</strong></div>
-      <div class="overlay-part-status-cell"><span>招集</span><strong>${operatorRosterCount(args.operators)}</strong></div>
+      <div class="overlay-part-status-cell"><span>招集</span><strong>${operatorRosterCount(args.allOperators)}</strong></div>
       ${runStats.map((item) => `<div class="overlay-part-status-cell"><span>${html(item.label)}</span><strong>${html(item.value)}</strong></div>`).join("")}
     </div>
     <div class="overlay-part-chip-row">
@@ -59,10 +66,10 @@ function renderStatusPart(args, context) {
 function renderRelicsPart(args, context) {
   const body = args.relics.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("horizontalRelicScrollSpeed")}">
     <div class="overlay-part-relic-grid">
-      ${args.relics.map((item) => `<div class="overlay-part-relic ${item.used ? "used" : ""}" title="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span>${html(item.name)}</span>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("")}
+      ${args.relics.map((item) => `<div class="overlay-part-relic ${item.used ? "used" : ""}" title="${html(item.name)}" aria-label="${html(item.name)}" data-effect="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span>${html(item.name)}</span>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("")}
     </div>
   </div>` : empty("秘宝なし");
-  return section("relics", "Relics", args.relics.length, body);
+  return section("relics", "Relics", args.relics.length, body, args.presentation);
 }
 
 function renderOperatorsPart(args, context) {
@@ -71,10 +78,10 @@ function renderOperatorsPart(args, context) {
     .filter((group) => group.items.length);
   const body = grouped.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("horizontalOperatorScrollSpeed")}">
     <div class="overlay-part-operator-groups">
-      ${grouped.map((group) => `<section class="overlay-part-operator-group"><h3>${stars(group.rarity)} <span>${operatorRosterCount(group.items)}</span></h3><div class="overlay-part-operator-grid">${group.items.map((item) => `<div class="overlay-part-operator">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${html(item.class || "-")} / ${html(item.branch || "-")}</span></div></div>`).join("")}</div></section>`).join("")}
+      ${grouped.map((group) => `<section class="overlay-part-operator-group"><h3>${stars(group.rarity)} <span>${operatorRosterCount(group.items)}</span></h3><div class="overlay-part-operator-grid">${group.items.map((item) => `<div class="overlay-part-operator" title="${html(item.name)}" aria-label="${html(item.name)}">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${html(item.class || "-")} / ${html(item.branch || "-")}</span></div></div>`).join("")}</div></section>`).join("")}
     </div>
   </div>` : empty("未招集");
-  return section("operators", "Operators", operatorRosterCount(args.operators), body);
+  return section("operators", "Operators", operatorRosterCount(args.operators), body, args.presentation);
 }
 
 function renderEffectsPart(args, context) {
@@ -96,12 +103,25 @@ function renderSpecialPart(args, context) {
   return section("special", "Special", specialItems.length, body);
 }
 
+function renderTournamentPart(args) {
+  const info = normalizeTournamentInfo(args.run?.tournamentInfo);
+  const hasValues = info.score !== null || info.withdrawals !== null || info.memo;
+  const body = hasValues ? `<div class="overlay-part-tournament-grid">
+    ${info.score !== null ? `<div class="overlay-part-tournament-value"><span>点数</span><strong data-tournament-field="score">${html(info.score)}</strong></div>` : ""}
+    ${info.withdrawals !== null ? `<div class="overlay-part-tournament-value"><span>引き出し</span><strong data-tournament-field="withdrawals">${html(info.withdrawals)}</strong></div>` : ""}
+    ${info.memo ? `<p class="overlay-part-tournament-memo">${html(info.memo)}</p>` : ""}
+  </div>` : empty("大会情報は未入力です");
+  return section("tournament", "Tournament", hasValues ? "LIVE" : "-", body, args.presentation);
+}
+
 export function renderOverlayPart(part, args, context) {
-  if (part === "status") return renderStatusPart(args, context);
-  if (part === "relics") return renderRelicsPart(args, context);
-  if (part === "operators") return renderOperatorsPart(args, context);
-  if (part === "effects") return renderEffectsPart(args, context);
-  if (part === "bosses") return renderBossesPart(args, context);
-  if (part === "special") return renderSpecialPart(args, context);
-  return renderStatusPart(args, context);
+  const prepared = prepareTournamentOverlayArgs(args);
+  if (part === "status") return renderStatusPart(prepared, context);
+  if (part === "relics") return renderRelicsPart(prepared, context);
+  if (part === "operators") return renderOperatorsPart(prepared, context);
+  if (part === "effects") return renderEffectsPart(prepared, context);
+  if (part === "bosses") return renderBossesPart(prepared, context);
+  if (part === "special") return renderSpecialPart(prepared, context);
+  if (part === "tournament") return renderTournamentPart(prepared);
+  return renderStatusPart(prepared, context);
 }

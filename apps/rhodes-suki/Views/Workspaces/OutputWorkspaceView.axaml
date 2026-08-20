@@ -154,19 +154,21 @@
     <Expander Header="外部中継サーバー（上級者向け）" IsExpanded="False">
       <Border Classes="surfaceCard" Margin="0,8,0,0">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
-          <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+          <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
             <StackPanel Spacing="2">
               <TextBlock Text="手動Relay接続" Classes="h2" />
               <TextBlock Text="常設URLや独自インフラが必要な場合だけ使用します。通常は上の簡易公開を使用してください。"
                          Classes="caption" TextWrapping="Wrap" />
             </StackPanel>
-            <Button Grid.Column="1" Classes="primary" Content="開始"
+            <Button Grid.Column="1" Classes="tertiaryAction" Content="導入ガイド"
+                    Command="{Binding OpenExternalRelayGuideCommand}" />
+            <Button Grid.Column="2" Classes="primary" Content="開始"
                     Command="{Binding StartTournamentRemoteCommand}" />
-            <Button Grid.Column="2" Content="現在値を同期"
+            <Button Grid.Column="3" Content="現在値を同期"
                     Command="{Binding SyncTournamentRemoteCommand}" />
-            <Button Grid.Column="3" Content="状態確認"
+            <Button Grid.Column="4" Content="状態確認"
                     Command="{Binding RefreshTournamentRemoteCommand}" />
-            <Button Grid.Column="4" Content="停止"
+            <Button Grid.Column="5" Content="停止"
                     Command="{Binding StopTournamentRemoteCommand}" />
           </Grid>
 
@@ -246,7 +248,7 @@
     </Border>
 
     <Border Classes="surfaceCard">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
           <StackPanel Spacing="2">
             <TextBlock Text="統合Overlay設定" Classes="h2" />
@@ -278,7 +280,34 @@
             </Grid>
           </StackPanel>
         </Grid>
-        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
+        <Border Grid.Row="2" Classes="settingsSubCard">
+          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="16">
+            <StackPanel Spacing="2">
+              <TextBlock Text="大会表示" Classes="sectionTitle" />
+              <TextBlock Text="情報量を絞って配信枠を確保します。" Classes="caption" />
+            </StackPanel>
+            <CheckBox Grid.Column="1" Content="秘宝はアイコンのみ"
+                      IsChecked="{Binding OutputRelicIconOnly, Mode=TwoWay}" VerticalAlignment="Center"
+                      ToolTip.Tip="秘宝名と説明を隠します。画像の代替名は保持されます。" />
+            <CheckBox Grid.Column="2" Content="オペレーターはアイコンのみ"
+                      IsChecked="{Binding OutputOperatorIconOnly, Mode=TwoWay}" VerticalAlignment="Center"
+                      ToolTip.Tip="オペレーター名と昇進表示を隠します。画像の代替名は保持されます。" />
+            <CheckBox Grid.Column="3" Content="タイトルを表示"
+                      IsChecked="{Binding OutputShowPartTitles, Mode=TwoWay}" VerticalAlignment="Center" />
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="表示レアリティ" Classes="caption" VerticalAlignment="Center" />
+              <ItemsControl ItemsSource="{Binding OutputOperatorRarityOptions}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,0,12,0" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Grid>
+        </Border>
+        <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="12">
           <Border Classes="settingsSubCard">
             <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="10" ColumnSpacing="12">
               <StackPanel Spacing="2">
@@ -318,12 +347,12 @@
             </Grid>
           </Border>
         </Grid>
-        <Grid Grid.Row="3" ColumnDefinitions="*,*,*" ColumnSpacing="10">
+        <Grid Grid.Row="4" ColumnDefinitions="*,*,*" ColumnSpacing="10">
           <StackPanel Spacing="3"><TextBlock Text="フォント色" Classes="caption" /><TextBox Text="{Binding OutputFontColor, Mode=TwoWay}" PlaceholderText="#F2EFE6" /></StackPanel>
           <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="枠線色" Classes="caption" /><TextBox Text="{Binding OutputBorderColor, Mode=TwoWay}" PlaceholderText="#2B3638" /></StackPanel>
           <StackPanel Grid.Column="2" Spacing="3"><TextBlock Text="強調色" Classes="caption" /><TextBox Text="{Binding OutputAccentColor, Mode=TwoWay}" PlaceholderText="#55D6BE" /></StackPanel>
         </Grid>
-        <Expander Grid.Row="4" Header="上級者向けユーザーCSS">
+        <Expander Grid.Row="5" Header="上級者向けユーザーCSS">
           <StackPanel Margin="0,10,0,0" Spacing="5">
             <TextBox Text="{Binding OutputCustomCss, Mode=TwoWay}" AcceptsReturn="True" MinHeight="110"
                      FontFamily="Consolas" TextWrapping="Wrap" PlaceholderText="/* 統合Overlayだけに追加されるCSS */" />
@@ -334,7 +363,7 @@
     </Border>
 
     <Border Classes="surfaceCard">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
           <StackPanel Spacing="2">
             <TextBlock Text="個別ウィンドウ設定" Classes="h2" />
@@ -360,7 +389,30 @@
             </Grid>
           </StackPanel>
         </Grid>
-        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
+        <Border Grid.Row="2" Classes="settingsSubCard">
+          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" RowSpacing="10" ColumnSpacing="16">
+            <StackPanel Spacing="2">
+              <TextBlock Text="大会表示" Classes="sectionTitle" />
+              <TextBlock Text="個別Browser Sourceだけに適用します。" Classes="caption" />
+            </StackPanel>
+            <CheckBox Grid.Column="1" Content="秘宝はアイコンのみ"
+                      IsChecked="{Binding IndividualOutputRelicIconOnly, Mode=TwoWay}" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="2" Content="オペレーターはアイコンのみ"
+                      IsChecked="{Binding IndividualOutputOperatorIconOnly, Mode=TwoWay}" VerticalAlignment="Center" />
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="表示レアリティ" Classes="caption" VerticalAlignment="Center" />
+              <ItemsControl ItemsSource="{Binding IndividualOutputOperatorRarityOptions}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,0,12,0" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Grid>
+        </Border>
+        <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="12">
           <Border Classes="settingsSubCard">
             <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="10" ColumnSpacing="12">
               <StackPanel Spacing="2"><TextBlock Text="全体背景" Classes="sectionTitle" /><TextBlock Text="個別Browser Source全体を塗ります。" Classes="caption" TextWrapping="Wrap" /></StackPanel>
@@ -394,13 +446,13 @@
             </Grid>
           </Border>
         </Grid>
-        <Grid Grid.Row="3" ColumnDefinitions="*,*,*,Auto" ColumnSpacing="10">
+        <Grid Grid.Row="4" ColumnDefinitions="*,*,*,Auto" ColumnSpacing="10">
           <StackPanel Spacing="3"><TextBlock Text="フォント色" Classes="caption" /><TextBox Text="{Binding IndividualOutputFontColor, Mode=TwoWay}" PlaceholderText="#F2EFE6" /></StackPanel>
           <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="枠線色" Classes="caption" /><TextBox Text="{Binding IndividualOutputBorderColor, Mode=TwoWay}" PlaceholderText="#2B3638" /></StackPanel>
           <StackPanel Grid.Column="2" Spacing="3"><TextBlock Text="強調色" Classes="caption" /><TextBox Text="{Binding IndividualOutputAccentColor, Mode=TwoWay}" PlaceholderText="#55D6BE" /></StackPanel>
           <CheckBox Grid.Column="3" Content="タイトルを表示" IsChecked="{Binding IndividualOutputShowPartTitles, Mode=TwoWay}" VerticalAlignment="Center" />
         </Grid>
-        <Expander Grid.Row="4" Header="個別ウィンドウ用ユーザーCSS">
+        <Expander Grid.Row="5" Header="個別ウィンドウ用ユーザーCSS">
           <StackPanel Margin="0,10,0,0" Spacing="5">
             <TextBox Text="{Binding IndividualOutputCustomCss, Mode=TwoWay}" AcceptsReturn="True" MinHeight="110"
                      FontFamily="Consolas" TextWrapping="Wrap" PlaceholderText="/* 部品別URLだけに追加されるCSS */" />

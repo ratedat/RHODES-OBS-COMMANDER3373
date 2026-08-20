@@ -524,6 +524,24 @@
       "scale": 1
     },
     {
+      "id": "is6.active_coin_count",
+      "profileIds": [
+        "is6ActiveCoinsFull"
+      ],
+      "roi": [
+        592,
+        115,
+        65,
+        60
+      ],
+      "onlyRec": true,
+      "scale": 3,
+      "numericFallback": {
+        "min": 1,
+        "max": 99
+      }
+    },
+    {
       "id": "is6.active_coin_list_text",
       "profileIds": [
         "is6ActiveCoinsFull"
@@ -538,15 +556,43 @@
       "scale": 2
     },
     {
+      "id": "is6.seasonal_hour_name",
+      "profileIds": [
+        "is6SeasonalHours"
+      ],
+      "roi": [
+        480,
+        98,
+        320,
+        45
+      ],
+      "onlyRec": false,
+      "scale": 4
+    },
+    {
+      "id": "is6.seasonal_hour_level",
+      "profileIds": [
+        "is6SeasonalHours"
+      ],
+      "roi": [
+        795,
+        100,
+        135,
+        42
+      ],
+      "onlyRec": false,
+      "scale": 3
+    },
+    {
       "id": "is6.seasonal_hour_detail_text",
       "profileIds": [
         "is6SeasonalHours"
       ],
       "roi": [
         383,
-        80,
+        100,
         563,
-        500
+        135
       ],
       "onlyRec": false,
       "scale": 3
