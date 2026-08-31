@@ -5,6 +5,7 @@ namespace RhodesSuki.Services;
 public static class RhodesRecognitionRuntimePlan
 {
     private const string OperatorCardTemplateEntry = "RhodesTemplate_operatorsFull_operator_card_name";
+    private const string RunStatusSquadIconEntryPrefix = "RhodesTemplate_runStatusFull_run_squad_icon_";
     private const string PhantomCampaignId = "is2_phantom";
     private const int RelicVisibleItemCapacity = 9;
 
@@ -32,10 +33,13 @@ public static class RhodesRecognitionRuntimePlan
         return plan with { TaskEntries = selectedEntries, Tasks = selected };
     }
 
-    public static MaaResourceExecutionPlan PrepareInitial(MaaResourceExecutionPlan plan)
+    public static MaaResourceExecutionPlan PrepareInitial(
+        MaaResourceExecutionPlan plan,
+        string? activeCampaignId = null)
     {
         var entries = plan.ProfileId switch
         {
+            "runStatusFull" => FocusRunStatusEntries(plan.TaskEntries, activeCampaignId),
             "operatorsFull" => plan.TaskEntries.Where(entry =>
                 entry.Equals(OperatorCardTemplateEntry, StringComparison.Ordinal)),
             "relicsFull" => plan.TaskEntries.Where(entry =>
@@ -52,6 +56,28 @@ public static class RhodesRecognitionRuntimePlan
             .Where(task => selectedEntries.Contains(task.Entry, StringComparer.Ordinal))
             .ToArray();
         return plan with { TaskEntries = selectedEntries, Tasks = selected };
+    }
+
+    private static IEnumerable<string> FocusRunStatusEntries(
+        IEnumerable<string> entries,
+        string? activeCampaignId)
+    {
+        var campaignToken = activeCampaignId switch
+        {
+            "is2_phantom" => "_is2_phantom_",
+            "is3_mizuki" => "_is3_mizuki_",
+            // IS4 has no icon-template task and resolves the squad from common OCR.
+            "is4_sami" => "__no_campaign_squad_icon__",
+            "is5_sarkaz" => "_is5_sarkaz_",
+            "is6_sui" => "_is6_sui_",
+            _ => "",
+        };
+        if (string.IsNullOrWhiteSpace(campaignToken))
+            return entries;
+
+        return entries.Where(entry =>
+            !entry.StartsWith(RunStatusSquadIconEntryPrefix, StringComparison.Ordinal)
+            || entry.Contains(campaignToken, StringComparison.Ordinal));
     }
 
     public static bool IsScrollProfile(string profileId) =>

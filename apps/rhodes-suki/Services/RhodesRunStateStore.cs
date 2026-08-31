@@ -178,6 +178,7 @@ public static class RhodesRunStateStore
             node["version"] ??= 1;
             PruneAbandonedRunValues(node);
             NormalizeOcrEnginePreference(node);
+            NormalizeRelicStackCounts(node);
             await WriteJsonAtomicAsync(path, node);
         }
         finally
@@ -303,17 +304,27 @@ public static class RhodesRunStateStore
         state["usedRelicIds"] = ToJsonArray(relicItems
             .Where(item => item.IsSelected && item.SupportsUsedFlag && item.IsUsed)
             .Select(item => item.Id));
+        var stackRules = RhodesRelicStackRuleCatalog.LoadDefault()
+            .ToDictionary(rule => rule.RelicId, StringComparer.Ordinal);
+        var nonStackRelicIds = RhodesRelicStackRuleCatalog.LoadExplicitNonStackRelics()
+            .Select(rule => rule.RelicId)
+            .ToHashSet(StringComparer.Ordinal);
         var relicStackCounts = new JsonObject();
-        foreach (var item in relicItems.Where(item =>
-            item.IsSelected
+        foreach (var item in relicItems.Where(item => item.IsSelected
             && item.SupportsRelicStackCount
-            && !RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(item.Id)
-            && item.RelicStackCount > 0
-            && (item.RelicStackMaximum is null || item.RelicStackCount <= item.RelicStackMaximum)))
+            && item.RelicStackCount > 0))
         {
+            if (nonStackRelicIds.Contains(item.Id)
+                || !stackRules.TryGetValue(item.Id, out var stackRule)
+                || stackRule.Maximum is int maximum && item.RelicStackCount > maximum)
+            {
+                continue;
+            }
+
             relicStackCounts[item.Id] = item.RelicStackCount;
         }
         state["relicStackCounts"] = relicStackCounts;
+        NormalizeRelicStackCounts(state);
         state["updatedAt"] = now.UtcDateTime.ToString("O");
 
         var preferences = EnsureObject(state, "preferences");
@@ -329,6 +340,42 @@ public static class RhodesRunStateStore
         preferences["relicGridColumns"] = Math.Clamp(snapshot.Options.RelicGridColumns, 1, 4);
 
         return state;
+    }
+
+    public static bool NormalizeRelicStackCounts(JsonObject state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        if (state["relicStackCounts"] is not JsonObject counts)
+        {
+            if (state.ContainsKey("relicStackCounts"))
+            {
+                state["relicStackCounts"] = new JsonObject();
+                return true;
+            }
+            return false;
+        }
+
+        var selectedRelicIds = state["relics"] is JsonArray selectedRelics
+            ? selectedRelics
+                .OfType<JsonValue>()
+                .Select(value => value.TryGetValue<string>(out var id) ? id : "")
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+        var changed = false;
+        foreach (var entry in counts.ToArray())
+        {
+            var valid = selectedRelicIds.Contains(entry.Key)
+                && entry.Value is JsonValue value
+                && value.TryGetValue<int>(out var count)
+                && RhodesRelicStackRuleCatalog.IsWithinKnownLimit(entry.Key, count);
+            if (valid)
+                continue;
+
+            counts.Remove(entry.Key);
+            changed = true;
+        }
+        return changed;
     }
 
     public static JsonObject ApplyBossSelection(
@@ -438,6 +485,7 @@ public static class RhodesRunStateStore
 
     private static async Task WriteJsonAtomicAsync(string path, JsonObject state)
     {
+        NormalizeRelicStackCounts(state);
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory))
             Directory.CreateDirectory(directory);

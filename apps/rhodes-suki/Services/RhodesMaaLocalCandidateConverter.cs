@@ -919,14 +919,17 @@ public static class RhodesMaaLocalCandidateConverter
             }
 
             var relicId = taskResult.Entry[RhodesRelicStackOcrPlanner.EntryPrefix.Length..];
-            if (string.IsNullOrWhiteSpace(relicId))
+            if (string.IsNullOrWhiteSpace(relicId)
+                || RhodesRelicStackRuleCatalog.Find(relicId) is null
+                || RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(relicId))
                 continue;
 
             foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
             {
                 var numbers = Regex.Matches(textResult.Text, @"\d+", RegexOptions.CultureInvariant)
                     .Select(match => int.TryParse(match.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)
-                    .Where(value => value > 0)
+                    .Where(value => value > 0
+                        && RhodesRelicStackRuleCatalog.IsWithinKnownLimit(relicId, value))
                     .Distinct()
                     .ToArray();
                 if (numbers.Length != 1)

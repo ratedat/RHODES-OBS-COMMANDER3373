@@ -51,6 +51,7 @@ public static class RhodesRelicStackOcrPlanner
 
                 var relic = RhodesMaaLocalCandidateConverter.ResolveRelicName(row.Text, campaignId);
                 if (relic is null
+                    || RhodesRelicStackRuleCatalog.Find(relic.Id) is null
                     || RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(relic.Id)
                     || !emitted.Add(relic.Id))
                     continue;

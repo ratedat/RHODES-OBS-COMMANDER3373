@@ -37,7 +37,7 @@ test("stack relic rules remain unique and match canonical relic data", () => {
   assert.equal(relicStackMaximum("is3_mizuki_relic_261", rules), null);
 });
 
-test("state normalization rejects known over-limit OCR but preserves unlisted positive counts", () => {
+test("state normalization keeps only allowlisted stack relic counts", () => {
   const normalized = normalizeRelicStackCounts({
     is5_sarkaz_relic_287: 11,
     is3_mizuki_relic_261: 123,
@@ -48,7 +48,6 @@ test("state normalization rejects known over-limit OCR but preserves unlisted po
 
   assert.deepEqual(normalized, {
     is3_mizuki_relic_261: 123,
-    unlisted_relic: 44,
   });
 });
 
@@ -56,8 +55,10 @@ test("manual stack input clamps known maxima and removes zero", () => {
   assert.equal(normalizeManualRelicStackCount(12, "is5_sarkaz_relic_287", rules), 10);
   assert.equal(normalizeManualRelicStackCount(123, "is3_mizuki_relic_261", rules), 123);
   assert.equal(normalizeManualRelicStackCount(0, "is5_sarkaz_relic_287", rules), 0);
+  assert.equal(normalizeManualRelicStackCount(44, "unlisted_relic", rules), 0);
   assert.equal(normalizeManualRelicStackCount(2, "is6_sui_relic_099", stackData), 0);
   assert.equal(relicIsExplicitlyNonStack("is6_sui_relic_099", stackData), true);
+  assert.equal(relicSupportsStackCount("unlisted_relic", { unlisted_relic: 44 }, stackData), false);
   assert.equal(relicSupportsStackCount("is6_sui_relic_099", { is6_sui_relic_099: 2 }, stackData), false);
 
   const state = { relics: ["is5_sarkaz_relic_287"], relicStackCounts: {} };

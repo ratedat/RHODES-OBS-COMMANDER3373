@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "meta": {
-    "updatedAt": "2026-08-14",
+    "updatedAt": "2026-08-31",
     "source": "User-provided verified working list",
-    "note": "maximum=null means no known in-game upper limit. The list may be incomplete; generic badge OCR remains available for unlisted relics unless explicitly excluded below."
+    "note": "maximum=null means no known in-game upper limit. Only listed relic IDs are eligible for stack OCR, persistence, and manual input; add newly confirmed stack relics to this allowlist first."
   },
   "nonStackRelics": [
     {

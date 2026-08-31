@@ -217,8 +217,10 @@ public sealed record SukiWin32InputOption(
 
 public static class SukiWin32InputCatalog
 {
-    // MAA v6.16.8 AttachWindow defaults.
-    // Source: https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/v6.16.8/src/MaaWpfGui/Models/EmulatorConnectionExtra/Win32Extra.cs
+    // Keep the proven MAA AttachWindow defaults while exposing compatible MaaFramework dev methods.
+    // Sources:
+    // https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/v6.16.8/src/MaaWpfGui/Models/EmulatorConnectionExtra/Win32Extra.cs
+    // https://github.com/MaaXYZ/MaaFramework/blob/v5.13.0-beta.5/docs/en_us/2.4-ControlMethods.md
     public const string DefaultMouseId = "send-message-cursor";
     public const string DefaultKeyboardId = "send-message";
 
@@ -229,6 +231,11 @@ public static class SukiWin32InputCatalog
             "SendMsg + CursorPos（推奨）",
             "MAAの既定方式です。操作時だけマウス位置を対象座標へ移し、送信後に元へ戻します。",
             Win32InputMethod.SendMessageWithCursorPos),
+        new(
+            "anchored-touch",
+            "AnchoredTouch（開発版）",
+            "カーソルを動かさず、合成タッチでクリックとスワイプを送ります。Windows 10 1809以降向けです。スクロールホイールには対応しないため、3373の取得プロファイルのタップ／スワイプ専用です。対象ウィンドウが隠れている場合は一時的に表示状態が変わることがあります。",
+            Win32InputMethod.AnchoredTouch),
         new(
             "send-message-window",
             "SendMsg + WindowPos",
@@ -270,6 +277,7 @@ public static class SukiWin32InputCatalog
         normalized = normalized switch
         {
             "sendmessagewithcursorpos" or "send-with-cursor-pos" or "cursor" => DefaultMouseId,
+            "anchored" or "anchoredtouch" or "touch" => "anchored-touch",
             "sendmessagewithwindowpos" or "send-with-window-pos" or "window" => "send-message-window",
             _ => normalized,
         };

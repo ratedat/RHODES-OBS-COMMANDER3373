@@ -50,6 +50,7 @@ var tests = new (string Name, Action Run)[]
     ("Local MAA candidate converter extracts random squad effect candidates", LocalCandidateConverterRunStatusSquadRandomEffect),
     ("Local MAA candidate converter extracts exact operator name candidates", LocalCandidateConverterOperators),
     ("Recognition catalog cache reuses operator data across candidate conversions", RecognitionCatalogCacheReusesOperatorData),
+    ("MAA resource cache reuses parsed recognition definitions", MaaResourceCacheReusesRecognitionDefinitions),
     ("Local MAA candidate converter counts duplicate reserve operators per frame", LocalCandidateConverterCountsReserveOperators),
     ("MAA Amiya role resolver targets the profession icon beside a detected card", MaaAmiyaRoleResolverTargetsProfessionIcon),
     ("Local MAA candidate converter disambiguates Amiya forms by profession", LocalCandidateConverterDisambiguatesAmiyaForms),
@@ -135,7 +136,7 @@ var tests = new (string Name, Action Run)[]
     ("DXGI adapter catalog labels physical GPUs while preserving DirectML device ids", DxgiAdapterCatalogBuildsStableOptions),
     ("MAA runtime settings normalize inference and PC controller values", MaaRuntimeSettingsNormalizeSafeValues),
     ("MAA PC window catalog prioritizes localized Arknights windows", MaaPcWindowCatalogPrioritizesArknights),
-    ("MAA PC controller policy uses released MAA defaults at 1280x720", MaaPcControllerPolicyUsesMaaDefaults),
+    ("MAA PC controller policy exposes dev Win32 methods at 1280x720", MaaPcControllerPolicyUsesMaaDefaults),
     ("MAA controller target never reuses the wrong connection kind", MaaControllerTargetMatchesSessionKind),
     ("User-facing runtime copy omits Android key implementation details", RuntimeUserCopyOmitsAndroidKeyDetails),
     ("ADB recovery runs enabled stages once and in order", AdbRecoveryRunsEnabledStagesInOrder),
@@ -1976,10 +1977,12 @@ static void RelicStackRuleCatalogMatchesCanonicalData()
     Equal<int?>(null, rules.Single(rule => rule.RelicId == "is3_mizuki_relic_261").Maximum, "unbounded survivor contract");
     Equal(true, RhodesRelicStackRuleCatalog.IsWithinKnownLimit("is5_sarkaz_relic_287", 10), "known maximum accepted");
     Equal(false, RhodesRelicStackRuleCatalog.IsWithinKnownLimit("is5_sarkaz_relic_287", 11), "known over-limit rejected");
-    Equal(true, RhodesRelicStackRuleCatalog.IsWithinKnownLimit("unlisted-relic", 123), "unlisted generic OCR remains possible");
+    Equal(false, RhodesRelicStackRuleCatalog.IsWithinKnownLimit("unlisted-relic", 123), "unlisted relic is outside the stack allowlist");
+    Equal(0, RhodesRelicStackRuleCatalog.ClampManualCount("unlisted-relic", 123), "unlisted relic rejects manual stack input");
     Equal(true, RhodesRelicStackRuleCatalog.IsExplicitlyNonStack("is6_sui_relic_099"), "Shangshanlang is explicitly non-stack");
     Equal(false, RhodesRelicStackRuleCatalog.IsWithinKnownLimit("is6_sui_relic_099", 2), "non-stack relic rejects OCR count");
     Equal(0, RhodesRelicStackRuleCatalog.ClampManualCount("is6_sui_relic_099", 2), "non-stack relic rejects manual count");
+
 }
 
 static void RelicStackOcrPlannerTargetsResolvedRelic()
@@ -2031,6 +2034,15 @@ static void RelicStackOcrPlannerTargetsResolvedRelic()
         0,
         RhodesRelicStackOcrPlanner.BuildRequests([nonStackNameResult], encoded.ToArray(), "is6_sui").Count,
         "explicit non-stack relic does not schedule numeric OCR");
+
+    var unlistedNameResult = nameResult with
+    {
+        RecognitionDetailJson = """{"all":[{"text":"咆哮の手","score":0.99,"box":[952,248,104,23]}]}""",
+    };
+    Equal(
+        0,
+        RhodesRelicStackOcrPlanner.BuildRequests([unlistedNameResult], encoded.ToArray(), "is5_sarkaz").Count,
+        "relic outside the known stack allowlist does not schedule numeric OCR");
 }
 
 static void LocalCandidateConverterRelicStackCounts()
@@ -2074,6 +2086,38 @@ static void LocalCandidateConverterRelicStackCounts()
             .Count,
         "known over-limit OCR is rejected instead of clamped");
 
+    var validFour = stackResult with
+    {
+        RecognitionDetailJson = """{"all":[{"text":"-4","score":0.99}]}""",
+    };
+    var noisyFourteen = stackResult with
+    {
+        RecognitionDetailJson = """{"all":[{"text":"-14","score":0.61}]}""",
+    };
+    Equal(
+        4,
+        RhodesMaaLocalCandidateConverter.FromTaskResults(
+                "relicsFull",
+                [nameResult, validFour, noisyFourteen],
+                "is5_sarkaz")
+            .Single(item => item.RelicId == "is5_sarkaz_relic_287")
+            .Count,
+        "over-limit OCR noise is discarded before agreeing on a known stack count");
+
+    var combinedFourAndNoise = stackResult with
+    {
+        RecognitionDetailJson = """{"all":[{"text":"4 14","score":0.99}]}""",
+    };
+    Equal(
+        4,
+        RhodesMaaLocalCandidateConverter.FromTaskResults(
+                "relicsFull",
+                [nameResult, combinedFourAndNoise],
+                "is5_sarkaz")
+            .Single(item => item.RelicId == "is5_sarkaz_relic_287")
+            .Count,
+        "one valid count survives an impossible over-limit token in the same OCR row");
+
     var ambiguousDigits = stackResult with
     {
         RecognitionDetailJson = """{"all":[{"text":"9/10","score":0.99}]}""",
@@ -2106,6 +2150,25 @@ static void LocalCandidateConverterRelicStackCounts()
             .Single(item => item.RelicId == "is3_mizuki_relic_261")
             .Count,
         "unbounded stack accepts three digits");
+
+    var unlistedName = nameResult with
+    {
+        RecognitionDetailJson = """{"all":[{"text":"咆哮の手","score":0.99,"box":[952,248,104,23]}]}""",
+    };
+    var unlistedStack = stackResult with
+    {
+        Entry = "relic.stack.is5_sarkaz_relic_186",
+        RecognitionDetailJson = """{"all":[{"text":"2","score":0.99}]}""",
+    };
+    Equal(
+        0,
+        RhodesMaaLocalCandidateConverter.FromTaskResults(
+                "relicsFull",
+                [unlistedName, unlistedStack],
+                "is5_sarkaz")
+            .Single(item => item.RelicId == "is5_sarkaz_relic_186")
+            .Count,
+        "stack OCR results outside the known allowlist are ignored defensively");
 }
 
 static void LocalCandidateConverterPrefersModifiedPhantomRelic()
@@ -8069,6 +8132,31 @@ static void RecognitionScrollPlanLoadsOperatorPasses()
 
 static void RecognitionRuntimePlanUsesFocusedTasks()
 {
+    var runStatusTasks = new[]
+    {
+        new MaaResourceTaskPreview("RhodesOcrRegion_run_squad_name", "common squad OCR", ""),
+        new MaaResourceTaskPreview("RhodesTemplate_runStatusFull_run_squad_icon_is2_phantom_batch", "IS2 icons", ""),
+        new MaaResourceTaskPreview("RhodesTemplate_runStatusFull_run_squad_icon_is3_mizuki_squad_01", "IS3 icon", ""),
+        new MaaResourceTaskPreview("RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch", "IS5 icons", ""),
+        new MaaResourceTaskPreview("RhodesTemplate_runStatusFull_run_squad_icon_is6_sui_batch", "IS6 icons", ""),
+    };
+    var runStatusPlan = new MaaResourceExecutionPlan(
+        "runStatusFull", "run status", "test", runStatusTasks.Select(task => task.Entry).ToArray(), runStatusTasks, "");
+    var focusedSarkaz = RhodesRecognitionRuntimePlan.PrepareInitial(runStatusPlan, "is5_sarkaz");
+    Equal(
+        "RhodesOcrRegion_run_squad_name|RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch",
+        string.Join("|", focusedSarkaz.TaskEntries),
+        "run status executes only current campaign squad templates");
+    var focusedSami = RhodesRecognitionRuntimePlan.PrepareInitial(runStatusPlan, "is4_sami");
+    Equal(
+        "RhodesOcrRegion_run_squad_name",
+        string.Join("|", focusedSami.TaskEntries),
+        "campaign without icon templates keeps common squad OCR only");
+    Equal(
+        runStatusTasks.Length,
+        RhodesRecognitionRuntimePlan.PrepareInitial(runStatusPlan).TaskEntries.Count,
+        "unscoped run status preserves the full compatibility plan");
+
     var operatorTasks = new[]
     {
         new MaaResourceTaskPreview("RhodesOcrRegion_run_operator_count", "count", ""),
@@ -9943,7 +10031,8 @@ static void MaaNativeEvidenceLog()
                 "ocr detail",
                 """{"filtered_results":[{"text":"グム","score":0.88}]}""",
                 "OCR",
-                true),
+                true,
+                420),
             new MaaTaskRunResult("RhodesBrokenTask", "Failed", false, "missing task", "", "", false),
         ],
         [
@@ -10014,6 +10103,10 @@ static void MaaNativeEvidenceLog()
     Equal("operatorsFull", root["profileId"]!.GetValue<string>(), "evidence profile");
     Equal("オペレーター", root["profileLabel"]!.GetValue<string>(), "evidence profile label");
     Equal("suki-maa-native", root["source"]!.GetValue<string>(), "evidence source");
+    Equal(2000L, root["durationMs"]!.GetValue<long>(), "evidence total duration");
+    var performance = root["performance"]!.AsObject();
+    Equal(420L, performance["taskDurationMs"]!.GetValue<long>(), "evidence MAA task duration");
+    Equal(1580L, performance["overheadDurationMs"]!.GetValue<long>(), "evidence navigation and capture overhead");
     var counts = root["counts"]!.AsObject();
     Equal(1, counts["candidates"]!.GetValue<int>(), "evidence candidate count");
     Equal(2, counts["resourceTasks"]!.GetValue<int>(), "evidence task count");
@@ -10024,6 +10117,7 @@ static void MaaNativeEvidenceLog()
     Equal("O:/debug/native-capture.png", root["log"]!.AsArray()[0]!.AsObject()["path"]!.GetValue<string>(), "evidence capture log path");
     Equal("frame-a", root["log"]!.AsArray()[0]!.AsObject()["frameId"]!.GetValue<string>(), "evidence capture frame id");
     Equal("maa-task", root["log"]!.AsArray()[1]!.AsObject()["event"]!.GetValue<string>(), "evidence task log event");
+    Equal(420L, root["log"]!.AsArray()[1]!.AsObject()["durationMs"]!.GetValue<long>(), "evidence task duration");
     var evidence = root["evidence"]!.AsObject();
     Equal("maa-resource-task-results", evidence["kind"]!.GetValue<string>(), "evidence kind");
     Equal("operatorsFull", evidence["profile"]!.AsObject()["id"]!.GetValue<string>(), "evidence profile object id");
@@ -10688,6 +10782,39 @@ static void ResourceCatalogExportsReplayPayloads()
 
     Equal("", RhodesMaaResourceCatalog.LoadRecognitionPayloadJson("RhodesMissingEntry"), "missing payload empty");
     Equal("", RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(""), "blank payload empty");
+}
+
+static void MaaResourceCacheReusesRecognitionDefinitions()
+{
+    RhodesMaaResourceCatalog.InvalidateRecognitionDefinitionCache();
+    var initialLoadCount = RhodesMaaResourceCatalog.DiagnosticRecognitionDefinitionLoadCount;
+
+    for (var index = 0; index < 5; index++)
+    {
+        Equal(
+            true,
+            !string.IsNullOrWhiteSpace(RhodesMaaResourceCatalog.LoadRecognitionPayloadJson("RhodesOperatorNameOcr")),
+            $"cached recognition payload {index}");
+        Equal(
+            3,
+            RhodesMaaResourceCatalog.LoadRecognitionScale("RhodesOcrRegion_operator_list_text"),
+            $"cached recognition scale {index}");
+    }
+
+    Equal(
+        1L,
+        RhodesMaaResourceCatalog.DiagnosticRecognitionDefinitionLoadCount - initialLoadCount,
+        "recognition definition cache load count");
+
+    RhodesMaaResourceCatalog.InvalidateRecognitionDefinitionCache();
+    Equal(
+        true,
+        !string.IsNullOrWhiteSpace(RhodesMaaResourceCatalog.LoadRecognitionPayloadJson("RhodesOperatorNameOcr")),
+        "recognition payload reload after invalidation");
+    Equal(
+        2L,
+        RhodesMaaResourceCatalog.DiagnosticRecognitionDefinitionLoadCount - initialLoadCount,
+        "recognition definition cache invalidation reload count");
 }
 
 static void ResourceCatalogValidatesInterfaceContract()
@@ -11899,6 +12026,44 @@ static void RelicStackChoicePersistence()
     Equal(false, nonStack.SupportsRelicStackCount, "explicit non-stack relic hides stack input");
     Equal(0, nonStack.RelicStackCount, "stale non-stack count is discarded on load");
 
+    var unlistedState =
+        """
+        {
+          "run": { "campaignId": "is5_sarkaz" },
+          "relics": ["is5_sarkaz_relic_186"],
+          "relicStackCounts": { "is5_sarkaz_relic_186": 2 }
+        }
+        """;
+    var unlistedCatalog = RhodesRunCatalog.LoadFromStateJson(unlistedState);
+    var unlisted = unlistedCatalog.Relics.Single(item => item.Id == "is5_sarkaz_relic_186");
+    Equal(false, unlisted.SupportsRelicStackCount, "unlisted relic hides stack input");
+    Equal(0, unlisted.RelicStackCount, "stale unlisted count is discarded on load");
+
+    var forgedUnlistedState = JsonNode.Parse("""{ "run": { "campaignId": "is5_sarkaz" } }""")!.AsObject();
+    RhodesRunStateStore.ApplyChoices(
+        forgedUnlistedState,
+        new SukiChoicePersistenceSnapshot(
+            [],
+            [new SukiChoicePersistenceItem(
+                "is5_sarkaz_relic_186",
+                true,
+                false,
+                false,
+                1,
+                false,
+                false,
+                false,
+                false,
+                true,
+                null,
+                2)],
+            new SukiChoicePersistenceOptions(false, false, false, false, false, false, 2, 2)),
+        DateTimeOffset.Parse("2026-08-12T00:00:30Z"));
+    Equal(
+        0,
+        forgedUnlistedState["relicStackCounts"]!.AsObject().Count,
+        "persistence boundary rejects a forged stack count outside the allowlist");
+
     limited.IsSelected = false;
     Equal(0, limited.RelicStackCount, "deselection clears stale stack count");
     RhodesRunStateStore.ApplyChoices(
@@ -12250,7 +12415,8 @@ static void StateApiReplacement()
               },
               "operators": ["gummy", "reserve_sniper"],
               "operatorCounts": { "reserve_sniper": 3, "reserve_caster": 5, "gummy": 8 },
-              "relics": []
+              "relics": ["is5_sarkaz_relic_186"],
+              "relicStackCounts": { "is5_sarkaz_relic_186": 2 }
             }
             """,
             statePath).GetAwaiter().GetResult();
@@ -12265,6 +12431,11 @@ static void StateApiReplacement()
         Equal(4, catalog.Current.Idea, "api idea");
         Equal(true, catalog.Current.SelectedOperatorIds.Contains("gummy"), "api selected operator");
         Equal(3, catalog.Current.OperatorCounts["reserve_sniper"], "api reserve count");
+        var replacedState = JsonNode.Parse(File.ReadAllText(statePath))!.AsObject();
+        Equal(
+            0,
+            replacedState["relicStackCounts"]!.AsObject().Count,
+            "state replacement removes a stale stack count outside the allowlist");
         Equal(3, catalog.Operators.Single(item => item.Id == "reserve_sniper").SelectionCount, "reserve count restored into choice");
         Equal(false, catalog.Current.OperatorCounts.ContainsKey("reserve_caster"), "unselected reserve count is discarded");
         Equal(false, catalog.Current.OperatorCounts.ContainsKey("gummy"), "regular operator count ignored by choice model");
@@ -13264,6 +13435,31 @@ static void CandidateRelicStackApplyPreservesAbsentOcr()
         [nonStackCandidate],
         DateTimeOffset.Parse("2026-08-14T00:00:00Z"));
     Equal(0, falsePositiveState["relicStackCounts"]!.AsObject().Count, "explicit non-stack candidate clears stale count");
+
+    var unlistedState = JsonNode.Parse(
+        """
+        {
+          "run": { "campaignId": "is5_sarkaz" },
+          "relics": ["is5_sarkaz_relic_186"],
+          "relicStackCounts": { "is5_sarkaz_relic_186": 2 }
+        }
+        """)!.AsObject();
+    var unlistedCandidate = nonStackCandidate with
+    {
+        Label = "咆哮の手",
+        Value = "is5_sarkaz_relic_186",
+        RawText = "咆哮の手",
+        RelicId = "is5_sarkaz_relic_186",
+        CampaignId = "is5_sarkaz",
+    };
+    RhodesRecognitionCandidateApplier.Apply(
+        unlistedState,
+        [unlistedCandidate],
+        DateTimeOffset.Parse("2026-08-14T00:01:00Z"));
+    Equal(
+        0,
+        unlistedState["relicStackCounts"]!.AsObject().Count,
+        "candidate persistence removes a stale stack count outside the allowlist");
 }
 
 static void CandidateRelicClearApply()
@@ -14308,9 +14504,9 @@ static void MaaPcControllerPolicyUsesMaaDefaults()
         string.Join("|", SukiWin32ScreencapCatalog.Options.Select(option => option.Id)),
         "released MAA PC capture choices");
     Equal(
-        "send-message-cursor|send-message-window|seize",
+        "send-message-cursor|anchored-touch|send-message-window|seize",
         string.Join("|", SukiWin32InputCatalog.MouseOptions.Select(option => option.Id)),
-        "released MAA PC mouse choices");
+        "dev MAA PC mouse choices");
     Equal(
         "send-message|post-message|seize",
         string.Join("|", SukiWin32InputCatalog.KeyboardOptions.Select(option => option.Id)),

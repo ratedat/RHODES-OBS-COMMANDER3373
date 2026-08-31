@@ -7,13 +7,23 @@ RHODES OBS COMMANDER3373のMAA-OCRを、既定の安定性を維持したままD
 
 ## 根拠として確認した現状
 
-- MaaFramework 5.12.3のWindows runtimeには`DirectML.dll`と`MaaWin32ControlUnit.dll`が含まれる。
-- C# binding 5.10.0には、Resource読込前の推論provider指定と`MaaWin32Controller`が公開されている。
+- MaaFramework 5.13.0-beta.5のWindows runtimeには`DirectML.dll`と`MaaWin32ControlUnit.dll`が含まれる。
+- C# binding 5.13.0-preview.1には、Resource読込前の推論provider指定、`MaaWin32Controller`、`AnchoredTouch`が公開されている。
 - MAA v6.16.8の中国版PC対応は、既に提供されている中国PCクライアントの`明日方舟`ウィンドウを検索し、HWNDと撮影・入力方式をWin32 Controllerへ渡す。
 - MAA中国版の既定撮影はFramePoolで、選択肢はFramePool、PrintWindow、ScreenDC、DesktopDupWindowである。
 - MAA v6.16.8の既定入力は、マウスがSendMessageWithCursorPos、キーボードがSendMessageである。
 - MAAの日本版タイトル対応は開発branchへ追加済みだがv6.16.8には含まれないため、RHODESではタイトルを1件に決め打ちしない。
 - MAAでは複数GPU環境の誤選択や一部GPUでの認識異常が修正対象になっている。GPUを無条件の既定値にはしない。
+
+## 2026-08-31 MAA更新方針
+
+- PC版取得の最適化を優先するユーザー方針に基づき、C# binding `Maa.Framework 5.13.0-preview.1`とWindows runtime `Maa.Framework.Runtimes 5.13.0-beta.5`を検証用参照へ採用する。
+- beta.4で追加されたWin32 WindowPos入力修正と、beta.5で追加された`AnchoredTouch`を利用可能にする。開発版であるため、依存更新ごとに契約テスト、全Service test、PC実機取得を再確認する。
+- `AnchoredTouch`はカーソルを動かさないタップ／スワイプ方式として選択可能にするが、実機取得を完走するまでは既定値にせず、確認済みの`SendMessageWithCursorPos`を維持する。
+- 認識規則とオペレーター名は、プロジェクト設定どおりMaaAssistantArknightsの`dev-v2`から同期する。
+- `third_party/maa/resource/tasks/tasks.json`の同期はOCR規則だけを抽出した差分ではなく、掉線処理や基地関連など3373が使用しない上流task定義も含む広範囲同期である。
+- 3373が実行するのは、ローカル認識定義から生成して契約検証した`rhodes-generated.json`のtaskである。上流の共通`tasks.json`をPC版取得経路から直接実行しない。
+- 将来、上流共通taskを実行経路へ追加する場合は、同期更新とは分けて挙動・安全方針・回帰試験を再審査する。
 
 ## 対応範囲
 
@@ -34,7 +44,7 @@ RHODES OBS COMMANDER3373のMAA-OCRを、既定の安定性を維持したままD
 - 選択したHWNDを`MaaWin32Controller`へ渡す。
 - 撮影方式は背景撮影、FramePool、PrintWindow、ScreenDC、DXGI windowを選択可能にする。
 - 既定撮影方式は、MAA v6.16.8と実機の完全Frame取得結果に合わせてFramePoolとする。
-- マウス入力方式はSendMessageWithCursorPos、SendMessageWithWindowPos、Seizeを選択可能にし、既定をSendMessageWithCursorPosとする。
+- マウス入力方式はSendMessageWithCursorPos、AnchoredTouch、SendMessageWithWindowPos、Seizeを選択可能にし、既定をSendMessageWithCursorPosとする。
 - キーボード入力方式はSendMessage、PostMessage、Seizeを選択可能にし、既定をSendMessageとする。ただしRHODESの取得処理からキー操作は発行しない。
 - Controller出力は1280x720へ正規化する。
 - 既存の認識プロファイルが定義する矩形内ランダムタップとランダムスワイプだけを、ADBと同じ取得経路で実行する。
@@ -102,8 +112,25 @@ var plan = RhodesMaaPcConnectionPolicy.Resolve(screencapId, mouseId, keyboardId)
 - 秘宝0件ではボタン自体が無効になる。保存済みの0件Frameと現在の1件Frameを入力なしで比較し、マップ上のオペレーター人数と秘宝サムネイル領域から、それぞれ`Empty`と`HasOwnedRelics`へ分離できた。
 - 秘宝件数付近のOCRは、1件を`.`、0件を`,C`などと読むため、0件確定の根拠には使わない。画像を復号できない場合も`Unknown`として既存状態を保持する。
 
+## PC版取得の高速化目標
+
+- 最終目標はPC版の一括取得を精度維持のまま短縮し、操作待ちを感じにくい時間へ収めることである。2026-08-13のIS#5実測43.45秒を旧基準値とし、現行コードは次の実機取得で改めて測定する。
+- 認識証跡にはプロファイル総時間、MAA task合計時間、両者の差分を保存する。差分には画面遷移、撮影、スクロール、候補変換、証跡保存が含まれるため、総時間だけでOCRを原因と決めつけない。
+- 精度を落とさない高速化として、認識定義のメモリキャッシュ、所持数一致による早期終了、FramePool撮影、実測済み物理GPUを指定したDirectMLを優先する。
+- `runStatusFull`の分隊アイコン照合は、現在選択中のISに属するtemplateだけを実行する。共通の分隊名・説明OCRは維持し、低信頼時の再撮影も従来どおり行う。別ISのtemplate結果は候補変換時に除外されていたため、実行前に絞ることで結果を変えずに無駄な照合を省く。
+- 人数や件数だけをキャッシュ判定に使わない。同数でも昇進状態、アーミヤ職分、秘宝の交換、スタック数が変わるため、将来の結果キャッシュは対象画面の視覚fingerprintと認識プロファイル版を組み合わせる。
+- MAA taskの並列実行、待機時間の短縮、スクロール省略は、Tasker/Controllerの直列性と画面アニメーションを実機で確認してから採用する。未検証の短縮を既定値へ入れない。
+
 ## 未確認事項
 
 - GPUの速度差はPC、adapter index、認識taskによって変わるため、保存Frameの比較結果を実測値として扱う。
 - PCクライアントの最小化・排他フルスクリーン時の撮影可否は未確認である。
 - 管理者権限で起動されたゲームへ非管理者のRHODESから入力できるかは保証せず、権限差がある場合は明示して入力を開始しない。
+
+## 一時的なリモートデバッグ運用
+
+- これは製品機能ではなく、PC版デバッグ期間だけの運用とする。
+- ゲームと検証用3373を同じWindows対話sessionで起動し、ゲームが管理者権限の場合は3373も管理者として起動する。
+- 画面操作と取得は既存の3373 UIとMaaWin32Controllerだけで行い、別の遠隔入力API、IPCブリッジ、任意座標操作は追加しない。
+- Codex側は3373が保存したFrame、認識証跡、ログを読み取り、必要なコード修正と再検証を行う。
+- 操作が必要な場面だけユーザーが3373上で取得を開始し、入力不要の保存Frame再認識はCodex側で継続する。

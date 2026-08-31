@@ -2,6 +2,7 @@ using MaaFramework.Binding;
 using MaaFramework.Binding.Buffers;
 using MaaFramework.Binding.Custom;
 using RhodesSuki.Models;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Principal;
@@ -421,9 +422,11 @@ public sealed class RhodesMaaSession : IDisposable
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "entry が空です。");
             }
 
+            var timer = Stopwatch.StartNew();
             var job = _tasker.AppendTask(entry.Trim(), string.IsNullOrWhiteSpace(pipelineOverrideJson) ? "{}" : pipelineOverrideJson);
             var status = job.Wait();
             var detail = BuildTaskDetail(_tasker, job.Id, $"TaskId={job.Id}");
+            timer.Stop();
             return new MaaTaskRunResult(
                 entry,
                 status.ToString(),
@@ -431,7 +434,8 @@ public sealed class RhodesMaaSession : IDisposable
                 detail.Summary,
                 detail.RecognitionDetailJson,
                 detail.Algorithm,
-                detail.Hit);
+                detail.Hit,
+                timer.ElapsedMilliseconds);
         }, cancellationToken);
     }
 
@@ -456,6 +460,7 @@ public sealed class RhodesMaaSession : IDisposable
             if (!RhodesMaaRecognitionInvocation.TryParse(recognitionPayloadJson, out var invocation, out var parseError))
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, parseError);
 
+            var timer = Stopwatch.StartNew();
             var scale = scaleOverride is > 0
                 ? Math.Clamp(scaleOverride.Value, 1, 12)
                 : RhodesMaaResourceCatalog.LoadRecognitionScale(entry);
@@ -470,6 +475,7 @@ public sealed class RhodesMaaSession : IDisposable
             var job = _tasker.AppendRecognition(invocation.Type, prepared.ParametersJson, image);
             var status = job.Wait();
             var detail = BuildTaskDetail(_tasker, job.Id, $"ReplayRecognition={entry}; type={invocation.Type}; scale={scale}");
+            timer.Stop();
             return new MaaTaskRunResult(
                 entry,
                 status.ToString(),
@@ -477,7 +483,8 @@ public sealed class RhodesMaaSession : IDisposable
                 detail.Summary,
                 detail.RecognitionDetailJson,
                 detail.Algorithm,
-                detail.Hit);
+                detail.Hit,
+                timer.ElapsedMilliseconds);
         }, cancellationToken);
     }
 

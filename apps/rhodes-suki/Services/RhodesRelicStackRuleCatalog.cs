@@ -69,7 +69,8 @@ public static class RhodesRelicStackRuleCatalog
             return false;
 
         var rule = Find(relicId);
-        return rule?.Maximum is not int maximum || count <= maximum;
+        return rule is not null
+            && (rule.Maximum is not int maximum || count <= maximum);
     }
 
     public static int ClampManualCount(string relicId, int count)
@@ -79,8 +80,11 @@ public static class RhodesRelicStackRuleCatalog
         if (IsExplicitlyNonStack(relicId))
             return 0;
 
-        var maximum = Find(relicId)?.Maximum;
-        return maximum is int value ? Math.Min(count, value) : count;
+        var rule = Find(relicId);
+        if (rule is null)
+            return 0;
+
+        return rule.Maximum is int maximum ? Math.Min(count, maximum) : count;
     }
 
     private static IReadOnlyList<RhodesRelicStackRule> LoadFromPath(string path)

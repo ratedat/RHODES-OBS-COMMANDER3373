@@ -27,8 +27,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   );
 
   assert.match(csproj, /PackageReference Include="SukiUI" Version="7\.0\.1"/);
-  assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.10\.0"/);
-  assert.match(csproj, /PackageReference Include="Maa\.Framework\.Runtimes" Version="5\.12\.3"/);
+  assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.13\.0-preview\.1"/);
+  assert.match(csproj, /PackageReference Include="Maa\.Framework\.Runtimes" Version="5\.13\.0-beta\.5"/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes\.json/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes-generated\.json/);
   assert.match(csproj, /interface\.json/);
@@ -845,6 +845,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToSourceJson/);
   assert.match(viewModel, /RhodesMaaRoiDraftSourceUpdater\.ApplyToSourceFileAsync/);
   assert.match(viewModel, /RhodesMaaGeneratedResourceBuilder\.RegenerateFileAsync/);
+  assert.match(viewModel, /RhodesMaaResourceCatalog\.InvalidateRecognitionDefinitionCache\(\)/);
   assert.match(viewModel, /ReloadResourceCatalog/);
   assert.match(viewModel, /_allResourceTasks = RhodesMaaResourceCatalog\.DefaultTasks\(\)/);
   assert.match(viewModel, /ReloadMaaResourceSessionIfReadyAsync/);

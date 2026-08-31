@@ -548,7 +548,8 @@ public sealed record MaaTaskRunResult(
     string Detail,
     string RecognitionDetailJson = "",
     string Algorithm = "",
-    bool Hit = false);
+    bool Hit = false,
+    long ElapsedMilliseconds = 0);
 
 public sealed record MaaOcrDetailRow(
     string Entry,

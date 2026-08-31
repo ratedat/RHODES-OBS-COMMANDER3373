@@ -234,7 +234,9 @@ public static class RhodesRunCatalog
                 var effect = JsonString(item, "effect");
                 stackRules.TryGetValue(id, out var stackRule);
                 var explicitlyNonStack = nonStackRelicIds.Contains(id);
-                var persistedStackCount = explicitlyNonStack ? 0 : state.RelicStackCounts.GetValueOrDefault(id);
+                var persistedStackCount = explicitlyNonStack || stackRule is null
+                    ? 0
+                    : state.RelicStackCounts.GetValueOrDefault(id);
                 var choice = new SukiChoiceItem(
                     "relic",
                     id,
@@ -251,7 +253,7 @@ public static class RhodesRunCatalog
                     $"{id} {number} {name} {category} {effect}",
                     ResolveLocalPath(dataRoot, JsonString(JsonObject(item, "image"), "localPath")),
                     supportsUsedFlag: RhodesRelicUsagePolicy.SupportsUsedFlag(name),
-                    supportsRelicStackCount: !explicitlyNonStack && (stackRule is not null || persistedStackCount > 0),
+                    supportsRelicStackCount: !explicitlyNonStack && stackRule is not null,
                     relicStackMaximum: stackRule?.Maximum);
                 choice.IsSelected = state.SelectedRelicIds.Contains(id);
                 choice.RelicStackCount = persistedStackCount;
@@ -1264,9 +1266,8 @@ public static class RhodesRunCatalog
                 continue;
             }
 
-            if (rules.TryGetValue(entry.Name, out var rule)
-                && rule.Maximum is int maximum
-                && count > maximum)
+            if (!rules.TryGetValue(entry.Name, out var rule)
+                || rule.Maximum is int maximum && count > maximum)
             {
                 continue;
             }

@@ -50,6 +50,9 @@ public static class RhodesMaaRecognitionEvidenceLog
         var normalizedFrameId = string.IsNullOrWhiteSpace(frameId) ? "" : frameId.Trim();
         var normalizedFrameMetadataPath = string.IsNullOrWhiteSpace(frameMetadataPath) ? "" : frameMetadataPath.Trim();
         var normalizedStateSnapshotPath = string.IsNullOrWhiteSpace(stateSnapshotPath) ? "" : stateSnapshotPath.Trim();
+        var totalDurationMs = Math.Max(0L, (long)(completedAt - startedAt).TotalMilliseconds);
+        var taskDurationMs = resultList.Sum(result => Math.Max(0L, result.ElapsedMilliseconds));
+        var overheadDurationMs = Math.Max(0L, totalDurationMs - taskDurationMs);
         var log = new List<object>();
         if (!string.IsNullOrWhiteSpace(normalizedCapturePath))
         {
@@ -77,6 +80,7 @@ public static class RhodesMaaRecognitionEvidenceLog
             result.Hit,
             result.Algorithm,
             detail = result.Detail,
+            durationMs = Math.Max(0, result.ElapsedMilliseconds),
         }));
         var diagnostics = RhodesMaaTaskDiagnostics.Summarize(resultList);
 
@@ -92,6 +96,12 @@ public static class RhodesMaaRecognitionEvidenceLog
             reason = (string?)null,
             startedAt = startedAt.UtcDateTime.ToString("O"),
             completedAt = completedAt.UtcDateTime.ToString("O"),
+            durationMs = totalDurationMs,
+            performance = new
+            {
+                taskDurationMs,
+                overheadDurationMs,
+            },
             counts = new
             {
                 candidates = candidateList.Length,

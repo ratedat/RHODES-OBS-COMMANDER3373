@@ -175,7 +175,7 @@
       "present": true
     }
   ],
-  "syncedAt": "2026-08-13T13:59:30.942Z",
+  "syncedAt": "2026-08-31T04:18:50.868Z",
   "downloaded": [
     {
       "id": "common.ocr_config",
@@ -199,13 +199,13 @@
       "id": "jp.tasks",
       "localPath": "third_party/maa/resource/global/YoStarJP/resource/tasks/tasks.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/global/YoStarJP/resource/tasks/tasks.json",
-      "bytes": 82979
+      "bytes": 83569
     },
     {
       "id": "common.tasks",
       "localPath": "third_party/maa/resource/tasks/tasks.json",
       "url": "https://raw.githubusercontent.com/MaaAssistantArknights/MaaAssistantArknights/dev-v2/resource/tasks/tasks.json",
-      "bytes": 177862
+      "bytes": 194236
     },
     {
       "id": "roguelike.base.tasks",

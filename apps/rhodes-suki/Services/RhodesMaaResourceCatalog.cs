@@ -9,6 +9,13 @@ public static class RhodesMaaResourceCatalog
     private const string InterfaceSource = "interface.json";
     private const string ManualPipelineSource = "resource/base/pipeline/rhodes.json";
     private const string GeneratedPipelineSource = "resource/base/pipeline/rhodes-generated.json";
+    private static readonly string[] PipelineSources = [ManualPipelineSource, GeneratedPipelineSource];
+    private static readonly object RecognitionDefinitionCacheSync = new();
+    private static RecognitionDefinitionCacheEntry? _recognitionDefinitionCache;
+    private static long _diagnosticRecognitionDefinitionLoadCount;
+
+    public static long DiagnosticRecognitionDefinitionLoadCount =>
+        Interlocked.Read(ref _diagnosticRecognitionDefinitionLoadCount);
 
     private static readonly IReadOnlyDictionary<string, string> ProfileLabels = new Dictionary<string, string>(StringComparer.Ordinal)
     {
@@ -64,14 +71,7 @@ public static class RhodesMaaResourceCatalog
         if (string.IsNullOrWhiteSpace(entry))
             return "";
 
-        foreach (var relativePath in new[] { ManualPipelineSource, GeneratedPipelineSource })
-        {
-            var payload = LoadRecognitionPayloadJson(relativePath, entry.Trim());
-            if (!string.IsNullOrWhiteSpace(payload))
-                return payload;
-        }
-
-        return "";
+        return LoadRecognitionDefinition(entry.Trim())?.PayloadJson ?? "";
     }
 
     public static int LoadRecognitionScale(string entry)
@@ -79,32 +79,13 @@ public static class RhodesMaaResourceCatalog
         if (string.IsNullOrWhiteSpace(entry))
             return 1;
 
-        foreach (var relativePath in new[] { ManualPipelineSource, GeneratedPipelineSource })
-        {
-            var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path))
-                continue;
+        return LoadRecognitionDefinition(entry.Trim())?.Scale ?? 1;
+    }
 
-            try
-            {
-                using var document = JsonDocument.Parse(File.ReadAllText(path));
-                if (document.RootElement.TryGetProperty(entry.Trim(), out var node)
-                    && node.ValueKind == JsonValueKind.Object
-                    && node.TryGetProperty("attach", out var attach)
-                    && attach.ValueKind == JsonValueKind.Object
-                    && attach.TryGetProperty("scale", out var scale)
-                    && scale.TryGetInt32(out var value))
-                {
-                    return Math.Clamp(value, 1, 12);
-                }
-            }
-            catch
-            {
-                // Invalid resource JSON is reported by ValidateContract; recognition stays unscaled here.
-            }
-        }
-
-        return 1;
+    public static void InvalidateRecognitionDefinitionCache()
+    {
+        lock (RecognitionDefinitionCacheSync)
+            _recognitionDefinitionCache = null;
     }
 
     public static IReadOnlyList<string> LoadCompositeTemplateIds(string entry)
@@ -780,33 +761,97 @@ public static class RhodesMaaResourceCatalog
         return tasks;
     }
 
-    private static string LoadRecognitionPayloadJson(string relativePath, string entry)
+    private static RecognitionDefinition? LoadRecognitionDefinition(string entry)
     {
-        var path = Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
-        if (!File.Exists(path))
-            return "";
+        var manualStamp = RecognitionPipelineFileStamp.Read(ResolvePipelinePath(ManualPipelineSource));
+        var generatedStamp = RecognitionPipelineFileStamp.Read(ResolvePipelinePath(GeneratedPipelineSource));
 
-        try
+        lock (RecognitionDefinitionCacheSync)
         {
-            using var document = JsonDocument.Parse(File.ReadAllText(path));
-            if (!document.RootElement.TryGetProperty(entry, out var node)
-                || node.ValueKind != JsonValueKind.Object
-                || !RhodesMaaRecognitionPolicy.IsPublishableEntry(entry))
+            if (_recognitionDefinitionCache is null
+                || _recognitionDefinitionCache.ManualStamp != manualStamp
+                || _recognitionDefinitionCache.GeneratedStamp != generatedStamp)
             {
-                return "";
+                _recognitionDefinitionCache = new RecognitionDefinitionCacheEntry(
+                    manualStamp,
+                    generatedStamp,
+                    BuildRecognitionDefinitions());
+                Interlocked.Increment(ref _diagnosticRecognitionDefinitionLoadCount);
             }
 
-            var payload = JsonNode.Parse(node.GetRawText())?.AsObject();
-            if (payload is null)
-                return "";
-
-            payload.Remove("action");
-            payload.Remove("attach");
-            return payload.ToJsonString();
+            return _recognitionDefinitionCache.Definitions.TryGetValue(entry, out var definition)
+                ? definition
+                : null;
         }
-        catch
+    }
+
+    private static IReadOnlyDictionary<string, RecognitionDefinition> BuildRecognitionDefinitions()
+    {
+        var definitions = new Dictionary<string, RecognitionDefinition>(StringComparer.Ordinal);
+        foreach (var relativePath in PipelineSources)
         {
-            return "";
+            var path = ResolvePipelinePath(relativePath);
+            if (!File.Exists(path))
+                continue;
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                foreach (var property in document.RootElement.EnumerateObject())
+                {
+                    if (property.Value.ValueKind != JsonValueKind.Object
+                        || !RhodesMaaRecognitionPolicy.IsPublishableEntry(property.Name))
+                    {
+                        continue;
+                    }
+
+                    var payload = JsonNode.Parse(property.Value.GetRawText())?.AsObject();
+                    if (payload is null)
+                        continue;
+
+                    payload.Remove("action");
+                    payload.Remove("attach");
+                    var scale = property.Value.TryGetProperty("attach", out var attach)
+                        && attach.ValueKind == JsonValueKind.Object
+                        && attach.TryGetProperty("scale", out var scaleValue)
+                        && scaleValue.TryGetInt32(out var parsedScale)
+                            ? Math.Clamp(parsedScale, 1, 12)
+                            : 1;
+                    definitions.TryAdd(
+                        property.Name,
+                        new RecognitionDefinition(payload.ToJsonString(), scale));
+                }
+            }
+            catch
+            {
+                // Invalid resource JSON is reported by ValidateContract; valid sources remain available.
+            }
+        }
+
+        return definitions;
+    }
+
+    private static string ResolvePipelinePath(string relativePath) =>
+        Path.Combine(AppContext.BaseDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+    private sealed record RecognitionDefinition(string PayloadJson, int Scale);
+
+    private sealed record RecognitionDefinitionCacheEntry(
+        RecognitionPipelineFileStamp ManualStamp,
+        RecognitionPipelineFileStamp GeneratedStamp,
+        IReadOnlyDictionary<string, RecognitionDefinition> Definitions);
+
+    private readonly record struct RecognitionPipelineFileStamp(
+        bool Exists,
+        long Length,
+        DateTime LastWriteTimeUtc)
+    {
+        public static RecognitionPipelineFileStamp Read(string path)
+        {
+            var info = new FileInfo(path);
+            return info.Exists
+                ? new RecognitionPipelineFileStamp(true, info.Length, info.LastWriteTimeUtc)
+                : new RecognitionPipelineFileStamp(false, 0, DateTime.MinValue);
         }
     }
 

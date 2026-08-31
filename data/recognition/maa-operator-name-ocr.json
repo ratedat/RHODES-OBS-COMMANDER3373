@@ -4349,6 +4349,46 @@
     [
       "リプレーザ",
       "复奏"
+    ],
+    [
+      "シラクーザの正装",
+      "叙拉古正装"
+    ],
+    [
+      "ペガサスの兜",
+      "天马之盔"
+    ],
+    [
+      "ペガサスの槍",
+      "天马之枪"
+    ],
+    [
+      "ネームタグ",
+      "随身身份牌"
+    ],
+    [
+      "カジミエーシュの競技旗",
+      "卡西米尔竞技旗"
+    ],
+    [
+      "ファミリーのバッジ",
+      "家族徽章"
+    ],
+    [
+      "簡易通信機",
+      "简易通讯机"
+    ],
+    [
+      "騎士の貯金箱",
+      "骑士储蓄罐"
+    ],
+    [
+      "騎士の戒律",
+      "骑士戒律"
+    ],
+    [
+      "緊急派遣券",
+      "紧急调度券"
     ]
   ],
   "rules": [
@@ -16495,6 +16535,86 @@
         }
       ],
       "error": null
+    },
+    {
+      "index": 1054,
+      "pattern": "シラクーザの正装",
+      "maaReplacement": "叙拉古正装",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1055,
+      "pattern": "ペガサスの兜",
+      "maaReplacement": "天马之盔",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1056,
+      "pattern": "ペガサスの槍",
+      "maaReplacement": "天马之枪",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1057,
+      "pattern": "ネームタグ",
+      "maaReplacement": "随身身份牌",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1058,
+      "pattern": "カジミエーシュの競技旗",
+      "maaReplacement": "卡西米尔竞技旗",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1059,
+      "pattern": "ファミリーのバッジ",
+      "maaReplacement": "家族徽章",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1060,
+      "pattern": "簡易通信機",
+      "maaReplacement": "简易通讯机",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1061,
+      "pattern": "騎士の貯金箱",
+      "maaReplacement": "骑士储蓄罐",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1062,
+      "pattern": "騎士の戒律",
+      "maaReplacement": "骑士戒律",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
+    },
+    {
+      "index": 1063,
+      "pattern": "緊急派遣券",
+      "maaReplacement": "紧急调度券",
+      "validRegex": true,
+      "localMatches": [],
+      "error": null
     }
   ],
   "publicRecruitmentOperators": [
@@ -18261,7 +18381,7 @@
     }
   ],
   "summary": {
-    "rawRuleCount": 1054,
+    "rawRuleCount": 1064,
     "localOperatorCount": 437,
     "rulesWithLocalMatches": 408,
     "uniqueMatchedLocalOperators": 412,

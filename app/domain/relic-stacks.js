@@ -30,9 +30,9 @@ export function relicStackCountFor(relicId, counts) {
   return positiveInteger(counts?.[relicId]);
 }
 
-export function relicSupportsStackCount(relicId, counts, rules) {
+export function relicSupportsStackCount(relicId, _counts, rules) {
   if (relicIsExplicitlyNonStack(relicId, rules)) return false;
-  return Boolean(relicStackRuleFor(relicId, rules)) || relicStackCountFor(relicId, counts) > 0;
+  return Boolean(relicStackRuleFor(relicId, rules));
 }
 
 export function normalizeRelicStackCounts(value, ownedRelicIds, rules) {
@@ -41,7 +41,8 @@ export function normalizeRelicStackCounts(value, ownedRelicIds, rules) {
   const normalized = {};
   for (const [relicId, rawCount] of Object.entries(source)) {
     const count = positiveInteger(rawCount);
-    if (!owned.has(relicId) || count <= 0 || relicIsExplicitlyNonStack(relicId, rules)) continue;
+    const rule = relicStackRuleFor(relicId, rules);
+    if (!owned.has(relicId) || count <= 0 || !rule || relicIsExplicitlyNonStack(relicId, rules)) continue;
     const maximum = relicStackMaximum(relicId, rules);
     if (typeof maximum === "number" && count > maximum) continue;
     normalized[relicId] = count;
@@ -50,7 +51,7 @@ export function normalizeRelicStackCounts(value, ownedRelicIds, rules) {
 }
 
 export function normalizeManualRelicStackCount(value, relicId, rules) {
-  if (relicIsExplicitlyNonStack(relicId, rules)) return 0;
+  if (!relicStackRuleFor(relicId, rules) || relicIsExplicitlyNonStack(relicId, rules)) return 0;
   const count = positiveInteger(value);
   if (count <= 0) return 0;
   const maximum = relicStackMaximum(relicId, rules);

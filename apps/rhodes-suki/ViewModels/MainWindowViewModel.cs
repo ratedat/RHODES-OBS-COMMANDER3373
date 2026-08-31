@@ -1006,7 +1006,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public bool LightweightAdbSupported => false;
 
-    public string LightweightAdbDetail => "MaaFramework 5.12.3の公開APIに1対1の軽量ADB機能がないため、この検証ビルドでは有効化できません。";
+    public string LightweightAdbDetail => "現在のMaaFramework公開APIに1対1の軽量ADB機能がないため、この検証ビルドでは有効化できません。";
 
     public string MuMuCapabilitySummary =>
         string.IsNullOrWhiteSpace(_muMuCapability.EmulatorRoot)
@@ -6376,6 +6376,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             var message = $"{MaaResourceGenerationResult.Message} / backup={MaaResourceGenerationResult.BackupPath}";
+            RhodesMaaResourceCatalog.InvalidateRecognitionDefinitionCache();
             ReloadResourceCatalog();
             var reloadSnapshot = await ReloadMaaResourceSessionIfReadyAsync();
             StatusMessage = reloadSnapshot is null
@@ -7835,7 +7836,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RefreshResourceTaskDiagnostics();
             RefreshInspectorRows();
 
-            var runtimePlan = RhodesRecognitionRuntimePlan.PrepareInitial(plan);
+            var runtimePlan = RhodesRecognitionRuntimePlan.PrepareInitial(
+                plan,
+                SelectedCampaign?.Id ?? _runState.CampaignId);
             var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
                 runtimePlan,
                 (entry, cancellationToken) =>
@@ -8208,6 +8211,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<bool> RunAllResourceTasksCoreAsync()
     {
+        var scanStartedAt = DateTimeOffset.UtcNow;
         var plan = CurrentResourceExecutionPlan;
         _lastResourceExecutionPlan = null;
         _lastRecognitionProfileSkippedAfterUnconfirmedTarget = false;
@@ -8271,7 +8275,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             StatusMessage = $"MAA実行計画: {plan.Summary} / {openResult.Detail}";
-            var runtimePlan = RhodesRecognitionRuntimePlan.PrepareInitial(plan);
+            var runtimePlan = RhodesRecognitionRuntimePlan.PrepareInitial(plan, CurrentCampaignId);
             RhodesRecognitionTaskExecutionResult execution;
             if (plan.ProfileId.Equals("is6SeasonalHours", StringComparison.Ordinal))
             {
@@ -8337,7 +8341,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         failedScreenCandidates,
                         plan.ProfileLabel,
                         plan.TaskEntries,
-                        plan);
+                        plan,
+                        startedAt: scanStartedAt,
+                        completedAt: DateTimeOffset.UtcNow);
                 }
                 if (RhodesRecognitionRuntimePlan.CanContinueAfterUnconfirmedTarget(plan.ProfileId))
                 {
@@ -8400,7 +8406,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     localCandidates,
                     plan.ProfileLabel,
                     plan.TaskEntries,
-                    plan);
+                    plan,
+                    startedAt: scanStartedAt,
+                    completedAt: DateTimeOffset.UtcNow);
                 StatusMessage = $"MAA scan証跡を保存しました: {LastResourceTaskResultsPath}";
             }
             return ResourceTaskResults.Any();
@@ -10909,7 +10917,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         MaaResourceExecutionPlan? executionPlan = null,
         SukiCandidateApplySummary? stateApplySummary = null,
         bool stateApplyLocalFallbackUsed = false,
-        string? stateApplyApiError = null)
+        string? stateApplyApiError = null,
+        DateTimeOffset? startedAt = null,
+        DateTimeOffset? completedAt = null)
     {
         var selectedMatches = string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal);
         return await RhodesMaaRecognitionEvidenceLog.SaveAsync(
@@ -10917,6 +10927,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             candidates ?? [],
             profileId,
             RhodesSukiDebugPaths.RecognitionScansDirectory,
+            startedAt: startedAt,
+            completedAt: completedAt,
             capturePath: LastCapturePath,
             captureBytes: _lastCapture.Length,
             profileLabel: profileLabel ?? (selectedMatches ? SelectedResourceProfile?.Label : null),

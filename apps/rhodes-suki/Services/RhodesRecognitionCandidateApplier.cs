@@ -252,7 +252,8 @@ public static class RhodesRecognitionCandidateApplier
             }
         }
 
-        if (applied.Count > 0 || pruned || normalizedOcrEngine)
+        var normalizedRelicStacks = RhodesRunStateStore.NormalizeRelicStackCounts(state);
+        if (applied.Count > 0 || pruned || normalizedOcrEngine || normalizedRelicStacks)
             state["updatedAt"] = now.UtcDateTime.ToString("O");
 
         return new SukiCandidateApplySummary(
