@@ -3,6 +3,26 @@ using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
 
+public sealed record RhodesRecognitionScrollPerformanceEvidence(
+    int ConfiguredPasses,
+    int PlannedPasses,
+    int ExecutedPasses,
+    int SkippedPasses,
+    int SwipeCount,
+    long SwipeDurationMs,
+    long SettleDurationMs,
+    int SettlePollCount,
+    long FixedDelayBudgetMs,
+    bool EndpointCacheUsed,
+    bool AdaptiveCaptureUsed,
+    int AdaptiveFallbackCount,
+    string PlanReason,
+    int SuccessfulSwipeCount,
+    int FailedSwipeCount,
+    bool HadFailure,
+    bool HadUncertainty,
+    string TerminationReason);
+
 public static class RhodesMaaRecognitionEvidenceLog
 {
     private const string Source = "suki-maa-native";
@@ -32,7 +52,8 @@ public static class RhodesMaaRecognitionEvidenceLog
         string? stateSnapshotPath = null,
         SukiCandidateApplySummary? stateApplySummary = null,
         bool stateApplyLocalFallbackUsed = false,
-        string? stateApplyApiError = null)
+        string? stateApplyApiError = null,
+        RhodesRecognitionScrollPerformanceEvidence? scrollPerformance = null)
     {
         var resultList = taskResults.ToArray();
         var candidateList = candidates.ToArray();
@@ -101,6 +122,7 @@ public static class RhodesMaaRecognitionEvidenceLog
             {
                 taskDurationMs,
                 overheadDurationMs,
+                scroll = scrollPerformance,
             },
             counts = new
             {
@@ -198,7 +220,8 @@ public static class RhodesMaaRecognitionEvidenceLog
         string? stateSnapshotPath = null,
         SukiCandidateApplySummary? stateApplySummary = null,
         bool stateApplyLocalFallbackUsed = false,
-        string? stateApplyApiError = null)
+        string? stateApplyApiError = null,
+        RhodesRecognitionScrollPerformanceEvidence? scrollPerformance = null)
     {
         Directory.CreateDirectory(directory);
         var completed = completedAt ?? DateTimeOffset.UtcNow;
@@ -226,7 +249,8 @@ public static class RhodesMaaRecognitionEvidenceLog
             stateSnapshotPath,
             stateApplySummary,
             stateApplyLocalFallbackUsed,
-            stateApplyApiError);
+            stateApplyApiError,
+            scrollPerformance);
         await File.WriteAllTextAsync(file, $"{json}{Environment.NewLine}");
         return file;
     }

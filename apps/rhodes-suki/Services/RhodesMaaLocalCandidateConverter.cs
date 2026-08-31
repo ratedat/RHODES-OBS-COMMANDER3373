@@ -909,7 +909,7 @@ public static class RhodesMaaLocalCandidateConverter
 
     private static IReadOnlyDictionary<string, int> RelicStackCounts(IEnumerable<MaaTaskRunResult> taskResults)
     {
-        var observed = new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
+        var observed = new Dictionary<string, Dictionary<int, int>>(StringComparer.Ordinal);
         foreach (var taskResult in taskResults)
         {
             if (!taskResult.Succeeded
@@ -940,15 +940,30 @@ public static class RhodesMaaLocalCandidateConverter
                     counts = [];
                     observed[relicId] = counts;
                 }
-                counts.Add(numbers[0]);
+
+                var count = numbers[0];
+                counts[count] = counts.GetValueOrDefault(count) + 1;
             }
         }
 
-        return observed
-            .Where(item => item.Value.Count == 1)
-            .Select(item => (item.Key, Count: item.Value.Single()))
-            .Where(item => RhodesRelicStackRuleCatalog.IsWithinKnownLimit(item.Key, item.Count))
-            .ToDictionary(item => item.Key, item => item.Count, StringComparer.Ordinal);
+        var resolved = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (relicId, counts) in observed)
+        {
+            var ranked = counts
+                .OrderByDescending(item => item.Value)
+                .ThenBy(item => item.Key)
+                .ToArray();
+            if (ranked.Length == 0
+                || ranked.Length > 1 && ranked[0].Value == ranked[1].Value
+                || !RhodesRelicStackRuleCatalog.IsWithinKnownLimit(relicId, ranked[0].Key))
+            {
+                continue;
+            }
+
+            resolved[relicId] = ranked[0].Key;
+        }
+
+        return resolved;
     }
 
     private static bool LooksLikeStandaloneRelicNameToken(string value)

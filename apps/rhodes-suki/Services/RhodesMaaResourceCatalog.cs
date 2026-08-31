@@ -799,27 +799,38 @@ public static class RhodesMaaResourceCatalog
                 using var document = JsonDocument.Parse(File.ReadAllText(path));
                 foreach (var property in document.RootElement.EnumerateObject())
                 {
-                    if (property.Value.ValueKind != JsonValueKind.Object
-                        || !RhodesMaaRecognitionPolicy.IsPublishableEntry(property.Name))
+                    try
                     {
-                        continue;
+                        if (property.Value.ValueKind != JsonValueKind.Object
+                            || !RhodesMaaRecognitionPolicy.IsPublishableEntry(property.Name))
+                        {
+                            continue;
+                        }
+
+                        var payload = JsonNode.Parse(property.Value.GetRawText())?.AsObject();
+                        if (payload is null)
+                            continue;
+
+                        payload.Remove("action");
+                        payload.Remove("attach");
+                        var scale = property.Value.TryGetProperty("attach", out var attach)
+                            && attach.ValueKind == JsonValueKind.Object
+                            && attach.TryGetProperty("scale", out var scaleValue)
+                            && scaleValue.ValueKind == JsonValueKind.Number
+                            && scaleValue.TryGetInt32(out var parsedScale)
+                                ? Math.Clamp(parsedScale, 1, 12)
+                                : 1;
+                        definitions.TryAdd(
+                            property.Name,
+                            new RecognitionDefinition(payload.ToJsonString(), scale));
                     }
-
-                    var payload = JsonNode.Parse(property.Value.GetRawText())?.AsObject();
-                    if (payload is null)
-                        continue;
-
-                    payload.Remove("action");
-                    payload.Remove("attach");
-                    var scale = property.Value.TryGetProperty("attach", out var attach)
-                        && attach.ValueKind == JsonValueKind.Object
-                        && attach.TryGetProperty("scale", out var scaleValue)
-                        && scaleValue.TryGetInt32(out var parsedScale)
-                            ? Math.Clamp(parsedScale, 1, 12)
-                            : 1;
-                    definitions.TryAdd(
-                        property.Name,
-                        new RecognitionDefinition(payload.ToJsonString(), scale));
+                    catch (Exception exception) when (exception is JsonException
+                                                       or InvalidOperationException
+                                                       or FormatException
+                                                       or OverflowException)
+                    {
+                        // Keep later recognition entries available when one generated node is malformed.
+                    }
                 }
             }
             catch

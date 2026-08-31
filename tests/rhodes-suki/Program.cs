@@ -188,6 +188,8 @@ var tests = new (string Name, Action Run)[]
     ("Recognition navigation restores profile open and close steps", RecognitionNavigationLoadsProfileSteps),
     ("Recognition navigation randomizes taps inside configured areas", RecognitionNavigationRandomizesTapAreas),
     ("Recognition scroll plan loads operator passes and randomizes swipe areas", RecognitionScrollPlanLoadsOperatorPasses),
+    ("Recognition pass optimizer uses remembered endpoints without trusting counts", RecognitionPassOptimizerUsesRememberedEndpoints),
+    ("Recognition settle tracker waits for two equivalent PC frames", RecognitionSettleTrackerRequiresEquivalentFrames),
     ("Recognition runtime plan removes legacy operator OCR and completes relic scans by owned count", RecognitionRuntimePlanUsesFocusedTasks),
     ("Recognition runtime plan excludes operator metadata from owned-card progress", RecognitionRuntimePlanCountsOperatorRosterOnly),
     ("Relic owned count reader extracts the footer count from MAA OCR evidence", RelicOwnedCountReaderExtractsFooterCount),
@@ -2103,6 +2105,38 @@ static void LocalCandidateConverterRelicStackCounts()
             .Single(item => item.RelicId == "is5_sarkaz_relic_287")
             .Count,
         "over-limit OCR noise is discarded before agreeing on a known stack count");
+
+    var repeatedFour = stackResult with
+    {
+        RecognitionDetailJson = """{"filtered":[{"text":"-4","score":0.927387}]}""",
+    };
+    var lowConfidenceNine = stackResult with
+    {
+        RecognitionDetailJson = """{"filtered":[{"text":"#-","score":0.522859},{"text":"_9","score":0.307236},{"text":"~","score":0.836344}]}""",
+    };
+    Equal(
+        4,
+        RhodesMaaLocalCandidateConverter.FromTaskResults(
+                "relicsFull",
+                [nameResult, validFour, repeatedFour, lowConfidenceNine],
+                "is5_sarkaz")
+            .Single(item => item.RelicId == "is5_sarkaz_relic_287")
+            .Count,
+        "repeated stack count wins over one low-confidence in-range OCR digit");
+
+    var conflictingNine = stackResult with
+    {
+        RecognitionDetailJson = """{"filtered":[{"text":"9","score":0.99}]}""",
+    };
+    Equal(
+        0,
+        RhodesMaaLocalCandidateConverter.FromTaskResults(
+                "relicsFull",
+                [nameResult, validFour, conflictingNine],
+                "is5_sarkaz")
+            .Single(item => item.RelicId == "is5_sarkaz_relic_287")
+            .Count,
+        "equally supported stack counts remain unresolved");
 
     var combinedFourAndNoise = stackResult with
     {
@@ -8130,6 +8164,258 @@ static void RecognitionScrollPlanLoadsOperatorPasses()
     Equal(false, coinPasses[1].MirrorPreviousPassScrolls, "collection pass independently reaches the opposite edge");
 }
 
+static void RecognitionPassOptimizerUsesRememberedEndpoints()
+{
+    var path = Path.Combine(AppContext.BaseDirectory, "data", "recognition", "scan-profiles.json");
+    var operatorPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "operatorsFull");
+    var cache = new RhodesRecognitionEndpointCache();
+
+    var initial = cache.Select(
+        "operatorsFull",
+        "is5_sarkaz",
+        "pc",
+        1280,
+        720,
+        0x1111111111111111UL,
+        operatorPasses);
+    Equal(2, initial.Passes.Count, "unknown operator position preserves both directions");
+    Equal(false, initial.UsedRememberedEndpoint, "unknown operator position never enables one-way planning");
+
+    cache.RecordEndpoint(
+        "operatorsFull",
+        "is5_sarkaz",
+        "pc",
+        1280,
+        720,
+        "left",
+        0x1111111111111111UL);
+    var remembered = cache.Select(
+        "operatorsFull",
+        "is5_sarkaz",
+        "pc",
+        1280,
+        720,
+        0x1111111111111111UL,
+        operatorPasses);
+    Equal("right", remembered.Passes[0].Direction, "remembered left endpoint scans toward the right endpoint first");
+    Equal(true, remembered.Passes[0].CollectCandidates, "remembered endpoint still performs full operator recognition");
+    Equal(2, remembered.Passes.Count, "remembered endpoint keeps the reverse pass as a conservative fallback");
+    Equal(true, remembered.UsedRememberedEndpoint, "remembered endpoint use is reported for evidence");
+
+    var changedCampaign = cache.Select(
+        "operatorsFull",
+        "is6_sui",
+        "pc",
+        1280,
+        720,
+        0x1111111111111111UL,
+        operatorPasses);
+    Equal(false, changedCampaign.UsedRememberedEndpoint, "endpoint cache is isolated by campaign");
+    Equal(2, changedCampaign.Passes.Count, "campaign change falls back to both directions");
+
+    var changedViewport = cache.Select(
+        "operatorsFull",
+        "is5_sarkaz",
+        "pc",
+        1280,
+        720,
+        0xaaaaaaaaaaaaaaaaUL,
+        operatorPasses);
+    Equal(false, changedViewport.UsedRememberedEndpoint, "changed endpoint fingerprint falls back to full scan");
+
+    var changedResolution = cache.Select(
+        "operatorsFull",
+        "is5_sarkaz",
+        "pc",
+        1920,
+        1080,
+        0x1111111111111111UL,
+        operatorPasses);
+    Equal(false, changedResolution.UsedRememberedEndpoint, "resolution change invalidates remembered endpoints");
+
+    var changedConnection = cache.Select(
+        "operatorsFull",
+        "is5_sarkaz",
+        "adb",
+        1280,
+        720,
+        0x1111111111111111UL,
+        operatorPasses);
+    Equal(false, changedConnection.UsedRememberedEndpoint, "connection target change invalidates remembered endpoints");
+
+    var ambiguousCache = new RhodesRecognitionEndpointCache();
+    ambiguousCache.RecordEndpoint(
+        "operatorsFull", "is5_sarkaz", "pc", 1280, 720, "left", 0x3333333333333333UL);
+    ambiguousCache.RecordEndpoint(
+        "operatorsFull", "is5_sarkaz", "pc", 1280, 720, "right", 0x3333333333333333UL);
+    var ambiguousEndpoint = ambiguousCache.Select(
+        "operatorsFull", "is5_sarkaz", "pc", 1280, 720, 0x3333333333333333UL, operatorPasses);
+    Equal(false, ambiguousEndpoint.UsedRememberedEndpoint, "ambiguous endpoint fingerprints fall back to both directions");
+
+    var thoughtPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "is5ThoughtFull");
+    var firstThought = cache.Select(
+        "is5ThoughtFull",
+        "is5_sarkaz",
+        "pc",
+        1280,
+        720,
+        0x2222222222222222UL,
+        thoughtPasses);
+    Equal(2, firstThought.Passes.Count, "unknown thought position preserves the restoration fallback");
+    Equal("down", firstThought.Passes[0].Direction, "unknown thought position keeps the existing collecting direction");
+
+    cache.RecordEndpoint(
+        "is5ThoughtFull",
+        "is5_sarkaz",
+        "pc",
+        1280,
+        720,
+        "down",
+        0x2222222222222222UL);
+    var repeatedThought = cache.Select(
+        "is5ThoughtFull",
+        "is5_sarkaz",
+        "pc",
+        1280,
+        720,
+        0x2222222222222222UL,
+        thoughtPasses);
+    Equal("up", repeatedThought.Passes[0].Direction, "retained thought bottom scans back toward the top");
+    Equal(true, repeatedThought.Passes[0].CollectCandidates, "thought reverse pass collects instead of restoring blindly");
+    Equal(false, repeatedThought.Passes[0].MirrorPreviousPassScrolls, "one-way thought reverse does not depend on a previous pass");
+    Equal(2, repeatedThought.Passes.Count, "thought reverse keeps the original direction as fallback");
+
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "is5ThoughtFull", true, true, 0, null, null, false, false, false),
+        "empty thought recognition keeps the fallback because empty and missed cannot yet be distinguished");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "is5ThoughtFull", true, true, 4, null, null, false, false, false),
+        "recognized thought candidates can stop after reaching the opposite stable endpoint");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "operatorsFull", true, true, 9, 9, 9, false, false, false),
+        "operator scan stops only after all expected cards are recognized and resolved");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "operatorsFull", true, true, 9, null, 9, false, false, false),
+        "operator scan keeps its fallback when the expected count is unknown");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "operatorsFull", true, true, 9, 9, 8, false, false, false),
+        "operator scan keeps its fallback while a card remains unresolved");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "relicsFull", true, true, 16, 16, null, false, false, false),
+        "relic scan stops only after the expected set and stack values are complete");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "relicsFull", true, true, 16, 16, null, true, false, false),
+        "relic scan keeps its fallback while a stack value is unresolved");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "relicsFull", true, false, 16, 16, null, false, false, false),
+        "relic scan keeps its fallback until the opposite endpoint is stable");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "relicsFull", true, true, 16, 16, null, false, false, true),
+        "recognition or swipe failure always keeps the fallback pass");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+        "is5ThoughtFull", true, true, 4, null, null, false, true, false),
+        "low-confidence recognition always keeps the fallback pass");
+}
+
+static void RecognitionSettleTrackerRequiresEquivalentFrames()
+{
+    Equal(true, RhodesRecognitionCapturePolicy.ShouldUseAdaptivePcSettle(
+        true,
+        true,
+        MaaSessionControllerKind.Win32,
+        Win32ScreencapMethods.FramePool),
+        "connected Win32 FramePool capture uses adaptive settle polling");
+    Equal(false, RhodesRecognitionCapturePolicy.ShouldUseAdaptivePcSettle(
+        false,
+        true,
+        MaaSessionControllerKind.Adb,
+        Win32ScreencapMethods.FramePool),
+        "ADB capture keeps the existing fixed delay");
+    Equal(false, RhodesRecognitionCapturePolicy.ShouldUseAdaptivePcSettle(
+        true,
+        true,
+        MaaSessionControllerKind.Win32,
+        Win32ScreencapMethods.PrintWindow),
+        "non-FramePool Win32 capture keeps the existing fixed delay");
+    Equal(false, RhodesRecognitionCapturePolicy.ShouldUseAdaptivePcSettle(
+        true,
+        false,
+        MaaSessionControllerKind.Win32,
+        Win32ScreencapMethods.FramePool),
+        "a stale UI selection cannot enable adaptive settle while disconnected");
+    Equal(false, RhodesRecognitionCapturePolicy.ShouldPersistAdaptiveScrollFrame(
+        isFinalFrame: false,
+        hadFailure: false),
+        "successful intermediate adaptive frames stay in memory without debug persistence");
+    Equal(true, RhodesRecognitionCapturePolicy.ShouldPersistAdaptiveScrollFrame(
+        isFinalFrame: true,
+        hadFailure: false),
+        "the final adaptive frame is persisted for evidence");
+    Equal(true, RhodesRecognitionCapturePolicy.ShouldPersistAdaptiveScrollFrame(
+        isFinalFrame: false,
+        hadFailure: true),
+        "failed adaptive frames retain diagnostics");
+    Equal(32, RhodesRecognitionCapturePolicy.MinimumStableElapsedMs(
+        sawViewportChange: true,
+        fixedDelayMs: 160),
+        "a visibly moved FramePool viewport can settle before the old fixed delay");
+    Equal(160, RhodesRecognitionCapturePolicy.MinimumStableElapsedMs(
+        sawViewportChange: false,
+        fixedDelayMs: 160),
+        "an unchanged viewport waits through the old delay before being trusted as an endpoint");
+    Equal(224, RhodesRecognitionCapturePolicy.AdaptiveSettleBudgetMs(
+        fixedDelayMs: 160,
+        pollIntervalMs: 16),
+        "the adaptive budget leaves room for post-delay unchanged-frame confirmation");
+    Equal(false, RhodesRecognitionCapturePolicy.IsConfirmedScrollEndpoint(
+        endpointOptimizationEnabled: true,
+        sawViewportChange: false),
+        "a PC FramePool pass that never moved cannot train or activate an endpoint shortcut");
+    Equal(true, RhodesRecognitionCapturePolicy.IsConfirmedScrollEndpoint(
+        endpointOptimizationEnabled: true,
+        sawViewportChange: true),
+        "a PC FramePool pass may confirm an endpoint after observing real viewport movement");
+    Equal(true, RhodesRecognitionCapturePolicy.IsConfirmedScrollEndpoint(
+        endpointOptimizationEnabled: false,
+        sawViewportChange: false),
+        "the legacy fixed-delay path preserves its existing endpoint contract");
+    Equal(false, RhodesRecognitionCapturePolicy.CanAcceptStableFrame(
+        settled: true,
+        sawViewportChange: false,
+        elapsedMilliseconds: 32,
+        fixedDelayMs: 160),
+        "two stale pre-swipe frames cannot be accepted before the fixed-delay boundary");
+    Equal(true, RhodesRecognitionCapturePolicy.CanAcceptStableFrame(
+        settled: true,
+        sawViewportChange: true,
+        elapsedMilliseconds: 32,
+        fixedDelayMs: 160),
+        "a changed and settled viewport can be accepted at the adaptive boundary");
+    Equal(true, RhodesRecognitionCapturePolicy.CanAcceptStableFrame(
+        settled: true,
+        sawViewportChange: false,
+        elapsedMilliseconds: 160,
+        fixedDelayMs: 160),
+        "an unchanged endpoint can be accepted after the original fixed-delay boundary");
+
+    var tracker = new RhodesRecognitionFrameSettleTracker(0x0000000000000000UL, stableSampleCount: 2);
+    Equal(false, tracker.Observe(0xffff000000000000UL), "first changed PC frame is not accepted while motion may continue");
+    Equal(false, tracker.Observe(0x00ffff0000000000UL), "different moving frame resets stability");
+    Equal(false, tracker.Observe(0x00ffff0000000001UL), "first equivalent frame starts the stable sample run");
+    Equal(true, tracker.Observe(0x00ffff0000000001UL), "second equivalent frame confirms capture stability");
+    Equal(true, tracker.SawViewportChange, "tracker records that the swipe moved the viewport");
+
+    var noisy = new RhodesRecognitionFrameSettleTracker(0x0000000000000000UL, stableSampleCount: 2);
+    Equal(false, noisy.Observe(0xffff000000000000UL), "one noisy frame does not settle");
+    Equal(false, noisy.Observe(0x0000000000000000UL), "the pre-swipe frame clears a one-sample movement suspicion");
+    Equal(false, noisy.SawViewportChange, "one transient fingerprint change is not treated as viewport movement");
+
+    var edge = new RhodesRecognitionFrameSettleTracker(0x3333333333333333UL, stableSampleCount: 2);
+    Equal(false, edge.Observe(0x3333333333333333UL), "first unchanged endpoint frame waits for confirmation");
+    Equal(true, edge.Observe(0x3333333333333333UL), "second unchanged frame confirms an immobile endpoint");
+    Equal(false, edge.SawViewportChange, "immobile endpoint is distinguished from a moved viewport");
+}
+
 static void RecognitionRuntimePlanUsesFocusedTasks()
 {
     var runStatusTasks = new[]
@@ -10096,7 +10382,26 @@ static void MaaNativeEvidenceLog()
                 new SukiCandidateApplyOutcome(1, "operator", "不明", "", "", "ignored", "", "missing-operator-id"),
             ]),
         true,
-        "api down");
+        "api down",
+        new RhodesRecognitionScrollPerformanceEvidence(
+            ConfiguredPasses: 2,
+            PlannedPasses: 2,
+            ExecutedPasses: 1,
+            SkippedPasses: 1,
+            SwipeCount: 5,
+            SwipeDurationMs: 650,
+            SettleDurationMs: 240,
+            SettlePollCount: 13,
+            FixedDelayBudgetMs: 400,
+            EndpointCacheUsed: true,
+            AdaptiveCaptureUsed: true,
+            AdaptiveFallbackCount: 1,
+            PlanReason: "remembered-left-distance-0",
+            SuccessfulSwipeCount: 5,
+            FailedSwipeCount: 0,
+            HadFailure: false,
+            HadUncertainty: true,
+            TerminationReason: "remembered-endpoint-complete"));
 
     var root = JsonNode.Parse(json)!.AsObject();
     Equal(1, root["schemaVersion"]!.GetValue<int>(), "evidence schema version");
@@ -10107,6 +10412,20 @@ static void MaaNativeEvidenceLog()
     var performance = root["performance"]!.AsObject();
     Equal(420L, performance["taskDurationMs"]!.GetValue<long>(), "evidence MAA task duration");
     Equal(1580L, performance["overheadDurationMs"]!.GetValue<long>(), "evidence navigation and capture overhead");
+    var scrollPerformance = performance["scroll"]!.AsObject();
+    Equal(1, scrollPerformance["executedPasses"]!.GetValue<int>(), "evidence executed scroll passes");
+    Equal(1, scrollPerformance["skippedPasses"]!.GetValue<int>(), "evidence skipped scroll passes");
+    Equal(5, scrollPerformance["swipeCount"]!.GetValue<int>(), "evidence swipe count");
+    Equal(240L, scrollPerformance["settleDurationMs"]!.GetValue<long>(), "evidence adaptive settle duration");
+    Equal(13, scrollPerformance["settlePollCount"]!.GetValue<int>(), "evidence adaptive settle poll count");
+    Equal(true, scrollPerformance["endpointCacheUsed"]!.GetValue<bool>(), "evidence endpoint cache use");
+    Equal(true, scrollPerformance["adaptiveCaptureUsed"]!.GetValue<bool>(), "evidence adaptive capture use");
+    Equal("remembered-left-distance-0", scrollPerformance["planReason"]!.GetValue<string>(), "evidence scroll plan reason");
+    Equal(5, scrollPerformance["successfulSwipeCount"]!.GetValue<int>(), "evidence successful swipe count");
+    Equal(0, scrollPerformance["failedSwipeCount"]!.GetValue<int>(), "evidence failed swipe count");
+    Equal(false, scrollPerformance["hadFailure"]!.GetValue<bool>(), "evidence scan failure state");
+    Equal(true, scrollPerformance["hadUncertainty"]!.GetValue<bool>(), "evidence settle uncertainty state");
+    Equal("remembered-endpoint-complete", scrollPerformance["terminationReason"]!.GetValue<string>(), "evidence termination reason");
     var counts = root["counts"]!.AsObject();
     Equal(1, counts["candidates"]!.GetValue<int>(), "evidence candidate count");
     Equal(2, counts["resourceTasks"]!.GetValue<int>(), "evidence task count");
@@ -10788,6 +11107,32 @@ static void MaaResourceCacheReusesRecognitionDefinitions()
 {
     RhodesMaaResourceCatalog.InvalidateRecognitionDefinitionCache();
     var initialLoadCount = RhodesMaaResourceCatalog.DiagnosticRecognitionDefinitionLoadCount;
+
+    const string nullableScaleEntry = "RhodesTemplate_runStatusFull_run_squad_icon_is5_sarkaz_batch";
+    const string trailingOperatorEntry = "RhodesTemplate_operatorsFull_operator_card_name";
+    var nullableScalePayload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(nullableScaleEntry);
+    Equal(
+        true,
+        !string.IsNullOrWhiteSpace(nullableScalePayload),
+        "nullable scale recognition remains cached");
+    Equal(
+        1,
+        RhodesMaaResourceCatalog.LoadRecognitionScale(nullableScaleEntry),
+        "nullable recognition scale defaults to one");
+
+    var trailingOperatorPayload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(trailingOperatorEntry);
+    Equal(
+        true,
+        !string.IsNullOrWhiteSpace(trailingOperatorPayload),
+        "definition after nullable scale remains cached");
+    Equal(
+        true,
+        RhodesMaaRecognitionInvocation.TryParse(
+            trailingOperatorPayload,
+            out var trailingOperatorInvocation,
+            out var trailingOperatorError),
+        $"trailing operator payload parses: {trailingOperatorError}");
+    Equal("TemplateMatch", trailingOperatorInvocation.Type, "trailing operator recognition type");
 
     for (var index = 0; index < 5; index++)
     {

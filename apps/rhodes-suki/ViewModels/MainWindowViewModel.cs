@@ -19,6 +19,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly RhodesMaaSession _session;
     private readonly RhodesManagedAdbInstaller _managedAdbInstaller;
     private readonly RhodesDistributionProfile _distributionProfile;
+    private readonly RhodesRecognitionEndpointCache _recognitionEndpointCache = new();
     private readonly SemaphoreSlim _bossSelectionSaveLock = new(1, 1);
     private IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private readonly IReadOnlyList<SukiChoiceItem> _allOperators = [];
@@ -101,6 +102,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _lastFrameMetadataPath = "";
     private string _lastFrameStateSnapshotPath = "";
     private string _lastResourceTaskResultsPath = "";
+    private RhodesRecognitionScrollPerformanceEvidence? _lastRecognitionScrollPerformance;
     private string _lastRoiDraftPath = "";
     private string _lastRoiSessionPath = "";
     private string _lastBugReportBundlePath = "";
@@ -8212,6 +8214,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private async Task<bool> RunAllResourceTasksCoreAsync()
     {
         var scanStartedAt = DateTimeOffset.UtcNow;
+        _lastRecognitionScrollPerformance = null;
         var plan = CurrentResourceExecutionPlan;
         _lastResourceExecutionPlan = null;
         _lastRecognitionProfileSkippedAfterUnconfirmedTarget = false;
@@ -8977,10 +8980,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RhodesSuiActiveCoinScanTracker? activeCoinScanTracker = null,
         CancellationToken cancellationToken = default)
     {
+        _lastRecognitionScrollPerformance = null;
         if (!RhodesRecognitionRuntimePlan.IsScrollProfile(plan.ProfileId))
             return;
 
-        var passes = RhodesRecognitionScrollPlan.LoadDefault(plan.ProfileId);
+        IReadOnlyList<RhodesRecognitionScrollPass> passes = RhodesRecognitionScrollPlan.LoadDefault(plan.ProfileId);
+        var configuredPassCount = passes.Count;
         if (passes.Count == 0)
             return;
 
@@ -9021,7 +9026,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 plan.ProfileId,
                 initialCandidateCount,
                 expectedCandidateCount,
-                operatorScanTracker?.ResolvedCardCount))
+                operatorScanTracker?.ResolvedCardCount)
+            && !(plan.ProfileId == "relicsFull" && HasUnresolvedRelicStackCandidate())
+            && !HasRecognitionUncertainty(plan.ProfileId))
         {
             var candidateLabel = plan.ProfileId == "operatorsFull" ? "オペレーター候補" : "秘宝候補";
             var candidateUnit = plan.ProfileId == "operatorsFull" ? "名" : "件";
@@ -9040,6 +9047,38 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
         var scanRegion = RhodesRecognitionScrollPlan.LoadScanRegionDefault(plan.ProfileId);
+        var initialFingerprint = RhodesRecognitionFrameFingerprint.Compute(_lastCapture, scanRegion);
+        var endpointOptimizationEnabled = IsAdaptivePcRecognitionCaptureEnabled();
+        var endpointConnectionKind = "pc-framepool";
+        var passSelection = endpointOptimizationEnabled
+            ? _recognitionEndpointCache.Select(
+                plan.ProfileId,
+                campaignId,
+                endpointConnectionKind,
+                _capturePixelWidth,
+                _capturePixelHeight,
+                initialFingerprint,
+                passes)
+            : new RhodesRecognitionPassSelection(
+                passes.ToArray(),
+                false,
+                "",
+                "disabled-non-framepool");
+        passes = passSelection.Passes;
+        var swipeCount = 0;
+        var successfulSwipeCount = 0;
+        var failedSwipeCount = 0;
+        long swipeDurationMs = 0;
+        long settleDurationMs = 0;
+        var settlePollCount = 0;
+        long fixedDelayBudgetMs = 0;
+        var adaptiveCaptureUsed = false;
+        var adaptiveFallbackCount = 0;
+        var scanHadFailure = false;
+        var scanHadUncertainty = false;
+        var terminationReason = "configured-passes-completed";
+        var pendingEndpoints = new List<(string Direction, ulong Fingerprint)>();
+        MaaCaptureResult? finalAdaptiveCapture = null;
 
         var previousPassScrolls = 0;
         var completedPassCount = 0;
@@ -9054,12 +9093,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var stableFrames = 0;
             var stableCandidates = 0;
             var previousFingerprint = RhodesRecognitionFrameFingerprint.Compute(_lastCapture, scanRegion);
+            var lastFingerprint = previousFingerprint;
             var previousCandidateCount = CurrentLocalCandidateCount(plan.ProfileId);
+            var passReachedStableEndpoint = false;
+            var passSawViewportChange = false;
+            var passHadFailure = false;
+            var passHadUncertainty = false;
+            var passSuccessfulSwipeCountAtStart = successfulSwipeCount;
 
             for (var index = 0; index < maxScrolls; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var swipe = RhodesRecognitionScrollPlan.RandomSwipe(pass);
+                var swipeStopwatch = Stopwatch.StartNew();
                 var swipeStatus = await _session.SwipeAsync(
                     swipe.StartX,
                     swipe.StartY,
@@ -9067,20 +9113,52 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     swipe.EndY,
                     pass.DurationMs,
                     cancellationToken);
+                swipeStopwatch.Stop();
+                swipeCount++;
+                swipeDurationMs += swipeStopwatch.ElapsedMilliseconds;
                 if (swipeStatus != MaaJobStatus.Succeeded)
                 {
+                    failedSwipeCount++;
                     StatusMessage = $"{pass.Label}: swipe失敗 ({swipeStatus})";
+                    passHadFailure = true;
+                    scanHadFailure = true;
                     break;
                 }
 
+                successfulSwipeCount++;
                 executedScrolls++;
-                if (pass.CaptureDelayMs > 0)
-                    await Task.Delay(pass.CaptureDelayMs, cancellationToken);
-                if (!await ForceCaptureAsync())
+                var captureOutcome = await CaptureScrollFrameAfterSwipeAsync(
+                    previousFingerprint,
+                    scanRegion,
+                    pass.CaptureDelayMs,
+                    cancellationToken);
+                fixedDelayBudgetMs += pass.CaptureDelayMs;
+                adaptiveCaptureUsed |= captureOutcome.UsedAdaptiveSettle;
+                if (captureOutcome.UsedAdaptiveSettle)
+                {
+                    if (captureOutcome.Capture is { Succeeded: true })
+                        finalAdaptiveCapture = captureOutcome.Capture;
+                    settleDurationMs += captureOutcome.ElapsedMilliseconds;
+                    settlePollCount += captureOutcome.PollCount;
+                    if (!string.IsNullOrWhiteSpace(captureOutcome.FallbackReason))
+                        adaptiveFallbackCount++;
+                }
+                passHadFailure |= captureOutcome.HadCaptureFailure;
+                passHadUncertainty |= captureOutcome.HadSettlementUncertainty;
+                scanHadFailure |= captureOutcome.HadCaptureFailure;
+                scanHadUncertainty |= captureOutcome.HadSettlementUncertainty;
+                if (!captureOutcome.Succeeded)
+                {
+                    passHadFailure = true;
                     break;
+                }
 
                 var fingerprint = RhodesRecognitionFrameFingerprint.Compute(_lastCapture, scanRegion);
+                lastFingerprint = fingerprint;
                 var fingerprintDistance = RhodesRecognitionFrameFingerprint.Distance(fingerprint, previousFingerprint);
+                passSawViewportChange |= captureOutcome.UsedAdaptiveSettle
+                    ? captureOutcome.SawViewportChange
+                    : fingerprintDistance > 2;
                 stableFrames = fingerprintDistance <= 2
                     ? stableFrames + 1
                     : 0;
@@ -9088,7 +9166,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
                 if (pass.CollectCandidates)
                 {
-                    await RunScrollFrameTasksAsync(
+                    var frameSucceeded = await RunScrollFrameTasksAsync(
                         plan.ProfileId,
                         taskEntries,
                         _lastCapture,
@@ -9096,6 +9174,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         operatorScanTracker,
                         activeCoinScanTracker,
                         viewportMoved: fingerprintDistance > 2);
+                    passHadFailure |= !frameSucceeded;
+                    scanHadFailure |= !frameSucceeded;
                     if (plan.ProfileId == "is6ActiveCoinsFull")
                     {
                         expectedCandidateCount ??= RhodesSuiActiveCoinCountReader
@@ -9114,27 +9194,46 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     : candidateCount.ToString();
                 StatusMessage = $"{pass.Label}: {executedScrolls}/{maxScrolls} / 候補{candidateProgress}件";
 
+                var hasUnresolvedRelicStack = plan.ProfileId == "relicsFull"
+                    && HasUnresolvedRelicStackCandidate();
                 if (RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount(
                         plan.ProfileId,
                         candidateCount,
                         expectedCandidateCount,
-                        operatorScanTracker?.ResolvedCardCount))
+                        operatorScanTracker?.ResolvedCardCount)
+                    && !passHadFailure
+                    && !passHadUncertainty
+                    && !(plan.ProfileId == "relicsFull" && hasUnresolvedRelicStack))
                 {
-                    reachedExpectedCandidateCount = true;
-                    break;
+                    var hasRecognitionUncertainty = HasRecognitionUncertainty(plan.ProfileId);
+                    if (!hasRecognitionUncertainty)
+                    {
+                        reachedExpectedCandidateCount = true;
+                        break;
+                    }
                 }
 
-                if (RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe(
+                if (!captureOutcome.HadSettlementUncertainty
+                    && RhodesRecognitionRuntimePlan.ShouldEndRelicPassAfterImmobileProbe(
                         plan.ProfileId,
                         campaignId,
                         executedScrolls,
                         fingerprintDistance))
                 {
                     StatusMessage = $"秘宝候補{candidateProgress}件: この方向には動かなかったため追加スクロールを省略しました。";
+                    passReachedStableEndpoint = RhodesRecognitionCapturePolicy.IsConfirmedScrollEndpoint(
+                        endpointOptimizationEnabled,
+                        passSawViewportChange);
+                    if (endpointOptimizationEnabled && !passSawViewportChange)
+                    {
+                        passHadUncertainty = true;
+                        scanHadUncertainty = true;
+                    }
                     break;
                 }
 
-                if (RhodesRecognitionRuntimePlan.CanStopResolvedOperatorViewport(
+                if (!captureOutcome.HadSettlementUncertainty
+                    && RhodesRecognitionRuntimePlan.CanStopResolvedOperatorViewport(
                         plan.ProfileId,
                         executedScrolls,
                         pass.MinScrolls,
@@ -9142,9 +9241,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         pass.EndFingerprintStableCount,
                         operatorScanTracker?.CanStopCurrentViewport == true))
                 {
+                    if (endpointOptimizationEnabled && !passSawViewportChange)
+                    {
+                        passHadUncertainty = true;
+                        scanHadUncertainty = true;
+                    }
                     break;
                 }
-                if (RhodesRecognitionRuntimePlan.HasReachedScrollEnd(
+                if (!captureOutcome.HadSettlementUncertainty
+                    && RhodesRecognitionRuntimePlan.HasReachedScrollEnd(
                         executedScrolls,
                         pass.MinScrolls,
                         stableFrames,
@@ -9152,12 +9257,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         stableCandidates,
                         pass.CandidateStableEndCount))
                 {
+                    passReachedStableEndpoint = RhodesRecognitionCapturePolicy.IsConfirmedScrollEndpoint(
+                        endpointOptimizationEnabled,
+                        passSawViewportChange);
+                    if (endpointOptimizationEnabled && !passSawViewportChange)
+                    {
+                        passHadUncertainty = true;
+                        scanHadUncertainty = true;
+                    }
                     break;
                 }
             }
 
             previousPassScrolls = executedScrolls;
-            completedPassCount++;
+            if (successfulSwipeCount > passSuccessfulSwipeCountAtStart)
+                completedPassCount++;
             var nextPassCollects = passIndex + 1 < passes.Count
                 && passes[passIndex + 1].CollectCandidates;
             if (executedScrolls > 0
@@ -9169,7 +9283,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 StatusMessage = plan.ProfileId == "is6ActiveCoinsFull"
                     ? "有効銭リストの上端を確認しました。表示順を保って下方向へ取得します。"
                     : "保有銭の左端を確認しました。左端の表示から一回走査を開始します。";
-                await RunScrollFrameTasksAsync(
+                var endpointFrameSucceeded = await RunScrollFrameTasksAsync(
                     plan.ProfileId,
                     taskEntries,
                     _lastCapture,
@@ -9177,6 +9291,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     operatorScanTracker,
                     activeCoinScanTracker,
                     viewportMoved: executedScrolls > 0);
+                passHadFailure |= !endpointFrameSucceeded;
+                scanHadFailure |= !endpointFrameSucceeded;
                 if (plan.ProfileId == "is6ActiveCoinsFull")
                 {
                     expectedCandidateCount ??= RhodesSuiActiveCoinCountReader
@@ -9184,11 +9300,43 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         ?.Count;
                 }
             }
+            if (endpointOptimizationEnabled
+                && passReachedStableEndpoint
+                && !passHadFailure
+                && !passHadUncertainty
+                && RhodesRecognitionCapturePolicy.IsConfirmedScrollEndpoint(
+                    endpointOptimizationEnabled,
+                    passSawViewportChange)
+                && executedScrolls > 0)
+            {
+                pendingEndpoints.Add((pass.Direction, lastFingerprint));
+            }
+            var canConsiderSkippingRemainingPasses = passIndex == 0
+                && passIndex + 1 < passes.Count;
+            var hasRecognitionUncertaintyForPassSkip = canConsiderSkippingRemainingPasses
+                && HasRecognitionUncertainty(plan.ProfileId);
+            if (canConsiderSkippingRemainingPasses
+                && RhodesRecognitionRuntimePlan.ShouldSkipRemainingPasses(
+                    plan.ProfileId,
+                    passSelection.UsedRememberedEndpoint,
+                    passReachedStableEndpoint,
+                    CurrentLocalCandidateCount(plan.ProfileId),
+                    expectedCandidateCount,
+                    operatorScanTracker?.ResolvedCardCount,
+                    plan.ProfileId == "relicsFull" && HasUnresolvedRelicStackCandidate(),
+                    hasRecognitionUncertaintyForPassSkip,
+                    passHadFailure || passHadUncertainty))
+            {
+                StatusMessage = $"{pass.Label}: 記憶した端点から反対端まで完全に確認できたため、復路を省略しました。";
+                terminationReason = "remembered-endpoint-complete";
+                break;
+            }
             if (reachedExpectedCandidateCount)
             {
                 var candidateLabel = plan.ProfileId == "operatorsFull" ? "オペレーター候補" : "秘宝候補";
                 var candidateUnit = plan.ProfileId == "operatorsFull" ? "名" : "件";
                 StatusMessage = $"{candidateLabel}{CurrentLocalCandidateCount(plan.ProfileId)}/{expectedCandidateCount}{candidateUnit}: 所持数と一致したため終了しました。";
+                terminationReason = "expected-candidate-count";
                 break;
             }
             if (RhodesRecognitionRuntimePlan.CanStopResolvedOperatorScan(
@@ -9198,9 +9346,186 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     operatorScanTracker?.CanStopScan == true))
             {
                 StatusMessage = "表示済みオペレーターをすべて解決したためスキャンを終了しました。";
+                terminationReason = "resolved-operator-scan";
                 break;
             }
         }
+
+        var finalRecognitionUncertainty = HasRecognitionUncertainty(plan.ProfileId);
+        scanHadUncertainty |= finalRecognitionUncertainty;
+        if (scanHadFailure)
+            terminationReason = terminationReason == "configured-passes-completed"
+                ? "configured-passes-completed-with-failure"
+                : terminationReason;
+        else if (scanHadUncertainty)
+            terminationReason = terminationReason == "configured-passes-completed"
+                ? "configured-passes-completed-with-uncertainty"
+                : terminationReason;
+        else if (completedPassCount == 0)
+            terminationReason = "no-scroll-pass-executed";
+
+        if (!scanHadFailure && !scanHadUncertainty)
+        {
+            foreach (var endpoint in pendingEndpoints)
+            {
+                _recognitionEndpointCache.RecordEndpoint(
+                    plan.ProfileId,
+                    campaignId,
+                    endpointConnectionKind,
+                    _capturePixelWidth,
+                    _capturePixelHeight,
+                    endpoint.Direction,
+                    endpoint.Fingerprint);
+            }
+        }
+
+        if (finalAdaptiveCapture is not null
+            && ReferenceEquals(_lastCapture, finalAdaptiveCapture.EncodedImage)
+            && RhodesRecognitionCapturePolicy.ShouldPersistAdaptiveScrollFrame(
+                isFinalFrame: true,
+                hadFailure: scanHadFailure))
+        {
+            await AcceptCaptureAsync(finalAdaptiveCapture);
+        }
+
+        _lastRecognitionScrollPerformance = new RhodesRecognitionScrollPerformanceEvidence(
+            configuredPassCount,
+            passes.Count,
+            completedPassCount,
+            Math.Max(0, passes.Count - completedPassCount),
+            swipeCount,
+            swipeDurationMs,
+            settleDurationMs,
+            settlePollCount,
+            fixedDelayBudgetMs,
+            passSelection.UsedRememberedEndpoint,
+            adaptiveCaptureUsed,
+            adaptiveFallbackCount,
+            passSelection.Reason,
+            successfulSwipeCount,
+            failedSwipeCount,
+            scanHadFailure,
+            scanHadUncertainty,
+            terminationReason);
+    }
+
+    private async Task<RhodesRecognitionScrollCaptureOutcome> CaptureScrollFrameAfterSwipeAsync(
+        ulong preSwipeFingerprint,
+        RhodesRecognitionSwipeArea scanRegion,
+        int fixedDelayMs,
+        CancellationToken cancellationToken)
+    {
+        var useAdaptiveSettle = IsAdaptivePcRecognitionCaptureEnabled();
+        var stopwatch = Stopwatch.StartNew();
+        if (!useAdaptiveSettle)
+        {
+            if (fixedDelayMs > 0)
+                await Task.Delay(fixedDelayMs, cancellationToken);
+            var succeeded = await ForceCaptureAsync();
+            return new RhodesRecognitionScrollCaptureOutcome(
+                succeeded,
+                false,
+                1,
+                stopwatch.ElapsedMilliseconds,
+                "fixed-delay",
+                null,
+                !succeeded,
+                false,
+                false);
+        }
+
+        const int pollIntervalMs = 16;
+        var settleBudgetMs = RhodesRecognitionCapturePolicy.AdaptiveSettleBudgetMs(
+            fixedDelayMs,
+            pollIntervalMs);
+        var tracker = new RhodesRecognitionFrameSettleTracker(preSwipeFingerprint, stableSampleCount: 2);
+        var unchangedAfterDelayTracker = new RhodesRecognitionFrameSettleTracker(
+            preSwipeFingerprint,
+            stableSampleCount: 2);
+        var pollCount = 0;
+        var sawCaptureFailure = false;
+
+        while (stopwatch.ElapsedMilliseconds < settleBudgetMs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (pollCount > 0)
+                await Task.Delay(pollIntervalMs, cancellationToken);
+
+            var capture = await _session.CaptureEncodedAsync(cancellationToken);
+            pollCount++;
+            if (!capture.Succeeded || capture.EncodedImage.Length == 0)
+            {
+                sawCaptureFailure = true;
+                continue;
+            }
+
+            var fingerprint = RhodesRecognitionFrameFingerprint.Compute(capture.EncodedImage, scanRegion);
+            var settled = tracker.Observe(fingerprint);
+            if (!tracker.SawViewportChange)
+            {
+                if (stopwatch.ElapsedMilliseconds < Math.Max(0, fixedDelayMs))
+                    continue;
+                settled = unchangedAfterDelayTracker.Observe(fingerprint);
+            }
+            if (!RhodesRecognitionCapturePolicy.CanAcceptStableFrame(
+                    settled,
+                    tracker.SawViewportChange,
+                    stopwatch.ElapsedMilliseconds,
+                    fixedDelayMs))
+                continue;
+
+            var settleElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+            AcceptTransientRecognitionCapture(capture);
+            return new RhodesRecognitionScrollCaptureOutcome(
+                true,
+                true,
+                pollCount,
+                settleElapsedMilliseconds,
+                "",
+                capture,
+                sawCaptureFailure,
+                false,
+                tracker.SawViewportChange);
+        }
+
+        var remainingDelayMs = fixedDelayMs - (int)stopwatch.ElapsedMilliseconds;
+        if (remainingDelayMs > 0)
+            await Task.Delay(remainingDelayMs, cancellationToken);
+
+        var fallback = await _session.CaptureEncodedAsync(cancellationToken);
+        pollCount++;
+        var fallbackElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+        if (fallback.Succeeded && fallback.EncodedImage.Length > 0)
+            AcceptTransientRecognitionCapture(fallback);
+        else if (RhodesRecognitionCapturePolicy.ShouldPersistAdaptiveScrollFrame(
+                     isFinalFrame: false,
+                     hadFailure: true))
+            await AcceptCaptureAsync(fallback);
+        return new RhodesRecognitionScrollCaptureOutcome(
+            fallback.Succeeded && fallback.EncodedImage.Length > 0,
+            true,
+            pollCount,
+            fallbackElapsedMilliseconds,
+            sawCaptureFailure ? "capture-failure-fallback" : "settle-timeout-fallback",
+            fallback.Succeeded && fallback.EncodedImage.Length > 0 ? fallback : null,
+            sawCaptureFailure || !fallback.Succeeded || fallback.EncodedImage.Length == 0,
+            true,
+            tracker.SawViewportChange);
+    }
+
+    private bool IsAdaptivePcRecognitionCaptureEnabled() =>
+        RhodesRecognitionCapturePolicy.ShouldUseAdaptivePcSettle(
+            IsPcConnectionTargetSelected,
+            _session.IsControllerReady,
+            _session.ControllerKind,
+            _session.ActivePcConnectionPlan?.ScreencapMethod);
+
+    private void AcceptTransientRecognitionCapture(MaaCaptureResult capture)
+    {
+        _lastCapture = capture.EncodedImage;
+        _adbDiagnosticsCaptureSucceeded = true;
+        _adbDiagnosticsCaptureDetail = capture.Detail;
+        CaptureState = $"認識中: {capture.Detail}";
     }
 
     private async Task RunSuiCatchWindDetailProbeAsync(
@@ -9424,7 +9749,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return [];
     }
 
-    private async Task RunScrollFrameTasksAsync(
+    private async Task<bool> RunScrollFrameTasksAsync(
         string profileId,
         IEnumerable<string> taskEntries,
         byte[] encodedImage,
@@ -9433,6 +9758,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RhodesSuiActiveCoinScanTracker? activeCoinScanTracker = null,
         bool viewportMoved = false)
     {
+        var resultStartIndex = ResourceTaskResults.Count;
         var frameResults = new List<MaaTaskRunResult>();
         foreach (var entry in taskEntries)
         {
@@ -9460,6 +9786,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             visibleFrameResults,
             cancellationToken);
         FlushResourceTaskDiagnostics();
+        return ResourceTaskResults
+            .Skip(resultStartIndex)
+            .All(result => result.Succeeded);
     }
 
     private int CurrentLocalCandidateCount(string profileId)
@@ -9480,10 +9809,54 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return RhodesRecognitionRuntimePlan.CountOperatorRosterCandidates(candidates);
     }
 
+    private bool HasUnresolvedRelicStackCandidate()
+    {
+        var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+            "relicsFull",
+            ResourceTaskResults,
+            SelectedCampaign?.Id ?? _runState.CampaignId);
+        return candidates.Any(candidate =>
+            candidate.Kind.Equals("relic", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(candidate.RelicId)
+            && RhodesRelicStackRuleCatalog.Find(candidate.RelicId) is not null
+            && candidate.Count <= 0);
+    }
+
+    private bool HasRecognitionUncertainty(string profileId)
+    {
+        var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
+        var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+            profileId,
+            ResourceTaskResults,
+            campaignId);
+        if (profileId.Equals("is5ThoughtFull", StringComparison.Ordinal)
+            && !candidates.Any(candidate => candidate.Kind.Equals("thought", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return RhodesRecognitionRetryPolicy.Evaluate(
+            profileId,
+            ResourceTaskResults,
+            candidates,
+            campaignId).ShouldRetry;
+    }
+
     private int CurrentSelectedOperatorCount() =>
         _allOperators
             .Where(item => item.IsSelected)
             .Sum(item => item.SupportsMultipleCount ? Math.Max(1, item.SelectionCount) : 1);
+
+    private sealed record RhodesRecognitionScrollCaptureOutcome(
+        bool Succeeded,
+        bool UsedAdaptiveSettle,
+        int PollCount,
+        long ElapsedMilliseconds,
+        string FallbackReason,
+        MaaCaptureResult? Capture,
+        bool HadCaptureFailure,
+        bool HadSettlementUncertainty,
+        bool SawViewportChange);
 
 
     private async Task<bool> ConvertResourceTaskResultsCoreAsync()
@@ -10941,7 +11314,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             stateSnapshotPath: _lastFrameStateSnapshotPath,
             stateApplySummary: stateApplySummary,
             stateApplyLocalFallbackUsed: stateApplyLocalFallbackUsed,
-            stateApplyApiError: stateApplyApiError);
+            stateApplyApiError: stateApplyApiError,
+            scrollPerformance: _lastRecognitionScrollPerformance);
     }
 
     private MaaRecognitionRuntimeEvidence BuildRecognitionRuntimeEvidence()

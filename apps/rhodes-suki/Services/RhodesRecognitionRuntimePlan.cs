@@ -168,6 +168,40 @@ public static class RhodesRecognitionRuntimePlan
             && resolvedOperatorCardCount >= expectedCandidateCount.Value;
     }
 
+    public static bool ShouldSkipRemainingPasses(
+        string profileId,
+        bool usedRememberedEndpoint,
+        bool reachedStableEndpoint,
+        int candidateCount,
+        int? expectedCandidateCount,
+        int? resolvedOperatorCardCount,
+        bool hasUnresolvedRelicStack,
+        bool hasRecognitionUncertainty,
+        bool hadFailure)
+    {
+        if (!usedRememberedEndpoint
+            || !reachedStableEndpoint
+            || hasRecognitionUncertainty
+            || hadFailure)
+            return false;
+
+        if (profileId.Equals("is5ThoughtFull", StringComparison.Ordinal))
+            return candidateCount > 0;
+
+        if (expectedCandidateCount is null or < 0
+            || candidateCount != expectedCandidateCount.Value)
+        {
+            return false;
+        }
+
+        return profileId switch
+        {
+            "operatorsFull" => resolvedOperatorCardCount == expectedCandidateCount.Value,
+            "relicsFull" => !hasUnresolvedRelicStack,
+            _ => false,
+        };
+    }
+
     public static int CountOperatorRosterCandidates(
         IEnumerable<MaaCandidatePreview> candidates)
     {
