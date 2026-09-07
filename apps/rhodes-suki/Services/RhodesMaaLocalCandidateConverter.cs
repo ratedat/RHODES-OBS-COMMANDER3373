@@ -924,26 +924,33 @@ public static class RhodesMaaLocalCandidateConverter
                 || RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(relicId))
                 continue;
 
-            foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
+            var rows = PrimaryTextResults(taskResult.RecognitionDetailJson);
+            // Read a whole badge token, never a digit embedded in icon/background noise.
+            // The bounded prefix set retains existing multiplier/arrow OCR forms.
+            var numbers = rows.Select(row =>
             {
-                var numbers = Regex.Matches(textResult.Text, @"\d+", RegexOptions.CultureInvariant)
-                    .Select(match => int.TryParse(match.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)
-                    .Where(value => value > 0
-                        && RhodesRelicStackRuleCatalog.IsWithinKnownLimit(relicId, value))
-                    .Distinct()
-                    .ToArray();
-                if (numbers.Length != 1)
-                    continue;
+                var match = Regex.Match(row.Text.Trim(), @"\A(?:[×xX^★-]\s*)?([0-9]+)\z", RegexOptions.CultureInvariant);
+                return match.Success
+                    && int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var number)
+                        ? number
+                        : 0;
+            }).Distinct().ToArray();
 
-                if (!observed.TryGetValue(relicId, out var counts))
-                {
-                    counts = [];
-                    observed[relicId] = counts;
-                }
+            // Reject the complete observation before range filtering. In particular,
+            // 4 + 14 must not become 4 just because 14 is above this relic's limit.
+            if (numbers.Length != 1
+                || !RhodesRelicStackRuleCatalog.IsWithinKnownLimit(relicId, numbers[0]))
+                continue;
 
-                var count = numbers[0];
-                counts[count] = counts.GetValueOrDefault(count) + 1;
+            if (!observed.TryGetValue(relicId, out var counts))
+            {
+                counts = [];
+                observed[relicId] = counts;
             }
+
+            var count = numbers[0];
+            // Multiple OCR rows from one capture provide only one observation.
+            counts[count] = counts.GetValueOrDefault(count) + 1;
         }
 
         var resolved = new Dictionary<string, int>(StringComparer.Ordinal);

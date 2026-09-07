@@ -192,6 +192,8 @@ var tests = new (string Name, Action Run)[]
     ("Recognition settle tracker waits for two equivalent PC frames", RecognitionSettleTrackerRequiresEquivalentFrames),
     ("Recognition runtime plan removes legacy operator OCR and completes relic scans by owned count", RecognitionRuntimePlanUsesFocusedTasks),
     ("Recognition runtime plan excludes operator metadata from owned-card progress", RecognitionRuntimePlanCountsOperatorRosterOnly),
+    ("Recognition retries only a briefly late operator target", RecognitionTargetConfirmationRetryIsBounded),
+    ("Recognition marks a scroll budget exhausted before the list endpoint as partial", RecognitionScrollBudgetRequiresCoverage),
     ("Relic owned count reader extracts the footer count from MAA OCR evidence", RelicOwnedCountReaderExtractsFooterCount),
     ("Relic footer availability distinguishes a disabled zero-count button from owned relics", RelicFooterAvailabilityDistinguishesDisabledButton),
     ("Relic footer image detector distinguishes an empty thumbnail strip from owned relics", RelicFooterImageDetectorDistinguishesThumbnailStrip),
@@ -259,6 +261,9 @@ var tests = new (string Name, Action Run)[]
     ("Run catalog exposes Sarkaz boss selections from campaign data", RunCatalogSarkazBossSelections),
     ("Run catalog gates Sui floor 6 and END5 routes behind their relics", RunCatalogSuiEnd5BossSelections),
     ("Run state store persists and clears campaign boss selections", RunStateStoreBossSelections),
+    ("Application instance prevents duplicate startup from resetting the active run", ApplicationInstanceTests.DuplicateStartPreservesCurrentRun),
+    ("Application instance separates independent state files", ApplicationInstanceTests.SeparateStateFilesRemainIndependent),
+    ("Application instance releases ownership after failed startup", ApplicationInstanceTests.FailedStartupReleasesInstance),
     ("Startup reset keeps ADB settings and starts a clean Phantom run", StartupResetKeepsAdbAndStartsPhantom),
     ("Choice pane drag scrolling clamps the target offset", ChoicePaneDragScrollMath),
     ("Choice catalog registry builds operator and relic workspace models", ChoiceCatalogRegistryBuildsWorkspaceModels),
@@ -303,6 +308,7 @@ var tests = new (string Name, Action Run)[]
     ("Recognition candidate applier replaces stale Amiya forms", CandidateAmiyaRoleReplacementApply),
     ("Recognition candidate applier refreshes Amiya role and promotion without a roster count change", CandidateSameCountOperatorMetadataRefreshApply),
     ("Recognition candidate applier can apply IS5 thought and age candidates", CandidateIs5SpecialApply),
+    ("Partial thought recognition preserves unseen state across API and local fallback", CandidatePartialThoughtApplyPreservesUnseen),
     ("Recognition candidate applier clears IS5 age when detection returns none", CandidateIs5AgeClearApply),
     ("Recognition candidate applier persists IS3 Mizuki special values", CandidateMizukiSpecialApply),
     ("Recognition candidate applier preserves IS3 rejection targets on effect-only refresh", CandidateMizukiRejectionEffectOnlyPreservesTargets),
@@ -318,6 +324,21 @@ var tests = new (string Name, Action Run)[]
     ("Recognition candidate applier clears stale Sui status on a status-free refresh", CandidateSuiStatuslessRefreshClearsStaleStatus),
     ("Choice rows group filtered items into up to four panes", ChoiceRows),
 };
+
+tests = tests.Concat(new (string Name, Action Run)[]
+{
+    ("Relic stack recognition rejects malformed count noise", RhodesSuki.Tests.RelicStackRecognitionTests.RejectsMalformedStackCountNoise),
+    ("Relic stack recognition rejects ambiguity before range filtering", RhodesSuki.Tests.RelicStackRecognitionTests.RejectsAmbiguousNumbersBeforeLimits),
+    ("Relic stack recognition counts each capture once", RhodesSuki.Tests.RelicStackRecognitionTests.KeepsWholeBadgeCountsAndOneVotePerCapture),
+    ("Recognition detail navigation cannot replace waiter frames", RecognitionOperationTests.DetailNavigationStaysOutsideWaiter),
+    ("Recognition native raw and PNG paths preserve OCR results", RecognitionNativeImageTests.RawAndPngProduceSameOcr),
+    ("Recognition safety keeps unresolved cards and endpoint contexts explicit", RhodesSuki.Tests.RecognitionSafetyTests.Run),
+    ("Recognition frame waiter handles variable capture and uncertainty", RhodesSuki.Tests.RhodesRecognitionFrameWaiterTests.Run),
+    ("MAA owned image defers PNG and preserves raw compatibility", RhodesSuki.Tests.MaaOwnedImageTests.Run),
+    ("Recognition operation includes restoration and state save", RecognitionOperationTests.TracksEndToEndAndFailures),
+    ("Recognition operation signatures preserve promotion class and count changes", RecognitionOperationTests.SignaturesIncludeMutableState),
+    ("Recognition operation correlates preserved evidence snapshots", RecognitionOperationTests.CorrelatesEvidenceWithoutReplacingSnapshots),
+}).ToArray();
 
 var testFilter = Environment.GetEnvironmentVariable("RHODES_SUKI_TEST_FILTER");
 if (!string.IsNullOrWhiteSpace(testFilter))
@@ -882,7 +903,7 @@ static void RecognitionWorkflowApplyCandidatesViaApi()
             replacedState = stateJson;
             return Task.CompletedTask;
         },
-        (_, _) =>
+        (_, _, _) =>
         {
             localFallbackCount++;
             return Task.FromResult(SukiCandidateApplySummary.Empty);
@@ -939,7 +960,7 @@ static void RecognitionWorkflowSkipsOptionalApisWhenOffline()
                 return Task.FromResult(new RhodesStateApiResult("", "unexpected save"));
             },
             (_, _) => throw new InvalidOperationException("replace should not run while offline"),
-            (_, _) =>
+            (_, _, _) =>
             {
                 localApplyCalls++;
                 return Task.FromResult(new SukiCandidateApplySummary(1, 0, ["ingot"]));
@@ -1017,7 +1038,7 @@ static void RecognitionWorkflowApplyCandidatesLocalFallback()
             RhodesStateApiFailureKind.Unavailable)),
         (_, _) => throw new InvalidOperationException("save should not run"),
         (_, _) => throw new InvalidOperationException("replace should not run"),
-        (_, _) =>
+        (_, _, _) =>
         {
             localFallbackCount++;
             return Task.FromResult(new SukiCandidateApplySummary(1, 0, ["ingot"]));
@@ -1045,7 +1066,7 @@ static void RecognitionWorkflowApplyCandidatesApiFailure()
             RhodesStateApiFailureKind.Api)),
         (_, _) => throw new InvalidOperationException("save should not run"),
         (_, _) => throw new InvalidOperationException("replace should not run"),
-        (_, _) => Task.FromResult(new SukiCandidateApplySummary(1, 0, ["ingot"])))
+        (_, _, _) => Task.FromResult(new SukiCandidateApplySummary(1, 0, ["ingot"])))
         .GetAwaiter()
         .GetResult();
 
@@ -1063,7 +1084,7 @@ static void RecognitionWorkflowApplyCandidatesEmpty()
         _ => throw new InvalidOperationException("fetch should not run"),
         (_, _) => throw new InvalidOperationException("save should not run"),
         (_, _) => throw new InvalidOperationException("replace should not run"),
-        (_, _) => throw new InvalidOperationException("local should not run")).GetAwaiter().GetResult();
+        (_, _, _) => throw new InvalidOperationException("local should not run")).GetAwaiter().GetResult();
 
     Equal(0, result.Summary.AppliedCount, "workflow empty apply count");
     Equal(false, result.ShouldReloadRunState, "workflow empty does not reload");
@@ -2143,14 +2164,14 @@ static void LocalCandidateConverterRelicStackCounts()
         RecognitionDetailJson = """{"all":[{"text":"4 14","score":0.99}]}""",
     };
     Equal(
-        4,
+        0,
         RhodesMaaLocalCandidateConverter.FromTaskResults(
                 "relicsFull",
                 [nameResult, combinedFourAndNoise],
                 "is5_sarkaz")
             .Single(item => item.RelicId == "is5_sarkaz_relic_287")
             .Count,
-        "one valid count survives an impossible over-limit token in the same OCR row");
+        "multi-number OCR is rejected before filtering an over-limit token");
 
     var ambiguousDigits = stackResult with
     {
@@ -8416,6 +8437,53 @@ static void RecognitionSettleTrackerRequiresEquivalentFrames()
     Equal(false, edge.SawViewportChange, "immobile endpoint is distinguished from a moved viewport");
 }
 
+static void RecognitionScrollBudgetRequiresCoverage()
+{
+    Equal(true, RhodesRecognitionRuntimePlan.HasUnconfirmedScrollBudget(
+        collectsCandidates: true, executedScrolls: 12, maxScrolls: 12,
+        reachedStableEndpoint: false, reachedExpectedCandidateCount: false),
+        "reading new rows on the last permitted swipe does not prove that the list ended");
+    Equal(false, RhodesRecognitionRuntimePlan.HasUnconfirmedScrollBudget(
+        collectsCandidates: true, executedScrolls: 12, maxScrolls: 12,
+        reachedStableEndpoint: true, reachedExpectedCandidateCount: false),
+        "an endpoint confirmed on the last permitted swipe still completes coverage");
+    Equal(false, RhodesRecognitionRuntimePlan.HasUnconfirmedScrollBudget(
+        collectsCandidates: true, executedScrolls: 12, maxScrolls: 12,
+        reachedStableEndpoint: false, reachedExpectedCandidateCount: true),
+        "matching the validated owned count is sufficient without an endpoint");
+    Equal(false, RhodesRecognitionRuntimePlan.HasUnconfirmedScrollBudget(
+        collectsCandidates: false, executedScrolls: 12, maxScrolls: 12,
+        reachedStableEndpoint: false, reachedExpectedCandidateCount: false),
+        "a bounded return to the starting viewport does not invalidate collected coverage");
+    Equal(false, RhodesRecognitionRuntimePlan.HasUnconfirmedScrollBudget(
+        collectsCandidates: true, executedScrolls: 4, maxScrolls: 12,
+        reachedStableEndpoint: false, reachedExpectedCandidateCount: false),
+        "a pass that stopped for another reason is not a budget exhaustion");
+}
+
+static void RecognitionTargetConfirmationRetryIsBounded()
+{
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldRetryTargetConfirmation(
+        "operatorsFull", completedRetryCount: 0, targetConfirmed: false),
+        "an immediate operator anchor miss gets a short recapture");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldRetryTargetConfirmation(
+        "operatorsFull", completedRetryCount: 1, targetConfirmed: false),
+        "a second late-render recapture remains available");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryTargetConfirmation(
+        "operatorsFull", completedRetryCount: 2, targetConfirmed: false),
+        "operator target retries are bounded");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryTargetConfirmation(
+        "operatorsFull", completedRetryCount: 0, targetConfirmed: true),
+        "a confirmed operator card never triggers another recapture");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldRetryTargetConfirmation(
+        "relicsFull", completedRetryCount: 0, targetConfirmed: false),
+        "other target screens keep their existing timing and behavior");
+    Equal(90, RhodesRecognitionRuntimePlan.TargetConfirmationRetryDelayMs(0),
+        "first recapture delay stays short");
+    Equal(160, RhodesRecognitionRuntimePlan.TargetConfirmationRetryDelayMs(1),
+        "second recapture gives the card grid a final bounded settle window");
+}
+
 static void RecognitionRuntimePlanUsesFocusedTasks()
 {
     var runStatusTasks = new[]
@@ -8786,6 +8854,28 @@ static void RelicOwnedCountReaderExtractsFooterCount()
     Equal(13, evidence!.Count, "relic footer count");
     Equal("13", evidence.RawText, "relic footer raw text");
     Equal(true, evidence.Confidence > 0.9, "relic footer confidence");
+
+    var separatedRows = new MaaTaskRunResult(
+        RhodesRelicOwnedCountReader.Entry,
+        "Succeeded",
+        true,
+        "multi-line footer",
+        """
+        {
+          "all": [
+            { "text": "137", "score": 0.99, "box": [12, 4, 42, 22] },
+            { "text": "秘宝", "score": 0.999, "box": [14, 32, 38, 21] }
+          ],
+          "best": { "text": "秘宝", "score": 0.999 },
+          "filtered": [{ "text": "秘宝", "score": 0.999 }]
+        }
+        """,
+        "OCR",
+        true);
+    Equal(137, RhodesRelicOwnedCountReader.FromTaskResults([separatedRows])?.Count,
+        "detected numeric row remains available when only the label matches the screen filter");
+    Equal(null, RhodesRelicOwnedCountReader.FromTaskResults([separatedRows with { Hit = false }]),
+        "numeric rows without the expected footer label do not establish ownership");
 }
 
 static void RelicFooterAvailabilityDistinguishesDisabledButton()
@@ -13964,6 +14054,122 @@ static void CandidateIs5SpecialApply()
     Equal("age_prime", special["age"]!.GetValue<string>(), "best age");
     Equal(21, special["idea"]!.GetValue<int>(), "existing idea preserved");
     Equal("2026-07-01T00:00:00.0000000Z", state["updatedAt"]!.GetValue<string>(), "is5 special updatedAt");
+}
+
+static void CandidatePartialThoughtApplyPreservesUnseen()
+{
+    const string stateJson =
+        """
+        {
+          "run": {
+            "campaignId": "is5_sarkaz",
+            "special": {
+              "is5_sarkaz": {
+                "thought": [
+                  { "effectId": "thought_a", "count": 3, "stateId": "old-a" },
+                  { "effectId": "thought_b", "count": 1, "stateId": "old-b" }
+                ],
+                "thoughtOverlayVisible": true
+              }
+            }
+          }
+        }
+        """;
+    var partialCandidates = new[]
+    {
+        new MaaCandidatePreview("thought", "思案A", "thought_a", "思案A", 0.94,
+            CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
+        new MaaCandidatePreview("thought", "思案A", "thought_a", "思案A", 0.92,
+            CampaignId: "is5_sarkaz", ThoughtId: "thought_a"),
+    };
+    var partialOptions = new RhodesCandidateApplyOptions(PreserveExistingThoughts: true);
+
+    var savedApiState = "";
+    var apiResult = RhodesRecognitionWorkflow.ApplyCandidatesAsync(
+        partialCandidates,
+        _ => Task.FromResult(new RhodesStateApiResult(stateJson, "")),
+        (updated, _) =>
+        {
+            savedApiState = updated;
+            return Task.FromResult(new RhodesStateApiResult(updated, ""));
+        },
+        (_, _) => Task.CompletedTask,
+        (_, _, _) => throw new InvalidOperationException("API success must not use local fallback"),
+        applyOptions: partialOptions).GetAwaiter().GetResult();
+    Equal(false, apiResult.LocalFallbackUsed, "partial thought apply uses API state when available");
+    Equal("thought_a:3:old-a|thought_b:1:old-b", ThoughtSnapshot(JsonNode.Parse(savedApiState)!.AsObject()),
+        "API apply preserves unseen thought B and never reduces partially observed thought A");
+
+    var localStatePath = Path.Combine(Path.GetTempPath(), $"rhodes-partial-thought-{Guid.NewGuid():N}.json");
+    try
+    {
+        File.WriteAllText(localStatePath, stateJson);
+        RhodesCandidateApplyOptions? receivedLocalOptions = null;
+        var localResult = RhodesRecognitionWorkflow.ApplyCandidatesAsync(
+            partialCandidates,
+            _ => Task.FromResult(new RhodesStateApiResult(
+                "", "offline", RhodesStateApiFailureKind.Unavailable)),
+            (_, _) => throw new InvalidOperationException("offline apply must not save API state"),
+            (_, _) => throw new InvalidOperationException("offline apply must not replace local state"),
+            (localCandidates, options, _) =>
+            {
+                receivedLocalOptions = options;
+                return RhodesRunStateStore.SaveCandidatesAsync(
+                    localCandidates,
+                    localStatePath,
+                    DateTimeOffset.Parse("2026-09-07T00:00:00Z"),
+                    options);
+            },
+            applyOptions: partialOptions).GetAwaiter().GetResult();
+        Equal(true, localResult.LocalFallbackUsed, "partial thought apply falls back locally when API is unavailable");
+        Equal(true, ReferenceEquals(partialOptions, receivedLocalOptions),
+            "local fallback receives the same partial-coverage option as API apply");
+        Equal("thought_a:3:old-a|thought_b:1:old-b",
+            ThoughtSnapshot(JsonNode.Parse(File.ReadAllText(localStatePath))!.AsObject()),
+            "local fallback preserves unseen thought B and never reduces partially observed thought A");
+    }
+    finally
+    {
+        File.Delete(localStatePath);
+    }
+
+    var manualState = JsonNode.Parse(stateJson)!.AsObject();
+    RhodesRecognitionCandidateApplier.Apply(
+        manualState,
+        [partialCandidates[0] with { Label = "思案A (手動入力)", RawText = "手動入力", Confidence = 1.0 }],
+        DateTimeOffset.Parse("2026-09-07T00:01:00Z"));
+    Equal("thought_a:1:", ThoughtSnapshot(manualState),
+        "manual thought editing keeps full replacement semantics despite a prior partial scan");
+
+    var increasedState = JsonNode.Parse(stateJson)!.AsObject();
+    RhodesRecognitionCandidateApplier.Apply(
+        increasedState,
+        [partialCandidates[0], partialCandidates[0], partialCandidates[0], partialCandidates[0]],
+        DateTimeOffset.Parse("2026-09-07T00:02:00Z"),
+        partialOptions);
+    Equal("thought_a:4:old-a|thought_b:1:old-b", ThoughtSnapshot(increasedState),
+        "partial recognition increases a thought count when the new observation exceeds existing state");
+
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldPreserveExistingThoughtsOnApply(
+        "is5ThoughtFull", scanHadFailure: false, scanHadUncertainty: true),
+        "partial thought coverage preserves unseen entries");
+    Equal(true, RhodesRecognitionRuntimePlan.ShouldPreserveExistingThoughtsOnApply(
+        "is5ThoughtFull", scanHadFailure: true, scanHadUncertainty: false),
+        "a failed thought task preserves entries that later frames may not cover");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldPreserveExistingThoughtsOnApply(
+        "is5ThoughtFull", scanHadFailure: false, scanHadUncertainty: false),
+        "confirmed complete thought coverage keeps replacement semantics");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldPreserveExistingThoughtsOnApply(
+        "operatorsFull", scanHadFailure: false, scanHadUncertainty: true),
+        "a stale partial flag cannot affect the next profile");
+
+    static string ThoughtSnapshot(JsonObject state) => string.Join('|',
+        state["run"]!["special"]!["is5_sarkaz"]!["thought"]!.AsArray().Select(item =>
+        {
+            var thought = item!.AsObject();
+            return $"{thought["effectId"]!.GetValue<string>()}:{thought["count"]!.GetValue<int>()}:"
+                + $"{thought["stateId"]?.GetValue<string>() ?? ""}";
+        }));
 }
 
 static void CandidateIs5AgeClearApply()

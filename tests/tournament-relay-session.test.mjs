@@ -49,6 +49,76 @@ test("relay queues ordered operations and records host results", () => {
   assert.equal(editor.snapshot.state.run.ingot, 12);
 });
 
+test("relay keeps the newest generated snapshot when requests arrive in reverse order", () => {
+  const store = createTournamentRelaySessionStore({ now: () => 3_000 });
+  const created = store.createSession({ playerLabel: "Player A" });
+
+  const newest = store.setSnapshot(created.sessionId, created.hostToken, {
+    revision: 1,
+    snapshotGeneration: 2,
+    state: { run: { ingot: 20 } },
+  });
+  const stale = store.setSnapshot(created.sessionId, created.hostToken, {
+    revision: 1,
+    snapshotGeneration: 1,
+    state: { run: { ingot: 10 } },
+  });
+
+  assert.equal(newest.accepted, true);
+  assert.equal(stale.accepted, false);
+  const editor = store.getEditorBootstrap(created.sessionId, created.editorCode);
+  assert.equal(editor.snapshot.snapshotGeneration, 2);
+  assert.equal(editor.snapshot.state.run.ingot, 20);
+});
+
+test("relay resolves an operation idempotently and never flips applied to rejected", () => {
+  const store = createTournamentRelaySessionStore({ now: () => 4_000 });
+  const created = store.createSession({ playerLabel: "Player A" });
+  const operation = store.enqueueOperation(created.sessionId, created.editorCode, {
+    type: "run.set",
+    field: "ingot",
+    value: 20,
+  });
+  const applied = {
+    status: "applied",
+    summary: "源石錐を20に変更",
+    snapshot: { revision: 1, snapshotGeneration: 2, state: { run: { ingot: 20 } } },
+  };
+
+  store.resolveOperation(created.sessionId, created.hostToken, operation.id, applied);
+  const retried = store.resolveOperation(created.sessionId, created.hostToken, operation.id, applied);
+  assert.equal(retried.status, "applied");
+  assert.throws(
+    () => store.resolveOperation(created.sessionId, created.hostToken, operation.id, {
+      status: "rejected",
+      snapshot: { revision: 1, snapshotGeneration: 1, state: { run: { ingot: 10 } } },
+    }),
+    (error) => error.code === "operation_already_resolved" && error.status === 409,
+  );
+  const editor = store.getEditorBootstrap(created.sessionId, created.editorCode);
+  assert.equal(editor.history[0].status, "applied");
+  assert.equal(editor.snapshot.state.run.ingot, 20);
+});
+
+test("relay keeps legacy generationless snapshots compatible until a generated snapshot is seen", () => {
+  const store = createTournamentRelaySessionStore({ now: () => 4_500 });
+  const legacy = store.createSession({ playerLabel: "Legacy host" });
+  assert.equal(store.setSnapshot(legacy.sessionId, legacy.hostToken, { state: { run: { ingot: 1 } } }).accepted, true);
+  assert.equal(store.setSnapshot(legacy.sessionId, legacy.hostToken, { state: { run: { ingot: 2 } } }).accepted, true);
+  assert.equal(store.getEditorBootstrap(legacy.sessionId, legacy.editorCode).snapshot.state.run.ingot, 2);
+
+  const upgraded = store.createSession({ playerLabel: "Upgraded host" });
+  store.setSnapshot(upgraded.sessionId, upgraded.hostToken, {
+    snapshotGeneration: 1,
+    state: { run: { ingot: 3 } },
+  });
+  const ignoredLegacy = store.setSnapshot(upgraded.sessionId, upgraded.hostToken, {
+    state: { run: { ingot: 0 } },
+  });
+  assert.equal(ignoredLegacy.accepted, false);
+  assert.equal(store.getEditorBootstrap(upgraded.sessionId, upgraded.editorCode).snapshot.state.run.ingot, 3);
+});
+
 test("relay rejects invalid credentials and expired sessions", () => {
   let now = 5_000;
   const store = createTournamentRelaySessionStore({

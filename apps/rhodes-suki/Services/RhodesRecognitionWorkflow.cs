@@ -178,10 +178,12 @@ public static class RhodesRecognitionWorkflow
         Func<CancellationToken, Task<RhodesStateApiResult>> fetchApiStateAsync,
         Func<string, CancellationToken, Task<RhodesStateApiResult>> saveApiStateAsync,
         Func<string, CancellationToken, Task> replaceLocalStateJsonAsync,
-        Func<IReadOnlyList<MaaCandidatePreview>, CancellationToken, Task<SukiCandidateApplySummary>> saveLocalCandidatesAsync,
+        Func<IReadOnlyList<MaaCandidatePreview>, RhodesCandidateApplyOptions, CancellationToken, Task<SukiCandidateApplySummary>> saveLocalCandidatesAsync,
         CancellationToken cancellationToken = default,
-        bool apiAvailable = true)
+        bool apiAvailable = true,
+        RhodesCandidateApplyOptions? applyOptions = null)
     {
+        var resolvedApplyOptions = applyOptions ?? RhodesCandidateApplyOptions.Default;
         if (candidates.Count == 0)
         {
             return new RhodesCandidateApplyWorkflowResult(
@@ -202,20 +204,34 @@ public static class RhodesRecognitionWorkflow
                     "配信サーバーは未起動です。",
                     RhodesStateApiFailureKind.Unavailable),
                 saveLocalCandidatesAsync,
+                resolvedApplyOptions,
                 cancellationToken);
         }
 
         var fetched = await fetchApiStateAsync(cancellationToken);
         if (!fetched.Succeeded)
-            return await ApplyLocalFallbackAsync(candidates, fetched, saveLocalCandidatesAsync, cancellationToken);
+            return await ApplyLocalFallbackAsync(
+                candidates,
+                fetched,
+                saveLocalCandidatesAsync,
+                resolvedApplyOptions,
+                cancellationToken);
 
-        var applied = RhodesStateApiClient.ApplyCandidatesToStateJson(fetched.StateJson, candidates);
+        var applied = RhodesStateApiClient.ApplyCandidatesToStateJson(
+            fetched.StateJson,
+            candidates,
+            applyOptions: resolvedApplyOptions);
         if (applied.Summary.AppliedCount <= 0)
             return NotAppliedResult(applied.Summary, "");
 
         var saved = await saveApiStateAsync(applied.StateJson, cancellationToken);
         if (!saved.Succeeded)
-            return await ApplyLocalFallbackAsync(candidates, saved, saveLocalCandidatesAsync, cancellationToken);
+            return await ApplyLocalFallbackAsync(
+                candidates,
+                saved,
+                saveLocalCandidatesAsync,
+                resolvedApplyOptions,
+                cancellationToken);
 
         await replaceLocalStateJsonAsync(saved.StateJson, cancellationToken);
         return AppliedResult(
@@ -229,10 +245,11 @@ public static class RhodesRecognitionWorkflow
     private static async Task<RhodesCandidateApplyWorkflowResult> ApplyLocalFallbackAsync(
         IReadOnlyList<MaaCandidatePreview> candidates,
         RhodesStateApiResult apiFailure,
-        Func<IReadOnlyList<MaaCandidatePreview>, CancellationToken, Task<SukiCandidateApplySummary>> saveLocalCandidatesAsync,
+        Func<IReadOnlyList<MaaCandidatePreview>, RhodesCandidateApplyOptions, CancellationToken, Task<SukiCandidateApplySummary>> saveLocalCandidatesAsync,
+        RhodesCandidateApplyOptions applyOptions,
         CancellationToken cancellationToken)
     {
-        var summary = await saveLocalCandidatesAsync(candidates, cancellationToken);
+        var summary = await saveLocalCandidatesAsync(candidates, applyOptions, cancellationToken);
         var apiState = apiFailure.IsUnavailable ? "未起動" : "同期失敗";
         var apiStatus = new SukiOptionalRuntimeStatus("配信サーバー", apiState, apiFailure.Error, false, false);
         return summary.AppliedCount <= 0

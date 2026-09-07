@@ -141,7 +141,7 @@
       84,
       60
     ],
-    "only_rec": true,
+    "only_rec": false,
     "threshold": 0.3,
     "action": "DoNothing",
     "attach": {
@@ -247,11 +247,11 @@
     "recognition": "OCR",
     "roi": [
       994,
-      650,
-      58,
-      58
+      662,
+      82,
+      32
     ],
-    "only_rec": true,
+    "only_rec": false,
     "threshold": 0.3,
     "action": "DoNothing",
     "attach": {

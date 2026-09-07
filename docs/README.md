@@ -19,6 +19,8 @@ Do not place Codex/Stitch working notes, prompt handoff files, generated design 
 
 ## Technical Reference
 
+- [Development verification](development-verification.md)
+- [Development setup](development-setup.md)
 - [Architecture](reference/architecture.md)
 - [Data sources](reference/data-sources.md)
 - [Campaign data coverage](reference/data-summary.md)

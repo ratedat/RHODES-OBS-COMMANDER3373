@@ -5,6 +5,11 @@ using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
 
+public sealed record RhodesCandidateApplyOptions(bool PreserveExistingThoughts = false)
+{
+    public static RhodesCandidateApplyOptions Default { get; } = new();
+}
+
 public static class RhodesRecognitionCandidateApplier
 {
     public const string NoAgeId = "__none__";
@@ -33,9 +38,10 @@ public static class RhodesRecognitionCandidateApplier
     public static SukiCandidateApplySummary Apply(
         JsonObject state,
         IEnumerable<MaaCandidatePreview> candidates,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        RhodesCandidateApplyOptions? options = null)
     {
-        return Apply(state, candidates, now, runStatusOnly: false);
+        return Apply(state, candidates, now, runStatusOnly: false, options ?? RhodesCandidateApplyOptions.Default);
     }
 
     public static MaaCandidatePreview CreateNoAgeCandidate() => new(
@@ -207,7 +213,8 @@ public static class RhodesRecognitionCandidateApplier
         JsonObject state,
         IEnumerable<MaaCandidatePreview> candidates,
         DateTimeOffset now,
-        bool runStatusOnly)
+        bool runStatusOnly,
+        RhodesCandidateApplyOptions? options = null)
     {
         var pruned = RhodesRunStateStore.PruneAbandonedRunValues(state);
         var normalizedOcrEngine = RhodesRunStateStore.NormalizeOcrEnginePreference(state);
@@ -223,7 +230,11 @@ public static class RhodesRecognitionCandidateApplier
         if (!runStatusOnly)
             handledIndexes.UnionWith(ApplyIs4ParadigmCandidates(state, candidateList, applied));
         if (!runStatusOnly)
-            handledIndexes.UnionWith(ApplyIs5SpecialCandidates(state, candidateList, applied));
+            handledIndexes.UnionWith(ApplyIs5SpecialCandidates(
+                state,
+                candidateList,
+                applied,
+                options?.PreserveExistingThoughts == true));
         if (!runStatusOnly)
             handledIndexes.UnionWith(ApplyIs6CoinCandidates(state, candidateList, applied));
         if (!runStatusOnly)
@@ -678,10 +689,11 @@ public static class RhodesRecognitionCandidateApplier
     private static HashSet<int> ApplyIs5SpecialCandidates(
         JsonObject state,
         IReadOnlyList<MaaCandidatePreview> candidates,
-        ICollection<string> applied)
+        ICollection<string> applied,
+        bool preserveExistingThoughts)
     {
         var handled = new HashSet<int>();
-        handled.UnionWith(ApplyThoughtCandidates(state, candidates, applied));
+        handled.UnionWith(ApplyThoughtCandidates(state, candidates, applied, preserveExistingThoughts));
         handled.UnionWith(ApplyAgeCandidates(state, candidates, applied));
         return handled;
     }
@@ -1479,7 +1491,8 @@ public static class RhodesRecognitionCandidateApplier
     private static IReadOnlyCollection<int> ApplyThoughtCandidates(
         JsonObject state,
         IReadOnlyList<MaaCandidatePreview> candidates,
-        ICollection<string> applied)
+        ICollection<string> applied,
+        bool preserveExistingThoughts)
     {
         var valid = new List<(int Index, string ThoughtId)>();
         for (var index = 0; index < candidates.Count; index++)
@@ -1512,15 +1525,51 @@ public static class RhodesRecognitionCandidateApplier
             counts[item.ThoughtId] = counts.GetValueOrDefault(item.ThoughtId) + 1;
         }
 
+        var existingThoughts = preserveExistingThoughts
+            ? campaign["thought"] as JsonArray
+            : null;
+        var existingThoughtsById = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+        if (existingThoughts is not null)
+        {
+            foreach (var existing in existingThoughts.OfType<JsonObject>())
+            {
+                var effectId = JsonString(existing, "effectId");
+                if (!string.IsNullOrWhiteSpace(effectId))
+                    existingThoughtsById.TryAdd(effectId, existing);
+            }
+        }
+
         var thought = new JsonArray();
         foreach (var thoughtId in ids)
         {
+            var count = counts[thoughtId];
+            JsonNode? stateId = null;
+            if (existingThoughtsById.TryGetValue(thoughtId, out var existing))
+            {
+                if (existing["count"] is JsonValue existingCountValue
+                    && existingCountValue.TryGetValue<int>(out var existingCount))
+                {
+                    count = Math.Max(count, existingCount);
+                }
+                stateId = existing["stateId"]?.DeepClone();
+            }
             thought.Add(new JsonObject
             {
                 ["effectId"] = thoughtId,
-                ["count"] = counts[thoughtId],
-                ["stateId"] = null,
+                ["count"] = count,
+                ["stateId"] = stateId,
             });
+        }
+        if (existingThoughts is not null)
+        {
+            var retainedIds = new HashSet<string>(ids, StringComparer.Ordinal);
+            foreach (var existing in existingThoughts.OfType<JsonObject>())
+            {
+                var effectId = JsonString(existing, "effectId");
+                if (string.IsNullOrWhiteSpace(effectId) || !retainedIds.Add(effectId))
+                    continue;
+                thought.Add(existing.DeepClone());
+            }
         }
         campaign["thought"] = thought;
         campaign["thoughtOverlayVisible"] = true;

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "source": "MaaAssistantArknights/MaaAssistantArknights",
+  "notices": "THIRD_PARTY_NOTICES.md",
+  "assets": [
+    {
+      "path": "third_party/maa/resource/PaddleOCR/det/inference.onnx",
+      "url": "https://api.github.com/repos/MaaAssistantArknights/MaaAssistantArknights/git/blobs/970c1e96ab377a2fe8fc104a84aecc26237a4daf",
+      "size": 2434618,
+      "sha256": "d572c1773fd00e72f2f2a4c6399513223c49d70f64bc8ccf52fc6cc500b2803c"
+    },
+    {
+      "path": "third_party/maa/resource/global/YoStarJP/resource/PaddleOCR/rec/inference.onnx",
+      "url": "https://api.github.com/repos/MaaAssistantArknights/MaaAssistantArknights/git/blobs/c2a05c52044e4f0658d527a8311430560cad1bc9",
+      "size": 10199792,
+      "sha256": "148b201495044b1677efc020d9f0925cdda6dc1e331aee42ea1ab8518b5de26a"
+    }
+  ]
+}

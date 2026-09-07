@@ -2,8 +2,10 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createPublicationGuard } from './publication-boundary.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const boundary = await createPublicationGuard(root);
 const output = join(root, 'outputs', 'apple-design-prototype');
 const project = join(root, 'apps', 'rhodes-apple-design', 'RhodesAppleDesign.csproj');
 const executable = join(output, 'RhodesAppleDesignPrototype.exe');
@@ -11,6 +13,22 @@ const executable = join(output, 'RhodesAppleDesignPrototype.exe');
 const safeOutputRoot = resolve(root, 'outputs');
 if (!resolve(output).startsWith(`${safeOutputRoot}\\`)) {
   throw new Error(`Refusing to clean output outside ${safeOutputRoot}`);
+}
+
+await boundary.assertDestination(output);
+await boundary.checkGitWorktree();
+for (const [directory, ignoreDirectoryNames] of [
+  [join(root, 'apps', 'rhodes-apple-design'), ['bin', 'obj']],
+  [join(root, 'assets', 'operators', 'wikiru', 'img'), []],
+  [join(root, 'assets', 'relics', 'wikiru', 'img'), []],
+  [join(root, 'assets', 'bosses', 'wikiru', 'img'), []],
+  [join(root, 'assets', 'selectable-effects', 'is3_mizuki', 'hordeCall'), []],
+]) {
+  await boundary.checkTree(directory, {
+    ignoreTopLevel: [],
+    ignoreDirectoryNames,
+    omitTransient: true,
+  });
 }
 
 rmSync(output, { recursive: true, force: true });
@@ -47,6 +65,12 @@ for (const name of readdirSync(output)) {
     rmSync(join(output, name), { force: true });
   }
 }
+
+await boundary.checkTree(output, {
+  ignoreTopLevel: [],
+  ignoreDirectoryNames: [],
+  omitTransient: false,
+});
 
 if (!existsSync(executable)) {
   throw new Error(`Published executable was not generated: ${executable}`);

@@ -9,7 +9,7 @@ test("package exposes Suki/Avalonia as the only active desktop app", async () =>
   assert.equal(pkg.scripts["suki:build"], "dotnet build apps/rhodes-suki/RhodesSuki.csproj");
   assert.equal(pkg.scripts["suki:test"], "dotnet run --project tests/rhodes-suki/RhodesSuki.ServiceTests.csproj");
   assert.equal(pkg.scripts["suki:run"], "dotnet run --project apps/rhodes-suki/RhodesSuki.csproj");
-  assert.equal(pkg.scripts["verify:desktop"], "npm run suki:check && npm run suki:build");
+  assert.equal(pkg.scripts["verify:desktop"], "node tools/verify.mjs --desktop");
   assert.equal(Object.values(pkg.scripts).some((command) => command.includes("launcher.mjs")), false);
 
   const scriptNames = Object.keys(pkg.scripts);

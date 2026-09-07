@@ -2,7 +2,7 @@
 
 OBS overlay tool for displaying Arknights Integrated Strategies run state.
 
-The project is planned around manual-first operation, with optional semi-automatic ADB/OCR assistance later.
+The project supports manual-first operation with optional semi-automatic ADB/OCR assistance.
 
 Target campaigns:
 
@@ -51,7 +51,7 @@ When running from the source folder on Windows, double-click this file instead o
 
 - `start-windows.vbs`
 
-The source-folder launcher builds and starts the Suki/Avalonia app. It also stops stale local servers on known development ports before launch.
+The source-folder launcher builds the current checkout and starts its Suki/Avalonia app only after the build succeeds. See [development setup](docs/development-setup.md) before the first source build.
 
 Developer Suki/Avalonia workflow:
 
@@ -73,6 +73,8 @@ After code changes, run the desktop verification command. It runs the Suki/MAA c
 ```powershell
 npm.cmd run verify:desktop
 ```
+
+For the full Node, MAA, C# and desktop checks, run `npm run verify:all -- --no-restore` after restoring dependencies. Results and the built executable hash are saved under `outputs/verification/latest.json`; live UI checks remain separate. See [development verification](docs/development-verification.md).
 
 Build a portable Windows package for distribution:
 

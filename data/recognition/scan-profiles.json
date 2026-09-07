@@ -494,15 +494,15 @@
         {
           "type": "tap",
           "point": {
-            "x": 948,
+            "x": 978,
             "y": 678
           },
           "label": "隊員を開く",
           "area": {
-            "x": 904,
-            "y": 645,
-            "width": 88,
-            "height": 66
+            "x": 966,
+            "y": 658,
+            "width": 24,
+            "height": 44
           }
         },
         {
@@ -519,26 +519,26 @@
       },
       "scrollAxis": "horizontal",
       "scrollDirection": "two-way",
-        "restoreSteps": [
-          {
-            "type": "tap",
-            "point": {
-              "x": 948,
+      "restoreSteps": [
+        {
+          "type": "tap",
+          "point": {
+            "x": 978,
             "y": 678
           },
           "label": "隊員を閉じる",
           "area": {
-            "x": 904,
-            "y": 645,
-            "width": 88,
-            "height": 66
+            "x": 966,
+            "y": 658,
+            "width": 24,
+            "height": 44
           }
-          },
-          {
-            "type": "wait",
-            "durationMs": 650,
-            "label": "閉じる待ち"
-          }
+        },
+        {
+          "type": "wait",
+          "durationMs": 650,
+          "label": "閉じる待ち"
+        }
       ],
       "maxScrolls": 30,
       "endFingerprintStableCount": 2,
@@ -644,9 +644,9 @@
           "label": "右側の秘宝を開く",
           "area": {
             "x": 170,
-            "y": 646,
-            "width": 45,
-            "height": 26
+            "y": 652,
+            "width": 27,
+            "height": 20
           }
         },
         {
@@ -673,9 +673,9 @@
           "label": "右側の秘宝を閉じる",
           "area": {
             "x": 170,
-            "y": 646,
-            "width": 45,
-            "height": 26
+            "y": 652,
+            "width": 27,
+            "height": 20
           }
         },
         {
@@ -1020,15 +1020,15 @@
         {
           "type": "tap",
           "point": {
-            "x": 638,
+            "x": 675,
             "y": 679
           },
           "label": "思案を開く",
           "area": {
-            "x": 582,
-            "y": 649,
-            "width": 112,
-            "height": 59
+            "x": 660,
+            "y": 660,
+            "width": 30,
+            "height": 40
           }
         },
         {
@@ -1049,15 +1049,15 @@
         {
           "type": "tap",
           "point": {
-            "x": 638,
+            "x": 675,
             "y": 679
           },
           "label": "思案を閉じる",
           "area": {
-            "x": 582,
-            "y": 649,
-            "width": 112,
-            "height": 59
+            "x": 660,
+            "y": 660,
+            "width": 30,
+            "height": 40
           }
         },
         {

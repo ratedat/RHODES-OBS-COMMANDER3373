@@ -106,6 +106,8 @@ public sealed class RhodesRecognitionEndpointCache
         endpoints[endpointDirection.Trim().ToLowerInvariant()] = fingerprint;
     }
 
+    public void Clear() => _endpoints.Clear();
+
     private static RhodesRecognitionPassSelection FullScan(
         IReadOnlyList<RhodesRecognitionScrollPass> passes,
         string reason) =>

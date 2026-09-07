@@ -2,8 +2,11 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createPublicationGuard } from "./publication-boundary.mjs";
+import { writeCleanDistributionState } from "./distribution-state.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const boundary = await createPublicationGuard(repoRoot);
 const outputsRoot = path.join(repoRoot, "outputs");
 const outputDir = path.join(outputsRoot, "suki-portable");
 const sukiBuildDir = path.join(repoRoot, "apps", "rhodes-suki", "bin", "Release", "net8.0", "win-x64");
@@ -69,6 +72,7 @@ async function moveMaaAgentBinaryToLibs() {
   }
 
   await fs.mkdir(path.dirname(target), { recursive: true });
+  await boundary.assertDestination(target);
   await fs.rm(target, { recursive: true, force: true });
   await fs.rename(source, target);
 }
@@ -95,9 +99,10 @@ async function copyMaaNativeRuntimeToRuntimes() {
     throw new Error(`MAA native runtime source was not found: ${source}`, { cause: error });
   }
 
+  await boundary.assertDestination(target);
   await fs.rm(target, { recursive: true, force: true });
   await fs.mkdir(target, { recursive: true });
-  await fs.cp(source, target, { recursive: true });
+  await boundary.copyTree(source, target, { ignoreTopLevel: [] });
 
   for (const fileName of requiredFiles) {
     await fs.access(path.join(target, fileName));
@@ -127,13 +132,15 @@ async function copyRequiredMasterData() {
 async function copyWebOverlayRuntime() {
   const source = path.join(repoRoot, "app");
   const target = path.join(outputDir, "app");
+  await boundary.assertDestination(target);
   await fs.rm(target, { recursive: true, force: true });
-  await fs.cp(source, target, { recursive: true });
+  await boundary.copyTree(source, target, { ignoreTopLevel: [] });
   const relaySource = path.join(repoRoot, "services", "tournament-relay");
   const relayTarget = path.join(outputDir, "services", "tournament-relay");
+  await boundary.assertDestination(relayTarget);
   await fs.rm(relayTarget, { recursive: true, force: true });
   await fs.mkdir(path.dirname(relayTarget), { recursive: true });
-  await fs.cp(relaySource, relayTarget, { recursive: true });
+  await boundary.copyTree(relaySource, relayTarget, { ignoreTopLevel: [] });
   await fs.mkdir(path.join(outputDir, "docs", "guides"), { recursive: true });
   await fs.copyFile(
     path.join(repoRoot, "docs", "guides", "tournament-remote-input.md"),
@@ -162,9 +169,10 @@ async function copyWebOverlayAssets() {
     const source = path.join(repoRoot, "assets", directory);
     const target = path.join(outputDir, "assets", directory);
     await fs.access(source);
+    await boundary.assertDestination(target);
     await fs.rm(target, { recursive: true, force: true });
     await fs.mkdir(path.dirname(target), { recursive: true });
-    await fs.cp(source, target, { recursive: true });
+    await boundary.copyTree(source, target, { ignoreTopLevel: [] });
   }
 
   const dataFiles = ["campaigns.json", "performances.json", "selectable-effects.json"];
@@ -187,6 +195,25 @@ async function copyWebOverlayAssets() {
 
   for (const relativePath of referencedAssets) {
     await fs.access(path.join(outputDir, relativePath));
+  }
+}
+
+async function checkPublicationInputs() {
+  const inputs = [
+    [path.join(repoRoot, "apps", "rhodes-suki"), ["bin", "obj"]],
+    [path.join(repoRoot, "app"), []],
+    [path.join(repoRoot, "services", "tournament-relay"), []],
+    [path.join(repoRoot, "assets", "bosses"), []],
+    [path.join(repoRoot, "assets", "performances"), []],
+    [path.join(repoRoot, "assets", "selectable-effects"), []],
+    [path.join(repoRoot, "assets", "ui"), []],
+  ];
+  for (const [directory, ignoreDirectoryNames] of inputs) {
+    await boundary.checkTree(directory, {
+      ignoreTopLevel: [],
+      ignoreDirectoryNames,
+      omitTransient: true,
+    });
   }
 }
 
@@ -216,6 +243,9 @@ async function collectSummary(directory) {
 }
 
 assertSafeOutputPath();
+await boundary.assertDestination(outputDir);
+await boundary.checkGitWorktree();
+await checkPublicationInputs();
 await cleanOutputPreservingUserData();
 
 run(process.execPath, ["tools/generate-maa-resource.mjs"]);
@@ -244,8 +274,14 @@ await removeFilesByExtension(outputDir, ".pdb");
 await moveMaaAgentBinaryToLibs();
 await copyMaaNativeRuntimeToRuntimes();
 await copyRequiredMasterData();
+await writeCleanDistributionState(repoRoot, outputDir);
 await copyWebOverlayRuntime();
 await copyWebOverlayAssets();
+await boundary.checkTree(outputDir, {
+  ignoreTopLevel: [...preservedTopLevelEntries],
+  ignoreDirectoryNames: [],
+  omitTransient: false,
+});
 
 const exePath = path.join(outputDir, "RhodesSuki.exe");
 await fs.access(exePath);

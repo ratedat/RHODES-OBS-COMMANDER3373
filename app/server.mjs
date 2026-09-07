@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { setTimeout as delay } from "node:timers/promises";
 import { normalizeControlMode } from "./domain/ui-modes.js";
 import { mergeImplementationHistory } from "./domain/operator-implementation-history.js";
 import { isAppShellPath } from "./lib/view-route.js";
@@ -78,11 +79,31 @@ async function readJson(file) {
   return JSON.parse(await fs.readFile(file, "utf8"));
 }
 
-async function writeJsonAtomic(file, value) {
+async function replaceStateFile(source, destination) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await fs.rename(source, destination);
+      return;
+    } catch (error) {
+      // Windows readers and file scanners can briefly prevent an atomic replace.
+      // Keep the previous complete file intact while retrying that same replace.
+      if (process.platform !== "win32" || !["EPERM", "EACCES", "EBUSY"].includes(error.code) || attempt >= 8) throw error;
+      await delay(25 * (attempt + 1));
+    }
+  }
+}
+
+async function writeJsonAtomic(file, value, { createOnly = false } = {}) {
   await fs.mkdir(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
-  await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-  await fs.rename(tmp, file);
+  const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    // Publish complete bytes without replacing a state saved during first-run initialization.
+    if (createOnly) await fs.link(tmp, file);
+    else await replaceStateFile(tmp, file);
+  } finally {
+    await fs.rm(tmp, { force: true });
+  }
 }
 
 function initialStateFromExample(example) {
@@ -119,7 +140,8 @@ function initialStateFromExample(example) {
 }
 
 function normalizeState(state) {
-  if (!state || typeof state !== "object") throw new Error("state must be an object");
+  if (!state || typeof state !== "object" || Array.isArray(state)) throw new Error("state must be an object");
+  if (state.run != null && (typeof state.run !== "object" || Array.isArray(state.run))) throw new Error("state.run must be an object");
   const next = structuredClone(state);
   next.version = next.version || 1;
   next.mode = normalizeControlMode(next.mode);
@@ -154,12 +176,20 @@ function normalizeState(state) {
 async function ensureState() {
   try {
     return normalizeState(await readJson(CURRENT_STATE));
-  } catch {
-    const example = await readJson(EXAMPLE_STATE);
-    const state = initialStateFromExample(example);
-    await writeJsonAtomic(CURRENT_STATE, state);
-    return state;
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      throw Object.assign(new Error("保存状態を読み込めません。状態ファイルは変更していません。ファイルを退避して内容とアクセス権を確認してください。", { cause: error }), { status: 503 });
+    }
   }
+  const state = initialStateFromExample(await readJson(EXAMPLE_STATE));
+  try {
+    await writeJsonAtomic(CURRENT_STATE, state, { createOnly: true });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    // Another request or the desktop app initialized/saved the state first.
+    return ensureState();
+  }
+  return state;
 }
 
 async function buildHealthPayload() {

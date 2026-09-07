@@ -20,6 +20,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly RhodesManagedAdbInstaller _managedAdbInstaller;
     private readonly RhodesDistributionProfile _distributionProfile;
     private readonly RhodesRecognitionEndpointCache _recognitionEndpointCache = new();
+    private RhodesRecognitionOperation? _activeRecognitionOperation;
+    private bool _recognitionOperationIncomplete;
     private readonly SemaphoreSlim _bossSelectionSaveLock = new(1, 1);
     private IReadOnlyList<MaaResourceTaskPreview> _allResourceTasks;
     private readonly IReadOnlyList<SukiChoiceItem> _allOperators = [];
@@ -28,7 +30,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly LatestAsyncOperationQueue _choicePersistence;
     private readonly IntegrationStatus _maaFrameworkStatus;
     private SukiRunStateSnapshot _runState;
-    private byte[] _lastCapture = [];
+    private MaaOwnedImage? _recognitionImage;
+    private MaaOwnedImage CurrentRecognitionImage => _recognitionImage ??= MaaOwnedImage.FromEncodedCopy([]);
+    private byte[] _lastCapture
+    {
+        get => CurrentRecognitionImage.EncodedImage;
+        set => SetRecognitionImage(MaaOwnedImage.FromEncodedCopy(value));
+    }
     private string _adbPath = "adb";
     private string _adbSerial = "";
     private string _adbConfigJson = "{}";
@@ -1262,6 +1270,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _selectedCampaign, value))
                 return;
+            _recognitionEndpointCache.Clear();
             RefreshRelicFilterOptions();
             RefreshChoiceLists();
             RefreshCampaignPreviews();
@@ -4791,6 +4800,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             || (AdbAutoDetect && (string.IsNullOrWhiteSpace(AdbSerial) || string.IsNullOrWhiteSpace(AdbPath))))
             await DetectAdbLocallyCoreAsync();
         StatusMessage = "MAA Controller でADBへ接続しています。";
+        _recognitionEndpointCache.Clear();
         var recovery = await ConnectWithRecoveryAsync();
         var snapshot = recovery.Snapshot;
         _adbDiagnosticsMaaReady = snapshot.IsReady;
@@ -4964,7 +4974,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunBusyAsync(async () =>
         {
-            if (_lastCapture.Length == 0)
+            if (CurrentRecognitionImage.Length == 0)
             {
                 MaaInferenceBenchmarkStatus = "比較する保存Frameがありません。先に撮影するか、履歴Frameを読み込んでください。";
                 return;
@@ -5051,7 +5061,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         foreach (var entry in entries)
         {
             var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-            var warmup = await session.RunResourceRecognitionAsync(entry, payload, _lastCapture);
+            var warmup = await session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage);
             if (!warmup.Succeeded)
                 return MaaInferenceBenchmarkPass.Failed($"warmup {entry}: {warmup.Detail}", initializationTimer.Elapsed);
         }
@@ -5068,7 +5078,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
                 var timer = Stopwatch.StartNew();
-                results.Add(await session.RunResourceRecognitionAsync(entry, payload, _lastCapture));
+                results.Add(await session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage));
                 timer.Stop();
                 elapsedByEntry[entry].Add(timer.Elapsed);
             }
@@ -6394,6 +6404,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!string.Equals(SessionState, "接続済み", StringComparison.Ordinal))
             return null;
 
+        _recognitionEndpointCache.Clear();
         var snapshot = await _session.InitializeAdbAsync(BuildSessionOptions());
         SessionState = snapshot.State;
         SessionDetail = snapshot.IsReady
@@ -6429,15 +6440,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     /// 候補反映の共通経路。認識候補も手動入力も同じreducer/API同期/ローカルfallbackを通す。
     /// </summary>
     private async Task<RhodesCandidateApplyWorkflowResult> ApplyCandidatesPipelineAsync(
-        IReadOnlyList<MaaCandidatePreview> candidates)
+        IReadOnlyList<MaaCandidatePreview> candidates,
+        RhodesCandidateApplyOptions? applyOptions = null)
     {
+        var resolvedApplyOptions = applyOptions ?? RhodesCandidateApplyOptions.Default;
         var result = await RhodesRecognitionWorkflow.ApplyCandidatesAsync(
             candidates,
             cancellationToken => RhodesStateApiClient.FetchAsync(RhodesApiUrl, cancellationToken: cancellationToken),
             (stateJson, cancellationToken) => RhodesStateApiClient.SaveAsync(RhodesApiUrl, stateJson, cancellationToken: cancellationToken),
             (stateJson, _) => RhodesRunStateStore.ReplaceStateJsonAsync(stateJson),
-            (localCandidates, _) => RhodesRunStateStore.SaveCandidatesAsync(localCandidates),
-            apiAvailable: _rhodesApiStatus.Installed);
+            (localCandidates, localApplyOptions, _) => RhodesRunStateStore.SaveCandidatesAsync(
+                localCandidates,
+                applyOptions: localApplyOptions),
+            apiAvailable: _rhodesApiStatus.Installed,
+            applyOptions: resolvedApplyOptions);
 
         if (result.ApiStatus is not null)
         {
@@ -6985,6 +7001,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 await RhodesRunStateStore.ClearCurrentRunAsync();
             }
+            _recognitionEndpointCache.Clear();
             IsClearRunConfirmationVisible = false;
             ReloadRunStateFromStore();
             StatusMessage = "現在の統合戦略ランをクリアしました。";
@@ -7515,7 +7532,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task ApplyCandidateResultsCoreAsync()
     {
-        var result = await ApplyCandidatesPipelineAsync(CandidateResults.ToArray());
+        using var timing = _activeRecognitionOperation?.Measure("apply-and-save", SelectedResourceProfile?.Id);
+        _activeRecognitionOperation?.RecordResult(SelectedResourceProfile?.Id ?? "all", CandidateResults);
+        var scrollPerformance = _lastRecognitionScrollPerformance;
+        var preserveExistingThoughts = RhodesRecognitionRuntimePlan.ShouldPreserveExistingThoughtsOnApply(
+            CandidateApiProfileId(),
+            scrollPerformance?.HadFailure == true || ResourceTaskResults.Any(result => !result.Succeeded),
+            scrollPerformance?.HadUncertainty == true);
+        var applyOptions = preserveExistingThoughts
+            ? new RhodesCandidateApplyOptions(PreserveExistingThoughts: true)
+            : RhodesCandidateApplyOptions.Default;
+        var result = await ApplyCandidatesPipelineAsync(CandidateResults.ToArray(), applyOptions);
+        if (_activeRecognitionOperation is not null && !await PersistChoiceStateAsync())
+            _recognitionOperationIncomplete = true;
         if (ResourceTaskResults.Any())
         {
             var profileId = CandidateApiProfileId();
@@ -7539,10 +7568,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunBusyAsync(async () =>
         {
-            StatusMessage = "選択プロファイルの認識を開始します。";
-            if (await RunAllResourceTasksCoreAsync()
-                && !_lastRecognitionProfileResolvedAsEmptyRelics)
-                await ConvertResourceTaskResultsCoreAsync();
+            await RunMeasuredRecognitionAsync([SelectedResourceProfile?.Id ?? "all"], async () =>
+            {
+                StatusMessage = "選択プロファイルの認識を開始します。";
+                if (!await RunAllResourceTasksCoreAsync()) return false;
+                if (!_lastRecognitionProfileResolvedAsEmptyRelics)
+                    await ConvertResourceTaskResultsCoreAsync();
+                _activeRecognitionOperation?.RecordResult(SelectedResourceProfile?.Id ?? "all", CandidateResults);
+                _recognitionOperationIncomplete |= _lastRecognitionProfileSkippedAfterUnconfirmedTarget
+                    || _lastRecognitionScrollPerformance is { HadFailure: true } or { HadUncertainty: true };
+                return true;
+            });
         });
     }
 
@@ -7628,27 +7664,77 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         await RunBusyAsync(async () =>
         {
+            await RunMeasuredRecognitionAsync(executableProfileIds.ToArray(), async () =>
+            {
             foreach (var profileId in executableProfileIds)
             {
                 if (!TrySelectRecognitionProfile(profileId))
-                    return;
+                    return false;
 
                 StatusMessage = $"{SelectedResourceProfile?.DisplayName ?? profileId}の撮影・認識・反映を開始します。";
                 if (!await RunSelectedProfileRecognitionAndApplyCoreAsync())
-                    return;
+                    return false;
             }
 
             TrySelectRecognitionProfile("runStatusFull");
             StatusMessage = completionMessage;
+            return true;
+            });
         });
     }
 
-    private async Task<bool> RunSelectedProfileRecognitionAndApplyCoreAsync()
+    private Task<bool> RunSelectedProfileRecognitionAndApplyCoreAsync() =>
+        RunMeasuredRecognitionAsync([SelectedResourceProfile?.Id ?? "all"], RunSelectedProfileRecognitionAndApplyUnmeasuredAsync);
+
+    private async Task<bool> RunMeasuredRecognitionAsync(string[] profileIds, Func<Task<bool>> action)
+    {
+        if (_activeRecognitionOperation is not null)
+            return await action();
+        var operation = new RhodesRecognitionOperation(profileIds);
+        _activeRecognitionOperation = operation;
+        var previousObserver = _session.PerformanceObserver;
+        _session.PerformanceObserver = operation.RecordMetric;
+        _recognitionOperationIncomplete = false;
+        var status = "failed";
+        try
+        {
+            var succeeded = await action();
+            status = succeeded ? (_recognitionOperationIncomplete ? "partial" : "completed") : "failed";
+            return succeeded;
+        }
+        catch (OperationCanceledException)
+        {
+            status = "cancelled";
+            throw;
+        }
+        finally
+        {
+            _session.PerformanceObserver = previousObserver;
+            operation.Complete(status);
+            _activeRecognitionOperation = null;
+            try
+            {
+                await operation.SaveAsync(Path.Combine(RhodesSukiDebugPaths.RecognitionScansDirectory, "Operations"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Recognition operation evidence write failed: {ex.Message}");
+                StatusMessage += $" 計測ログを保存できませんでした。この取得は速度比較には利用できません。({ex.Message})";
+            }
+        }
+    }
+
+    private async Task<bool> RunSelectedProfileRecognitionAndApplyUnmeasuredAsync()
     {
         if (!await RunAllResourceTasksCoreAsync())
             return false;
+        _recognitionOperationIncomplete |= _lastRecognitionScrollPerformance is { HadFailure: true }
+            or { HadUncertainty: true } || ResourceTaskResults.Any(result => !result.Succeeded);
         if (_lastRecognitionProfileSkippedAfterUnconfirmedTarget)
+        {
+            _recognitionOperationIncomplete = true;
             return true;
+        }
         if (_lastRecognitionProfileResolvedAsEmptyRelics)
         {
             await ApplyCandidateResultsCoreAsync();
@@ -7811,7 +7897,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 }
             }
 
-            if (_lastCapture.Length == 0)
+            if (CurrentRecognitionImage.Length == 0)
             {
                 StatusMessage = "再実行するFrame Record画像がありません。";
                 return;
@@ -7846,7 +7932,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 (entry, cancellationToken) =>
                 {
                     var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                    return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, cancellationToken);
+                    return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
                 },
                 result =>
                 {
@@ -7861,8 +7947,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            await RunTemplateOcrExpansionsAsync(execution.TaskResults, _lastCapture);
-            await RunThoughtLoadOcrExpansionsAsync(execution.TaskResults, _lastCapture);
+            await RunTemplateOcrExpansionsAsync(execution.TaskResults, CurrentRecognitionImage);
+            await RunThoughtLoadOcrExpansionsAsync(execution.TaskResults, CurrentRecognitionImage);
 
             RefreshInspectorRows();
             var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -7917,6 +8003,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return true;
 
         StatusMessage = "MAA Resourceをオフライン認識用に初期化しています。";
+        _recognitionEndpointCache.Clear();
         var snapshot = await _session.InitializeOfflineAsync(BuildSessionOptions());
         ApplyMaaSessionSnapshot(
             snapshot,
@@ -8213,6 +8300,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<bool> RunAllResourceTasksCoreAsync()
     {
+        using var timing = _activeRecognitionOperation?.Measure("scan", SelectedResourceProfile?.Id);
         var scanStartedAt = DateTimeOffset.UtcNow;
         _lastRecognitionScrollPerformance = null;
         var plan = CurrentResourceExecutionPlan;
@@ -8293,7 +8381,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     (entry, cancellationToken) =>
                     {
                         var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                        return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, cancellationToken);
+                        return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
                     },
                     result =>
                     {
@@ -8303,7 +8391,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     });
             }
 
-            if (_lastCapture.Length == 0)
+            if (CurrentRecognitionImage.Length == 0)
             {
                 StatusMessage = "認識に渡すスクリーンショットがありません。";
                 RefreshInspectorRows();
@@ -8323,9 +8411,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 await RunTemplateOcrExpansionsAsync(
                     execution.TaskResults,
-                    _lastCapture,
+                    CurrentRecognitionImage,
                     includeOwnedCoinStatusRecognition: !RhodesRecognitionRuntimePlan.ShouldDeferInitialCoinStatusRecognition(plan.ProfileId));
             }
+
+            var targetFrameResults = await RetryUnconfirmedTargetFrameAsync(
+                plan,
+                runtimePlan,
+                execution.TaskResults);
 
             if (!RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
                     plan.ProfileId,
@@ -8383,11 +8476,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 // The active-coin tracker must start only after the list has been normalized
                 // to its top edge; the panel can reopen at a retained bottom scroll position.
                 await RunTemplateOcrExpansionsAsync(
-                    execution.TaskResults,
-                    _lastCapture,
+                    targetFrameResults,
+                    CurrentRecognitionImage,
                     operatorScanTracker: operatorScanTracker);
             }
-            await RunThoughtLoadOcrExpansionsAsync(execution.TaskResults, _lastCapture);
+            await RunThoughtLoadOcrExpansionsAsync(targetFrameResults, CurrentRecognitionImage);
             await TryResolveVisibleSuiCatchWindAsync(
                 plan.ProfileId,
                 ResourceTaskResults.ToArray(),
@@ -8421,11 +8514,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             FlushResourceTaskDiagnostics();
             if (shouldRestoreTarget)
             {
+                using var restoreTiming = _activeRecognitionOperation?.Measure("restore", plan.ProfileId);
                 var restoreResult = await RhodesRecognitionNavigation.ExecuteAsync(
                     navigation.RestoreSteps,
                     _session.TapAsync);
                 if (!restoreResult.Succeeded)
+                {
+                    _recognitionOperationIncomplete = true;
                     StatusMessage = $"認識後の画面復元に失敗しました: {restoreResult.Detail}";
+                }
             }
         }
     }
@@ -8566,7 +8663,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var preNavigationPlan = RhodesRecognitionRuntimePlan.PreparePreNavigation(plan);
         if (preNavigationPlan.TaskEntries.Count == 0)
             return RhodesRelicFooterAvailability.Unknown;
-        if (!await ForceCaptureAsync() || _lastCapture.Length == 0)
+        if (!await ForceCaptureAsync() || CurrentRecognitionImage.Length == 0)
             return RhodesRelicFooterAvailability.Unknown;
 
         var execution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
@@ -8574,7 +8671,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             (entry, cancellationToken) =>
             {
                 var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, cancellationToken);
+                return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
             },
             result =>
             {
@@ -8605,7 +8702,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RunTemplateOcrExpansionsAsync(
         IEnumerable<MaaTaskRunResult> templateResults,
-        byte[] encodedImage,
+        MaaOwnedImage encodedImage,
         CancellationToken cancellationToken = default,
         RhodesOperatorScanTracker? operatorScanTracker = null,
         RhodesSuiActiveCoinScanTracker? activeCoinScanTracker = null,
@@ -8614,7 +8711,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         var frameResults = templateResults as MaaTaskRunResult[] ?? templateResults.ToArray();
         var profileId = CandidateApiProfileId();
-        foreach (var request in RhodesSamiSpecialOcrPlanner.BuildRequests(profileId, encodedImage))
+        foreach (var request in RhodesSamiSpecialOcrPlanner.BuildRequests(profileId, profileId == "is4RevelationFull" ? encodedImage.EncodedImage : null))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var result = await _session.RunResourceRecognitionAsync(
@@ -8631,7 +8728,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             var stackRequests = RhodesRelicStackOcrPlanner.BuildRequests(
                 frameResults,
-                encodedImage,
+                encodedImage.EncodedImage,
                 SelectedCampaign?.Id ?? _runState.CampaignId);
             foreach (var request in stackRequests)
             {
@@ -8658,7 +8755,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var fallbackOcrCount = 0;
             if (encodedImage.Length > 0)
             {
-                var inspections = RhodesSuiCoinImageRecognizer.InspectActive(encodedImage);
+                var inspections = RhodesSuiCoinImageRecognizer.InspectActive(encodedImage.EncodedImage);
                 var rowRequests = RhodesSuiCoinImageRecognizer.PlanActivePanelOcrRequests(inspections);
                 visibleRowCount = rowRequests.Count;
                 var initialRecognizedCount = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -8717,7 +8814,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (encodedImage.Length > 0)
             {
                 inspections = await Task.Run(
-                    () => RhodesSuiCoinImageRecognizer.InspectOwned(encodedImage),
+                    () => RhodesSuiCoinImageRecognizer.InspectOwned(encodedImage.EncodedImage),
                     cancellationToken);
                 var missingNameRequests = RhodesSuiCoinImageRecognizer.PlanMissingOwnedNameOcrRequests(
                     inspections,
@@ -8743,7 +8840,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 statusResult = await Task.Run(
                     () => RhodesSuiCoinStatusRecognizer.RecognizeOwned(
-                        encodedImage,
+                        encodedImage.EncodedImage,
                         candidateFrameResults,
                         imageInspections: inspections),
                     cancellationToken);
@@ -8780,7 +8877,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (operatorScanTracker is not null
                 && config.IdPrefix.Equals("operator.card.name", StringComparison.Ordinal))
             {
-                var selection = operatorScanTracker.Select(encodedImage, requests);
+                var selection = operatorScanTracker.Select(encodedImage.EncodedImage, requests);
                 StatusMessage = $"オペレーター表示{selection.VisibleCardCount}件 / OCR対象{selection.WorkItems.Count}件";
                 foreach (var workItem in selection.WorkItems)
                 {
@@ -8818,7 +8915,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                         resolvedOperators.FirstOrDefault()?.OperatorId ?? "");
                     if (resolvedOperators.Length == 1)
                     {
-                        var promotionDetection = RhodesOperatorPromotionCardDetector.Detect(encodedImage, request);
+                        var promotionDetection = RhodesOperatorPromotionCardDetector.Detect(encodedImage.EncodedImage, request);
                         if (promotionDetection.IsEliteTwo)
                         {
                             ResourceTaskResults.Add(RhodesOperatorPromotionCardDetector.CreateTaskResult(
@@ -8830,7 +8927,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     }
                     if (IsMizukiCampaignSelected && resolvedOperators.Length == 1)
                     {
-                        var rejectionDetection = RhodesMizukiRejectionCardDetector.Detect(encodedImage, request);
+                        var rejectionDetection = RhodesMizukiRejectionCardDetector.Detect(encodedImage.EncodedImage, request);
                         if (rejectionDetection.IsAffected)
                         {
                             ResourceTaskResults.Add(RhodesMizukiRejectionCardDetector.CreateTaskResult(
@@ -8850,7 +8947,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     }
                     if (IsSuiCampaignSelected && resolvedOperators.Length == 1)
                     {
-                        var candleBearerDetection = RhodesSuiCandleBearerCardDetector.Detect(encodedImage, request);
+                        var candleBearerDetection = RhodesSuiCandleBearerCardDetector.Detect(encodedImage.EncodedImage, request);
                         if (candleBearerDetection.IsCandleBearer)
                         {
                             ResourceTaskResults.Add(RhodesSuiCandleBearerCardDetector.CreateTaskResult(
@@ -8884,7 +8981,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task RunThoughtLoadOcrExpansionsAsync(
         IEnumerable<MaaTaskRunResult> frameResults,
-        byte[] encodedImage,
+        MaaOwnedImage encodedImage,
         CancellationToken cancellationToken = default)
     {
         var resolvedThoughtIds = ResourceTaskResults
@@ -8944,7 +9041,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         StatusMessage = $"低信頼フレームを1回だけ再撮影します: {decision.Reason}";
         await Task.Delay(80, cancellationToken);
-        if (!await ForceCaptureAsync() || _lastCapture.Length == 0)
+        if (!await ForceCaptureAsync() || CurrentRecognitionImage.Length == 0)
             return;
 
         var retryExecution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
@@ -8952,7 +9049,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             (entry, token) =>
             {
                 var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                return _session.RunResourceRecognitionAsync(entry, payload, _lastCapture, token);
+                return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, token);
             },
             result =>
             {
@@ -8968,10 +9065,55 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         await RunTemplateOcrExpansionsAsync(
             retryExecution.TaskResults,
-            _lastCapture,
+            CurrentRecognitionImage,
             cancellationToken,
             operatorScanTracker);
-        await RunThoughtLoadOcrExpansionsAsync(retryExecution.TaskResults, _lastCapture, cancellationToken);
+        await RunThoughtLoadOcrExpansionsAsync(retryExecution.TaskResults, CurrentRecognitionImage, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<MaaTaskRunResult>> RetryUnconfirmedTargetFrameAsync(
+        MaaResourceExecutionPlan plan,
+        MaaResourceExecutionPlan runtimePlan,
+        IReadOnlyList<MaaTaskRunResult> initialFrameResults,
+        CancellationToken cancellationToken = default)
+    {
+        var completedRetryCount = 0;
+        var latestFrameResults = initialFrameResults;
+        while (RhodesRecognitionRuntimePlan.ShouldRetryTargetConfirmation(
+                   plan.ProfileId,
+                   completedRetryCount,
+                   RhodesRecognitionRuntimePlan.IsTargetScreenConfirmed(
+                       plan.ProfileId,
+                       ResourceTaskResults,
+                       CurrentCampaignId)))
+        {
+            var delayMs = RhodesRecognitionRuntimePlan.TargetConfirmationRetryDelayMs(completedRetryCount);
+            completedRetryCount++;
+            StatusMessage = $"オペレーターカードの描画を待って基準点を再確認します "
+                + $"({completedRetryCount}/{RhodesRecognitionRuntimePlan.OperatorTargetConfirmationRetryLimit})。";
+            await Task.Delay(delayMs, cancellationToken);
+            if (!await ForceCaptureAsync() || CurrentRecognitionImage.Length == 0)
+                continue;
+
+            var retryExecution = await RhodesRecognitionWorkflow.RunResourceTasksAsync(
+                runtimePlan,
+                (entry, token) =>
+                {
+                    var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
+                    return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, token);
+                },
+                result =>
+                {
+                    ResourceTaskResults.Add(result);
+                    RefreshResourceTaskDiagnostics();
+                },
+                cancellationToken);
+            latestFrameResults = retryExecution.TaskResults;
+            if (!retryExecution.Succeeded)
+                StatusMessage = $"オペレーターカード基準点の再確認に失敗しました: {retryExecution.Error}";
+        }
+
+        return latestFrameResults;
     }
 
     private async Task RunScrollRecognitionFramesAsync(
@@ -9016,7 +9158,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 await RunScrollFrameTasksAsync(
                     plan.ProfileId,
                     taskEntries,
-                    _lastCapture,
+                    CurrentRecognitionImage,
                     cancellationToken,
                     operatorScanTracker);
                 initialCandidateCount = CurrentLocalCandidateCount(plan.ProfileId);
@@ -9027,7 +9169,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 initialCandidateCount,
                 expectedCandidateCount,
                 operatorScanTracker?.ResolvedCardCount)
-            && !(plan.ProfileId == "relicsFull" && HasUnresolvedRelicStackCandidate())
+            && !(plan.ProfileId == "relicsFull" && HasRelicStackOptimizationRisk())
+            && operatorScanTracker is not { UnresolvedCardCount: > 0 }
             && !HasRecognitionUncertainty(plan.ProfileId))
         {
             var candidateLabel = plan.ProfileId == "operatorsFull" ? "オペレーター候補" : "秘宝候補";
@@ -9047,7 +9190,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
         var scanRegion = RhodesRecognitionScrollPlan.LoadScanRegionDefault(plan.ProfileId);
-        var initialFingerprint = RhodesRecognitionFrameFingerprint.Compute(_lastCapture, scanRegion);
+        var initialFingerprint = RhodesRecognitionFrameFingerprint.Compute(CurrentRecognitionImage, scanRegion);
         var endpointOptimizationEnabled = IsAdaptivePcRecognitionCaptureEnabled();
         var endpointConnectionKind = "pc-framepool";
         var passSelection = endpointOptimizationEnabled
@@ -9076,9 +9219,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var adaptiveFallbackCount = 0;
         var scanHadFailure = false;
         var scanHadUncertainty = false;
+        var scrollSteps = new List<RhodesRecognitionScrollStepEvidence>();
         var terminationReason = "configured-passes-completed";
         var pendingEndpoints = new List<(string Direction, ulong Fingerprint)>();
-        MaaCaptureResult? finalAdaptiveCapture = null;
+        MaaCaptureFrameResult? finalAdaptiveCapture = null;
 
         var previousPassScrolls = 0;
         var completedPassCount = 0;
@@ -9092,7 +9236,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var executedScrolls = 0;
             var stableFrames = 0;
             var stableCandidates = 0;
-            var previousFingerprint = RhodesRecognitionFrameFingerprint.Compute(_lastCapture, scanRegion);
+            var previousFingerprint = RhodesRecognitionFrameFingerprint.Compute(CurrentRecognitionImage, scanRegion);
             var lastFingerprint = previousFingerprint;
             var previousCandidateCount = CurrentLocalCandidateCount(plan.ProfileId);
             var passReachedStableEndpoint = false;
@@ -9131,7 +9275,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     previousFingerprint,
                     scanRegion,
                     pass.CaptureDelayMs,
-                    cancellationToken);
+                    cancellationToken,
+                    RhodesRecognitionCapturePolicy.CanRecognizeDuringSettle(plan.ProfileId, pass.CollectCandidates)
+                        ? (image, moved, token) => RunScrollFrameTasksAsync(plan.ProfileId, taskEntries,
+                            image, token, operatorScanTracker, activeCoinScanTracker, viewportMoved: moved)
+                        : null);
                 fixedDelayBudgetMs += pass.CaptureDelayMs;
                 adaptiveCaptureUsed |= captureOutcome.UsedAdaptiveSettle;
                 if (captureOutcome.UsedAdaptiveSettle)
@@ -9149,11 +9297,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 scanHadUncertainty |= captureOutcome.HadSettlementUncertainty;
                 if (!captureOutcome.Succeeded)
                 {
+                    scrollSteps.Add(new(passIndex, executedScrolls, pass.Direction, captureOutcome.PollCount,
+                        captureOutcome.ElapsedMilliseconds, captureOutcome.SawViewportChange,
+                        captureOutcome.FallbackReason, previousCandidateCount, expectedCandidateCount, ["capture-failure"]));
                     passHadFailure = true;
                     break;
                 }
 
-                var fingerprint = RhodesRecognitionFrameFingerprint.Compute(_lastCapture, scanRegion);
+                var acceptedFrame = captureOutcome.Capture?.Image ?? CurrentRecognitionImage;
+                var fingerprint = RhodesRecognitionFrameFingerprint.Compute(acceptedFrame, scanRegion);
                 lastFingerprint = fingerprint;
                 var fingerprintDistance = RhodesRecognitionFrameFingerprint.Distance(fingerprint, previousFingerprint);
                 passSawViewportChange |= captureOutcome.UsedAdaptiveSettle
@@ -9166,10 +9318,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
                 if (pass.CollectCandidates)
                 {
-                    var frameSucceeded = await RunScrollFrameTasksAsync(
+                    var frameSucceeded = captureOutcome.RecognitionPerformed
+                        ? captureOutcome.RecognitionSucceeded
+                        : await RunScrollFrameTasksAsync(
                         plan.ProfileId,
                         taskEntries,
-                        _lastCapture,
+                        CurrentRecognitionImage,
                         cancellationToken,
                         operatorScanTracker,
                         activeCoinScanTracker,
@@ -9196,14 +9350,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
                 var hasUnresolvedRelicStack = plan.ProfileId == "relicsFull"
                     && HasUnresolvedRelicStackCandidate();
+                var completionBlockers = new List<string>();
+                if (scanHadFailure) completionBlockers.Add("capture-or-recognition-failure");
+                if (scanHadUncertainty) completionBlockers.Add("unconfirmed-earlier-segment");
+                if (!expectedCandidateCount.HasValue) completionBlockers.Add("expected-count-unknown");
+                else if (candidateCount < expectedCandidateCount.Value) completionBlockers.Add("expected-count-not-reached");
+                if (operatorScanTracker is { UnresolvedCardCount: > 0 }) completionBlockers.Add("unresolved-operator-cards");
+                if (plan.ProfileId == "relicsFull" && HasRelicStackOptimizationRisk()) completionBlockers.Add("stack-shortcut-disabled");
+                if (!passSawViewportChange) completionBlockers.Add("viewport-movement-unconfirmed");
+                scrollSteps.Add(new(passIndex, executedScrolls, pass.Direction, captureOutcome.PollCount,
+                    captureOutcome.ElapsedMilliseconds, captureOutcome.SawViewportChange,
+                    captureOutcome.FallbackReason, candidateCount, expectedCandidateCount, completionBlockers.ToArray()));
                 if (RhodesRecognitionRuntimePlan.HasReachedExpectedCandidateCount(
                         plan.ProfileId,
                         candidateCount,
                         expectedCandidateCount,
                         operatorScanTracker?.ResolvedCardCount)
-                    && !passHadFailure
-                    && !passHadUncertainty
-                    && !(plan.ProfileId == "relicsFull" && hasUnresolvedRelicStack))
+                    && !scanHadFailure
+                    && !scanHadUncertainty
+                    && !(plan.ProfileId == "relicsFull" && HasRelicStackOptimizationRisk())
+                    && operatorScanTracker is not { UnresolvedCardCount: > 0 })
                 {
                     var hasRecognitionUncertainty = HasRecognitionUncertainty(plan.ProfileId);
                     if (!hasRecognitionUncertainty)
@@ -9233,6 +9399,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 }
 
                 if (!captureOutcome.HadSettlementUncertainty
+                    && (!endpointOptimizationEnabled || passSawViewportChange)
+                    && operatorScanTracker is { UnresolvedCardCount: 0 }
                     && RhodesRecognitionRuntimePlan.CanStopResolvedOperatorViewport(
                         plan.ProfileId,
                         executedScrolls,
@@ -9269,6 +9437,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 }
             }
 
+            if (RhodesRecognitionRuntimePlan.HasUnconfirmedScrollBudget(
+                    pass.CollectCandidates,
+                    executedScrolls,
+                    maxScrolls,
+                    passReachedStableEndpoint,
+                    reachedExpectedCandidateCount))
+            {
+                passHadUncertainty = true;
+                scanHadUncertainty = true;
+                _recognitionOperationIncomplete = true;
+                terminationReason = "scroll-budget-exhausted";
+            }
+
             previousPassScrolls = executedScrolls;
             if (successfulSwipeCount > passSuccessfulSwipeCountAtStart)
                 completedPassCount++;
@@ -9286,7 +9467,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 var endpointFrameSucceeded = await RunScrollFrameTasksAsync(
                     plan.ProfileId,
                     taskEntries,
-                    _lastCapture,
+                    CurrentRecognitionImage,
                     cancellationToken,
                     operatorScanTracker,
                     activeCoinScanTracker,
@@ -9323,8 +9504,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     CurrentLocalCandidateCount(plan.ProfileId),
                     expectedCandidateCount,
                     operatorScanTracker?.ResolvedCardCount,
-                    plan.ProfileId == "relicsFull" && HasUnresolvedRelicStackCandidate(),
-                    hasRecognitionUncertaintyForPassSkip,
+                    plan.ProfileId == "relicsFull" && HasRelicStackOptimizationRisk(),
+                    hasRecognitionUncertaintyForPassSkip || operatorScanTracker is { UnresolvedCardCount: > 0 },
                     passHadFailure || passHadUncertainty))
             {
                 StatusMessage = $"{pass.Label}: 記憶した端点から反対端まで完全に確認できたため、復路を省略しました。";
@@ -9339,7 +9520,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 terminationReason = "expected-candidate-count";
                 break;
             }
-            if (RhodesRecognitionRuntimePlan.CanStopResolvedOperatorScan(
+            if (!scanHadFailure && !scanHadUncertainty
+                && operatorScanTracker is { AllCardsResolved: true }
+                && RhodesRecognitionRuntimePlan.CanStopResolvedOperatorScan(
                     plan.ProfileId,
                     completedPassCount,
                     passes.Count,
@@ -9352,7 +9535,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var finalRecognitionUncertainty = HasRecognitionUncertainty(plan.ProfileId);
-        scanHadUncertainty |= finalRecognitionUncertainty;
+        scanHadUncertainty |= finalRecognitionUncertainty
+            || operatorScanTracker is { UnresolvedCardCount: > 0 }
+            || plan.ProfileId == "relicsFull" && HasRelicStackOptimizationRisk();
         if (scanHadFailure)
             terminationReason = terminationReason == "configured-passes-completed"
                 ? "configured-passes-completed-with-failure"
@@ -9380,14 +9565,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         if (finalAdaptiveCapture is not null
-            && ReferenceEquals(_lastCapture, finalAdaptiveCapture.EncodedImage)
+            && ReferenceEquals(CurrentRecognitionImage, finalAdaptiveCapture.Image)
             && RhodesRecognitionCapturePolicy.ShouldPersistAdaptiveScrollFrame(
                 isFinalFrame: true,
                 hadFailure: scanHadFailure))
         {
-            await AcceptCaptureAsync(finalAdaptiveCapture);
+            await AcceptOwnedCaptureAsync(finalAdaptiveCapture);
         }
 
+        _activeRecognitionOperation?.RecordMetric("stop." + terminationReason, 0);
         _lastRecognitionScrollPerformance = new RhodesRecognitionScrollPerformanceEvidence(
             configuredPassCount,
             passes.Count,
@@ -9406,111 +9592,87 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             failedSwipeCount,
             scanHadFailure,
             scanHadUncertainty,
-            terminationReason);
+            terminationReason) { Steps = scrollSteps };
     }
 
     private async Task<RhodesRecognitionScrollCaptureOutcome> CaptureScrollFrameAfterSwipeAsync(
         ulong preSwipeFingerprint,
         RhodesRecognitionSwipeArea scanRegion,
         int fixedDelayMs,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<MaaOwnedImage, bool, CancellationToken, Task<bool>>? recognizeFrameAsync = null)
     {
-        var useAdaptiveSettle = IsAdaptivePcRecognitionCaptureEnabled();
         var stopwatch = Stopwatch.StartNew();
-        if (!useAdaptiveSettle)
+        if (!IsAdaptivePcRecognitionCaptureEnabled())
         {
-            if (fixedDelayMs > 0)
-                await Task.Delay(fixedDelayMs, cancellationToken);
+            if (fixedDelayMs > 0) await Task.Delay(fixedDelayMs, cancellationToken);
             var succeeded = await ForceCaptureAsync();
-            return new RhodesRecognitionScrollCaptureOutcome(
-                succeeded,
-                false,
-                1,
-                stopwatch.ElapsedMilliseconds,
-                "fixed-delay",
-                null,
-                !succeeded,
-                false,
-                false);
+            return new(succeeded, false, 1, stopwatch.ElapsedMilliseconds, "fixed-delay", null,
+                !succeeded, false, false);
         }
 
-        const int pollIntervalMs = 16;
-        var settleBudgetMs = RhodesRecognitionCapturePolicy.AdaptiveSettleBudgetMs(
-            fixedDelayMs,
-            pollIntervalMs);
-        var tracker = new RhodesRecognitionFrameSettleTracker(preSwipeFingerprint, stableSampleCount: 2);
-        var unchangedAfterDelayTracker = new RhodesRecognitionFrameSettleTracker(
+        ulong lastFingerprint = preSwipeFingerprint;
+        var recognitionPerformed = false;
+        var result = await RhodesRecognitionFrameWaiter.WaitAsync<MaaCaptureFrameResult>(
             preSwipeFingerprint,
-            stableSampleCount: 2);
-        var pollCount = 0;
-        var sawCaptureFailure = false;
+            new(fixedDelayMs, 16, MaxPollCount: Math.Max(8, (Math.Max(0, fixedDelayMs) + 15) / 16 + 3)),
+            async token =>
+            {
+                var timer = Stopwatch.StartNew();
+                var capture = await _session.CaptureFrameAsync(token);
+                return new(capture.Succeeded && capture.Image is { Length: > 0 }, capture,
+                    capture.Detail, timer.ElapsedMilliseconds);
+            },
+            (capture, token) =>
+            {
+                token.ThrowIfCancellationRequested();
+                var timer = Stopwatch.StartNew();
+                lastFingerprint = RhodesRecognitionFrameFingerprint.Compute(capture.Image!, scanRegion);
+                return ValueTask.FromResult(new RhodesRecognitionTimedFingerprint(lastFingerprint, timer.ElapsedMilliseconds));
+            },
+            async (capture, token) =>
+            {
+                AcceptTransientRecognitionCapture(capture);
+                if (recognizeFrameAsync is null)
+                    return new(true, false, "recognition-not-required", 0);
+                var timer = Stopwatch.StartNew();
+                recognitionPerformed = true;
+                var succeeded = await recognizeFrameAsync(capture.Image!,
+                    RhodesRecognitionFrameFingerprint.Distance(lastFingerprint, preSwipeFingerprint) > 2, token);
+                return new(succeeded, false, succeeded ? "recognized" : "recognition-failed", timer.ElapsedMilliseconds);
+            },
+            (delay, token) => new ValueTask(Task.Delay(delay, token)),
+            (name, duration) =>
+            {
+                // Session owns capture/recognition metrics; avoid counting these again here.
+                if (name == "fingerprint") _activeRecognitionOperation?.RecordMetric(name, duration);
+            },
+            cancellationToken);
 
-        while (stopwatch.ElapsedMilliseconds < settleBudgetMs)
+        if (result.Stable && result.Frame is { Succeeded: true } stable)
+            return new(true, true, result.PollCount,
+                Math.Max(0, stopwatch.ElapsedMilliseconds - result.Timing.RecognitionMilliseconds), "", stable,
+                result.HadCaptureFailure, false, result.SawViewportChange,
+                recognitionPerformed, result.RecognitionSucceeded);
+
+        if (result.Outcome != RhodesRecognitionFrameWaitOutcome.TimedOut)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (pollCount > 0)
-                await Task.Delay(pollIntervalMs, cancellationToken);
-
-            var capture = await _session.CaptureEncodedAsync(cancellationToken);
-            pollCount++;
-            if (!capture.Succeeded || capture.EncodedImage.Length == 0)
-            {
-                sawCaptureFailure = true;
-                continue;
-            }
-
-            var fingerprint = RhodesRecognitionFrameFingerprint.Compute(capture.EncodedImage, scanRegion);
-            var settled = tracker.Observe(fingerprint);
-            if (!tracker.SawViewportChange)
-            {
-                if (stopwatch.ElapsedMilliseconds < Math.Max(0, fixedDelayMs))
-                    continue;
-                settled = unchangedAfterDelayTracker.Observe(fingerprint);
-            }
-            if (!RhodesRecognitionCapturePolicy.CanAcceptStableFrame(
-                    settled,
-                    tracker.SawViewportChange,
-                    stopwatch.ElapsedMilliseconds,
-                    fixedDelayMs))
-                continue;
-
-            var settleElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
-            AcceptTransientRecognitionCapture(capture);
-            return new RhodesRecognitionScrollCaptureOutcome(
-                true,
-                true,
-                pollCount,
-                settleElapsedMilliseconds,
-                "",
-                capture,
-                sawCaptureFailure,
-                false,
-                tracker.SawViewportChange);
+            CaptureState = result.Detail;
+            return new(false, true, result.PollCount, stopwatch.ElapsedMilliseconds,
+                "settle-capture-failed", null, true, true, result.SawViewportChange);
         }
 
-        var remainingDelayMs = fixedDelayMs - (int)stopwatch.ElapsedMilliseconds;
-        if (remainingDelayMs > 0)
-            await Task.Delay(remainingDelayMs, cancellationToken);
-
-        var fallback = await _session.CaptureEncodedAsync(cancellationToken);
-        pollCount++;
-        var fallbackElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
-        if (fallback.Succeeded && fallback.EncodedImage.Length > 0)
-            AcceptTransientRecognitionCapture(fallback);
-        else if (RhodesRecognitionCapturePolicy.ShouldPersistAdaptiveScrollFrame(
-                     isFinalFrame: false,
-                     hadFailure: true))
-            await AcceptCaptureAsync(fallback);
-        return new RhodesRecognitionScrollCaptureOutcome(
-            fallback.Succeeded && fallback.EncodedImage.Length > 0,
-            true,
-            pollCount,
-            fallbackElapsedMilliseconds,
-            sawCaptureFailure ? "capture-failure-fallback" : "settle-timeout-fallback",
-            fallback.Succeeded && fallback.EncodedImage.Length > 0 ? fallback : null,
-            sawCaptureFailure || !fallback.Succeeded || fallback.EncodedImage.Length == 0,
-            true,
-            tracker.SawViewportChange);
+        // Only a timeout can use this sample; it never confirms an endpoint.
+        var remaining = fixedDelayMs - (int)stopwatch.ElapsedMilliseconds;
+        if (remaining > 0) await Task.Delay(remaining, cancellationToken);
+        var fallback = await _session.CaptureFrameAsync(cancellationToken);
+        var fallbackSucceeded = fallback.Succeeded && fallback.Image is { Length: > 0 };
+        if (fallbackSucceeded) AcceptTransientRecognitionCapture(fallback);
+        else await AcceptOwnedCaptureAsync(fallback);
+        return new(fallbackSucceeded, true, result.PollCount + 1, stopwatch.ElapsedMilliseconds,
+            result.HadCaptureFailure ? "capture-failure-fallback" : "settle-timeout-fallback",
+            fallbackSucceeded ? fallback : null, result.HadCaptureFailure || !fallbackSucceeded,
+            true, result.SawViewportChange);
     }
 
     private bool IsAdaptivePcRecognitionCaptureEnabled() =>
@@ -9520,9 +9682,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _session.ControllerKind,
             _session.ActivePcConnectionPlan?.ScreencapMethod);
 
-    private void AcceptTransientRecognitionCapture(MaaCaptureResult capture)
+    private void AcceptTransientRecognitionCapture(MaaCaptureFrameResult capture)
     {
-        _lastCapture = capture.EncodedImage;
+        SetRecognitionImage(capture.Image!);
         _adbDiagnosticsCaptureSucceeded = true;
         _adbDiagnosticsCaptureDetail = capture.Detail;
         CaptureState = $"認識中: {capture.Detail}";
@@ -9542,13 +9704,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         var listEntry = ScrollRecognitionTaskEntries(plan).FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(listEntry) || _lastCapture.Length == 0)
+        if (string.IsNullOrWhiteSpace(listEntry) || CurrentRecognitionImage.Length == 0)
             return;
 
         StatusMessage = "捕風を検出したため、最後に説明文から方向を確認します。";
         var visibleSlot = await FindVisibleSuiCatchWindSlotAsync(
             listEntry,
-            _lastCapture,
+            CurrentRecognitionImage,
             cancellationToken);
         if (visibleSlot is null)
         {
@@ -9557,7 +9719,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (searchPass is not null)
             {
                 var scanRegion = RhodesRecognitionScrollPlan.LoadScanRegionDefault(plan.ProfileId);
-                var previousFingerprint = RhodesRecognitionFrameFingerprint.Compute(_lastCapture, scanRegion);
+                var previousFingerprint = RhodesRecognitionFrameFingerprint.Compute(CurrentRecognitionImage, scanRegion);
                 var stableFrames = 0;
                 for (var index = 0; index < searchPass.MaxScrolls; index++)
                 {
@@ -9575,17 +9737,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
                     if (searchPass.CaptureDelayMs > 0)
                         await Task.Delay(searchPass.CaptureDelayMs, cancellationToken);
-                    if (!await ForceCaptureAsync() || _lastCapture.Length == 0)
+                    if (!await ForceCaptureAsync() || CurrentRecognitionImage.Length == 0)
                         break;
 
-                    var fingerprint = RhodesRecognitionFrameFingerprint.Compute(_lastCapture, scanRegion);
+                    var fingerprint = RhodesRecognitionFrameFingerprint.Compute(CurrentRecognitionImage, scanRegion);
                     stableFrames = RhodesRecognitionFrameFingerprint.Distance(fingerprint, previousFingerprint) <= 2
                         ? stableFrames + 1
                         : 0;
                     previousFingerprint = fingerprint;
                     visibleSlot = await FindVisibleSuiCatchWindSlotAsync(
                         listEntry,
-                        _lastCapture,
+                        CurrentRecognitionImage,
                         cancellationToken);
                     if (visibleSlot is not null)
                         break;
@@ -9667,14 +9829,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         await Task.Delay(220, cancellationToken);
-        if (!await ForceCaptureAsync() || _lastCapture.Length == 0)
+        if (!await ForceCaptureAsync() || CurrentRecognitionImage.Length == 0)
             return false;
 
         var detailRequest = RhodesSuiCatchWindDetailResolver.BuildDetailRequest();
         var detailResult = await _session.RunResourceRecognitionAsync(
             detailRequest.Entry,
             detailRequest.PayloadJson,
-            _lastCapture,
+            CurrentRecognitionImage,
             cancellationToken,
             detailRequest.Scale);
         ResourceTaskResults.Add(detailResult);
@@ -9699,7 +9861,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<int?> FindVisibleSuiCatchWindSlotAsync(
         string listEntry,
-        byte[] encodedImage,
+        MaaOwnedImage encodedImage,
         CancellationToken cancellationToken)
     {
         var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(listEntry);
@@ -9752,7 +9914,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private async Task<bool> RunScrollFrameTasksAsync(
         string profileId,
         IEnumerable<string> taskEntries,
-        byte[] encodedImage,
+        MaaOwnedImage encodedImage,
         CancellationToken cancellationToken,
         RhodesOperatorScanTracker? operatorScanTracker,
         RhodesSuiActiveCoinScanTracker? activeCoinScanTracker = null,
@@ -9809,6 +9971,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return RhodesRecognitionRuntimePlan.CountOperatorRosterCandidates(candidates);
     }
 
+    private bool HasRelicStackOptimizationRisk() =>
+        ResourceTaskResults.Any(result => result.Entry.StartsWith(RhodesRelicStackOcrPlanner.EntryPrefix, StringComparison.Ordinal))
+        || RhodesMaaLocalCandidateConverter.FromTaskResults("relicsFull", ResourceTaskResults, CurrentCampaignId)
+            .Any(candidate => candidate.Kind.Equals("relic", StringComparison.OrdinalIgnoreCase)
+                && RhodesRelicStackRuleCatalog.Find(candidate.RelicId) is not null);
+
     private bool HasUnresolvedRelicStackCandidate()
     {
         var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -9853,10 +10021,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         int PollCount,
         long ElapsedMilliseconds,
         string FallbackReason,
-        MaaCaptureResult? Capture,
+        MaaCaptureFrameResult? Capture,
         bool HadCaptureFailure,
         bool HadSettlementUncertainty,
-        bool SawViewportChange);
+        bool SawViewportChange,
+        bool RecognitionPerformed = false,
+        bool RecognitionSucceeded = false);
 
 
     private async Task<bool> ConvertResourceTaskResultsCoreAsync()
@@ -9937,14 +10107,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _lastResourceExecutionPlan = null;
             if (!await ForceCaptureAsync())
                 return;
-            if (_lastCapture.Length == 0)
+            if (CurrentRecognitionImage.Length == 0)
             {
                 StatusMessage = "認識に渡すスクリーンショットがありません。";
                 return;
             }
 
             var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(task.Entry);
-            var result = await _session.RunResourceRecognitionAsync(task.Entry, payload, _lastCapture);
+            var result = await _session.RunResourceRecognitionAsync(task.Entry, payload, CurrentRecognitionImage);
             ResourceTaskResults.Add(result);
             RefreshResourceTaskDiagnostics();
             RefreshInspectorRows();
@@ -10178,6 +10348,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void ReloadResourceCatalog()
     {
+        _recognitionEndpointCache.Clear();
         var selectedProfileId = SelectedResourceProfile?.Id;
         _allResourceTasks = RhodesMaaResourceCatalog.DefaultTasks();
         MaaResourceContract = RhodesMaaResourceCatalog.ValidateContract();
@@ -11079,6 +11250,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await DetectAdbLocallyCoreAsync();
 
         StatusMessage = "MAA Controller に接続しています。";
+        _recognitionEndpointCache.Clear();
         var recovery = await ConnectWithRecoveryAsync();
         var snapshot = recovery.Snapshot;
         ApplyMaaSessionSnapshot(
@@ -11123,6 +11295,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         PcWindowStatus = $"接続中: {selectedWindow.DisplayName}";
         StatusMessage = "PCクライアントへMAA Win32 Controllerで接続しています。";
+        _recognitionEndpointCache.Clear();
         var snapshot = await _session.InitializeWin32Async(
             BuildBaseSessionOptions(),
             selectedWindow.Handle,
@@ -11147,7 +11320,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!await EnsureMaaControllerReadyAsync())
             return false;
 
-        if (_lastCapture.Length > 0)
+        if (CurrentRecognitionImage.Length > 0)
             return true;
 
         var capture = await CaptureCoreAsync();
@@ -11165,11 +11338,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<MaaCaptureResult> CaptureCoreAsync()
     {
-        var capture = await _session.CaptureEncodedAsync();
-        return await AcceptCaptureAsync(capture);
+        var frame = await _session.CaptureFrameAsync();
+        return await AcceptOwnedCaptureAsync(frame);
     }
 
-    private async Task<MaaCaptureResult> AcceptCaptureAsync(MaaCaptureResult capture)
+    private void SetRecognitionImage(MaaOwnedImage image)
+    {
+        if (_recognitionImage is { Length: > 0 } previous
+            && (previous.Width != image.Width || previous.Height != image.Height))
+            _recognitionEndpointCache.Clear();
+        _recognitionImage = image;
+    }
+
+    private Task<MaaCaptureResult> AcceptOwnedCaptureAsync(MaaCaptureFrameResult frame) =>
+        AcceptCaptureAsync(new MaaCaptureResult(frame.Status, frame.Succeeded, frame.Detail,
+            frame.Image?.EncodedImage ?? []), frame.Image);
+
+    private async Task<MaaCaptureResult> AcceptCaptureAsync(MaaCaptureResult capture, MaaOwnedImage? sourceImage = null)
     {
         CaptureState = capture.Succeeded ? $"取得済み: {capture.Detail}" : $"失敗: {capture.Detail}";
         _adbDiagnosticsCaptureSucceeded = capture.Succeeded;
@@ -11181,7 +11366,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return capture;
         }
 
-        _lastCapture = capture.EncodedImage;
+        SetRecognitionImage(sourceImage ?? MaaOwnedImage.FromEncodedCopy(capture.EncodedImage));
         LastCaptureImage = CreateCaptureBitmap(capture.EncodedImage);
         var frameRecord = await SaveCaptureFrameAsync(capture.EncodedImage);
         LastCapturePath = frameRecord.Succeeded ? frameRecord.ImagePath : await SaveLegacyCaptureAsync(capture.EncodedImage);
@@ -11294,6 +11479,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         DateTimeOffset? startedAt = null,
         DateTimeOffset? completedAt = null)
     {
+        using var timing = _activeRecognitionOperation?.Measure("evidence-save", profileId);
         var selectedMatches = string.Equals(SelectedResourceProfile?.Id, profileId, StringComparison.Ordinal);
         return await RhodesMaaRecognitionEvidenceLog.SaveAsync(
             taskResults,
@@ -11315,7 +11501,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             stateApplySummary: stateApplySummary,
             stateApplyLocalFallbackUsed: stateApplyLocalFallbackUsed,
             stateApplyApiError: stateApplyApiError,
-            scrollPerformance: _lastRecognitionScrollPerformance);
+            scrollPerformance: _lastRecognitionScrollPerformance,
+            scanId: _activeRecognitionOperation?.Id);
     }
 
     private MaaRecognitionRuntimeEvidence BuildRecognitionRuntimeEvidence()

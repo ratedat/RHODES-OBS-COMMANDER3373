@@ -32,12 +32,23 @@
     "data:update": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1",
     "data:update:plan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/update-data.ps1 -PlanOnly",
     "data:diff": "node tools/compare-data-update.mjs --before data --after data --out review/update-runs/manual-compare",
-    "verify:desktop": "npm run suki:check && npm run suki:build",
     "ocr:sync-maa": "node tools/sync-maa-ocr-assets.mjs",
     "ocr:sync-maa:models": "node tools/sync-maa-ocr-assets.mjs --models",
     "ocr:sync-maa-operator": "node tools/sync-maa-operator-ocr-map.mjs",
-    "ocr:corpus:sui-coins": "python tools/generate-sui-coin-ocr-corpus.py"
+    "ocr:corpus:sui-coins": "python tools/generate-sui-coin-ocr-corpus.py",
+    "doctor": "node tools/doctor.mjs",
+    "assets:check": "node tools/prepare-build-assets.mjs --check",
+    "assets:fetch": "node tools/prepare-build-assets.mjs --fetch",
+    "hooks:check": "node tools/install-publication-hooks.mjs --check",
+    "hooks:install": "node tools/install-publication-hooks.mjs --install",
+    "verify:all": "node tools/verify.mjs",
+    "verify:desktop": "node tools/verify.mjs --desktop",
+    "deps:restore": "dotnet restore tests/rhodes-suki/RhodesSuki.ServiceTests.csproj --locked-mode"
   },
   "devDependencies": {},
-  "license": "AGPL-3.0-only"
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=24.18.0 <25"
+  },
+  "packageManager": "npm@11.17.0"
 }

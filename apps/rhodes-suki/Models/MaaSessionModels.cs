@@ -457,7 +457,21 @@ public sealed record MaaCaptureResult(
     string Status,
     bool Succeeded,
     string Detail,
-    byte[] EncodedImage);
+    byte[] EncodedImage,
+    MaaCaptureTimingBreakdown? Timing = null);
+
+public sealed record MaaCaptureTimingBreakdown(
+    long CaptureMilliseconds,
+    long RawCopyMilliseconds,
+    long EncodeMilliseconds,
+    long TotalMilliseconds);
+
+public sealed record MaaCaptureFrameResult(
+    string Status,
+    bool Succeeded,
+    string Detail,
+    MaaOwnedImage? Image,
+    MaaCaptureTimingBreakdown Timing);
 
 public sealed record MaaResourceTaskPreview(
     string Entry,
@@ -549,7 +563,13 @@ public sealed record MaaTaskRunResult(
     string RecognitionDetailJson = "",
     string Algorithm = "",
     bool Hit = false,
-    long ElapsedMilliseconds = 0);
+    long ElapsedMilliseconds = 0,
+    MaaRecognitionTimingBreakdown? Timing = null);
+
+public sealed record MaaRecognitionTimingBreakdown(
+    long PreprocessMilliseconds,
+    long RecognitionMilliseconds,
+    long TotalMilliseconds);
 
 public sealed record MaaOcrDetailRow(
     string Entry,

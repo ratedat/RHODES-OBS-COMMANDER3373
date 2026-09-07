@@ -17,6 +17,14 @@ const tapLabels = (profile) => (profile.openSteps || []).filter((step) => step.t
 
 const firstTapPoint = (profile) => (profile.openSteps || []).find((step) => step.type === "tap")?.point;
 
+const annotatedTapAreas = new Map([
+  ["runStatusFull", { x: 30, y: 650, width: 54, height: 62 }],
+  ["relicsFull", { x: 170, y: 646, width: 45, height: 26 }],
+  ["is5ThoughtFull", { x: 582, y: 649, width: 112, height: 59 }],
+  ["is5AgeFull", { x: 550, y: 8, width: 180, height: 44 }],
+  ["operatorsFull", { x: 904, y: 645, width: 88, height: 66 }],
+]);
+
 async function pngSize(pathname) {
   const bytes = await readFile(new URL(`../${pathname}`, import.meta.url));
   return {
@@ -165,18 +173,13 @@ test("scan profile defaults never restore with Android Back", () => {
 });
 
 
-test("ADB scan profile taps match the annotated 2560x1440 screenshot scaled to 1280x720", async () => {
+test("ADB scan profile taps stay inside annotated targets scaled to 1280x720", async () => {
   const profiles = await profilesById();
-  const expected = new Map([
-    ["runStatusFull", { x: 54, y: 677 }],
-    ["relicsFull", { x: 184, y: 655 }],
-    ["is5ThoughtFull", { x: 638, y: 679 }],
-    ["is5AgeFull", { x: 660, y: 52 }],
-    ["operatorsFull", { x: 948, y: 678 }],
-  ]);
 
-  for (const [id, point] of expected) {
-    assert.deepEqual(firstTapPoint(profiles.get(id)), point);
+  for (const [id, bounds] of annotatedTapAreas) {
+    const point = firstTapPoint(profiles.get(id));
+    assert.ok(point.x >= bounds.x && point.x <= bounds.x + bounds.width, `${id} horizontal tap target`);
+    assert.ok(point.y >= bounds.y && point.y <= bounds.y + bounds.height, `${id} vertical tap target`);
   }
 });
 
@@ -274,19 +277,20 @@ test("run status profile includes template anchors for map resources", async () 
 });
 
 
-test("ADB scan profiles keep annotated tap rectangles for randomized execution", async () => {
+test("ADB randomized scan taps remain within the annotated active rectangles", async () => {
   const profiles = await profilesById();
-  const expected = new Map([
-    ["runStatusFull", { x: 30, y: 650, width: 54, height: 62 }],
-    ["relicsFull", { x: 170, y: 646, width: 45, height: 26 }],
-    ["is5ThoughtFull", { x: 582, y: 649, width: 112, height: 59 }],
-    ["is5AgeFull", { x: 550, y: 8, width: 180, height: 44 }],
-    ["operatorsFull", { x: 904, y: 645, width: 88, height: 66 }],
-  ]);
 
-  for (const [id, area] of expected) {
-    const tap = (profiles.get(id).openSteps || []).find((step) => step.type === "tap");
-    assert.deepEqual(tap.area, area);
+  for (const [id, bounds] of annotatedTapAreas) {
+    const profile = profiles.get(id);
+    const restoresSameButton = ["relicsFull", "is5ThoughtFull", "operatorsFull"].includes(id);
+    const steps = [...profile.openSteps, ...(restoresSameButton ? profile.restoreSteps : [])];
+    for (const tap of steps.filter((step) => step.type === "tap")) {
+      const area = tap.area;
+      assert.ok(area.width > 0 && area.height > 0, `${id} nonempty tap area`);
+      assert.ok(area.x >= bounds.x && area.y >= bounds.y, `${id} tap area start`);
+      assert.ok(area.x + area.width <= bounds.x + bounds.width, `${id} tap area right edge`);
+      assert.ok(area.y + area.height <= bounds.y + bounds.height, `${id} tap area bottom edge`);
+    }
   }
 });
 test("relic tap area avoids the inactive count edge", async () => {

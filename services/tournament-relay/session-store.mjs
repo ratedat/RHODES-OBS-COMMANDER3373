@@ -66,6 +66,7 @@ export function createTournamentRelaySessionStore({
       expiresAt: createdAt + sessionTtlMs,
       nextSequence: 1,
       snapshot: null,
+      snapshotGeneration: null,
       operations: [],
     };
     sessions.set(sessionId, session);
@@ -79,11 +80,38 @@ export function createTournamentRelaySessionStore({
     };
   }
 
+  function readSnapshotGeneration(snapshot) {
+    const value = snapshot?.snapshotGeneration;
+    if (value === undefined || value === null) return null;
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw relayError("スナップショット世代が不正です。", 400, "invalid_snapshot_generation");
+    }
+    return value;
+  }
+
+  function acceptSnapshot(session, snapshot) {
+    const generation = readSnapshotGeneration(snapshot);
+    if (generation === null) {
+      // Generation-less hosts keep their previous last-arrival-wins behavior until
+      // this session receives its first generation-aware snapshot.
+      if (session.snapshotGeneration !== null) return false;
+    } else {
+      if (session.snapshotGeneration !== null && generation <= session.snapshotGeneration) return false;
+      session.snapshotGeneration = generation;
+    }
+    session.snapshot = clone(snapshot);
+    return true;
+  }
+
   function setSnapshot(sessionId, hostToken, snapshot) {
     const session = requireHost(sessionId, hostToken);
-    session.snapshot = clone(snapshot);
+    const accepted = acceptSnapshot(session, snapshot);
     touch(session);
-    return { updatedAt: session.updatedAt };
+    return {
+      updatedAt: session.updatedAt,
+      accepted,
+      snapshotGeneration: session.snapshotGeneration,
+    };
   }
 
   function getEditorBootstrap(sessionId, editorCode) {
@@ -140,11 +168,18 @@ export function createTournamentRelaySessionStore({
     const entry = session.operations.find((item) => item.id === operationId);
     if (!entry) throw relayError("操作履歴が見つかりません。", 404, "operation_not_found");
     const status = result.status === "applied" ? "applied" : "rejected";
+    if (entry.status !== "pending") {
+      if (entry.status !== status) {
+        throw relayError("確定済みの操作結果は変更できません。", 409, "operation_already_resolved");
+      }
+      touch(session);
+      return clone(entry);
+    }
+    if (result.snapshot) acceptSnapshot(session, result.snapshot);
     entry.status = status;
     entry.summary = String(result.summary || "").slice(0, 240);
     entry.error = String(result.error || "").slice(0, 500);
     entry.resolvedAt = now();
-    if (result.snapshot) session.snapshot = clone(result.snapshot);
     touch(session);
     return clone(entry);
   }

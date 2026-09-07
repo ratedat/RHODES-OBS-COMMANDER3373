@@ -3,6 +3,11 @@ using RhodesSuki.Models;
 
 namespace RhodesSuki.Services;
 
+public sealed record RhodesRecognitionScrollStepEvidence(
+    int PassIndex, int ScrollIndex, string Direction, int PollCount, long SettleDurationMs,
+    bool SawViewportChange, string FallbackReason, int CandidateCount, int? ExpectedCandidateCount,
+    string[] CompletionBlockers);
+
 public sealed record RhodesRecognitionScrollPerformanceEvidence(
     int ConfiguredPasses,
     int PlannedPasses,
@@ -21,7 +26,10 @@ public sealed record RhodesRecognitionScrollPerformanceEvidence(
     int FailedSwipeCount,
     bool HadFailure,
     bool HadUncertainty,
-    string TerminationReason);
+    string TerminationReason)
+{
+    public IReadOnlyList<RhodesRecognitionScrollStepEvidence> Steps { get; init; } = [];
+}
 
 public static class RhodesMaaRecognitionEvidenceLog
 {
@@ -221,7 +229,8 @@ public static class RhodesMaaRecognitionEvidenceLog
         SukiCandidateApplySummary? stateApplySummary = null,
         bool stateApplyLocalFallbackUsed = false,
         string? stateApplyApiError = null,
-        RhodesRecognitionScrollPerformanceEvidence? scrollPerformance = null)
+        RhodesRecognitionScrollPerformanceEvidence? scrollPerformance = null,
+        string? scanId = null)
     {
         Directory.CreateDirectory(directory);
         var completed = completedAt ?? DateTimeOffset.UtcNow;
@@ -236,7 +245,7 @@ public static class RhodesMaaRecognitionEvidenceLog
             started,
             completed,
             requestId,
-            requestId,
+            scanId ?? requestId,
             capturePath,
             captureBytes,
             profileLabel,

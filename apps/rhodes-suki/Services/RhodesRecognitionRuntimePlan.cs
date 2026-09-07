@@ -4,6 +4,8 @@ namespace RhodesSuki.Services;
 
 public static class RhodesRecognitionRuntimePlan
 {
+    public const int OperatorTargetConfirmationRetryLimit = 2;
+
     private const string OperatorCardTemplateEntry = "RhodesTemplate_operatorsFull_operator_card_name";
     private const string RunStatusSquadIconEntryPrefix = "RhodesTemplate_runStatusFull_run_squad_icon_";
     private const string PhantomCampaignId = "is2_phantom";
@@ -285,6 +287,39 @@ public static class RhodesRecognitionRuntimePlan
 
     public static bool CanContinueAfterUnconfirmedTarget(string profileId) =>
         profileId.Equals("is5AgeFull", StringComparison.Ordinal);
+
+    public static bool ShouldRetryTargetConfirmation(
+        string profileId,
+        int completedRetryCount,
+        bool targetConfirmed) =>
+        profileId.Equals("operatorsFull", StringComparison.Ordinal)
+        && !targetConfirmed
+        && completedRetryCount is >= 0 and < OperatorTargetConfirmationRetryLimit;
+
+    public static int TargetConfirmationRetryDelayMs(int completedRetryCount) => completedRetryCount switch
+    {
+        0 => 90,
+        1 => 160,
+        _ => throw new ArgumentOutOfRangeException(nameof(completedRetryCount)),
+    };
+
+    public static bool ShouldPreserveExistingThoughtsOnApply(
+        string? profileId,
+        bool scanHadFailure,
+        bool scanHadUncertainty) =>
+        profileId?.Equals("is5ThoughtFull", StringComparison.Ordinal) == true
+        && (scanHadFailure || scanHadUncertainty);
+
+    public static bool HasUnconfirmedScrollBudget(
+        bool collectsCandidates,
+        int executedScrolls,
+        int maxScrolls,
+        bool reachedStableEndpoint,
+        bool reachedExpectedCandidateCount) =>
+        collectsCandidates
+        && executedScrolls >= maxScrolls
+        && !reachedStableEndpoint
+        && !reachedExpectedCandidateCount;
 
     public static bool HasReachedScrollEnd(
         int executedScrolls,

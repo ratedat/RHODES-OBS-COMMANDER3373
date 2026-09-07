@@ -128,49 +128,73 @@ export function createTournamentRemoteHost({
     }, pollIntervalMs);
   }
 
-  async function snapshot() {
-    return buildTournamentRemoteSnapshot(await getState(), await getMaster());
+  async function snapshot(activeSession, state, master) {
+    const snapshotGeneration = ++activeSession.snapshotGeneration;
+    const currentState = state === undefined ? await getState() : state;
+    const currentMaster = master === undefined ? await getMaster() : master;
+    return {
+      ...buildTournamentRemoteSnapshot(currentState, currentMaster),
+      snapshotGeneration,
+    };
   }
 
   async function sync() {
     if (!session) return status();
+    const activeSession = session;
     try {
-      await relayRequest(fetchImpl, `${session.relayUrl}/api/sessions/${encodeURIComponent(session.sessionId)}/snapshot`, {
+      await relayRequest(fetchImpl, `${activeSession.relayUrl}/api/sessions/${encodeURIComponent(activeSession.sessionId)}/snapshot`, {
         method: "PUT",
-        hostToken: session.hostToken,
-        body: { snapshot: await snapshot() },
+        hostToken: activeSession.hostToken,
+        body: { snapshot: await snapshot(activeSession) },
       });
-      session.lastSyncedAt = now().toISOString();
-      session.lastError = "";
+      activeSession.lastSyncedAt = now().toISOString();
+      activeSession.lastError = "";
       return status();
     } catch (error) {
-      session.lastError = publicError(error);
+      activeSession.lastError = publicError(error);
       throw error;
     }
   }
 
-  async function resolveOperation(entry, result) {
+  async function resolveOperation(activeSession, entry, result) {
     await relayRequest(
       fetchImpl,
-      `${session.relayUrl}/api/sessions/${encodeURIComponent(session.sessionId)}/operations/${encodeURIComponent(entry.id)}/result`,
+      `${activeSession.relayUrl}/api/sessions/${encodeURIComponent(activeSession.sessionId)}/operations/${encodeURIComponent(entry.id)}/result`,
       {
         method: "POST",
-        hostToken: session.hostToken,
+        hostToken: activeSession.hostToken,
         body: result,
       },
     );
   }
 
+  async function confirmResult(activeSession) {
+    const pending = activeSession.unconfirmedResult;
+    if (!pending) return null;
+    if (!pending.result.snapshot) {
+      pending.result.snapshot = await snapshot(activeSession);
+    }
+    await resolveOperation(activeSession, pending.entry, pending.result);
+    activeSession.cursor = Math.max(activeSession.cursor, pending.sequence);
+    activeSession.unconfirmedResult = null;
+    activeSession.lastSyncedAt = now().toISOString();
+    return pending.outcome;
+  }
+
   async function pollNow() {
     if (!session || polling) return { applied: 0, rejected: 0, cursor: session?.cursor || 0 };
+    const activeSession = session;
     polling = true;
     let applied = 0;
     let rejected = 0;
     try {
+      const retriedOutcome = await confirmResult(activeSession);
+      if (retriedOutcome === "applied") applied += 1;
+      else if (retriedOutcome === "rejected") rejected += 1;
       const result = await relayRequest(
         fetchImpl,
-        `${session.relayUrl}/api/sessions/${encodeURIComponent(session.sessionId)}/operations?after=${session.cursor}`,
-        { hostToken: session.hostToken },
+        `${activeSession.relayUrl}/api/sessions/${encodeURIComponent(activeSession.sessionId)}/operations?after=${activeSession.cursor}`,
+        { hostToken: activeSession.hostToken },
       );
       const entries = Array.isArray(result.operations)
         ? [...result.operations].sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0))
@@ -178,34 +202,45 @@ export function createTournamentRemoteHost({
       const master = await getMaster();
       for (const entry of entries) {
         const sequence = Math.max(0, Number(entry.sequence) || 0);
+        if (entry.status !== "pending") {
+          activeSession.cursor = Math.max(activeSession.cursor, sequence);
+          continue;
+        }
+        let pending;
         try {
-          if (entry.status !== "pending") continue;
           const current = await getState();
           const operationResult = applyTournamentRemoteOperation(current, master, entry.operation);
-          const saved = await saveState(operationResult.state);
-          await resolveOperation(entry, {
-            status: "applied",
-            summary: operationResult.summary,
-            snapshot: buildTournamentRemoteSnapshot(saved || operationResult.state, master),
-          });
-          applied += 1;
-          session.lastOperationAt = now().toISOString();
-          session.lastSyncedAt = session.lastOperationAt;
+          await saveState(operationResult.state);
+          activeSession.lastOperationAt = now().toISOString();
+          pending = {
+            entry,
+            sequence,
+            outcome: "applied",
+            result: {
+              status: "applied",
+              summary: operationResult.summary,
+            },
+          };
         } catch (error) {
-          await resolveOperation(entry, {
-            status: "rejected",
-            error: publicError(error),
-            snapshot: await snapshot(),
-          });
-          rejected += 1;
-        } finally {
-          session.cursor = Math.max(session.cursor, sequence);
+          pending = {
+            entry,
+            sequence,
+            outcome: "rejected",
+            result: {
+              status: "rejected",
+              error: publicError(error),
+            },
+          };
         }
+        activeSession.unconfirmedResult = pending;
+        const outcome = await confirmResult(activeSession);
+        if (outcome === "applied") applied += 1;
+        else rejected += 1;
       }
-      session.lastError = "";
-      return { applied, rejected, cursor: session.cursor };
+      activeSession.lastError = "";
+      return { applied, rejected, cursor: activeSession.cursor };
     } catch (error) {
-      session.lastError = publicError(error);
+      activeSession.lastError = publicError(error);
       throw error;
     } finally {
       polling = false;
@@ -246,6 +281,8 @@ export function createTournamentRemoteHost({
       playerLabel: String(playerLabel || "Player").trim().slice(0, 80) || "Player",
       expiresAt: normalizeTimestamp(created.expiresAt),
       cursor: 0,
+      snapshotGeneration: 0,
+      unconfirmedResult: null,
       startedAt: now().toISOString(),
       lastSyncedAt: null,
       lastOperationAt: null,

@@ -1,9 +1,28 @@
 using System.Text.Json.Nodes;
+using RhodesSuki.Models;
 using SkiaSharp;
 
 namespace RhodesSuki.Services;
 
-public sealed record MaaPreparedRecognitionInput(byte[] EncodedImage, string ParametersJson);
+public sealed class MaaPreparedRecognitionInput
+{
+    public MaaPreparedRecognitionInput(MaaOwnedImage image, string parametersJson)
+    {
+        Image = image;
+        ParametersJson = parametersJson;
+    }
+
+    public MaaPreparedRecognitionInput(byte[] encodedImage, string parametersJson)
+        : this(MaaOwnedImage.FromEncodedCopy(encodedImage), parametersJson)
+    {
+    }
+
+    public MaaOwnedImage Image { get; }
+
+    public byte[] EncodedImage => Image.EncodedImage;
+
+    public string ParametersJson { get; }
+}
 
 public static class RhodesMaaRecognitionImagePreprocessor
 {
@@ -12,17 +31,31 @@ public static class RhodesMaaRecognitionImagePreprocessor
         string recognitionType,
         string parametersJson,
         int scale,
+        string entry = "") =>
+        Prepare(
+            MaaOwnedImage.FromEncodedCopy(encodedImage),
+            recognitionType,
+            parametersJson,
+            scale,
+            entry);
+
+    public static MaaPreparedRecognitionInput Prepare(
+        MaaOwnedImage sourceImage,
+        string recognitionType,
+        string parametersJson,
+        int scale,
         string entry = "")
     {
+        ArgumentNullException.ThrowIfNull(sourceImage);
         var operatorNameEntry = entry.StartsWith("operator.card.name.", StringComparison.Ordinal);
         var catchWindDetailEntry = entry.Equals(
             RhodesSuiCatchWindDetailResolver.DetailEntry,
             StringComparison.Ordinal);
         if (!string.Equals(recognitionType, "OCR", StringComparison.Ordinal)
             || scale <= 1 && !operatorNameEntry && !catchWindDetailEntry
-            || encodedImage.Length == 0)
+            || sourceImage.Length == 0)
         {
-            return new MaaPreparedRecognitionInput(encodedImage, parametersJson);
+            return new MaaPreparedRecognitionInput(sourceImage, parametersJson);
         }
 
         JsonObject? parameters;
@@ -32,7 +65,7 @@ public static class RhodesMaaRecognitionImagePreprocessor
         }
         catch
         {
-            return new MaaPreparedRecognitionInput(encodedImage, parametersJson);
+            return new MaaPreparedRecognitionInput(sourceImage, parametersJson);
         }
 
         if (parameters?["roi"] is not JsonArray roi
@@ -44,12 +77,10 @@ public static class RhodesMaaRecognitionImagePreprocessor
             || width <= 0
             || height <= 0)
         {
-            return new MaaPreparedRecognitionInput(encodedImage, parametersJson);
+            return new MaaPreparedRecognitionInput(sourceImage, parametersJson);
         }
 
-        using var source = SKBitmap.Decode(encodedImage);
-        if (source is null)
-            return new MaaPreparedRecognitionInput(encodedImage, parametersJson);
+        using var source = sourceImage.CreateBitmap();
 
         var left = Math.Clamp(x, 0, source.Width);
         var top = Math.Clamp(y, 0, source.Height);
@@ -58,7 +89,7 @@ public static class RhodesMaaRecognitionImagePreprocessor
         var cropWidth = right - left;
         var cropHeight = bottom - top;
         if (cropWidth <= 0 || cropHeight <= 0)
-            return new MaaPreparedRecognitionInput(encodedImage, parametersJson);
+            return new MaaPreparedRecognitionInput(sourceImage, parametersJson);
 
         if (operatorNameEntry)
         {
@@ -97,10 +128,10 @@ public static class RhodesMaaRecognitionImagePreprocessor
                 null);
         }
 
-        using var image = SKImage.FromBitmap(scaled);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
         parameters["roi"] = new JsonArray(0, 0, targetWidth, targetHeight);
-        return new MaaPreparedRecognitionInput(data.ToArray(), parameters.ToJsonString());
+        return new MaaPreparedRecognitionInput(
+            MaaOwnedImage.FromBitmap(scaled),
+            parameters.ToJsonString());
     }
 
     private static MaaPreparedRecognitionInput PrepareDarkTextOnLight(
@@ -131,10 +162,10 @@ public static class RhodesMaaRecognitionImagePreprocessor
             }
         }
 
-        using var image = SKImage.FromBitmap(binary);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
         parameters["roi"] = new JsonArray(0, 0, targetWidth, targetHeight);
-        return new MaaPreparedRecognitionInput(data.ToArray(), parameters.ToJsonString());
+        return new MaaPreparedRecognitionInput(
+            MaaOwnedImage.FromBitmap(binary),
+            parameters.ToJsonString());
     }
 
     private static MaaPreparedRecognitionInput PrepareMaaOperatorName(
@@ -237,10 +268,10 @@ public static class RhodesMaaRecognitionImagePreprocessor
                 null);
         }
 
-        using var image = SKImage.FromBitmap(scaled);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
         parameters["roi"] = new JsonArray(0, 0, targetWidth, targetHeight);
-        return new MaaPreparedRecognitionInput(data.ToArray(), parameters.ToJsonString());
+        return new MaaPreparedRecognitionInput(
+            MaaOwnedImage.FromBitmap(scaled),
+            parameters.ToJsonString());
     }
 
     private static int Luminance(SKColor color) =>

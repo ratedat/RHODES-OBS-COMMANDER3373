@@ -40,6 +40,41 @@ test("portable publisher includes local-image master data and assets", () => {
   assert.match(source, /path\.join\(outputDir, "出力CSSカスタマイズガイド\.html"\)/u);
 });
 
+test("publish entry points enforce the publication boundary", () => {
+  const portable = readFileSync(
+    new URL("../tools/publish-suki-portable.mjs", import.meta.url),
+    "utf8",
+  );
+  const publicDebug = readFileSync(
+    new URL("../tools/package-suki-public-debug.mjs", import.meta.url),
+    "utf8",
+  );
+  const apple = readFileSync(
+    new URL("../tools/publish-apple-design-prototype.mjs", import.meta.url),
+    "utf8",
+  );
+
+  for (const source of [portable, publicDebug, apple]) {
+    assert.match(source, /createPublicationGuard/);
+    assert.match(source, /boundary\.assertDestination\(/);
+    assert.match(source, /boundary\.checkGitWorktree\(\)/);
+    assert.match(source, /boundary\.checkTree\(/);
+  }
+  for (const source of [portable, publicDebug]) {
+    assert.match(source, /boundary\.copyTree\(/);
+    assert.doesNotMatch(source, /fs\.cp\(/);
+  }
+
+  const excludedPortableEntries = publicDebug.match(
+    /const excludedPortableEntries = new Set\(\[[\s\S]*?\]\);/,
+  )?.[0] ?? "";
+  assert.match(excludedPortableEntries, /nodejs-runtime/);
+  assert.match(excludedPortableEntries, /cloudflared-runtime/);
+  assert.match(publicDebug, /await fs\.rm\(runtimeRoot, \{ recursive: true, force: true \}\)/);
+  assert.ok(publicDebug.indexOf("boundary.checkTree(packageRoot") < publicDebug.lastIndexOf('run("tar.exe"'));
+  assert.ok(apple.indexOf("boundary.checkTree(output") < apple.indexOf("existsSync(executable)"));
+});
+
 test("output CSS guide documents the supported customization contract", () => {
   const guide = readFileSync(
     new URL("../docs/guides/output-css-customization.md", import.meta.url),

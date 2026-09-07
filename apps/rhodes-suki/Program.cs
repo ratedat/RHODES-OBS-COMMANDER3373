@@ -8,8 +8,12 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        RhodesRunStateStore.PrepareForStartupAsync().GetAwaiter().GetResult();
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        var statePath = RhodesRunStateStore.ResolveDefaultStatePath();
+        RhodesApplicationInstance.RunIfPrimary(statePath, () =>
+        {
+            RhodesRunStateStore.PrepareForStartupAsync(statePath).GetAwaiter().GetResult();
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        });
     }
 
     public static AppBuilder BuildAvaloniaApp()

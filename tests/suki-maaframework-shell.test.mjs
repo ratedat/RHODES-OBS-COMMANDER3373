@@ -44,7 +44,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(csproj, /data\\campaigns\.json/);
   assert.match(csproj, /data\\operators\.json/);
   assert.match(csproj, /data\\relics\.json/);
-  assert.match(csproj, /data\\current-state\.json/);
+  assert.match(csproj, /data\\overlay-state\.example\.json/);
+  assert.doesNotMatch(csproj, /Include="[^"\r\n]*current-state\.json"/);
   assert.match(csproj, /data\\selectable-effects\.json/);
   assert.match(csproj, /data\\recognition\\maa-tasks\.json/);
   assert.match(csproj, /data\\recognition\\scan-profiles\.json/);
@@ -87,8 +88,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   const excludedPortableEntries = publicDebugPackager.match(
     /const excludedPortableEntries = new Set\(\[[\s\S]*?\]\);/,
   )?.[0] ?? "";
-  assert.doesNotMatch(excludedPortableEntries, /nodejs-runtime/);
-  assert.doesNotMatch(excludedPortableEntries, /cloudflared-runtime/);
+  assert.match(excludedPortableEntries, /nodejs-runtime/);
+  assert.match(excludedPortableEntries, /cloudflared-runtime/);
   assert.match(publicDebugPackager, /ensureBundledPublicRuntime\(packageRoot\)/);
   assert.match(publicDebugPackager, /node-v24\.18\.0-win-x64/);
   assert.match(publicDebugPackager, /cloudflared-windows-amd64\.exe/);
@@ -108,8 +109,8 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(publicDebugPackager, /public-debug/);
   assert.match(publicDebugPackager, /const folderOnly = process\.argv\.includes\("--folder-only"\)/);
   assert.match(publicDebugPackager, /const slim = process\.argv\.includes\("--slim"\)/);
-  assert.match(publicDebugPackager, /const slimExcludedPortableEntries = new Set\(\[[\s\S]*?"nodejs-runtime"[\s\S]*?"cloudflared-runtime"[\s\S]*?\]\);/);
-  assert.match(publicDebugPackager, /slim && slimExcludedPortableEntries\.has\(topLevel\)/);
+  assert.doesNotMatch(publicDebugPackager, /slimExcludedPortableEntries/);
+  assert.match(publicDebugPackager, /boundary\.copyTree\(portableRoot, targetRoot/);
   assert.match(publicDebugPackager, /if \(!slim\) await ensureBundledPublicRuntime\(packageRoot\)/);
   assert.match(publicDebugPackager, /runtimeBundle: slim \? "on-demand" : "bundled"/);
   assert.match(publicDebugPackager, /slim \? "-slim" : ""/);
@@ -311,7 +312,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.match(runCatalog, /File\.Exists\(preferred\)/);
   assert.match(runCatalog, /ResolveLocalPath/);
   assert.match(runCatalog, /SukiRunStateSnapshot/);
-  assert.match(programCode, /PrepareForStartupAsync\(\)\.GetAwaiter\(\)\.GetResult\(\);\s*BuildAvaloniaApp\(\)/);
+  assert.match(programCode, /RhodesApplicationInstance\.RunIfPrimary\(statePath,\s*\(\) =>\s*\{\s*RhodesRunStateStore\.PrepareForStartupAsync\(statePath\)\.GetAwaiter\(\)\.GetResult\(\);\s*BuildAvaloniaApp\(\)/);
   assert.doesNotMatch(appCodeBehind, /PrepareForStartupAsync/);
   assert.match(viewModel, /ToggleRelicUsedCommand/);
   assert.match(viewModel, /UsedRelicIds/);
@@ -568,7 +569,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   );
   assert.match(
     viewModel,
-    /private async Task<bool> RunSelectedProfileRecognitionAndApplyCoreAsync\(\)[\s\S]*if \(!await RunAllResourceTasksCoreAsync\(\)\)[\s\S]*return false;[\s\S]*var converted = await ConvertResourceTaskResultsCoreAsync\(\);[\s\S]*EnsureMizukiResetCandidatesWhenUndetected\(\);[\s\S]*if \(!converted && CandidateResults\.Count == 0\)[\s\S]*return false;[\s\S]*await ApplyCandidateResultsCoreAsync\(\)/,
+    /private async Task<bool> RunSelectedProfileRecognitionAndApplyUnmeasuredAsync\(\)[\s\S]*if \(!await RunAllResourceTasksCoreAsync\(\)\)[\s\S]*return false;[\s\S]*var converted = await ConvertResourceTaskResultsCoreAsync\(\);[\s\S]*EnsureMizukiResetCandidatesWhenUndetected\(\);[\s\S]*if \(!converted && CandidateResults\.Count == 0\)[\s\S]*return false;[\s\S]*await ApplyCandidateResultsCoreAsync\(\)/,
   );
   assert.match(viewModel, /RunProfileRecognitionAndApplyCommand/);
   assert.match(viewModel, /RunProfileRecognitionAndApplyAsync\(parameter as string\)/);
@@ -580,7 +581,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   );
   assert.match(
     viewModel,
-    /private async Task ApplyCandidateResultsCoreAsync\(\)[\s\S]*ApplyCandidatesPipelineAsync\(CandidateResults\.ToArray\(\)\)/,
+    /private async Task ApplyCandidateResultsCoreAsync\(\)[\s\S]*ShouldPreserveExistingThoughtsOnApply\([\s\S]*ApplyCandidatesPipelineAsync\(CandidateResults\.ToArray\(\), applyOptions\)/,
   );
   assert.match(viewModel, /ApplyManualRunValuesAsync/);
   assert.match(viewModel, /RhodesDifficultyTierCatalog/);
@@ -656,7 +657,7 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.ok(liveResourceTaskEnd > liveResourceTaskStart);
   const liveResourceTaskBody = viewModel.slice(liveResourceTaskStart, liveResourceTaskEnd);
   assert.match(liveResourceTaskBody, /RhodesMaaResourceCatalog\.LoadRecognitionPayloadJson\(entry\)/);
-  assert.match(liveResourceTaskBody, /_session\.RunResourceRecognitionAsync\(entry, payload, _lastCapture, cancellationToken\)/);
+  assert.match(liveResourceTaskBody, /_session\.RunResourceRecognitionAsync\(entry, payload, CurrentRecognitionImage, cancellationToken\)/);
   assert.doesNotMatch(liveResourceTaskBody, /_session\.RunResourceTaskAsync\(entry, "\{\}", cancellationToken\)/);
   assert.match(recognitionWorkflow, /RhodesMaaResultPreview\.FromTaskResults/);
   assert.match(viewModel, /CandidateResults/);
@@ -1598,7 +1599,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.match(xaml, /ReplayFrameRecordRecognitionCommand/);
   assert.match(viewModel, /ReplayFrameRecordRecognitionAsync/);
   assert.match(viewModel, /InitializeOfflineAsync\(BuildSessionOptions\(\)\)/);
-  assert.match(viewModel, /RunResourceRecognitionAsync\(entry, payload, _lastCapture/);
+  assert.match(viewModel, /RunResourceRecognitionAsync\(entry, payload, CurrentRecognitionImage/);
   assert.match(xaml, /FrameRecordHistory/);
   assert.match(xaml, /Frame Records/);
   assert.match(xaml, /RecognitionScanLogRows/);
@@ -1909,7 +1910,7 @@ test("Sui map recognition reads active coins without opening the held-coin workf
   assert.doesNotMatch(currentSpecial, /"is6_sui"[^\n]+"is6CoinsFull"/);
   assert.match(
     viewModel,
-    /string\.Equals\(profileId, "is6ActiveCoinsFull"[\s\S]*?RhodesSuiCoinImageRecognizer\.InspectActive\(encodedImage\)[\s\S]*?PlanActivePanelOcrRequests\(inspections\)[\s\S]*?_session\.RunResourceRecognitionAsync/,
+    /string\.Equals\(profileId, "is6ActiveCoinsFull"[\s\S]*?RhodesSuiCoinImageRecognizer\.InspectActive\(encodedImage\.EncodedImage\)[\s\S]*?PlanActivePanelOcrRequests\(inspections\)[\s\S]*?_session\.RunResourceRecognitionAsync/,
   );
   assert.doesNotMatch(
     viewModel,
@@ -1927,11 +1928,11 @@ test("Sui held coin scrolling supplements full-list MAA OCR only for missing vis
   assert.match(viewModel, /PlanMissingOwnedNameOcrRequests\(/);
   assert.match(
     viewModel,
-    /await Task\.Run\(\s*\(\) => RhodesSuiCoinImageRecognizer\.InspectOwned\(encodedImage\),\s*cancellationToken\)/,
+    /await Task\.Run\(\s*\(\) => RhodesSuiCoinImageRecognizer\.InspectOwned\(encodedImage\.EncodedImage\),\s*cancellationToken\)/,
   );
   assert.match(
     viewModel,
-    /await Task\.Run\(\s*\(\) => RhodesSuiCoinStatusRecognizer\.RecognizeOwned\(\s*encodedImage,\s*candidateFrameResults,\s*imageInspections:\s*inspections\),\s*cancellationToken\)/,
+    /await Task\.Run\(\s*\(\) => RhodesSuiCoinStatusRecognizer\.RecognizeOwned\(\s*encodedImage\.EncodedImage,\s*candidateFrameResults,\s*imageInspections:\s*inspections\),\s*cancellationToken\)/,
   );
   assert.doesNotMatch(viewModel, /RecognizeOwnedWithOcrFallback\(/);
   assert.doesNotMatch(viewModel, /useOwnedCoinImageClassifier/);

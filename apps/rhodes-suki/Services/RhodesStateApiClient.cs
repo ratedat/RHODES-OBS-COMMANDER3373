@@ -157,10 +157,15 @@ public static class RhodesStateApiClient
     public static RhodesCandidateStateApplyResult ApplyCandidatesToStateJson(
         string stateJson,
         IEnumerable<MaaCandidatePreview> candidates,
-        DateTimeOffset? now = null)
+        DateTimeOffset? now = null,
+        RhodesCandidateApplyOptions? applyOptions = null)
     {
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson)?.AsObject() ?? [];
-        var summary = RhodesRecognitionCandidateApplier.Apply(root, candidates, now ?? DateTimeOffset.UtcNow);
+        var summary = RhodesRecognitionCandidateApplier.Apply(
+            root,
+            candidates,
+            now ?? DateTimeOffset.UtcNow,
+            applyOptions);
         return new RhodesCandidateStateApplyResult(root.ToJsonString(), summary);
     }
 

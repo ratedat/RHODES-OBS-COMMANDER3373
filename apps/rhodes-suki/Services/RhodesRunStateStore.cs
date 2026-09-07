@@ -147,7 +147,8 @@ public static class RhodesRunStateStore
     public static async Task<SukiCandidateApplySummary> SaveCandidatesAsync(
         IEnumerable<MaaCandidatePreview> candidates,
         string? statePath = null,
-        DateTimeOffset? now = null)
+        DateTimeOffset? now = null,
+        RhodesCandidateApplyOptions? applyOptions = null)
     {
         var path = string.IsNullOrWhiteSpace(statePath) ? ResolveDefaultStatePath() : statePath;
         await WriteLock.WaitAsync();
@@ -155,7 +156,11 @@ public static class RhodesRunStateStore
         {
             var state = await LoadStateNodeAsync(path);
             var before = state.ToJsonString();
-            var summary = RhodesRecognitionCandidateApplier.Apply(state, candidates, now ?? DateTimeOffset.UtcNow);
+            var summary = RhodesRecognitionCandidateApplier.Apply(
+                state,
+                candidates,
+                now ?? DateTimeOffset.UtcNow,
+                applyOptions);
             if (summary.AppliedCount > 0 || !string.Equals(before, state.ToJsonString(), StringComparison.Ordinal))
                 await WriteJsonAtomicAsync(path, state);
             return summary;

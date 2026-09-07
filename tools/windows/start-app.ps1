@@ -1,50 +1,52 @@
-﻿param(
-  [switch]$SmokeTest
+param(
+    [switch]$SmokeTest,
+    [switch]$NoRestore
 )
 
-$ErrorActionPreference = "Stop"
-$root = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-$shell = New-Object -ComObject WScript.Shell
-Set-Location $root
+$ErrorActionPreference = 'Stop'
+$root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+$helperPath = Join-Path $PSScriptRoot 'rhodes-launch-helpers.ps1'
+. $helperPath
 
-function Stop-StaleLocalServers {
-  $servers = Get-CimInstance Win32_Process -Filter "name = 'node.exe'" |
-    Where-Object { $_.CommandLine -match 'app[\\/]server\.mjs --port (5173|5174|5200)' }
+$dotnet = Get-Command dotnet -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $dotnet) {
+    [Console]::Error.WriteLine('The .NET SDK was not found. See global.json and docs/development-setup.md, or use a packaged application.')
+    exit 1
+}
 
-  foreach ($server in $servers) {
+$runBuild = {
+    param([string]$FilePath, [string[]]$ArgumentList, [string]$WorkingDirectory)
+
+    Push-Location -LiteralPath $WorkingDirectory
     try {
-      Stop-Process -Id $server.ProcessId -Force -ErrorAction Stop
-    } catch {
-      # Best effort only. A stale process should not block the normal launcher path.
+        & $FilePath @ArgumentList | Out-Host
+        return [int]$LASTEXITCODE
     }
-  }
+    finally {
+        Pop-Location
+    }
 }
-function Show-Message($message, $title = "RHODES OBS COMMANDER3373", $icon = 64) {
-  $shell.Popup($message, 0, $title, $icon) | Out-Null
-}
+$startApplication = {
+    param([string]$FilePath, [string]$WorkingDirectory)
 
-Stop-StaleLocalServers
-
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-  Show-Message ".NET SDK/Runtime が見つかりません。配布版の exe を使うか、開発用に .NET 8 SDK をインストールしてください。" "起動できません" 16
-  exit 1
+    Start-Process -FilePath $FilePath -WorkingDirectory $WorkingDirectory | Out-Null
 }
 
-$project = Join-Path $root "apps\rhodes-suki\RhodesSuki.csproj"
-$exe = Join-Path $root "apps\rhodes-suki\bin\Debug\net8.0\RhodesSuki.exe"
-
-if ($SmokeTest) {
-  $run = Start-Process -FilePath "dotnet" -ArgumentList @("build", $project) -WorkingDirectory $root -Wait -PassThru -WindowStyle Hidden
-  exit $run.ExitCode
+try {
+    $result = Invoke-RhodesSourceLaunch `
+        -Root $root `
+        -SmokeTest:$SmokeTest `
+        -NoRestore:$NoRestore `
+        -DotnetPath $dotnet.Source `
+        -RunBuild $runBuild `
+        -StartApplication $startApplication
+}
+catch {
+    [Console]::Error.WriteLine($_.Exception.Message)
+    exit 1
 }
 
-if (-not (Test-Path $exe)) {
-  $shell.Popup("Suki/Avaloniaアプリをビルドしています。完了するとアプリが起動します。", 5, "RHODES OBS COMMANDER3373", 64) | Out-Null
-  $build = Start-Process -FilePath "dotnet" -ArgumentList @("build", $project) -WorkingDirectory $root -Wait -PassThru -WindowStyle Hidden
-  if ($build.ExitCode -ne 0) {
-    Show-Message "Suki/Avaloniaアプリのビルドに失敗しました。.NET 8 SDK とリポジトリ状態を確認してください。" "ビルド失敗" 16
-    exit $build.ExitCode
-  }
+if ($result.ExitCode -ne 0) {
+    [Console]::Error.WriteLine($result.Message)
 }
-
-Start-Process -FilePath $exe -WorkingDirectory $root
+exit [int]$result.ExitCode

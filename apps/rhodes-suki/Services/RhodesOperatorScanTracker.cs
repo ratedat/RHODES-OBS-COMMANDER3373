@@ -45,6 +45,16 @@ public sealed class RhodesOperatorScanTracker
         _cards.Count > 0
         && _cards.All(card => card.Resolved || card.Attempts >= _maxAttemptsPerCard);
 
+    public bool AllCardsResolved =>
+        _cards.Count > 0
+        && _cards.All(card => card.Resolved);
+
+    public int UnresolvedCardCount => _cards.Count(card => !card.Resolved);
+
+    public int ExhaustedUnresolvedCount => _cards.Count(card =>
+        !card.Resolved
+        && card.Attempts >= _maxAttemptsPerCard);
+
     public int ResolvedCardCount => _cards.Count(card => card.Resolved);
 
     public RhodesOperatorScanSelection Select(

@@ -21,6 +21,8 @@ public sealed class RhodesMaaSession : IDisposable
 
     public MaaTasker? Tasker => _tasker;
 
+    public Action<string, double>? PerformanceObserver { get; set; }
+
     public bool IsControllerReady => _tasker?.Controller is { IsConnected: true };
 
     public bool IsTaskerReady => _tasker is not null;
@@ -336,36 +338,135 @@ public sealed class RhodesMaaSession : IDisposable
 
     public async Task<MaaCaptureResult> CaptureEncodedAsync(CancellationToken cancellationToken = default)
     {
+        var frameResult = await CaptureFrameAsync(cancellationToken);
+        if (!frameResult.Succeeded || frameResult.Image is null)
+        {
+            return new MaaCaptureResult(
+                frameResult.Status,
+                false,
+                frameResult.Detail,
+                [],
+                frameResult.Timing);
+        }
+
         return await Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var encodeTimer = Stopwatch.StartNew();
+            var encodedImage = frameResult.Image.EncodedImage;
+            encodeTimer.Stop();
+            var timing = frameResult.Timing with
+            {
+                EncodeMilliseconds = frameResult.Timing.EncodeMilliseconds + encodeTimer.ElapsedMilliseconds,
+                TotalMilliseconds = frameResult.Timing.TotalMilliseconds + encodeTimer.ElapsedMilliseconds,
+            };
+            return new MaaCaptureResult(
+                frameResult.Status,
+                true,
+                $"{encodedImage.Length:N0} bytes",
+                encodedImage,
+                timing);
+        }, cancellationToken);
+    }
+
+    public async Task<MaaCaptureFrameResult> CaptureFrameAsync(CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() =>
+        {
+            var totalTimer = Stopwatch.StartNew();
+            cancellationToken.ThrowIfCancellationRequested();
             if (_tasker?.Controller is not { IsConnected: true } controller)
             {
-                return new MaaCaptureResult(
+                totalTimer.Stop();
+                return CaptureFrameFailure(
                     MaaJobStatus.Invalid.ToString(),
-                    false,
                     "MAA Controller が接続されていません。",
-                    []);
+                    0,
+                    0,
+                    0,
+                    totalTimer.ElapsedMilliseconds);
             }
 
             using var buffer = new MaaImageBuffer();
+            var captureTimer = Stopwatch.StartNew();
             var status = controller.Screencap().Wait();
+            captureTimer.Stop();
+            ObservePerformance("capture", captureTimer.Elapsed.TotalMilliseconds);
             if (status != MaaJobStatus.Succeeded)
             {
-                return new MaaCaptureResult(status.ToString(), false, "Screencap が失敗しました。", []);
+                totalTimer.Stop();
+                return CaptureFrameFailure(
+                    status.ToString(),
+                    "Screencap が失敗しました。",
+                    captureTimer.ElapsedMilliseconds,
+                    0,
+                    0,
+                    totalTimer.ElapsedMilliseconds);
             }
 
             if (!controller.GetCachedImage(buffer))
             {
-                return new MaaCaptureResult(status.ToString(), false, "Cached image を取得できませんでした。", []);
+                totalTimer.Stop();
+                return CaptureFrameFailure(
+                    status.ToString(),
+                    "Cached image を取得できませんでした。",
+                    captureTimer.ElapsedMilliseconds,
+                    0,
+                    0,
+                    totalTimer.ElapsedMilliseconds);
             }
 
-            if (!buffer.TryGetEncodedData(out byte[]? encodedImage) || encodedImage is null || encodedImage.Length == 0)
+            var rawCopyTimer = Stopwatch.StartNew();
+            if (TryCopyRawImage(buffer, out var image))
             {
-                return new MaaCaptureResult(status.ToString(), false, "Encoded image を取得できませんでした。", []);
+                rawCopyTimer.Stop();
+                ObservePerformance("raw-copy", rawCopyTimer.Elapsed.TotalMilliseconds);
+                totalTimer.Stop();
+                return new MaaCaptureFrameResult(
+                    status.ToString(),
+                    true,
+                    $"raw {image.Width}x{image.Height}x{image.Channels} / {image.Length:N0} bytes",
+                    image,
+                    new MaaCaptureTimingBreakdown(
+                        captureTimer.ElapsedMilliseconds,
+                        rawCopyTimer.ElapsedMilliseconds,
+                        0,
+                        totalTimer.ElapsedMilliseconds));
+            }
+            rawCopyTimer.Stop();
+            ObservePerformance("raw-copy", rawCopyTimer.Elapsed.TotalMilliseconds);
+
+            var encodeTimer = Stopwatch.StartNew();
+            if (!buffer.TryGetEncodedData(out byte[]? encodedImage)
+                || encodedImage is null
+                || encodedImage.Length == 0)
+            {
+                encodeTimer.Stop();
+                ObservePerformance("encode", encodeTimer.Elapsed.TotalMilliseconds);
+                totalTimer.Stop();
+                return CaptureFrameFailure(
+                    status.ToString(),
+                    "Raw/Encoded image を取得できませんでした。",
+                    captureTimer.ElapsedMilliseconds,
+                    rawCopyTimer.ElapsedMilliseconds,
+                    encodeTimer.ElapsedMilliseconds,
+                    totalTimer.ElapsedMilliseconds);
             }
 
-            return new MaaCaptureResult(status.ToString(), true, $"{encodedImage.Length:N0} bytes", encodedImage);
+            var encodedOwnedImage = MaaOwnedImage.FromEncodedCopy(encodedImage);
+            encodeTimer.Stop();
+            ObservePerformance("encode", encodeTimer.Elapsed.TotalMilliseconds);
+            totalTimer.Stop();
+            return new MaaCaptureFrameResult(
+                status.ToString(),
+                true,
+                $"encoded fallback / {encodedImage.Length:N0} bytes",
+                encodedOwnedImage,
+                new MaaCaptureTimingBreakdown(
+                    captureTimer.ElapsedMilliseconds,
+                    rawCopyTimer.ElapsedMilliseconds,
+                    encodeTimer.ElapsedMilliseconds,
+                    totalTimer.ElapsedMilliseconds));
         }, cancellationToken);
     }
 
@@ -444,10 +545,24 @@ public sealed class RhodesMaaSession : IDisposable
         string recognitionPayloadJson,
         byte[] encodedImage,
         CancellationToken cancellationToken = default,
+        int? scaleOverride = null) =>
+        await RunResourceRecognitionAsync(
+            entry,
+            recognitionPayloadJson,
+            MaaOwnedImage.FromEncodedCopy(encodedImage),
+            cancellationToken,
+            scaleOverride);
+
+    public async Task<MaaTaskRunResult> RunResourceRecognitionAsync(
+        string entry,
+        string recognitionPayloadJson,
+        MaaOwnedImage sourceImage,
+        CancellationToken cancellationToken = default,
         int? scaleOverride = null)
     {
         return await Task.Run(() =>
         {
+            ArgumentNullException.ThrowIfNull(sourceImage);
             cancellationToken.ThrowIfCancellationRequested();
             if (_tasker is null)
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "MAA Tasker が初期化されていません。");
@@ -455,7 +570,7 @@ public sealed class RhodesMaaSession : IDisposable
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "entry が空です。");
             if (string.IsNullOrWhiteSpace(recognitionPayloadJson))
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "recognition payload が空です。");
-            if (encodedImage.Length == 0)
+            if (sourceImage.Length == 0)
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, "保存Frame画像が空です。");
             if (!RhodesMaaRecognitionInvocation.TryParse(recognitionPayloadJson, out var invocation, out var parseError))
                 return new MaaTaskRunResult(entry, MaaJobStatus.Invalid.ToString(), false, parseError);
@@ -464,17 +579,37 @@ public sealed class RhodesMaaSession : IDisposable
             var scale = scaleOverride is > 0
                 ? Math.Clamp(scaleOverride.Value, 1, 12)
                 : RhodesMaaResourceCatalog.LoadRecognitionScale(entry);
+            var preprocessTimer = Stopwatch.StartNew();
             var prepared = RhodesMaaRecognitionImagePreprocessor.Prepare(
-                encodedImage,
+                sourceImage,
                 invocation.Type,
                 invocation.ParametersJson,
                 scale,
                 entry);
+            preprocessTimer.Stop();
+            ObservePerformance("preprocess", preprocessTimer.Elapsed.TotalMilliseconds);
             using var image = new MaaImageBuffer();
-            image.TrySetEncodedData(prepared.EncodedImage);
+            if (!TrySetImage(image, prepared.Image))
+            {
+                timer.Stop();
+                return new MaaTaskRunResult(
+                    entry,
+                    MaaJobStatus.Invalid.ToString(),
+                    false,
+                    "認識Frame画像をMAA ImageBufferへ設定できませんでした。",
+                    ElapsedMilliseconds: timer.ElapsedMilliseconds,
+                    Timing: new MaaRecognitionTimingBreakdown(
+                        preprocessTimer.ElapsedMilliseconds,
+                        0,
+                        timer.ElapsedMilliseconds));
+            }
+
+            var recognitionTimer = Stopwatch.StartNew();
             var job = _tasker.AppendRecognition(invocation.Type, prepared.ParametersJson, image);
             var status = job.Wait();
             var detail = BuildTaskDetail(_tasker, job.Id, $"ReplayRecognition={entry}; type={invocation.Type}; scale={scale}");
+            recognitionTimer.Stop();
+            ObservePerformance("recognition", recognitionTimer.Elapsed.TotalMilliseconds);
             timer.Stop();
             return new MaaTaskRunResult(
                 entry,
@@ -484,8 +619,101 @@ public sealed class RhodesMaaSession : IDisposable
                 detail.RecognitionDetailJson,
                 detail.Algorithm,
                 detail.Hit,
-                timer.ElapsedMilliseconds);
+                timer.ElapsedMilliseconds,
+                new MaaRecognitionTimingBreakdown(
+                    preprocessTimer.ElapsedMilliseconds,
+                    recognitionTimer.ElapsedMilliseconds,
+                    timer.ElapsedMilliseconds));
         }, cancellationToken);
+    }
+
+    private bool TryCopyRawImage(MaaImageBuffer buffer, out MaaOwnedImage image)
+    {
+        image = null!;
+        if (!buffer.TryGetRawData(
+                out var rawPointer,
+                out var width,
+                out var height,
+                out var openCvType)
+            || rawPointer == IntPtr.Zero
+            || width <= 0
+            || height <= 0
+            || buffer.Channels is not (1 or 3 or 4))
+        {
+            return false;
+        }
+
+        try
+        {
+            var length = checked(width * height * buffer.Channels);
+            var pixels = new byte[length];
+            Marshal.Copy(rawPointer, pixels, 0, length);
+            image = MaaOwnedImage.FromOwnedRaw(
+                pixels,
+                width,
+                height,
+                buffer.Channels,
+                openCvType,
+                elapsedMilliseconds => ObservePerformance("encode", elapsedMilliseconds));
+            return true;
+        }
+        catch (Exception ex) when (ex is OverflowException or ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TrySetImage(MaaImageBuffer buffer, MaaOwnedImage image)
+    {
+        if (!image.HasRawPixels)
+            return image.HasEncodedImage && buffer.TrySetEncodedData(image.EncodedImage);
+
+        var pinned = GCHandle.Alloc(image.OwnedRawPixels, GCHandleType.Pinned);
+        bool rawAccepted;
+        try
+        {
+            rawAccepted = buffer.TrySetRawData(
+                pinned.AddrOfPinnedObject(),
+                image.Width,
+                image.Height,
+                image.OpenCvType);
+        }
+        finally
+        {
+            pinned.Free();
+        }
+
+        return rawAccepted || buffer.TrySetEncodedData(image.EncodedImage);
+    }
+
+    private static MaaCaptureFrameResult CaptureFrameFailure(
+        string status,
+        string detail,
+        long captureMilliseconds,
+        long rawCopyMilliseconds,
+        long encodeMilliseconds,
+        long totalMilliseconds) =>
+        new(
+            status,
+            false,
+            detail,
+            null,
+            new MaaCaptureTimingBreakdown(
+                captureMilliseconds,
+                rawCopyMilliseconds,
+                encodeMilliseconds,
+                totalMilliseconds));
+
+    private void ObservePerformance(string name, double elapsedMilliseconds)
+    {
+        try
+        {
+            PerformanceObserver?.Invoke(name, Math.Max(0, elapsedMilliseconds));
+        }
+        catch
+        {
+            // 計測先の失敗で撮影・認識を中断しない。
+        }
     }
 
     internal static MaaTaskDetailSnapshot BuildTaskDetail(MaaTasker tasker, long taskId, string fallback)

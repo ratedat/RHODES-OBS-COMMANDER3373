@@ -1,4 +1,5 @@
 using System.Numerics;
+using RhodesSuki.Models;
 using SkiaSharp;
 
 namespace RhodesSuki.Services;
@@ -9,6 +10,18 @@ public static class RhodesRecognitionFrameFingerprint
     {
         using var source = SKBitmap.Decode(encodedImage)
             ?? throw new InvalidOperationException("認識Frame画像をデコードできません。");
+        return Compute(source, area);
+    }
+
+    public static ulong Compute(MaaOwnedImage image, RhodesRecognitionSwipeArea area)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        using var source = image.CreateBitmap();
+        return Compute(source, area);
+    }
+
+    private static ulong Compute(SKBitmap source, RhodesRecognitionSwipeArea area)
+    {
         var scaleX = source.Width / 1280d;
         var scaleY = source.Height / 720d;
         var left = Math.Clamp((int)Math.Round(area.X * scaleX), 0, source.Width - 1);

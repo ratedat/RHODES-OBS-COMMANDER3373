@@ -3,8 +3,11 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createPublicationGuard } from "./publication-boundary.mjs";
+import { writeCleanDistributionState } from "./distribution-state.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const boundary = await createPublicationGuard(repoRoot);
 const portableRoot = path.join(repoRoot, "outputs", "suki-portable");
 const releaseRoot = path.join(repoRoot, "outputs", "release");
 const folderOnly = process.argv.includes("--folder-only");
@@ -28,8 +31,6 @@ const excludedPortableEntries = new Set([
   "RHODES OBS COMMANDER3373 Debug Logs",
   "glm-ocr-runtime",
   "ollama-runtime",
-]);
-const slimExcludedPortableEntries = new Set([
   "nodejs-runtime",
   "cloudflared-runtime",
 ]);
@@ -67,15 +68,8 @@ async function copyFile(source, target) {
 }
 
 async function copyPortablePayload(targetRoot) {
-  await fs.cp(portableRoot, targetRoot, {
-    recursive: true,
-    filter(source) {
-      const relative = path.relative(portableRoot, source);
-      if (!relative || relative.startsWith("..")) return true;
-      const [topLevel] = relative.split(path.sep);
-      if (excludedPortableEntries.has(topLevel)) return false;
-      return !(slim && slimExcludedPortableEntries.has(topLevel));
-    },
+  await boundary.copyTree(portableRoot, targetRoot, {
+    ignoreTopLevel: [...excludedPortableEntries],
   });
 }
 
@@ -111,16 +105,10 @@ async function ensureBundledNodeRuntime(targetRoot) {
   const runtimeRoot = path.join(targetRoot, "nodejs-runtime");
   const installRoot = path.join(runtimeRoot, nodeRuntime.distributionDirectory);
   const executablePath = path.join(installRoot, "node.exe");
-  try {
-    const version = run(executablePath, ["--version"], { capture: true });
-    if (version === `v${nodeRuntime.version}`) return;
-  } catch {
-    // Missing or mismatched runtimes are replaced from the pinned official archive.
-  }
-
   const archivePath = path.join(runtimeRoot, ".node-runtime.zip");
-  await fs.rm(installRoot, { recursive: true, force: true });
-  await fs.rm(archivePath, { force: true });
+  await boundary.assertDestination(runtimeRoot);
+  await fs.rm(runtimeRoot, { recursive: true, force: true });
+  await fs.mkdir(runtimeRoot, { recursive: true });
   try {
     console.log(`Bundling Node.js v${nodeRuntime.version} for one-click publishing...`);
     await downloadVerified(
@@ -149,16 +137,12 @@ async function ensureBundledNodeRuntime(targetRoot) {
 }
 
 async function ensureBundledCloudflaredRuntime(targetRoot) {
-  const executablePath = path.join(targetRoot, "cloudflared-runtime", "cloudflared.exe");
-  try {
-    if ((await sha256(executablePath)).toLowerCase() === cloudflaredRuntime.executableSha256) return;
-  } catch {
-    // Missing or mismatched runtimes are replaced below.
-  }
-
+  const runtimeRoot = path.join(targetRoot, "cloudflared-runtime");
+  const executablePath = path.join(runtimeRoot, "cloudflared.exe");
   const temporaryPath = `${executablePath}.download`;
-  await fs.rm(executablePath, { force: true });
-  await fs.rm(temporaryPath, { force: true });
+  await boundary.assertDestination(runtimeRoot);
+  await fs.rm(runtimeRoot, { recursive: true, force: true });
+  await fs.mkdir(runtimeRoot, { recursive: true });
   try {
     console.log(`Bundling cloudflared v${cloudflaredRuntime.version} for one-click publishing...`);
     await downloadVerified(
@@ -179,8 +163,12 @@ async function ensureBundledPublicRuntime(targetRoot) {
 }
 
 async function addWebOverlayRuntime(targetRoot) {
-  await fs.cp(path.join(repoRoot, "app"), path.join(targetRoot, "app"), { recursive: true });
-  await fs.cp(path.join(repoRoot, "services"), path.join(targetRoot, "services"), { recursive: true });
+  await boundary.copyTree(path.join(repoRoot, "app"), path.join(targetRoot, "app"), {
+    ignoreTopLevel: [],
+  });
+  await boundary.copyTree(path.join(repoRoot, "services"), path.join(targetRoot, "services"), {
+    ignoreTopLevel: [],
+  });
   await copyFile(path.join(repoRoot, "package.json"), path.join(targetRoot, "package.json"));
   await copyFile(
     path.join(repoRoot, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json"),
@@ -271,7 +259,7 @@ async function writeDistributionProfile(targetRoot) {
 
 async function resetPublicState(targetRoot) {
   const statePath = path.join(targetRoot, "data", "current-state.json");
-  const state = JSON.parse(await fs.readFile(statePath, "utf8"));
+  const state = await writeCleanDistributionState(repoRoot, targetRoot);
   state.mode = "casual";
   state.run = {
     ...(state.run || {}),
@@ -327,7 +315,24 @@ async function sha256(filePath) {
   return hash.digest("hex").toUpperCase();
 }
 
+async function checkPublicationInputs() {
+  await boundary.checkTree(portableRoot, {
+    ignoreTopLevel: [...excludedPortableEntries],
+    ignoreDirectoryNames: [],
+    omitTransient: true,
+  });
+  for (const directory of [path.join(repoRoot, "app"), path.join(repoRoot, "services")]) {
+    await boundary.checkTree(directory, {
+      ignoreTopLevel: [],
+      ignoreDirectoryNames: [],
+      omitTransient: true,
+    });
+  }
+}
+
+await boundary.checkGitWorktree();
 await fs.access(path.join(portableRoot, "RhodesSuki.exe"));
+await checkPublicationInputs();
 const revision = run("git", ["rev-parse", "--short", "HEAD"], { capture: true });
 const dirty = run("git", ["status", "--porcelain"], { capture: true }).length > 0;
 const sourceStatus = dirty ? "dirty working tree" : "clean";
@@ -336,14 +341,23 @@ const packageRoot = path.join(releaseRoot, packageName);
 const zipPath = path.join(releaseRoot, `${packageName}.zip`);
 
 await fs.mkdir(releaseRoot, { recursive: true });
+await boundary.assertDestination(packageRoot);
 await fs.rm(packageRoot, { recursive: true, force: true });
-if (!folderOnly) await fs.rm(zipPath, { force: true });
+if (!folderOnly) {
+  await boundary.assertDestination(zipPath);
+  await fs.rm(zipPath, { force: true });
+}
 await copyPortablePayload(packageRoot);
 if (!slim) await ensureBundledPublicRuntime(packageRoot);
 await addWebOverlayRuntime(packageRoot);
 await resetPublicState(packageRoot);
 await writeDistributionProfile(packageRoot);
 await addPublicDocuments(packageRoot, revision, sourceStatus);
+await boundary.checkTree(packageRoot, {
+  ignoreTopLevel: [],
+  ignoreDirectoryNames: [],
+  omitTransient: false,
+});
 
 console.log(`Public debug folder: ${path.relative(repoRoot, packageRoot)}`);
 console.log(`Public debug EXE: ${path.relative(repoRoot, path.join(packageRoot, "RhodesSuki.exe"))}`);
