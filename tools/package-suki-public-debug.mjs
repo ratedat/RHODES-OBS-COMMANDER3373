@@ -364,7 +364,7 @@ await boundary.checkTree(packageRoot, {
 console.log(`Public debug folder: ${path.relative(repoRoot, packageRoot)}`);
 console.log(`Public debug EXE: ${path.relative(repoRoot, path.join(packageRoot, "RhodesSuki.exe"))}`);
 if (!folderOnly) {
-  run("tar.exe", ["-a", "-c", "-f", zipPath, "-C", releaseRoot, packageName]);
+  run("tar.exe", ["-a", "-c", "-f", zipPath, "--options", "zip:hdrcharset=UTF-8", "-C", releaseRoot, packageName]);
   const archiveHash = await sha256(zipPath);
   const archiveSizeMb = Math.round(((await fs.stat(zipPath)).size / 1024 / 1024) * 10) / 10;
   console.log(`Public debug ZIP: ${path.relative(repoRoot, zipPath)} (${archiveSizeMb} MB)`);
