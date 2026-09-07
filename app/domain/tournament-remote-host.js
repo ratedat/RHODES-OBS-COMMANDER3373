@@ -42,33 +42,35 @@ async function relayRequest(fetchImpl, url, {
   if (body !== undefined) headers["content-type"] = "application/json";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  let response;
   try {
-    response = await fetchImpl(url, {
+    const response = await fetchImpl(url, {
       method,
       headers,
       signal: controller.signal,
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
+    const text = response.status === 204 ? "" : await response.text();
+    let payload = {};
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = { error: text };
+      }
+    }
+    if (!response.ok) {
+      throw Object.assign(new Error(payload?.error || `中継サーバーがHTTP ${response.status}を返しました。`), {
+        status: response.status,
+        code: payload?.code || "relay_error",
+      });
+    }
+    return payload;
   } catch (error) {
     if (controller.signal.aborted) throw new Error("中継サーバーが応答しませんでした。");
     throw error;
   } finally {
     clearTimeout(timeout);
   }
-  const text = response.status === 204 ? "" : await response.text();
-  let payload = {};
-  if (text) {
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = { error: text };
-    }
-  }
-  if (!response.ok) {
-    throw new Error(payload?.error || `中継サーバーがHTTP ${response.status}を返しました。`);
-  }
-  return payload;
 }
 
 export function createTournamentRemoteHost({
@@ -76,8 +78,10 @@ export function createTournamentRemoteHost({
   getState,
   getMaster,
   saveState,
+  onSessionStarted = async () => {},
   autoPoll = true,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
+  requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
   setTimer = setTimeout,
   clearTimer = clearTimeout,
   now = () => new Date(),
@@ -86,10 +90,18 @@ export function createTournamentRemoteHost({
   if (typeof getState !== "function") throw new Error("getState is required");
   if (typeof getMaster !== "function") throw new Error("getMaster is required");
   if (typeof saveState !== "function") throw new Error("saveState is required");
+  if (typeof onSessionStarted !== "function") throw new Error("onSessionStarted must be a function");
 
   let session = null;
   let timer = null;
-  let polling = false;
+  let lifecycle = Promise.resolve();
+  const request = (url, options) => relayRequest(fetchImpl, url, { timeoutMs: requestTimeoutMs, ...options });
+
+  function transition(action) {
+    const next = lifecycle.then(action, action);
+    lifecycle = next.catch(() => {});
+    return next;
+  }
 
   function status() {
     return {
@@ -101,10 +113,12 @@ export function createTournamentRemoteHost({
       playerLabel: session?.playerLabel || "",
       expiresAt: normalizeTimestamp(session?.expiresAt),
       cursor: session?.cursor || 0,
+      appliedSequence: session?.appliedSequence || 0,
       startedAt: session?.startedAt || null,
       lastSyncedAt: session?.lastSyncedAt || null,
       lastOperationAt: session?.lastOperationAt || null,
       lastError: session?.lastError || "",
+      syncPending: Boolean(session && session.syncCompleted < session.syncRequested),
     };
   }
 
@@ -141,24 +155,32 @@ export function createTournamentRemoteHost({
   async function sync() {
     if (!session) return status();
     const activeSession = session;
+    activeSession.syncRequested += 1;
+    return publishRequestedSync(activeSession);
+  }
+
+  async function publishRequestedSync(activeSession) {
+    const revision = activeSession.syncRequested;
     try {
-      await relayRequest(fetchImpl, `${activeSession.relayUrl}/api/sessions/${encodeURIComponent(activeSession.sessionId)}/snapshot`, {
+      const currentSnapshot = await snapshot(activeSession);
+      if (session !== activeSession) return status();
+      await request(`${activeSession.relayUrl}/api/sessions/${encodeURIComponent(activeSession.sessionId)}/snapshot`, {
         method: "PUT",
         hostToken: activeSession.hostToken,
-        body: { snapshot: await snapshot(activeSession) },
+        body: { snapshot: currentSnapshot },
       });
+      activeSession.syncCompleted = Math.max(activeSession.syncCompleted, revision);
       activeSession.lastSyncedAt = now().toISOString();
-      activeSession.lastError = "";
+      if (activeSession.syncCompleted >= activeSession.syncRequested) activeSession.lastError = "";
       return status();
     } catch (error) {
-      activeSession.lastError = publicError(error);
+      if (activeSession.syncCompleted < revision) activeSession.lastError = publicError(error);
       throw error;
     }
   }
 
   async function resolveOperation(activeSession, entry, result) {
-    await relayRequest(
-      fetchImpl,
+    await request(
       `${activeSession.relayUrl}/api/sessions/${encodeURIComponent(activeSession.sessionId)}/operations/${encodeURIComponent(entry.id)}/result`,
       {
         method: "POST",
@@ -174,6 +196,7 @@ export function createTournamentRemoteHost({
     if (!pending.result.snapshot) {
       pending.result.snapshot = await snapshot(activeSession);
     }
+    if (session !== activeSession) return null;
     await resolveOperation(activeSession, pending.entry, pending.result);
     activeSession.cursor = Math.max(activeSession.cursor, pending.sequence);
     activeSession.unconfirmedResult = null;
@@ -181,26 +204,34 @@ export function createTournamentRemoteHost({
     return pending.outcome;
   }
 
-  async function pollNow() {
-    if (!session || polling) return { applied: 0, rejected: 0, cursor: session?.cursor || 0 };
+  function pollNow() {
+    if (!session) return Promise.resolve({ applied: 0, rejected: 0, cursor: 0 });
     const activeSession = session;
-    polling = true;
+    if (activeSession.pollTask) return activeSession.pollTask;
+    activeSession.pollTask = runPoll(activeSession).finally(() => { activeSession.pollTask = null; });
+    return activeSession.pollTask;
+  }
+
+  async function runPoll(activeSession) {
     let applied = 0;
     let rejected = 0;
+    const resultCounts = () => ({ applied, rejected, cursor: activeSession.cursor });
     try {
       const retriedOutcome = await confirmResult(activeSession);
       if (retriedOutcome === "applied") applied += 1;
       else if (retriedOutcome === "rejected") rejected += 1;
-      const result = await relayRequest(
-        fetchImpl,
+      if (session !== activeSession) return resultCounts();
+      const result = await request(
         `${activeSession.relayUrl}/api/sessions/${encodeURIComponent(activeSession.sessionId)}/operations?after=${activeSession.cursor}`,
         { hostToken: activeSession.hostToken },
       );
+      if (session !== activeSession) return resultCounts();
       const entries = Array.isArray(result.operations)
         ? [...result.operations].sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0))
         : [];
       const master = await getMaster();
       for (const entry of entries) {
+        if (session !== activeSession) return resultCounts();
         const sequence = Math.max(0, Number(entry.sequence) || 0);
         if (entry.status !== "pending") {
           activeSession.cursor = Math.max(activeSession.cursor, sequence);
@@ -209,9 +240,12 @@ export function createTournamentRemoteHost({
         let pending;
         try {
           const current = await getState();
+          if (session !== activeSession) return resultCounts();
           const operationResult = applyTournamentRemoteOperation(current, master, entry.operation);
           await saveState(operationResult.state);
+          activeSession.appliedSequence = Math.max(activeSession.appliedSequence, sequence);
           activeSession.lastOperationAt = now().toISOString();
+          if (session !== activeSession) return resultCounts();
           pending = {
             entry,
             sequence,
@@ -222,6 +256,7 @@ export function createTournamentRemoteHost({
             },
           };
         } catch (error) {
+          if (session !== activeSession) return resultCounts();
           pending = {
             entry,
             sequence,
@@ -235,25 +270,27 @@ export function createTournamentRemoteHost({
         activeSession.unconfirmedResult = pending;
         const outcome = await confirmResult(activeSession);
         if (outcome === "applied") applied += 1;
-        else rejected += 1;
+        else if (outcome === "rejected") rejected += 1;
       }
-      activeSession.lastError = "";
-      return { applied, rejected, cursor: activeSession.cursor };
+      if (session !== activeSession) return resultCounts();
+      if (activeSession.syncCompleted < activeSession.syncRequested) await publishRequestedSync(activeSession);
+      if (activeSession.syncCompleted >= activeSession.syncRequested) activeSession.lastError = "";
+      return resultCounts();
     } catch (error) {
       activeSession.lastError = publicError(error);
       throw error;
-    } finally {
-      polling = false;
     }
   }
 
-  async function stop() {
+  async function stopSession() {
     cancelTimer();
     const closing = session;
     session = null;
     if (!closing) return status();
+    // Let a save that already started finish before a new session can use its state.
+    await closing.pollTask?.catch(() => {});
     try {
-      await relayRequest(fetchImpl, `${closing.relayUrl}/api/sessions/${encodeURIComponent(closing.sessionId)}`, {
+      await request(`${closing.relayUrl}/api/sessions/${encodeURIComponent(closing.sessionId)}`, {
         method: "DELETE",
         hostToken: closing.hostToken,
       });
@@ -263,10 +300,10 @@ export function createTournamentRemoteHost({
     return status();
   }
 
-  async function start({ relayUrl, playerLabel = "Player", adminToken = "" } = {}) {
-    await stop();
+  async function startSession({ relayUrl, playerLabel = "Player", adminToken = "" } = {}) {
+    await stopSession();
     const normalizedRelayUrl = normalizeRelayUrl(relayUrl);
-    const created = await relayRequest(fetchImpl, `${normalizedRelayUrl}/api/sessions`, {
+    const created = await request(`${normalizedRelayUrl}/api/sessions`, {
       method: "POST",
       adminToken: String(adminToken || ""),
       body: { playerLabel: String(playerLabel || "Player").trim().slice(0, 80) || "Player" },
@@ -281,7 +318,11 @@ export function createTournamentRemoteHost({
       playerLabel: String(playerLabel || "Player").trim().slice(0, 80) || "Player",
       expiresAt: normalizeTimestamp(created.expiresAt),
       cursor: 0,
+      appliedSequence: 0,
       snapshotGeneration: 0,
+      syncRequested: 0,
+      syncCompleted: 0,
+      pollTask: null,
       unconfirmedResult: null,
       startedAt: now().toISOString(),
       lastSyncedAt: null,
@@ -290,17 +331,18 @@ export function createTournamentRemoteHost({
     };
     try {
       await sync();
+      await onSessionStarted();
       schedulePoll();
       return status();
     } catch (error) {
-      await stop();
+      await stopSession();
       throw error;
     }
   }
 
   return {
-    start,
-    stop,
+    start: (options) => transition(() => startSession(options)),
+    stop: () => transition(stopSession),
     sync,
     pollNow,
     status,

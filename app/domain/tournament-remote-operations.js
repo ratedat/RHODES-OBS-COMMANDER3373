@@ -216,6 +216,12 @@ function operationSummary(operation, state, master) {
   return operation.type;
 }
 
+export function setTournamentRecovery(state, enabled) {
+  if (!state.tournament || typeof state.tournament !== "object" || Array.isArray(state.tournament)) state.tournament = {};
+  state.tournament.recoverOnStartup = enabled === true;
+  return state;
+}
+
 function clearEditableRunState(state) {
   const campaignId = state.run?.campaignId || "is2_phantom";
   const next = structuredClone(state);
@@ -239,7 +245,7 @@ function clearEditableRunState(state) {
   next.usedRelicIds = [];
   next.bossFlags = [];
   next.bossSelections = {};
-  return next;
+  return setTournamentRecovery(next, false);
 }
 
 export function applyTournamentRemoteOperation(state, master, operation) {
@@ -350,7 +356,7 @@ export function applyTournamentRemoteOperation(state, master, operation) {
   }
 
   return {
-    state: next,
+    state: setTournamentRecovery(next, true),
     summary: operationSummary(operation, next, master),
   };
 }

@@ -3528,15 +3528,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!force && !_tournamentRemoteStateTracker.ShouldImport(status))
             return;
 
-        var error = await SyncRunStateFromApiCoreAsync();
-        if (!string.IsNullOrWhiteSpace(error))
+        var fetched = await RhodesStateApiClient.FetchAsync(RhodesApiUrl);
+        if (!fetched.Succeeded)
         {
-            StatusMessage = $"遠隔入力の本体反映に失敗しました: {error}";
+            _rhodesApiStatus = new SukiOptionalRuntimeStatus(
+                "配信サーバー",
+                fetched.IsUnavailable ? "未起動" : "接続失敗",
+                fetched.Error,
+                false,
+                false);
+            RefreshRuntimeCapabilities();
+            StatusMessage = $"遠隔入力の本体反映に失敗しました: {fetched.Error}";
             return;
         }
 
+        _rhodesApiStatus = RhodesApiStatusProbe.ParseStateJson(fetched.StateJson);
+        RefreshRuntimeCapabilities();
+        ReloadRunStateFromJson(fetched.StateJson);
         _tournamentRemoteStateTracker.MarkImported(status);
-        StatusMessage = $"遠隔入力を本体へ反映しました（受信位置 {status.Cursor}）。";
+        StatusMessage = $"遠隔入力を本体へ反映しました（反映位置 {Math.Max(status.Cursor, status.AppliedSequence)}）。";
     }
 
     private void ApplyTournamentQuickResult(RhodesTournamentQuickPublishResult result)

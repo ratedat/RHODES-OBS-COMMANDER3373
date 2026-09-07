@@ -26,6 +26,11 @@ test("relay queues ordered operations and records host results", () => {
     field: "ingot",
     value: 12,
   });
+  store.resolveOperation(created.sessionId, created.hostToken, first.id, {
+    status: "applied",
+    summary: "源石錐を12に変更",
+    snapshot: { revision: 3, state: { run: { ingot: 12 } } },
+  });
   const second = store.enqueueOperation(created.sessionId, created.editorCode, {
     type: "run.set",
     field: "difficulty",
@@ -39,14 +44,111 @@ test("relay queues ordered operations and records host results", () => {
     [1, 2],
   );
 
-  store.resolveOperation(created.sessionId, created.hostToken, first.id, {
-    status: "applied",
-    summary: "源石錐を12に変更",
-    snapshot: { revision: 3, state: { run: { ingot: 12 } } },
-  });
   const editor = store.getEditorBootstrap(created.sessionId, created.editorCode);
   assert.equal(editor.history.find((item) => item.id === first.id).status, "applied");
   assert.equal(editor.snapshot.state.run.ingot, 12);
+});
+
+test("relay reuses a client operation result and rejects id reuse with different content", () => {
+  const store = createTournamentRelaySessionStore({ now: () => 2_500 });
+  const created = store.createSession({ playerLabel: "Player A" });
+  const operation = { type: "run.set", field: "ingot", value: 12 };
+  const identity = {
+    clientOperationId: "operation-a",
+    editorClientId: "editor-a",
+  };
+
+  const first = store.enqueueOperation(created.sessionId, created.editorCode, operation, identity);
+  store.resolveOperation(created.sessionId, created.hostToken, first.id, {
+    status: "applied",
+    summary: "源石錐を12に変更",
+  });
+  const replayed = store.enqueueOperation(created.sessionId, created.editorCode, operation, identity);
+
+  assert.equal(replayed.id, first.id);
+  assert.equal(replayed.sequence, first.sequence);
+  assert.equal(replayed.status, "applied");
+  assert.equal(store.listOperations(created.sessionId, created.hostToken).length, 1);
+  assert.throws(
+    () => store.enqueueOperation(created.sessionId, created.editorCode, {
+      ...operation,
+      value: 13,
+    }, identity),
+    (error) => error.code === "client_operation_conflict" && error.status === 409,
+  );
+});
+
+test("relay rejects a second operation while any editor operation is pending", () => {
+  const store = createTournamentRelaySessionStore({ now: () => 2_750 });
+  const created = store.createSession({ playerLabel: "Player A" });
+  const first = store.enqueueOperation(created.sessionId, created.editorCode, {
+    type: "run.set",
+    field: "ingot",
+    value: 12,
+  }, {
+    clientOperationId: "operation-a",
+    editorClientId: "editor-a",
+  });
+
+  assert.throws(
+    () => store.enqueueOperation(created.sessionId, created.editorCode, {
+      type: "run.set",
+      field: "ingot",
+      value: 13,
+    }, {
+      clientOperationId: "operation-b",
+      editorClientId: "editor-b",
+    }),
+    (error) => error.code === "pending_operation_conflict" && error.status === 409,
+  );
+
+  store.resolveOperation(created.sessionId, created.hostToken, first.id, { status: "applied" });
+  const second = store.enqueueOperation(created.sessionId, created.editorCode, {
+    type: "run.set",
+    field: "ingot",
+    value: 13,
+  }, {
+    clientOperationId: "operation-b",
+    editorClientId: "editor-b",
+  });
+  assert.equal(second.sequence, 2);
+});
+
+test("relay rejects new operations at its finite session limit without forgetting dedupe ids", () => {
+  const store = createTournamentRelaySessionStore({ now: () => 2_900, maxOperations: 2 });
+  const created = store.createSession({ playerLabel: "Player A" });
+  const identities = ["operation-a", "operation-b"].map((clientOperationId) => ({
+    clientOperationId,
+    editorClientId: "editor-a",
+  }));
+  const operations = identities.map((identity, index) => {
+    const entry = store.enqueueOperation(created.sessionId, created.editorCode, {
+      type: "run.set",
+      field: "ingot",
+      value: index + 1,
+    }, identity);
+    store.resolveOperation(created.sessionId, created.hostToken, entry.id, { status: "applied" });
+    return entry;
+  });
+
+  assert.throws(
+    () => store.enqueueOperation(created.sessionId, created.editorCode, {
+      type: "run.set",
+      field: "ingot",
+      value: 3,
+    }, {
+      clientOperationId: "operation-c",
+      editorClientId: "editor-a",
+    }),
+    (error) => error.code === "operation_limit_reached" && error.status === 429,
+  );
+  const replayed = store.enqueueOperation(created.sessionId, created.editorCode, {
+    type: "run.set",
+    field: "ingot",
+    value: 1,
+  }, identities[0]);
+  assert.equal(replayed.id, operations[0].id);
+  assert.equal(store.getEditorBootstrap(created.sessionId, created.editorCode).limits.maxOperations, 2);
 });
 
 test("relay keeps the newest generated snapshot when requests arrive in reverse order", () => {

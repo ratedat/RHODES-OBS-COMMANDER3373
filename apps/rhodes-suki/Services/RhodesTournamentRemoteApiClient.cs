@@ -55,7 +55,8 @@ public sealed record RhodesTournamentRemoteStatus(
     string StartedAt = "",
     string LastSyncedAt = "",
     string LastOperationAt = "",
-    string LastError = "");
+    string LastError = "",
+    long AppliedSequence = 0);
 
 public sealed record RhodesTournamentRemoteResult(
     RhodesTournamentRemoteStatus Status,

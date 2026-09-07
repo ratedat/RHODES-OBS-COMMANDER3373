@@ -3,7 +3,7 @@ namespace RhodesSuki.Services;
 public sealed class RhodesTournamentRemoteStateTracker
 {
     private string _sessionId = "";
-    private long _cursor;
+    private long _position;
     private bool _hasImported;
 
     public bool ShouldImport(RhodesTournamentRemoteStatus status)
@@ -11,9 +11,10 @@ public sealed class RhodesTournamentRemoteStateTracker
         if (!status.Active || string.IsNullOrWhiteSpace(status.SessionId))
             return false;
 
+        var position = Math.Max(status.Cursor, status.AppliedSequence);
         return !_hasImported
             || !string.Equals(_sessionId, status.SessionId, StringComparison.Ordinal)
-            || status.Cursor > _cursor;
+            || position > _position;
     }
 
     public void MarkImported(RhodesTournamentRemoteStatus status)
@@ -22,14 +23,14 @@ public sealed class RhodesTournamentRemoteStateTracker
             return;
 
         _sessionId = status.SessionId;
-        _cursor = status.Cursor;
+        _position = Math.Max(status.Cursor, status.AppliedSequence);
         _hasImported = true;
     }
 
     public void Reset()
     {
         _sessionId = "";
-        _cursor = 0;
+        _position = 0;
         _hasImported = false;
     }
 }

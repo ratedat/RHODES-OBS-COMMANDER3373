@@ -28,6 +28,7 @@ import { detectWindowsHypervisor } from "./domain/system-diagnostics.js";
 import { createGlmOcrRuntimeManager } from "./domain/glm-ocr-runtime.js";
 import { createOllamaRuntimeManager } from "./domain/ollama-runtime.js";
 import { createTournamentRemoteHost } from "./domain/tournament-remote-host.js";
+import { setTournamentRecovery } from "./domain/tournament-remote-operations.js";
 import { createTournamentQuickPublishManager } from "./domain/tournament-quick-publish.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -570,6 +571,10 @@ export function createAppServer({
   tournamentRemoteHost = createTournamentRemoteHost({
     getState: ensureState,
     getMaster: masterData,
+    onSessionStarted: async () => {
+      const state = setTournamentRecovery(await ensureState(), true);
+      await writeJsonAtomic(CURRENT_STATE, state);
+    },
     saveState: async (state) => {
       const normalized = normalizeState(state);
       await writeJsonAtomic(CURRENT_STATE, normalized);

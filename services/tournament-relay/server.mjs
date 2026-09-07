@@ -129,7 +129,10 @@ export function createTournamentRelayServer({
         }
 
         if (req.method === "GET" && action === "bootstrap") {
-          return sendJson(res, 200, store.getEditorBootstrap(sessionId, editorCode(req, url)));
+          return sendJson(res, 200, store.getEditorBootstrap(sessionId, editorCode(req, url), {
+            editorClientId: url.searchParams.get("editorClientId") || "",
+            clientOperationId: url.searchParams.get("clientOperationId") || "",
+          }));
         }
 
         if (req.method === "GET" && action === "operations") {
@@ -142,7 +145,10 @@ export function createTournamentRelayServer({
 
         if (req.method === "POST" && action === "operations") {
           const body = await readJsonBody(req, maxBodyBytes);
-          return sendJson(res, 202, store.enqueueOperation(sessionId, editorCode(req, url), body.operation));
+          return sendJson(res, 202, store.enqueueOperation(sessionId, editorCode(req, url), body.operation, {
+            clientOperationId: body.clientOperationId,
+            editorClientId: body.editorClientId,
+          }));
         }
 
         const resolveMatch = action.match(/^operations\/([^/]+)\/result$/);

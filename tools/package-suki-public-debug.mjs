@@ -180,6 +180,7 @@ async function addPublicDocuments(targetRoot, sourceRevision, sourceStatus) {
   const copies = [
     ["LICENSE", "LICENSE"],
     ["THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"],
+    ["PATCH_NOTES.md", "PATCH_NOTES.md"],
     ["docs/guides/adb-setup.md", "docs/guides/adb-setup.md"],
     ["docs/guides/debugger-adb-report-guide.md", "docs/guides/debugger-adb-report-guide.md"],
     ["docs/guides/discord-public-debug-guide.md", "docs/guides/discord-public-debug-guide.md"],
@@ -229,6 +230,7 @@ ${runtimeBundleDescription}
 - タップとスワイプは指定矩形内でランダム化されます。
 
 Discordへ貼り付ける短い手順は \`DISCORD_USAGE.md\` にあります。
+今回の変更点と更新後の注意事項は \`PATCH_NOTES.md\` にあります。
 外部中継サーバーを導入する場合は、EXEと同じ場所の \`EXTERNAL_RELAY_SERVER_GUIDE.html\` をブラウザで開いてください。
 出力CSSの具体的な表示見本は、EXEと同じ場所の \`OUTPUT_CSS_CUSTOMIZATION_GUIDE.html\` をブラウザで開いてください。
 詳細は \`docs/guides/discord-public-debug-guide.md\`、\`docs/guides/debugger-adb-report-guide.md\`、\`docs/guides/adb-setup.md\`、\`docs/guides/external-relay-server-setup.md\`、\`docs/guides/output-css-customization.md\` を参照してください。サルカズの個別確認項目は \`docs/guides/sarkaz-test-guide.md\` にあります。

@@ -123,6 +123,91 @@ test("relay HTTP API accepts editor operations and exposes them only to the host
   });
 });
 
+test("relay HTTP API deduplicates editor retries and exposes pending ownership to bootstrap", async () => {
+  await withServer(async (baseUrl) => {
+    const created = (
+      await jsonRequest(`${baseUrl}/api/sessions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ playerLabel: "Retry test" }),
+      })
+    ).body;
+    const envelope = {
+      clientOperationId: "operation-a",
+      editorClientId: "editor-a",
+      operation: { type: "run.set", field: "ingot", value: 31 },
+    };
+    const options = {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-editor-code": created.editorCode,
+      },
+      body: JSON.stringify(envelope),
+    };
+
+    const first = await jsonRequest(`${baseUrl}/api/sessions/${created.sessionId}/operations`, options);
+    const retried = await jsonRequest(`${baseUrl}/api/sessions/${created.sessionId}/operations`, options);
+    assert.equal(first.response.status, 202);
+    assert.equal(retried.response.status, 202);
+    assert.equal(retried.body.id, first.body.id);
+
+    const bootstrap = await jsonRequest(
+      `${baseUrl}/api/sessions/${created.sessionId}/bootstrap?code=${created.editorCode}`
+        + "&editorClientId=editor-a&clientOperationId=operation-a",
+    );
+    assert.equal(bootstrap.body.pendingOperations.length, 1);
+    assert.equal(bootstrap.body.pendingOperations[0].editorClientId, "editor-a");
+    assert.equal(bootstrap.body.submittedOperation.id, first.body.id);
+
+    const hostView = await jsonRequest(`${baseUrl}/api/sessions/${created.sessionId}/operations`, {
+      headers: { authorization: `Bearer ${created.hostToken}` },
+    });
+    assert.equal(hostView.body.operations.length, 1);
+  });
+});
+
+test("relay HTTP API rejects concurrent editor submissions and conflicting id reuse", async () => {
+  await withServer(async (baseUrl) => {
+    const created = (
+      await jsonRequest(`${baseUrl}/api/sessions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ playerLabel: "Conflict test" }),
+      })
+    ).body;
+    const submit = (body) => jsonRequest(`${baseUrl}/api/sessions/${created.sessionId}/operations`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-editor-code": created.editorCode,
+      },
+      body: JSON.stringify(body),
+    });
+
+    await submit({
+      clientOperationId: "operation-a",
+      editorClientId: "editor-a",
+      operation: { type: "run.set", field: "ingot", value: 31 },
+    });
+    const conflict = await submit({
+      clientOperationId: "operation-b",
+      editorClientId: "editor-b",
+      operation: { type: "run.set", field: "ingot", value: 32 },
+    });
+    assert.equal(conflict.response.status, 409);
+    assert.equal(conflict.body.code, "pending_operation_conflict");
+
+    const reused = await submit({
+      clientOperationId: "operation-a",
+      editorClientId: "editor-a",
+      operation: { type: "run.set", field: "ingot", value: 99 },
+    });
+    assert.equal(reused.response.status, 409);
+    assert.equal(reused.body.code, "client_operation_conflict");
+  });
+});
+
 test("relay serves the two-pane editor assets", async () => {
   await withServer(async (baseUrl) => {
     const html = await fetch(`${baseUrl}/input/example`);
@@ -140,6 +225,14 @@ test("relay serves the two-pane editor assets", async () => {
     const editorDraft = await fetch(`${baseUrl}/assets/editor-draft.js`);
     assert.equal(editorDraft.status, 200);
     assert.match(await editorDraft.text(), /buildDraftState/);
+
+    const persistence = await fetch(`${baseUrl}/assets/editor-persistence.js`);
+    assert.equal(persistence.status, 200);
+    assert.match(await persistence.text(), /loadEditorPersistence/);
+
+    const editorRequest = await fetch(`${baseUrl}/assets/editor-request.js`);
+    assert.equal(editorRequest.status, 200);
+    assert.match(await editorRequest.text(), /requestEditorJson/);
 
     const catalogFilters = await fetch(`${baseUrl}/assets/catalog-filters.js`);
     assert.equal(catalogFilters.status, 200);

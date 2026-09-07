@@ -82,6 +82,148 @@ function baseMaster() {
   };
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+test("remote host retries a failed state sync after relay polling recovers", async () => {
+  const relay = createRelayFetch();
+  let state = baseState();
+  let failSnapshot = false;
+  const host = createTournamentRemoteHost({
+    fetchImpl: async (url, options) => {
+      if (failSnapshot && new URL(url).pathname.endsWith("/snapshot")) {
+        failSnapshot = false;
+        throw new Error("temporary sync failure");
+      }
+      return relay.fetchImpl(url, options);
+    },
+    getState: async () => state,
+    getMaster: async () => baseMaster(),
+    saveState: async (next) => { state = next; },
+    autoPoll: false,
+  });
+  await host.start({ relayUrl: "https://relay.example.test" });
+  state = { ...state, run: { ...state.run, ingot: 99 } };
+  failSnapshot = true;
+  await assert.rejects(host.sync(), /temporary sync failure/);
+  assert.equal(host.status().syncPending, true);
+  await host.pollNow();
+
+  const published = relay.calls.filter((item) => item.url.pathname.endsWith("/snapshot"));
+  assert.equal(published.at(-1).body.snapshot.state.run.ingot, 99);
+  assert.equal(host.status().lastError, "");
+  assert.equal(host.status().syncPending, false);
+});
+
+test("remote host ignores operations returned after the session is stopped", async () => {
+  const relay = createRelayFetch();
+  const requested = deferred();
+  const release = deferred();
+  let saves = 0;
+  relay.operations.push({ id: "late-operation", sequence: 1, status: "pending", operation: { type: "run.set", field: "ingot", value: 42 } });
+  const host = createTournamentRemoteHost({
+    fetchImpl: async (url, options) => {
+      if (new URL(url).pathname.endsWith("/operations")) {
+        requested.resolve();
+        await release.promise;
+      }
+      return relay.fetchImpl(url, options);
+    },
+    getState: async () => baseState(),
+    getMaster: async () => baseMaster(),
+    saveState: async () => { saves += 1; },
+    autoPoll: false,
+  });
+  await host.start({ relayUrl: "https://relay.example.test" });
+  const polling = host.pollNow();
+  await requested.promise;
+  const stopping = host.stop();
+  release.resolve();
+  await Promise.allSettled([polling, stopping]);
+  assert.equal(saves, 0);
+  assert.equal(host.status().active, false);
+  assert.equal(relay.calls.filter((call) => call.url.pathname.endsWith("/result")).length, 0);
+});
+
+test("remote host stop drains an already-started save without applying the next operation", async () => {
+  const relay = createRelayFetch();
+  const saving = deferred();
+  const release = deferred();
+  let state = baseState();
+  let saves = 0;
+  let stopped = false;
+  for (let sequence = 1; sequence <= 2; sequence += 1) {
+    relay.operations.push({ id: `operation-${sequence}`, sequence, status: "pending", operation: { type: "run.set", field: "ingot", value: 40 + sequence } });
+  }
+  const host = createTournamentRemoteHost({
+    fetchImpl: relay.fetchImpl,
+    getState: async () => state,
+    getMaster: async () => baseMaster(),
+    saveState: async (next) => {
+      saves += 1;
+      saving.resolve();
+      await release.promise;
+      state = next;
+    },
+    autoPoll: false,
+  });
+  await host.start({ relayUrl: "https://relay.example.test" });
+  const polling = host.pollNow();
+  await saving.promise;
+  const stopping = host.stop().then(() => { stopped = true; });
+  try {
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(stopped, false, "stop must not return while a state save can still complete");
+  } finally {
+    release.resolve();
+    await Promise.allSettled([polling, stopping]);
+  }
+  assert.equal(saves, 1);
+  assert.equal(state.run.ingot, 41);
+});
+
+test("remote host times out a stalled relay response body", async () => {
+  const relay = createRelayFetch();
+  let releaseBody;
+  const host = createTournamentRemoteHost({
+    fetchImpl: async (url, options) => {
+      if (new URL(url).pathname.endsWith("/operations")) {
+        return {
+          status: 200,
+          ok: true,
+          text: () => new Promise((_resolve, reject) => {
+            releaseBody = () => reject(new Error("test cleanup"));
+            options.signal.addEventListener("abort", () => reject(new Error("request aborted")), { once: true });
+          }),
+        };
+      }
+      return relay.fetchImpl(url, options);
+    },
+    getState: async () => baseState(),
+    getMaster: async () => baseMaster(),
+    saveState: async () => {},
+    autoPoll: false,
+    requestTimeoutMs: 20,
+  });
+  await host.start({ relayUrl: "https://relay.example.test" });
+  const polling = host.pollNow().then(() => "completed", (error) => error.message);
+  let deadline;
+  try {
+    const result = await Promise.race([
+      polling,
+      new Promise((resolve) => { deadline = setTimeout(() => resolve("still waiting"), 200); }),
+    ]);
+    assert.match(result, /中継サーバーが応答しませんでした/);
+  } finally {
+    clearTimeout(deadline);
+    releaseBody?.();
+    await polling;
+  }
+});
+
 test("remote host creates a session and publishes a sanitized snapshot", async () => {
   const relay = createRelayFetch();
   let state = baseState();
@@ -114,6 +256,29 @@ test("remote host creates a session and publishes a sanitized snapshot", async (
   const snapshotCall = relay.calls.find((item) => item.url.pathname.endsWith("/snapshot"));
   assert.equal(snapshotCall.body.snapshot.state.adb, undefined);
   assert.equal(snapshotCall.body.snapshot.state.preferences, undefined);
+});
+
+test("remote host records recovery only after the initial relay sync succeeds", async () => {
+  const relay = createRelayFetch();
+  let failSync = true;
+  let recovered = 0;
+  const host = createTournamentRemoteHost({
+    fetchImpl: async (url, options) => {
+      if (failSync && new URL(url).pathname.endsWith("/snapshot")) throw new Error("initial sync failed");
+      return relay.fetchImpl(url, options);
+    },
+    getState: async () => baseState(),
+    getMaster: async () => baseMaster(),
+    saveState: async () => {},
+    onSessionStarted: async () => { recovered += 1; },
+    autoPoll: false,
+  });
+  await assert.rejects(host.start({ relayUrl: "https://relay.example.test" }), /initial sync failed/);
+  assert.equal(recovered, 0);
+  assert.equal(host.status().active, false);
+  failSync = false;
+  await host.start({ relayUrl: "https://relay.example.test" });
+  assert.equal(recovered, 1);
 });
 
 test("remote host applies queued operations in sequence and reports results", async () => {
@@ -198,6 +363,7 @@ test("remote host retries an unconfirmed applied result without saving or reject
   await assert.rejects(host.pollNow(), /result response lost/);
   assert.equal(state.run.ingot, 42);
   assert.equal(saveCount, 1);
+  assert.equal(host.status().appliedSequence, 1, "the desktop can import a saved operation before its relay acknowledgement returns");
   assert.equal(host.status().cursor, 0);
   assert.deepEqual(
     relay.calls.filter((item) => item.url.pathname.endsWith("/result")).map((item) => item.body.status),

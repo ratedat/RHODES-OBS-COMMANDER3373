@@ -327,6 +327,9 @@ var tests = new (string Name, Action Run)[]
 
 tests = tests.Concat(new (string Name, Action Run)[]
 {
+    ("Tournament recovery preserves remote state until an explicit run clear", RhodesSuki.Tests.TournamentRemoteRecoveryTests.StartupRecoveryPreservesRemoteStateUntilClear),
+    ("Tournament polling projects API state without writing it back", RhodesSuki.Tests.TournamentRemoteRecoveryTests.RemotePollingUsesDisplayOnlyState),
+    ("Tournament tracker imports saved operations before relay acknowledgement", RhodesSuki.Tests.TournamentRemoteRecoveryTests.TrackerUsesAppliedSequence),
     ("Relic stack recognition rejects malformed count noise", RhodesSuki.Tests.RelicStackRecognitionTests.RejectsMalformedStackCountNoise),
     ("Relic stack recognition rejects ambiguity before range filtering", RhodesSuki.Tests.RelicStackRecognitionTests.RejectsAmbiguousNumbersBeforeLimits),
     ("Relic stack recognition counts each capture once", RhodesSuki.Tests.RelicStackRecognitionTests.KeepsWholeBadgeCountsAndOneVotePerCapture),

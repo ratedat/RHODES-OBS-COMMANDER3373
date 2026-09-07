@@ -210,6 +210,7 @@ public static class RhodesRunStateStore
             state["relics"] = new JsonArray();
             state["usedRelicIds"] = new JsonArray();
             state["relicStackCounts"] = new JsonObject();
+            EnsureObject(state, "tournament")["recoverOnStartup"] = false;
             state["updatedAt"] = (now ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("O");
             await WriteJsonAtomicAsync(path, state);
         }
@@ -239,6 +240,14 @@ public static class RhodesRunStateStore
 
     public static JsonObject ApplyStartupReset(JsonObject state, DateTimeOffset now)
     {
+        if (state["tournament"] is JsonObject tournament
+            && tournament["recoverOnStartup"] is JsonValue recoveryValue
+            && recoveryValue.TryGetValue<bool>(out var recoverOnStartup)
+            && recoverOnStartup)
+        {
+            return state;
+        }
+
         var adb = state["adb"]?.DeepClone();
         var preferences = state["preferences"]?.DeepClone();
         var theme = state["theme"]?.DeepClone();

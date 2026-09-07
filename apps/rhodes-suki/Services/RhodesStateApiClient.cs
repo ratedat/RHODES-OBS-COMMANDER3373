@@ -311,6 +311,9 @@ public static class RhodesStateApiClient
         root["relics"] = new JsonArray();
         root["usedRelicIds"] = new JsonArray();
         root["relicStackCounts"] = new JsonObject();
+        var tournament = root["tournament"] as JsonObject ?? new JsonObject();
+        root["tournament"] = tournament;
+        tournament["recoverOnStartup"] = false;
         root["updatedAt"] = DateTimeOffset.UtcNow.ToString("O");
         return root.ToJsonString(IndentedWriteOptions);
     }

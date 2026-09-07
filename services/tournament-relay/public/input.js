@@ -12,13 +12,33 @@ import {
   buildOperatorCatalogView,
   buildRelicCatalogView,
 } from "/assets/catalog-filters.js";
+import {
+  createEditorPersistence,
+  describeEditorPendingState,
+  loadEditorPersistence,
+  prepareEditorSubmission,
+  reconcileEditorSubmission,
+  returnEditorSubmissionToDraft,
+  saveEditorPersistence,
+} from "/assets/editor-persistence.js";
+import { requestEditorJson } from "/assets/editor-request.js";
 
 const sessionId = location.pathname.split("/").filter(Boolean).at(-1) || "";
 const query = new URLSearchParams(location.search);
 const storageKey = `rhodes-tournament-editor:${sessionId}`;
-const editorCode = (query.get("code") || localStorage.getItem(storageKey) || "").trim().toUpperCase();
+let storedEditorCode = "";
+try {
+  storedEditorCode = localStorage.getItem(storageKey) || "";
+} catch {
+  // The durable editor-state check below reports unavailable browser storage.
+}
+const editorCode = (query.get("code") || storedEditorCode).trim().toUpperCase();
 
-if (editorCode) localStorage.setItem(storageKey, editorCode);
+try {
+  if (editorCode) localStorage.setItem(storageKey, editorCode);
+} catch {
+  // The current invite URL remains usable; durable editor state is checked separately.
+}
 
 const elements = {
   playerLabel: document.querySelector("#player-label"),
@@ -67,11 +87,21 @@ const catalogFilters = {
 let pollTimer = 0;
 let toastTimer = 0;
 let requestPending = false;
+let submitRequestPending = false;
 let editorRenderSignature = "";
 let editorRefreshPending = false;
-let pendingOperations = [];
 let draftState = null;
-let submittedOperationId = "";
+let persistenceErrorMessage = "";
+let editorPersistence;
+
+try {
+  editorPersistence = loadEditorPersistence(localStorage, sessionId)
+    || createEditorPersistence(crypto.randomUUID());
+  saveEditorPersistence(localStorage, sessionId, editorPersistence);
+} catch (error) {
+  editorPersistence = createEditorPersistence(crypto.randomUUID());
+  persistenceErrorMessage = error.message;
+}
 
 function node(tag, properties = {}, children = []) {
   const element = document.createElement(tag);
@@ -96,18 +126,31 @@ function showToast(message, error = false) {
   toastTimer = setTimeout(() => elements.toast.classList.remove("visible"), 2_800);
 }
 
-async function request(path, options = {}) {
-  const response = await fetch(path, {
-    cache: "no-store",
-    ...options,
-    headers: {
-      ...(options.body ? { "content-type": "application/json" } : {}),
-      ...(options.headers || {}),
-    },
+function persistEditorState(nextState) {
+  editorPersistence = nextState;
+  try {
+    saveEditorPersistence(localStorage, sessionId, editorPersistence);
+    persistenceErrorMessage = "";
+    return true;
+  } catch (error) {
+    persistenceErrorMessage = error.message;
+    return false;
+  }
+}
+
+function pendingRelayOperations() {
+  return (bootstrap?.pendingOperations || []).filter((entry) => entry.status === "pending");
+}
+
+function bootstrapUrl() {
+  const params = new URLSearchParams({
+    code: editorCode,
+    editorClientId: editorPersistence.editorClientId,
   });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
-  return payload;
+  if (editorPersistence.submission?.clientOperationId) {
+    params.set("clientOperationId", editorPersistence.submission.clientOperationId);
+  }
+  return `/api/sessions/${encodeURIComponent(sessionId)}/bootstrap?${params}`;
 }
 
 async function loadBootstrap({ announce = false, forceEditor = false } = {}) {
@@ -122,23 +165,23 @@ async function loadBootstrap({ announce = false, forceEditor = false } = {}) {
   if (requestPending) return;
   requestPending = true;
   try {
-    bootstrap = await request(`/api/sessions/${encodeURIComponent(sessionId)}/bootstrap?code=${encodeURIComponent(editorCode)}`);
-    const submitted = submittedOperationId
-      ? (bootstrap.history || []).find((entry) => entry.id === submittedOperationId)
-      : null;
+    bootstrap = await requestEditorJson(bootstrapUrl());
+    const submitted = bootstrap.submittedOperation;
     if (submitted?.status === "applied") {
-      pendingOperations = [];
+      const hadSubmission = Boolean(editorPersistence.submission);
+      persistEditorState(reconcileEditorSubmission(editorPersistence, submitted));
       draftState = null;
-      submittedOperationId = "";
       forceEditor = true;
-      showToast("配信PCへ反映しました。");
+      if (hadSubmission) showToast("配信PCへ反映しました。");
     } else if (submitted?.status === "rejected") {
-      submittedOperationId = "";
+      persistEditorState(reconcileEditorSubmission(editorPersistence, submitted));
       forceEditor = true;
       showToast(submitted.error || "配信PCへ反映できませんでした。", true);
+    } else if (submitted?.status === "pending") {
+      persistEditorState(reconcileEditorSubmission(editorPersistence, submitted));
     }
     rebuildDraftState();
-    setConnection(bootstrap.snapshot ? "接続済み" : "配信PC待機中", true);
+    setConnection(bootstrap.snapshot ? "中継接続済み" : "配信PC待機中", true);
     render({ forceEditor });
     if (announce) showToast("最新状態を読み込みました。");
   } catch (error) {
@@ -153,16 +196,26 @@ function setConnection(message, online) {
   elements.connectionState.classList.toggle("offline", !online);
 }
 
-async function sendOperation(operation, successMessage = "配信PCへ送信しました。") {
-  if (submittedOperationId) {
-    showToast("前の変更を配信PCへ反映中です。", true);
+async function sendOperation(operation, draftMessage = "下書きに追加しました。") {
+  const pendingState = describeEditorPendingState(
+    editorPersistence,
+    pendingRelayOperations(),
+    bootstrap?.limits,
+  );
+  if (pendingState.disableEditor) {
+    showToast(pendingState.detail, true);
     return;
   }
-  pendingOperations = upsertDraftOperation(pendingOperations, operation);
+  const nextState = {
+    ...editorPersistence,
+    pendingOperations: upsertDraftOperation(editorPersistence.pendingOperations, operation),
+  };
+  persistEditorState(nextState);
   rebuildDraftState();
   renderPending();
   refreshEditor({ force: true });
-  showToast(successMessage.replace("送信しました", "下書きに追加しました"));
+  if (persistenceErrorMessage) showToast(`${persistenceErrorMessage} 送信は停止しています。`, true);
+  else showToast(draftMessage);
 }
 
 function liveSnapshot() {
@@ -176,56 +229,122 @@ function snapshot() {
 
 function rebuildDraftState() {
   const live = liveSnapshot();
-  draftState = buildDraftState(live.state, pendingOperations, live.master);
+  draftState = buildDraftState(live.state, editorPersistence.pendingOperations, live.master);
 }
 
 function renderPending() {
-  const count = pendingOperations.length;
-  const waiting = Boolean(submittedOperationId);
-  elements.pendingBar.classList.toggle("has-changes", count > 0);
-  elements.pendingSummary.textContent = waiting
-    ? `${count}件の変更を送信済み`
-    : count
-      ? `${count}件の未送信変更`
-      : "未送信の変更はありません";
-  elements.pendingDetail.textContent = waiting
-    ? "配信PCでの反映完了を待っています。"
-    : count
-      ? "内容を確認し、「変更を送信」でまとめて即時反映します。"
-      : "入力内容は、この端末内だけに保持されています。";
-  elements.discard.disabled = count === 0 || waiting;
-  elements.send.disabled = count === 0 || waiting;
-  elements.send.textContent = waiting ? "反映待ち" : "変更を送信";
-  elements.editor.toggleAttribute("inert", waiting);
+  let presentation = describeEditorPendingState(
+    editorPersistence,
+    pendingRelayOperations(),
+    bootstrap?.limits,
+  );
+  if (persistenceErrorMessage) {
+    presentation = {
+      mode: "persistence-error",
+      summary: "入力内容を端末へ保存できません",
+      detail: `${persistenceErrorMessage} 再読込で内容が失われるため、送信を停止しています。`,
+      sendLabel: "端末保存エラー",
+      disableEditor: true,
+      disableSend: true,
+      disableDiscard: true,
+    };
+  }
+  elements.pendingBar.dataset.mode = presentation.mode;
+  elements.pendingBar.classList.toggle("has-changes", presentation.mode !== "empty");
+  elements.pendingSummary.textContent = presentation.summary;
+  elements.pendingDetail.textContent = presentation.detail;
+  elements.discard.disabled = presentation.disableDiscard || submitRequestPending;
+  elements.send.disabled = presentation.disableSend || submitRequestPending;
+  elements.send.textContent = submitRequestPending ? "送信中" : presentation.sendLabel;
+  elements.editor.toggleAttribute("inert", presentation.disableEditor || submitRequestPending);
+  elements.clearRun.disabled = presentation.disableEditor || submitRequestPending;
 }
 
 async function submitPendingOperations() {
-  if (!pendingOperations.length || submittedOperationId) return;
+  if (!editorPersistence.pendingOperations.length || submitRequestPending || persistenceErrorMessage) return;
+  const pendingState = describeEditorPendingState(
+    editorPersistence,
+    pendingRelayOperations(),
+    bootstrap?.limits,
+  );
+  if (pendingState.disableSend) return;
+
+  if (!editorPersistence.submission) {
+    const prepared = prepareEditorSubmission(editorPersistence, () => crypto.randomUUID());
+    if (!persistEditorState(prepared)) {
+      renderPending();
+      showToast(`${persistenceErrorMessage} 変更は送信していません。`, true);
+      return;
+    }
+  }
+
+  submitRequestPending = true;
+  renderPending();
   try {
-    const entry = await request(
+    const entry = await requestEditorJson(
       `/api/sessions/${encodeURIComponent(sessionId)}/operations?code=${encodeURIComponent(editorCode)}`,
       {
         method: "POST",
         body: JSON.stringify({
+          clientOperationId: editorPersistence.submission.clientOperationId,
+          editorClientId: editorPersistence.editorClientId,
           operation: {
             type: "batch",
-            operations: pendingOperations,
+            operations: editorPersistence.pendingOperations,
           },
         }),
       },
     );
-    submittedOperationId = entry.id;
+    persistEditorState(reconcileEditorSubmission(editorPersistence, entry));
+    bootstrap = {
+      ...(bootstrap || {}),
+      pendingOperations: [
+        ...(bootstrap?.pendingOperations || []).filter((item) => item.id !== entry.id),
+        ...(entry.status === "pending" ? [entry] : []),
+      ],
+    };
+    rebuildDraftState();
     renderPending();
-    showToast("変更を送信しました。配信PCの反映を待っています。");
+    refreshEditor({ force: entry.status !== "pending" });
+    if (entry.status === "applied") showToast("配信PCへ反映しました。");
+    else if (entry.status === "rejected") {
+      showToast(entry.error || "配信PCへ反映できませんでした。", true);
+    } else showToast("変更を送信しました。配信PCの反映を待っています。");
     await loadBootstrap();
   } catch (error) {
+    if (error.code === "operation_limit_reached") {
+      persistEditorState(returnEditorSubmissionToDraft(editorPersistence));
+      bootstrap = {
+        ...(bootstrap || {}),
+        limits: {
+          ...(bootstrap?.limits || {}),
+          remainingOperations: 0,
+        },
+      };
+      rebuildDraftState();
+      refreshEditor({ force: true });
+    }
     showToast(error.message, true);
+    await loadBootstrap();
+  } finally {
+    submitRequestPending = false;
+    renderPending();
   }
 }
 
 function discardPendingOperations() {
-  if (submittedOperationId) return;
-  pendingOperations = [];
+  if (editorPersistence.submission || pendingRelayOperations().length) return;
+  const previous = editorPersistence;
+  const discarded = {
+    ...editorPersistence,
+    pendingOperations: [],
+  };
+  if (!persistEditorState(discarded)) {
+    editorPersistence = previous;
+    renderPending();
+    showToast(`${persistenceErrorMessage} 変更は破棄していません。`, true);
+    return;
+  }
   draftState = null;
   renderPending();
   refreshEditor({ force: true });
@@ -1045,7 +1164,7 @@ elements.send.addEventListener("click", submitPendingOperations);
 elements.discard.addEventListener("click", discardPendingOperations);
 elements.clearRun.addEventListener("click", () => {
   if (confirm("現在のラン入力をすべてクリアします。よろしいですか？")) {
-    sendOperation({ type: "run.clear" }, "ランのクリアを送信しました。");
+    sendOperation({ type: "run.clear" }, "ランのクリアを下書きに追加しました。");
   }
 });
 

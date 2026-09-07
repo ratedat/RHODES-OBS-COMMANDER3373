@@ -50,6 +50,24 @@ function baseState() {
   };
 }
 
+test("remote operations preserve restart recovery until an explicit run clear", async () => {
+  const master = await loadMaster();
+  const state = { ...baseState(), tournament: { recoverOnStartup: false, submittedBy: "test editor" } };
+  const update = { type: "run.set", field: "ingot", value: 31 };
+  const applied = applyTournamentRemoteOperation(state, master, update).state;
+  assert.equal(applied.tournament.recoverOnStartup, true);
+  assert.equal(applied.tournament.submittedBy, "test editor");
+  assert.equal(state.tournament.recoverOnStartup, false);
+  assert.equal(buildTournamentRemoteSnapshot(applied, master).state.tournament, undefined);
+
+  const cleared = applyTournamentRemoteOperation(applied, master, { type: "run.clear" }).state;
+  assert.equal(cleared.tournament.recoverOnStartup, false);
+  const editedAfterClear = applyTournamentRemoteOperation(applied, master, { type: "batch", operations: [{ type: "run.clear" }, update] }).state;
+  assert.equal(editedAfterClear.tournament.recoverOnStartup, true);
+  const clearLast = applyTournamentRemoteOperation(applied, master, { type: "batch", operations: [update, { type: "run.clear" }] }).state;
+  assert.equal(clearLast.tournament.recoverOnStartup, false);
+});
+
 test("remote operations update only allowed state fields", async () => {
   const master = await loadMaster();
   const state = baseState();
