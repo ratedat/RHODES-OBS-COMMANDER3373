@@ -16,8 +16,13 @@ const transientExtensions = new Set([".log", ".pdb", ".tmp", ".pyc", ".pyo"]);
 const transientSegments = new Set(["__pycache__", ".pytest_cache", ".ruff_cache"]);
 const codeExtensions = new Set([".cs", ".py", ".js", ".mjs", ".ts", ".tsx", ".ps1", ".cpp", ".c", ".h", ".rs"]);
 const sourceLimit = 8 * 1024 * 1024;
-// Existing review archive, verified against the three adjacent public files.
-const reviewedArchives = ["ef84a5dfc370d0826cc6b16e9c7a04f0ed0fe819efd7553fdcc00207c55d8626"];
+const reviewedArchives = [
+  // Existing review archive, verified against the three adjacent public files.
+  "ef84a5dfc370d0826cc6b16e9c7a04f0ed0fe819efd7553fdcc00207c55d8626",
+  // Maa.AgentBinary 1.2.0 from nuget.org: bin/maatouch/universal/maatouch.
+  // Exact Android helper payload; a changed archive still requires a new review.
+  "4ea8590cd0349ce900f39ab16ef3751dad2356286b465b4293f80f9858c995d0",
+];
 
 function digest(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
 function normalize(value) { return String(value).replace(/\\+/g, "/").toLowerCase(); }

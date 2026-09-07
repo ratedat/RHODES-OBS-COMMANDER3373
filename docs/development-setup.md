@@ -29,6 +29,8 @@ npm run verify:all -- --no-restore
 
 `deps:restore` はアプリとC#テストの `packages.lock.json` を固定モードで復元します。依存更新時だけロックの更新を明示的に行い、差分を確認してください。既に必要なパッケージがローカルにある場合は、そのパッケージソースを指定して復元できます。
 
+`suki:publish:portable` は、Windows x64の自己完結型・単一ファイル配布に必要な依存関係を `apps/rhodes-suki/packages.portable.lock.json` から固定モードで復元します。通常ビルド用のロックは書き換えません。配布の依存関係を更新する場合は、この配布用ロックも明示的に更新して差分を確認してください。
+
 ## 読み取りだけの診断
 
 ```powershell

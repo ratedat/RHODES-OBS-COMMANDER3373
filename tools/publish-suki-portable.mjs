@@ -266,6 +266,8 @@ run("dotnet", [
   "-p:EnableCompressionInSingleFile=true",
   "-p:DebugType=None",
   "-p:DebugSymbols=false",
+  `-p:NuGetLockFilePath=${path.join(repoRoot, "apps", "rhodes-suki", "packages.portable.lock.json")}`,
+  "-p:RestoreLockedMode=true",
   "-o",
   "outputs/suki-portable",
 ]);
