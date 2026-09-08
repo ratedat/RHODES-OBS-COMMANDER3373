@@ -605,7 +605,8 @@ test("operator and thought scans use bounded passes tuned for their scroll surfa
   assert.ok(operator.scrollPasses.every((pass) => pass.captureDelayMs <= 120));
   assert.equal(operator.scrollPasses[1].mirrorPreviousPassScrolls, false);
 
-  assert.ok(thought.scrollPasses.every((pass) => pass.maxScrolls <= 12));
+  assert.equal(thought.maxScrolls, 120, "thought lists keep a bounded budget for large mixed inventories");
+  assert.ok(thought.scrollPasses.every((pass) => pass.maxScrolls === thought.maxScrolls));
   assert.ok(thought.scrollPasses.every((pass) => pass.endFingerprintStableCount === 1));
   assert.ok(thought.scrollPasses.every((pass) => pass.candidateStableEndCount === 1));
   assert.ok(thought.scrollPasses.every((pass) => pass.captureDelayMs <= 120));

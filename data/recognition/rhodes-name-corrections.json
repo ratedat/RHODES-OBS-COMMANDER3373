@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "normalization": "nfkc-compact-quotes-lower",
+  "rules": [
+    {
+      "id": "operator.may",
+      "kind": "operator",
+      "campaignId": "",
+      "targetId": "may",
+      "canonicalName": "メイ",
+      "aliases": ["フメイ", "プメイ", "フメィ―"]
+    },
+    {
+      "id": "operator.mlynar",
+      "kind": "operator",
+      "campaignId": "",
+      "targetId": "mlynar",
+      "canonicalName": "ムリナール",
+      "aliases": ["ユリチニル", "■ユリチニル"]
+    },
+    {
+      "id": "operator.phantom2",
+      "kind": "operator",
+      "campaignId": "",
+      "targetId": "phantom2",
+      "canonicalName": "トラゴーディア",
+      "aliases": ["アラコーデイア", "アラコデイア", "下ラコーデイア", "下ラコデイア", "下ラコ―ディア"]
+    },
+    {
+      "id": "operator.12f",
+      "kind": "operator",
+      "campaignId": "",
+      "targetId": "12f",
+      "canonicalName": "12F",
+      "aliases": ["12-"]
+    },
+    {
+      "id": "thought.is5.enlightenment",
+      "kind": "thought",
+      "campaignId": "is5_sarkaz",
+      "targetId": "is5_sarkaz_selectable_thought_insp_09",
+      "canonicalName": "啓蒙",
+      "aliases": ["啓豪", "啓幕", "啓攀", "啓夢", "啓募"]
+    },
+    {
+      "id": "thought.is5.cultivation",
+      "kind": "thought",
+      "campaignId": "is5_sarkaz",
+      "targetId": "is5_sarkaz_selectable_thought_insp_11",
+      "canonicalName": "開墾",
+      "aliases": ["開墨", "開聖", "開翠"]
+    },
+    {
+      "id": "thought.is5.pillar",
+      "kind": "thought",
+      "campaignId": "is5_sarkaz",
+      "targetId": "is5_sarkaz_selectable_thought_legacy_05",
+      "canonicalName": "功名の石柱",
+      "aliases": ["功各の石柱", "功者の石柱"]
+    },
+    {
+      "id": "thought.is5.tableware",
+      "kind": "thought",
+      "campaignId": "is5_sarkaz",
+      "targetId": "is5_sarkaz_selectable_thought_legacy_11",
+      "canonicalName": "土を被った食器",
+      "aliases": ["土を被つた食器"]
+    },
+    {
+      "id": "relic.is5.return",
+      "kind": "relic",
+      "campaignId": "is5_sarkaz",
+      "targetId": "is5_sarkaz_relic_126",
+      "canonicalName": "『帰還』",
+      "aliases": ["帰還j"]
+    }
+  ]
+}

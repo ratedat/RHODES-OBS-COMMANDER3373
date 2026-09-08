@@ -43,6 +43,7 @@ const PACKAGE_JSON = path.join(ROOT, "package.json");
 const SCAN_PROFILES = path.join(DATA, "recognition", "scan-profiles.json");
 const MAA_TASKS = path.join(DATA, "recognition", "maa-tasks.json");
 const MAA_OPERATOR_OCR_MAP = path.join(DATA, "recognition", "maa-operator-name-ocr.json");
+const RHODES_NAME_CORRECTIONS = path.join(DATA, "recognition", "rhodes-name-corrections.json");
 const MAA_GENERATED_PIPELINE = path.join(ROOT, "apps", "rhodes-suki", "resource", "base", "pipeline", "rhodes-generated.json");
 const RELIC_STACK_RULES_FILE = path.join(DATA, "relic-stack-rules.json");
 const RELIC_STACK_RULES_DATA = await readJson(RELIC_STACK_RULES_FILE).catch(() => ({ schemaVersion: 1, rules: [] }));
@@ -249,7 +250,7 @@ function legacyRecognitionScanError() {
   });
 }
 
-function createRecognitionCandidateExtractors({ state, master, operatorOcrMap }) {
+function createRecognitionCandidateExtractors({ state, master, operatorOcrMap, nameCorrections }) {
   const runStatusExtractor = (frame, context) => context.profile?.id === "runStatusFull"
     ? extractRunStatusCandidates(frame, {
       campaignId: state.run?.campaignId,
@@ -260,14 +261,17 @@ function createRecognitionCandidateExtractors({ state, master, operatorOcrMap })
   const relicExtractor = createRelicCandidateExtractor({
     relics: master.relics,
     campaignId: state.run?.campaignId,
+    nameCorrections,
   });
   const operatorExtractor = createOperatorCandidateExtractor({
     operators: master.operators,
     operatorOcrMap,
+    nameCorrections,
   });
   const thoughtExtractor = createThoughtCandidateExtractor({
     selectableEffects: master.selectableEffects,
     campaignId: state.run?.campaignId,
+    nameCorrections,
   });
   const ageExtractor = createAgeCandidateExtractor({
     selectableEffects: master.selectableEffects,
@@ -279,11 +283,12 @@ function createRecognitionCandidateExtractors({ state, master, operatorOcrMap })
 }
 
 async function runMaaResourceRecognitionRequest(body = {}) {
-  const [profiles, state, master, operatorOcrMap] = await Promise.all([
+  const [profiles, state, master, operatorOcrMap, nameCorrections] = await Promise.all([
     recognitionProfiles(),
     ensureState(),
     masterData(),
     readJson(MAA_OPERATOR_OCR_MAP).catch(() => ({ rules: [], equivalenceClasses: [] })),
+    readJson(RHODES_NAME_CORRECTIONS).catch(() => ({ schemaVersion: 1, rules: [] })),
   ]);
   const profile = findScanProfile(profiles, profileIdFromScanBody(body));
   const pipeline = body.pipeline && typeof body.pipeline === "object" && !Array.isArray(body.pipeline)
@@ -293,7 +298,7 @@ async function runMaaResourceRecognitionRequest(body = {}) {
     profile,
     pipeline,
     taskResults: Array.isArray(body.taskResults) ? body.taskResults : [],
-    candidateExtractors: createRecognitionCandidateExtractors({ state, master, operatorOcrMap }),
+    candidateExtractors: createRecognitionCandidateExtractors({ state, master, operatorOcrMap, nameCorrections }),
     recognitionContext: recognitionContextFromScanBody(body),
     source: body.source || "maa-framework",
     scanId: body.scanId || randomUUID(),

@@ -55,6 +55,7 @@ var tests = new (string Name, Action Run)[]
     ("MAA Amiya role resolver targets the profession icon beside a detected card", MaaAmiyaRoleResolverTargetsProfessionIcon),
     ("Local MAA candidate converter disambiguates Amiya forms by profession", LocalCandidateConverterDisambiguatesAmiyaForms),
     ("Local MAA candidate converter extracts current campaign relic candidates", LocalCandidateConverterRelics),
+    ("Local MAA relic matching accepts every formal Sarkaz name including quoted suffixes", LocalCandidateConverterFormalSarkazRelicNames),
     ("Relic stack rules match canonical relic ids and limits", RelicStackRuleCatalogMatchesCanonicalData),
     ("Relic stack OCR planner targets the generic badge beside a resolved relic", RelicStackOcrPlannerTargetsResolvedRelic),
     ("Local MAA candidate converter attaches validated relic stack counts", LocalCandidateConverterRelicStackCounts),
@@ -210,6 +211,14 @@ var tests = new (string Name, Action Run)[]
     ("MAA template OCR expander builds dynamic name regions", MaaTemplateOcrExpanderBuildsDynamicRegions),
     ("MAA template OCR expander restores weak operator anchors on the detected card grid", MaaTemplateOcrExpanderRestoresWeakGridAlignedOperatorAnchors),
     ("MAA thought load OCR expander targets displayed card values", MaaThoughtLoadOcrExpanderTargetsDisplayedValues),
+    ("MAA thought name retry restores titles within the original frame", RhodesSuki.Tests.ThoughtNameOcrTests.RefinesNamesWithinTheirOriginalFrame),
+    ("MAA thought name retry preserves unknown and unrelated evidence", RhodesSuki.Tests.ThoughtNameOcrTests.PreservesUnknownNamesAndRejectsUnrelatedEvidence),
+    ("MAA thought name retry bounds work and preserves original OCR evidence", RhodesSuki.Tests.ThoughtNameOcrTests.BoundsRetriesAndPreservesRawEvidence),
+    ("3373 name correction master resolves curated OCR names and preserves raw text", RhodesSuki.Tests.NameCorrectionMasterTests.ResolvesCuratedNamesWithoutChangingRawText),
+    ("3373 name correction master preserves formal operator identity and short names", RhodesSuki.Tests.NameCorrectionMasterTests.PreservesFormalOperatorIdentityIncludingSingleCharacterNames),
+    ("3373 name correction master rejects alias conflicts and invalid targets", RhodesSuki.Tests.NameCorrectionMasterTests.RejectsInvalidTargetsAndAliasConflicts),
+    ("3373 name correction master avoids redundant thought OCR and keeps load coordinates", RhodesSuki.Tests.NameCorrectionMasterTests.CorrectsThoughtRowsBeforeAdditionalOcr),
+    ("Relic title retry separates colored names from background text", RhodesSuki.Tests.RelicTitleOcrTests.SeparatesColoredTitlesFromBackgroundText),
     ("Operator scan tracker skips resolved cards and stops on repeated viewports", OperatorScanTrackerCachesResolvedCards),
     ("Operator scan tracker keeps moving cards stable and duplicate reserves distinct", OperatorScanTrackerTracksMovingDuplicateReserves),
     ("Mizuki rejection card detector identifies the purple operator name", MizukiRejectionCardDetectorIdentifiesPurpleBand),
@@ -333,6 +342,9 @@ tests = tests.Concat(new (string Name, Action Run)[]
     ("Relic stack recognition rejects malformed count noise", RhodesSuki.Tests.RelicStackRecognitionTests.RejectsMalformedStackCountNoise),
     ("Relic stack recognition rejects ambiguity before range filtering", RhodesSuki.Tests.RelicStackRecognitionTests.RejectsAmbiguousNumbersBeforeLimits),
     ("Relic stack recognition counts each capture once", RhodesSuki.Tests.RelicStackRecognitionTests.KeepsWholeBadgeCountsAndOneVotePerCapture),
+    ("Relic stack planner keeps distinct cards after marker validation", RhodesSuki.Tests.RelicStackRecognitionTests.PlansEveryEligibleCardAfterMarkerValidation),
+    ("Relic stack image separation keeps only one to three digits", RhodesSuki.Tests.RelicStackRecognitionTests.SeparatesDigitsFromArrowAndCardArtwork),
+    ("Relic stack recognition keeps card evidence without forcing zero", RhodesSuki.Tests.RelicStackRecognitionTests.KeepsCardEvidenceWithoutForcingZeroOrConflictingCardsIntoState),
     ("Recognition detail navigation cannot replace waiter frames", RecognitionOperationTests.DetailNavigationStaysOutsideWaiter),
     ("Recognition native raw and PNG paths preserve OCR results", RecognitionNativeImageTests.RawAndPngProduceSameOcr),
     ("Recognition safety keeps unresolved cards and endpoint contexts explicit", RhodesSuki.Tests.RecognitionSafetyTests.Run),
@@ -1768,6 +1780,37 @@ static void LocalCandidateConverterDisambiguatesAmiyaForms()
     }
 }
 
+static void LocalCandidateConverterFormalSarkazRelicNames()
+{
+    var relics = RhodesRunCatalog.LoadDefault().Relics
+        .Where(item => item.CampaignId == "is5_sarkaz")
+        .ToArray();
+    Equal(true, relics.Length > 0, "Sarkaz relic catalog is available");
+
+    foreach (var relic in relics)
+    {
+        var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+            "relicsFull",
+            [M("RhodesOcrRegion_relic_list_text", relic.Name, 0.99)],
+            "is5_sarkaz");
+        Equal(relic.Id, string.Join("|", candidates.Select(item => item.RelicId)), $"formal relic name: {relic.Name}");
+    }
+
+    foreach (var name in new[] { "ヴィクトリア「鉄屑」勲章", "『オールドジョージ』栄養剤原液", "「錆刃・長居」" })
+    {
+        var candidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
+            "relicsFull",
+            [M("RhodesOcrRegion_relic_list_text", $"{name}を所持している場合", 0.99)],
+            "is5_sarkaz");
+        Equal(0, candidates.Count, $"quoted relic in description stays excluded: {name}");
+    }
+
+    static MaaTaskRunResult M(string entry, string text, double score) => new(
+        entry, "Succeeded", true, "synthetic OCR",
+        JsonSerializer.Serialize(new { filtered = new[] { new { text, score, box = new[] { 200, 100, 280, 20 } } } }),
+        "OCR", true);
+}
+
 static void LocalCandidateConverterRelics()
 {
     var catalog = RhodesRunCatalog.LoadDefault();
@@ -2015,8 +2058,25 @@ static void RelicStackOcrPlannerTargetsResolvedRelic()
 {
     using var bitmap = new SKBitmap(1280, 720, SKColorType.Bgra8888, SKAlphaType.Premul);
     bitmap.Erase(SKColors.Black);
-    for (var y = 316; y < 328; y++)
-    for (var x = 900; x < 914; x++)
+    for (var y = 0; y < 6; y++)
+    {
+        var halfWidth = y + 1;
+        for (var x = 6 - halfWidth + 1; x <= 7 + halfWidth - 1; x++)
+            bitmap.SetPixel(885 + x, 318 + y, SKColors.White);
+    }
+    for (var y = 324; y < 326; y++)
+    for (var x = 885; x < 899; x++)
+        bitmap.SetPixel(x, y, SKColors.White);
+    for (var y = 8; y < 13; y++)
+    {
+        var offset = y - 7;
+        for (var x = 6 - offset; x <= 8 - offset; x++)
+            bitmap.SetPixel(885 + x, 318 + y, SKColors.White);
+        for (var x = 5 + offset; x <= 7 + offset; x++)
+            bitmap.SetPixel(885 + x, 318 + y, SKColors.White);
+    }
+    for (var y = 318; y < 334; y++)
+    for (var x = 906; x < 911; x++)
         bitmap.SetPixel(x, y, SKColors.White);
     using var image = SKImage.FromBitmap(bitmap);
     using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
@@ -2035,13 +2095,17 @@ static void RelicStackOcrPlannerTargetsResolvedRelic()
         "is5_sarkaz");
 
     Equal(1, requests.Count, "one visible stack badge request");
-    Equal("relic.stack.is5_sarkaz_relic_287", requests[0].Entry, "request carries resolved relic id");
-    Equal(856, requests[0].X, "stack OCR begins left of the full marker");
-    Equal(294, requests[0].Y, "stack OCR includes the full marker height");
-    Equal(90, requests[0].Width, "stack OCR excludes effect text");
-    Equal(70, requests[0].Height, "stack OCR excludes the next row");
-    Equal(6, requests[0].Scale, "small stack glyph is enlarged");
-    Equal(false, requests[0].OnlyRecognition, "stack OCR includes text detection");
+    Equal(true, RhodesRelicStackOcrPlanner.TryParseEntry(
+        requests[0].Entry, out var requestRelicId, out var captureId, out var cardId),
+        "request carries parseable card evidence");
+    Equal("is5_sarkaz_relic_287", requestRelicId, "request carries resolved relic id");
+    Equal(true, captureId.Length > 0 && cardId == "952_248", "request identifies its capture and card");
+    Equal(904, requests[0].X, "stack OCR excludes the arrow left of the digit");
+    Equal(318, requests[0].Y, "stack OCR begins at the marker top to exclude artwork above it");
+    Equal(8, requests[0].Width, "stack OCR isolates the digit from card artwork");
+    Equal(17, requests[0].Height, "stack OCR stops just below the marker to exclude card artwork");
+    Equal(8, requests[0].Scale, "small stack glyph is enlarged");
+    Equal(true, requests[0].OnlyRecognition, "the isolated stack crop is recognized as a whole token");
     Equal(true, requests[0].PayloadJson.Contains("\"threshold\":0.1", StringComparison.Ordinal), "low-confidence badge threshold");
 
     bitmap.Erase(SKColors.Black);
@@ -8166,7 +8230,8 @@ static void RecognitionScrollPlanLoadsOperatorPasses()
     var thoughtPasses = RhodesRecognitionScrollPlan.LoadFromJson(File.ReadAllText(path), "is5ThoughtFull");
     Equal(false, thoughtPasses[1].CollectCandidates, "thought restore pass does not collect");
     Equal(true, thoughtPasses[1].MirrorPreviousPassScrolls, "thought restore mirrors forward pass");
-    Equal(12, thoughtPasses[0].MaxScrolls, "thought scan has enough bounded small steps to reach the list end");
+    Equal(120, thoughtPasses[0].MaxScrolls, "thought scan keeps headroom for large mixed inventories");
+    Equal(thoughtPasses[0].MaxScrolls, thoughtPasses[1].MaxScrolls, "thought return budget supports the entire forward pass");
     var thoughtSwipes = Enumerable.Range(0, 50)
         .Select(_ => RhodesRecognitionScrollPlan.RandomSwipe(thoughtPasses[0], random))
         .ToArray();

@@ -7958,7 +7958,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             await RunTemplateOcrExpansionsAsync(execution.TaskResults, CurrentRecognitionImage);
-            await RunThoughtLoadOcrExpansionsAsync(execution.TaskResults, CurrentRecognitionImage);
+            await RunNameOcrExpansionsAsync(execution.TaskResults, CurrentRecognitionImage);
 
             RefreshInspectorRows();
             var localCandidates = RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -8490,7 +8490,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     CurrentRecognitionImage,
                     operatorScanTracker: operatorScanTracker);
             }
-            await RunThoughtLoadOcrExpansionsAsync(targetFrameResults, CurrentRecognitionImage);
+            await RunNameOcrExpansionsAsync(targetFrameResults, CurrentRecognitionImage);
             await TryResolveVisibleSuiCatchWindAsync(
                 plan.ProfileId,
                 ResourceTaskResults.ToArray(),
@@ -8751,6 +8751,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     request.Scale);
                 ResourceTaskResults.Add(result);
                 RefreshResourceTaskDiagnostics();
+
+                var attempted = request;
+                while (!RhodesRelicStackObservationReader.IsConfirmed(result)
+                    && RhodesRelicStackOcrPlanner.BuildFallbackRequest(attempted) is { } fallback)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    result = await _session.RunResourceRecognitionAsync(
+                        fallback.Entry,
+                        fallback.PayloadJson,
+                        encodedImage,
+                        cancellationToken,
+                        fallback.Scale);
+                    ResourceTaskResults.Add(result);
+                    RefreshResourceTaskDiagnostics();
+                    attempted = fallback;
+                }
             }
             if (stackRequests.Count > 0)
                 StatusMessage = $"スタック表示を{stackRequests.Count}件確認しました。";
@@ -8989,11 +9005,35 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task RunThoughtLoadOcrExpansionsAsync(
+    private async Task RunNameOcrExpansionsAsync(
         IEnumerable<MaaTaskRunResult> frameResults,
         MaaOwnedImage encodedImage,
         CancellationToken cancellationToken = default)
     {
+        int FindSourceIndex(MaaTaskRunResult source)
+        {
+            for (var index = ResourceTaskResults.Count - 1; index >= 0; index--)
+                if (ReferenceEquals(ResourceTaskResults[index], source)) return index;
+            return -1;
+        }
+
+        var frames = frameResults.ToArray();
+        foreach (var relicListResult in frames.Where(result => result.Entry == "RhodesOcrRegion_relic_list_text"))
+        {
+            var sourceIndex = FindSourceIndex(relicListResult);
+            if (sourceIndex < 0) continue;
+            var refinement = await RhodesMaaRelicTitleOcrExpander.RefineAsync(
+                relicListResult, encodedImage, CurrentCampaignId,
+                async (request, token) =>
+                {
+                    StatusMessage = "背景と重なった秘宝名を再確認しています。";
+                    return await _session.RunResourceRecognitionAsync(
+                        request.Entry, request.PayloadJson, encodedImage, token, request.Scale);
+                }, cancellationToken);
+            ResourceTaskResults[sourceIndex] = refinement.Frame;
+            foreach (var attempt in refinement.Attempts) ResourceTaskResults.Add(attempt);
+        }
+
         var resolvedThoughtIds = ResourceTaskResults
             .Where(result => result.Succeeded
                 && result.Hit
@@ -9003,13 +9043,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             .Select(entry => entry["thought.card.load.".Length..])
             .ToHashSet(StringComparer.Ordinal);
 
-        foreach (var thoughtListResult in frameResults.Where(result =>
+        foreach (var thoughtListResult in frames.Where(result =>
                      result.Succeeded
                      && result.Hit
-                     && result.Entry.Equals("RhodesOcrRegion_is5_thought_list_text", StringComparison.Ordinal)))
+                     && result.Entry.Equals("RhodesOcrRegion_is5_thought_list_text", StringComparison.Ordinal)).ToArray())
         {
+            // Replace only the exact source object: equal OCR on an earlier capture is
+            // still a different frame for scroll tracking and duplicate card counts.
+            var sourceIndex = FindSourceIndex(thoughtListResult);
+            if (sourceIndex < 0)
+                continue;
+
+            var refinement = await RhodesMaaThoughtNameOcrExpander.RefineAsync(
+                thoughtListResult,
+                async (request, token) =>
+                {
+                    StatusMessage = "読み取れなかった思想名を再確認しています。";
+                    return await _session.RunResourceRecognitionAsync(
+                        request.Entry, request.PayloadJson, encodedImage, token, request.Scale);
+                },
+                cancellationToken);
+            ResourceTaskResults[sourceIndex] = refinement.Frame;
+            foreach (var attempt in refinement.Attempts)
+                ResourceTaskResults.Add(attempt);
+
             var requests = RhodesMaaThoughtLoadOcrExpander.BuildRequests(
-                thoughtListResult.RecognitionDetailJson,
+                refinement.Frame.RecognitionDetailJson,
                 resolvedThoughtIds);
             foreach (var request in requests)
             {
@@ -9078,7 +9137,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             CurrentRecognitionImage,
             cancellationToken,
             operatorScanTracker);
-        await RunThoughtLoadOcrExpansionsAsync(retryExecution.TaskResults, CurrentRecognitionImage, cancellationToken);
+        await RunNameOcrExpansionsAsync(retryExecution.TaskResults, CurrentRecognitionImage, cancellationToken);
     }
 
     private async Task<IReadOnlyList<MaaTaskRunResult>> RetryUnconfirmedTargetFrameAsync(
@@ -9949,7 +10008,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             operatorScanTracker,
             activeCoinScanTracker,
             viewportMoved);
-        await RunThoughtLoadOcrExpansionsAsync(frameResults, encodedImage, cancellationToken);
+        await RunNameOcrExpansionsAsync(frameResults, encodedImage, cancellationToken);
         var visibleFrameResults = frameResults
             .Concat(ResourceTaskResults.Skip(derivedResultStartIndex))
             .ToArray();

@@ -1,4 +1,5 @@
 import { normalizeRecognitionText } from "./text-normalize.js";
+import { createNameCorrectionResolver } from "./name-corrections.js";
 
 const MIN_AGGREGATE_FALLBACK_ROW_HITS = 3;
 
@@ -110,9 +111,26 @@ export function buildRelicRecognitionDb(relics = [], { campaignId = null } = {})
     .filter((entry) => entry.normalizedName.length >= 2);
 }
 
-function bestRowHitForRelic(relic, textRows) {
+function bestRowHitForRelic(relic, textRows, nameResolutionByRow) {
   let best = null;
   for (const row of textRows) {
+    const resolution = nameResolutionByRow.get(row);
+    if (resolution === false) continue;
+    if (resolution) {
+      if (resolution.targetId !== relic.relicId) continue;
+      const corrected = resolution.matchType === "alias";
+      const confidence = Math.min(corrected ? 0.9 : 0.98, Number(row.confidence || 0.5) + (corrected ? 0.08 : 0.04));
+      if (!best || confidence > best.confidence) {
+        best = {
+          rawText: row.text,
+          normalizedText: corrected ? resolution.normalizedText : normalizeRelicRecognitionText(row.text),
+          confidence,
+          roi: row.roi || null,
+          source: corrected ? "rhodes-name-correction" : "ocr-row",
+        };
+      }
+      continue;
+    }
     const normalizedText = normalizeRelicRecognitionText(row.text);
     if (!normalizedText) continue;
     const nameIndex = normalizedText.indexOf(relic.normalizedName);
@@ -146,8 +164,21 @@ function aggregateFallbackRows(frame, scanRegion) {
     .filter((row) => normalizeRelicRecognitionText(row.text).length >= 8);
 }
 
-export function createRelicCandidateExtractor({ relics = [], campaignId = null } = {}) {
+export function createRelicCandidateExtractor({ relics = [], campaignId = null, nameCorrections = {} } = {}) {
   const db = buildRelicRecognitionDb(relics);
+  const correctionResolvers = new Map();
+  const resolverForCampaign = (activeCampaignId) => {
+    const key = activeCampaignId || "";
+    if (!correctionResolvers.has(key)) {
+      correctionResolvers.set(key, createNameCorrectionResolver({
+        nameCorrections,
+        kind: "relic",
+        campaignId: key,
+        catalog: relics,
+      }));
+    }
+    return correctionResolvers.get(key);
+  };
   return async function extractRelicCandidates(frame, context = {}) {
     if (context.profile?.id !== "relicsFull") return [];
     const activeCampaignId = context.campaignId || campaignId || null;
@@ -157,9 +188,14 @@ export function createRelicCandidateExtractor({ relics = [], campaignId = null }
     if (!textRows.length) return [];
 
     const activeDb = db.filter((relic) => !activeCampaignId || relic.campaignId === activeCampaignId);
+    const nameCorrectionResolver = resolverForCampaign(activeCampaignId);
+    const nameResolutionByRow = new Map(textRows.map((row) => {
+      const resolution = nameCorrectionResolver.resolve(row.text);
+      return [row, resolution || (nameCorrectionResolver.containsAliasFragment(row.text) ? false : null)];
+    }));
     const rowHits = new Map();
     for (const relic of activeDb) {
-      const hit = bestRowHitForRelic(relic, textRows);
+      const hit = bestRowHitForRelic(relic, textRows, nameResolutionByRow);
       if (hit) rowHits.set(relic.relicId, hit);
     }
     const aggregateRows = rowHits.size >= MIN_AGGREGATE_FALLBACK_ROW_HITS ? aggregateFallbackRows(frame, scanRegion) : [];

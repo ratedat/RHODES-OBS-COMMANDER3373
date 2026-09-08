@@ -1066,7 +1066,7 @@
           "label": "閉じる待ち"
         }
       ],
-      "maxScrolls": 12,
+      "maxScrolls": 120,
       "endFingerprintStableCount": 1,
       "captureDelayMs": 120,
       "navigationNote": "思案表示をクリックして思案一覧を開く。構想の個数は下部中央の家型アイコン下に表示される。一覧は左端レールではなく中央のリスト本体を掴み、下端方向、続けて上端方向へ読み切る。上方向の戻しは下方向で実際に動かした回数を最低限ミラーする。",
@@ -1098,7 +1098,7 @@
             },
             "durationMs": 260
           },
-          "maxScrolls": 12,
+          "maxScrolls": 120,
           "endFingerprintStableCount": 1,
           "captureDelayMs": 120,
           "collectWindow": {
@@ -1133,7 +1133,7 @@
             },
             "durationMs": 260
           },
-          "maxScrolls": 12,
+          "maxScrolls": 120,
           "endFingerprintStableCount": 1,
           "captureDelayMs": 120,
           "candidateStableEndCount": 1,

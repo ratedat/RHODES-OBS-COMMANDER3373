@@ -1,4 +1,5 @@
 import { normalizeRecognitionText } from "./text-normalize.js";
+import { createNameCorrectionResolver } from "./name-corrections.js";
 
 function asArray(value) {
   if (value == null) return [];
@@ -193,7 +194,7 @@ export function buildOperatorRecognitionDb(operators = [], { operatorOcrMap = {}
       normalizedName: normalizeOperatorRecognitionText(operator.name, operatorOcrMap),
       ocrPatterns: maaPatternsForOperator(operator, operatorOcrMap),
     }))
-    .filter((entry) => entry.normalizedName.length >= 2 || entry.operatorId === "w");
+    .filter((entry) => entry.normalizedName.length >= 1);
 }
 
 const operatorClassAliases = new Map([
@@ -326,6 +327,39 @@ function localNameFallbackHitsForRow(row, db, operatorOcrMap) {
     }));
 }
 
+function priorityNameHitsForRow(row, db, operatorOcrMap, nameCorrectionResolver) {
+  const resolution = nameCorrectionResolver.resolve(row.text);
+  if (!resolution) return nameCorrectionResolver.containsAliasFragment(row.text) ? [] : null;
+  const operator = db.find((entry) => entry.operatorId === resolution.targetId);
+  if (!operator && resolution.matchType === "formal" && resolution.targetId === "amiya"
+    && db.some((entry) => amiyaOperatorIds.has(entry.operatorId))) return null;
+  if (!operator) return [];
+
+  if (resolution.matchType === "formal") {
+    const maaHits = maaRuleHitsForRow(row, [operator], operatorOcrMap);
+    if (maaHits.length) return maaHits;
+    return [{
+      operator,
+      rawText: row.text,
+      normalizedText: normalizeOperatorRecognitionText(row.text, operatorOcrMap),
+      confidence: Math.min(0.82, Number(row.confidence || 0.5) + 0.03),
+      source: "local-name-fallback",
+      matchedPattern: null,
+      maaReplacement: null,
+    }];
+  }
+
+  return [{
+    operator,
+    rawText: row.text,
+    normalizedText: resolution.normalizedText,
+    confidence: Math.min(0.9, Number(row.confidence || 0.5) + 0.08),
+    source: "rhodes-name-correction",
+    matchedPattern: resolution.ruleId,
+    maaReplacement: null,
+  }];
+}
+
 const operatorOcrDriftAliases = [
   { operatorId: "bluepoison", pattern: /^アスリウス$/i, matchedPattern: "アスリウス" },
   { operatorId: "wisadel", pattern: /^ウイシ[ヤャ][テデ]ル$/i, matchedPattern: "ウイシャデル" },
@@ -424,8 +458,13 @@ function collapseAmbiguousAmiyaCandidates(candidates) {
   return candidates.filter((candidate) => !amiyaOperatorIds.has(candidate.operatorId) || candidate === fallback);
 }
 
-export function createOperatorCandidateExtractor({ operators = [], operatorOcrMap = {} } = {}) {
+export function createOperatorCandidateExtractor({ operators = [], operatorOcrMap = {}, nameCorrections = {} } = {}) {
   const db = buildOperatorRecognitionDb(operators, { operatorOcrMap });
+  const nameCorrectionResolver = createNameCorrectionResolver({
+    nameCorrections,
+    kind: "operator",
+    catalog: operators,
+  });
   return async function extractOperatorCandidates(frame, context = {}) {
     if (context.profile?.id !== "operatorsFull") return [];
     const operatorClassSet = operatorClassSetFromContext(context);
@@ -438,10 +477,13 @@ export function createOperatorCandidateExtractor({ operators = [], operatorOcrMa
 
     const byOperator = new Map();
     for (const row of rows) {
-      const hits = maaRuleHitsForRow(row, scopedDb, operatorOcrMap);
-      const maaIds = new Set(hits.map((hit) => hit.operator.operatorId));
-      hits.push(...localNameFallbackHitsForRow(row, scopedDb, operatorOcrMap).filter((hit) => !maaIds.has(hit.operator.operatorId)));
-      hits.push(...localOcrDriftHitsForRow(row, scopedDb, operatorOcrMap).filter((hit) => !maaIds.has(hit.operator.operatorId)));
+      const priorityHits = priorityNameHitsForRow(row, scopedDb, operatorOcrMap, nameCorrectionResolver);
+      const hits = priorityHits ?? maaRuleHitsForRow(row, scopedDb, operatorOcrMap);
+      if (priorityHits == null) {
+        const maaIds = new Set(hits.map((hit) => hit.operator.operatorId));
+        hits.push(...localNameFallbackHitsForRow(row, scopedDb, operatorOcrMap).filter((hit) => !maaIds.has(hit.operator.operatorId)));
+        hits.push(...localOcrDriftHitsForRow(row, scopedDb, operatorOcrMap).filter((hit) => !maaIds.has(hit.operator.operatorId)));
+      }
       for (const hit of hits) {
         const candidate = candidateFromHit(hit, row);
         const previous = byOperator.get(candidate.operatorId);

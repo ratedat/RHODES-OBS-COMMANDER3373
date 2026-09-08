@@ -1,4 +1,5 @@
 import { normalizeRecognitionText } from "./text-normalize.js";
+import { createNameCorrectionResolver } from "./name-corrections.js";
 
 function asArray(value) {
   if (value == null) return [];
@@ -129,8 +130,21 @@ function thoughtInstanceIdFromRoi(roi, scanRegion) {
   return `slot:${column},${row}`;
 }
 
-export function createThoughtCandidateExtractor({ selectableEffects = [], campaignId = "is5_sarkaz" } = {}) {
+export function createThoughtCandidateExtractor({ selectableEffects = [], campaignId = "is5_sarkaz", nameCorrections = {} } = {}) {
   const db = buildThoughtRecognitionDb(selectableEffects, { campaignId });
+  const correctionResolvers = new Map();
+  const resolverForCampaign = (activeCampaignId) => {
+    const key = activeCampaignId || "";
+    if (!correctionResolvers.has(key)) {
+      correctionResolvers.set(key, createNameCorrectionResolver({
+        nameCorrections,
+        kind: "thought",
+        campaignId: key,
+        catalog: selectableEffects,
+      }));
+    }
+    return correctionResolvers.get(key);
+  };
   return async function extractThoughtCandidates(frame, context = {}) {
     if (context.profile?.id !== "is5ThoughtFull") return [];
     const activeCampaignId = context.campaignId || campaignId || "is5_sarkaz";
@@ -140,8 +154,42 @@ export function createThoughtCandidateExtractor({ selectableEffects = [], campai
     if (!rows.length) return [];
 
     const activeDb = db.filter((thought) => !activeCampaignId || thought.campaignId === activeCampaignId);
+    const nameCorrectionResolver = resolverForCampaign(activeCampaignId);
     const candidates = [];
     for (const row of rows) {
+      const priorityMatch = nameCorrectionResolver.resolve(row.text);
+      if (priorityMatch) {
+        const thought = activeDb.find((entry) => entry.thoughtId === priorityMatch.targetId);
+        if (!thought) continue;
+        const corrected = priorityMatch.matchType === "alias";
+        const hit = {
+          rawText: row.text,
+          normalizedText: corrected ? priorityMatch.normalizedText : normalizeThoughtRecognitionText(row.text),
+          confidence: Math.min(corrected ? 0.9 : 0.94, Number(row.confidence || 0.5) + (corrected ? 0.08 : (thought.normalizedName.length >= 3 ? 0.04 : 0))),
+          roi: row.roi || null,
+          source: corrected ? "rhodes-name-correction" : "ocr-row",
+        };
+        candidates.push({
+          kind: "thought",
+          thoughtId: thought.thoughtId,
+          campaignId: thought.campaignId,
+          name: thought.name,
+          groupLabel: thought.groupLabel,
+          thoughtRank: thought.thoughtRank,
+          thoughtLoad: thought.thoughtLoad,
+          effect: thought.effect,
+          imagePath: thought.imagePath,
+          rawText: hit.rawText,
+          normalizedText: hit.normalizedText,
+          confidence: hit.confidence,
+          needsReview: true,
+          roi: hit.roi,
+          instanceId: thoughtInstanceIdFromRoi(hit.roi, scanRegion),
+          source: hit.source,
+        });
+        continue;
+      }
+      if (nameCorrectionResolver.containsAliasFragment(row.text)) continue;
       for (const thought of activeDb) {
         const hit = rowMatchesThought(thought, row);
         if (!hit) continue;

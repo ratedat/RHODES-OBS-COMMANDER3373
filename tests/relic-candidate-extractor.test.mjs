@@ -86,6 +86,14 @@ const relics = [
   },
 ];
 
+const nameCorrections = {
+  schemaVersion: 1,
+  normalization: "nfkc-compact-quotes-lower",
+  rules: [
+    { id: "relic.return", kind: "relic", campaignId: "is5_sarkaz", targetId: "is5_sarkaz_relic_250", canonicalName: "時と光", aliases: ["時と光j"] },
+  ],
+};
+
 test("relic recognition DB keeps campaign, name, number, and local image path", () => {
   const db = buildRelicRecognitionDb(relics);
 
@@ -122,6 +130,22 @@ test("relic candidate extractor matches OCR text only for the active campaign", 
   assert.equal(candidates[0].name, "時と光");
   assert.equal(candidates[0].imagePath, "assets/relics/wikiru/img/scso_250.png");
   assert.equal(candidates[0].needsReview, true);
+});
+
+test("relic candidate extractor applies campaign-scoped corrections as whole-row matches and preserves raw OCR", async () => {
+  const extractor = createRelicCandidateExtractor({ relics, campaignId: "is5_sarkaz", nameCorrections });
+  const context = { profile: { id: "relicsFull" }, region: { x: 90, y: 84, width: 1100, height: 540 } };
+  const corrected = await extractor({
+    ocrResults: [{ text: "時と光j", confidence: 0.81, roi: { x: 100, y: 100, width: 300, height: 40 } }],
+  }, context);
+  const prose = await extractor({
+    ocrResults: [{ text: "時と光jを所持している場合", confidence: 0.81, roi: { x: 100, y: 100, width: 300, height: 40 } }],
+  }, context);
+
+  assert.deepEqual(corrected.map((item) => item.relicId), ["is5_sarkaz_relic_250"]);
+  assert.equal(corrected[0].source, "rhodes-name-correction");
+  assert.equal(corrected[0].rawText, "時と光j");
+  assert.deepEqual(prose, []);
 });
 
 test("relic candidate extractor ignores OCR outside the scan region", async () => {

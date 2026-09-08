@@ -9,19 +9,17 @@ public static class RhodesOperatorOcrNormalizer
     private const double MinimumRuleCoverage = 0.70;
     private static readonly Lazy<IReadOnlyDictionary<char, char>> EquivalenceMap = new(LoadEquivalenceMap);
     private static readonly Lazy<IReadOnlyList<OfficialOperatorRule>> OfficialRules = new(LoadOfficialRules);
-    private static readonly IReadOnlyDictionary<string, string> MeasuredAliases =
-        new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["フメイ"] = "メイ",
-            ["プメイ"] = "メイ",
-            ["ユリチニル"] = "ムリナール",
-            ["アラコーデイア"] = "トラゴーデイア",
-            ["アラコデイア"] = "トラゴーデイア",
-            ["下ラコーデイア"] = "トラゴーデイア",
-            ["下ラコデイア"] = "トラゴーデイア",
-        };
+    public static string Normalize(string? value) => NormalizeWithCorrections(value, RhodesOcrNameCorrections.Load());
 
-    public static string Normalize(string? value)
+    internal static string NormalizeWithCorrections(string? value, RhodesOcrNameCorrections corrections)
+    {
+        var normalized = NormalizeCore(value);
+        if (normalized.Length == 0) return "";
+        var correction = corrections.Resolve("operator", "", value);
+        return correction is null ? normalized : NormalizeCore(correction.CanonicalName);
+    }
+
+    private static string NormalizeCore(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return "";
@@ -39,16 +37,19 @@ public static class RhodesOperatorOcrNormalizer
                 builder.Append(char.ToLowerInvariant(ch));
         }
 
-        var result = builder.ToString().TrimStart('ー');
-        return MeasuredAliases.TryGetValue(result.TrimEnd('ー'), out var alias)
-            ? alias
-            : result;
+        return builder.ToString().TrimStart('ー');
     }
 
-    public static string? ResolveOfficialOperatorId(string? value)
+    public static string? ResolveOfficialOperatorId(string? value) =>
+        ResolveOfficialOperatorIdWithCorrections(value, RhodesOcrNameCorrections.Load());
+
+    internal static string? ResolveOfficialOperatorIdWithCorrections(string? value, RhodesOcrNameCorrections corrections)
     {
         if (string.IsNullOrWhiteSpace(value))
             return null;
+
+        if (corrections.Resolve("operator", "", value) is { } correction)
+            return correction.TargetId;
 
         var raw = value.Trim().Normalize(NormalizationForm.FormKC);
         var compact = string.Concat(raw.Where(ch => !char.IsWhiteSpace(ch)));
@@ -160,7 +161,7 @@ public static class RhodesOperatorOcrNormalizer
                     .Where(item => item.ValueKind == JsonValueKind.Object
                                    && item.TryGetProperty("name", out var name)
                                    && name.ValueKind == JsonValueKind.String)
-                    .Select(item => Normalize(item.GetProperty("name").GetString()))
+                    .Select(item => NormalizeCore(item.GetProperty("name").GetString()))
                     .Where(name => !string.IsNullOrWhiteSpace(name))
                     .All(name => name.Length <= 2);
 

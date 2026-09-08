@@ -115,6 +115,46 @@ public static class RhodesMaaRecognitionImagePreprocessor
                 parameters);
         }
 
+        if (entry.StartsWith(RhodesRelicStackOcrPlanner.EntryPrefix, StringComparison.Ordinal))
+        {
+            RhodesRelicStackOcrPlanner.TryParseEntry(
+                entry, out _, out _, out _, out var stackImageVariant);
+            var preserveStackLuminance = stackImageVariant is "gray" or "gray0" or "gray0-pad2";
+            var addVerticalPadding = stackImageVariant is "binary-pad2" or "gray0-pad2";
+            if (stackImageVariant.Equals("gray", StringComparison.Ordinal) && top > 0)
+            {
+                top--;
+                cropHeight++;
+            }
+            return PrepareRelicStackDigits(
+                source,
+                left,
+                top,
+                cropWidth,
+                cropHeight,
+                Math.Clamp(scale, 1, 12),
+                parameters,
+                preserveStackLuminance,
+                addVerticalPadding);
+        }
+
+        if (entry.StartsWith(RhodesMaaRelicTitleOcrExpander.EntryPrefix, StringComparison.Ordinal))
+        {
+            using var foreground = new SKBitmap(cropWidth, cropHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
+            for (var yIndex = 0; yIndex < cropHeight; yIndex++)
+                for (var xIndex = 0; xIndex < cropWidth; xIndex++)
+                    foreground.SetPixel(xIndex, yIndex,
+                        RhodesMaaRelicTitleOcrExpander.IsTitleForeground(source.GetPixel(left + xIndex, top + yIndex))
+                            ? SKColors.White : SKColors.Black);
+            var titleWidth = checked(cropWidth * Math.Clamp(scale, 1, 12));
+            var titleHeight = checked(cropHeight * Math.Clamp(scale, 1, 12));
+            using var title = new SKBitmap(titleWidth, titleHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
+            using (var canvas = new SKCanvas(title))
+                canvas.DrawBitmap(foreground, new SKRect(0, 0, titleWidth, titleHeight));
+            parameters["roi"] = new JsonArray(0, 0, titleWidth, titleHeight);
+            return new MaaPreparedRecognitionInput(MaaOwnedImage.FromBitmap(title), parameters.ToJsonString());
+        }
+
         var targetWidth = checked(cropWidth * Math.Clamp(scale, 1, 12));
         var targetHeight = checked(cropHeight * Math.Clamp(scale, 1, 12));
         using var scaled = new SKBitmap(targetWidth, targetHeight, source.ColorType, source.AlphaType);
@@ -131,6 +171,57 @@ public static class RhodesMaaRecognitionImagePreprocessor
         parameters["roi"] = new JsonArray(0, 0, targetWidth, targetHeight);
         return new MaaPreparedRecognitionInput(
             MaaOwnedImage.FromBitmap(scaled),
+            parameters.ToJsonString());
+    }
+
+    private static MaaPreparedRecognitionInput PrepareRelicStackDigits(
+        SKBitmap source,
+        int left,
+        int top,
+        int width,
+        int height,
+        int scale,
+        JsonObject parameters,
+        bool preserveLuminance,
+        bool addVerticalPadding)
+    {
+        var contentWidth = checked(width * scale);
+        var contentHeight = checked(height * scale);
+        var horizontalMargin = contentHeight;
+        var verticalMargin = addVerticalPadding ? checked(2 * scale) : 0;
+        var targetWidth = checked(contentWidth + horizontalMargin * 2);
+        var targetHeight = checked(contentHeight + verticalMargin * 2);
+        using var binary = new SKBitmap(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
+        binary.Erase(SKColors.Black);
+        for (var y = 0; y < height; y++)
+        for (var x = 0; x < width; x++)
+        {
+            var sourceColor = source.GetPixel(left + x, top + y);
+            SKColor targetColor;
+            if (preserveLuminance)
+            {
+                if (!RhodesRelicStackImageSeparator.IsNeutral(sourceColor))
+                    continue;
+                var luminance = (byte)Luminance(sourceColor);
+                targetColor = new SKColor(luminance, luminance, luminance);
+            }
+            else
+            {
+                if (!RhodesRelicStackImageSeparator.IsDigitForeground(sourceColor))
+                    continue;
+                targetColor = SKColors.White;
+            }
+            for (var offsetY = 0; offsetY < scale; offsetY++)
+            for (var offsetX = 0; offsetX < scale; offsetX++)
+                binary.SetPixel(
+                    horizontalMargin + x * scale + offsetX,
+                    verticalMargin + y * scale + offsetY,
+                    targetColor);
+        }
+
+        parameters["roi"] = new JsonArray(0, 0, targetWidth, targetHeight);
+        return new MaaPreparedRecognitionInput(
+            MaaOwnedImage.FromBitmap(binary),
             parameters.ToJsonString());
     }
 

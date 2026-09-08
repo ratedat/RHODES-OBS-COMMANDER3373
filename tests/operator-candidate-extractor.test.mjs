@@ -17,6 +17,8 @@ const operators = [
   { id: "ray", name: "レイ", rarity: 6, class: "狙撃", branch: "狩人" },
   { id: "bluepoison", name: "アズリウス", rarity: 5, class: "狙撃", branch: "速射手" },
   { id: "w", name: "W", rarity: 6, class: "狙撃", branch: "榴弾射手" },
+  { id: "aak", name: "ア", rarity: 6, class: "特殊", branch: "本源術師" },
+  { id: "12f", name: "12F", rarity: 2, class: "術師", branch: "拡散術師" },
   { id: "dusk", name: "シー", rarity: 6, class: "術師", branch: "拡散術師" },
   { id: "pozyomka", name: "パゼオンカ", rarity: 6, class: "狙撃", branch: "精密射手" },
   { id: "schwarz", name: "シュヴァルツ", rarity: 6, class: "狙撃", branch: "精密射手" },
@@ -87,6 +89,14 @@ const operatorOcrMap = {
     { pattern: "^シー(?:$|[^ジシンソニ二ボホポル儿の]|トへ|ーた|ーの)|^(シ|ツ|ン)ー$", maaReplacement: "夕", localMatches: [{ id: "dusk", name: "シー" }] },
   ],
   equivalenceClasses: [["ン", "ソ"], ["-", "ー", "一"], ["フ", "ブ", "プ"], ["へ", "ベ", "ペ", "ヘ", "べ", "ぺ"]],
+};
+
+const nameCorrections = {
+  schemaVersion: 1,
+  normalization: "nfkc-compact-quotes-lower",
+  rules: [
+    { id: "operator.12f", kind: "operator", campaignId: "", targetId: "12f", canonicalName: "12F", aliases: ["12-"] },
+  ],
 };
 
 test("operator recognition text normalization removes OCR punctuation and MAA equivalence drift", () => {
@@ -163,6 +173,19 @@ test("operator candidate extractor keeps ambiguous Amiya OCR as one caster fallb
   assert.deepEqual(candidates.map((item) => item.operatorId), ["amiya"]);
 });
 
+test("operator candidate extractor preserves profession-scoped Amiya disambiguation", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap, nameCorrections });
+  const candidates = await extractor({
+    ocrResults: [{ text: "アーミヤ", regionId: "operator.card.name.0", roi: { x: 891, y: 291, width: 188, height: 29 }, confidence: 0.99 }],
+  }, {
+    profile: { id: "operatorsFull" },
+    region: { x: 525, y: 105, width: 1320, height: 833 },
+    operatorClasses: ["前衛"],
+  });
+
+  assert.deepEqual(candidates.map((item) => item.operatorId), ["amiya2"]);
+});
+
 test("operator candidate extractor keeps the one-letter W operator searchable", async () => {
   const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap });
   const candidates = await extractor({
@@ -172,6 +195,43 @@ test("operator candidate extractor keeps the one-letter W operator searchable", 
   assert.deepEqual(candidates.map((item) => item.operatorId), ["w"]);
   assert.equal(candidates[0].name, "W");
   assert.equal(candidates[0].source, "local-name-fallback");
+});
+
+test("operator candidate extractor accepts formal one-character names only as the complete raw name", async () => {
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap, nameCorrections });
+  const context = { profile: { id: "operatorsFull" }, region: { x: 700, y: 140, width: 1720, height: 1110 } };
+  const exactW = await extractor({ ocrResults: [{ text: "w", regionId: "operator.name.mid.1", roi: { x: 800, y: 320, width: 60, height: 40 } }] }, context);
+  const exactA = await extractor({ ocrResults: [{ text: "ア", regionId: "operator.name.mid.1", roi: { x: 900, y: 320, width: 60, height: 40 } }] }, context);
+  const prose = await extractor({
+    ocrResults: [
+      { text: "wを編成する", regionId: "operator.name.mid.1", roi: { x: 800, y: 420, width: 180, height: 40 } },
+      { text: "アを編成する", regionId: "operator.name.mid.2", roi: { x: 800, y: 520, width: 180, height: 40 } },
+    ],
+  }, context);
+
+  assert.deepEqual(exactW.map((item) => item.operatorId), ["w"]);
+  assert.deepEqual(exactA.map((item) => item.operatorId), ["aak"]);
+  assert.deepEqual(prose, []);
+});
+
+test("operator candidate extractor applies validated corrections before MAA rules and preserves raw OCR", async () => {
+  const conflictingMap = {
+    ...operatorOcrMap,
+    rules: [
+      ...operatorOcrMap.rules,
+      { pattern: "^12-$", maaReplacement: "誤対応", localMatches: [{ id: "blaze", name: "ブレイズ" }] },
+      { pattern: "^ア$", maaReplacement: "誤対応", localMatches: [{ id: "w", name: "W" }] },
+    ],
+  };
+  const extractor = createOperatorCandidateExtractor({ operators, operatorOcrMap: conflictingMap, nameCorrections });
+  const context = { profile: { id: "operatorsFull" }, region: { x: 700, y: 140, width: 1720, height: 1110 } };
+  const corrected = await extractor({ ocrResults: [{ text: "12-", regionId: "operator.name.mid.1", roi: { x: 800, y: 320, width: 80, height: 40 }, confidence: 0.7 }] }, context);
+  const formal = await extractor({ ocrResults: [{ text: "ア", regionId: "operator.name.mid.1", roi: { x: 900, y: 320, width: 60, height: 40 }, confidence: 0.7 }] }, context);
+
+  assert.deepEqual(corrected.map((item) => item.operatorId), ["12f"]);
+  assert.equal(corrected[0].source, "rhodes-name-correction");
+  assert.equal(corrected[0].rawText, "12-");
+  assert.deepEqual(formal.map((item) => item.operatorId), ["aak"]);
 });
 
 test("operator candidate extractor strips card CODE-NAME labels before matching", async () => {

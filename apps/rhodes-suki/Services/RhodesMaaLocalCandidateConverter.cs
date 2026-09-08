@@ -145,7 +145,13 @@ public static class RhodesMaaLocalCandidateConverter
             .GroupBy(item => NormalizeRelicName(item.Name), StringComparer.Ordinal)
             .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
-        return ResolveRelic(NormalizeRelicName(rawText), byNormalizedName);
+        var normalized = NormalizeRelicName(rawText);
+        if (byNormalizedName.TryGetValue(normalized, out var formal)) return formal;
+        var corrections = RhodesOcrNameCorrections.Load();
+        if (corrections.Resolve("relic", campaignId, rawText) is { } correction)
+            return relics.FirstOrDefault(item => item.Id == correction.TargetId);
+        return corrections.ContainsAliasFragment("relic", campaignId, rawText) || !LooksLikeStandaloneRelicNameToken(rawText)
+            ? null : ResolveRelic(normalized, byNormalizedName);
     }
 
     private static IReadOnlyList<MaaCandidatePreview> AllProfileCandidates(
@@ -601,11 +607,12 @@ public static class RhodesMaaLocalCandidateConverter
     private static IEnumerable<MaaCandidatePreview> OperatorCandidates(IEnumerable<MaaTaskRunResult> taskResults)
     {
         var results = taskResults.ToArray();
+        var nameCorrections = RhodesOcrNameCorrections.Load();
         var operators = RhodesRecognitionCatalogCache.Load().Operators
             .Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
             .ToArray();
         var byNormalizedName = operators
-            .GroupBy(item => RhodesOperatorOcrNormalizer.Normalize(item.Name), StringComparer.Ordinal)
+            .GroupBy(item => RhodesOperatorOcrNormalizer.NormalizeWithCorrections(item.Name, nameCorrections), StringComparer.Ordinal)
             .Where(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() == 1)
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
         var byId = operators.ToDictionary(item => item.Id, StringComparer.Ordinal);
@@ -630,23 +637,29 @@ public static class RhodesMaaLocalCandidateConverter
             var countedReserveIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
             {
-                foreach (var token in ChoiceNameTokens(textResult.Text))
+                if (!byNormalizedName.ContainsKey(RhodesOperatorOcrNormalizer.NormalizeWithCorrections(textResult.Text, nameCorrections))
+                    && nameCorrections.ContainsAliasFragment("operator", "", textResult.Text)) continue;
+                foreach (var token in ChoiceNameTokens(textResult.Text, allowSingleCharacterWhole: true))
                 {
-                    var normalized = RhodesOperatorOcrNormalizer.Normalize(token.Raw);
-                    var officialId = RhodesOperatorOcrNormalizer.ResolveOfficialOperatorId(token.Raw);
+                    var normalized = RhodesOperatorOcrNormalizer.NormalizeWithCorrections(token.Raw, nameCorrections);
                     var roleResolved = false;
+                    SukiChoiceItem? op;
                     if (RhodesMaaAmiyaRoleResolver.IsLiteralAmiyaText(token.Raw))
                     {
                         var roleOperatorId = RhodesMaaAmiyaRoleResolver.ResolveOperatorId(results, taskResultIndex);
                         if (string.IsNullOrWhiteSpace(roleOperatorId))
                             continue;
 
-                        officialId = roleOperatorId;
+                        op = byId.GetValueOrDefault(roleOperatorId);
                         roleResolved = true;
                     }
-                    var op = officialId is not null && byId.TryGetValue(officialId, out var official)
-                        ? official
-                        : ResolveOperator(normalized, byNormalizedName);
+                    else if (!byNormalizedName.TryGetValue(normalized, out op))
+                    {
+                        var officialId = RhodesOperatorOcrNormalizer.ResolveOfficialOperatorIdWithCorrections(token.Raw, nameCorrections);
+                        op = officialId is not null && byId.TryGetValue(officialId, out var official)
+                            ? official
+                            : ResolveOperator(normalized, byNormalizedName);
+                    }
 
                     if (op is null)
                         continue;
@@ -659,13 +672,13 @@ public static class RhodesMaaLocalCandidateConverter
 
                     if (!matched.TryGetValue(op.Id, out var existing))
                     {
-                        matched[op.Id] = (op, token.Raw, textResult.Confidence, order, roleResolved);
+                        matched[op.Id] = (op, textResult.OriginalText ?? token.Raw, textResult.Confidence, order, roleResolved);
                     }
                     else if ((roleResolved && !existing.RoleResolved)
                         || (roleResolved == existing.RoleResolved
                             && (textResult.Confidence ?? 0) > (existing.Confidence ?? 0)))
                     {
-                        matched[op.Id] = (op, token.Raw, textResult.Confidence, existing.Order, roleResolved);
+                        matched[op.Id] = (op, textResult.OriginalText ?? token.Raw, textResult.Confidence, existing.Order, roleResolved);
                     }
                 }
             }
@@ -760,10 +773,10 @@ public static class RhodesMaaLocalCandidateConverter
         string normalized,
         IReadOnlyDictionary<string, SukiChoiceItem> byNormalizedName)
     {
-        if (normalized.Length < 2)
-            return null;
         if (byNormalizedName.TryGetValue(normalized, out var exact))
             return exact;
+        if (normalized.Length < 2)
+            return null;
 
         var fuzzy = byNormalizedName
             .Where(item => item.Key.Length >= 5 && Math.Abs(item.Key.Length - normalized.Length) <= 2)
@@ -844,6 +857,8 @@ public static class RhodesMaaLocalCandidateConverter
         var matched = new Dictionary<string, (SukiChoiceItem Relic, string RawText, double? Confidence, int Order, string StateId)>(
             StringComparer.Ordinal);
         var stackCounts = RelicStackCounts(results);
+        var nameCorrections = RhodesOcrNameCorrections.Load();
+        var byId = relics.ToDictionary(item => item.Id, StringComparer.Ordinal);
         var order = 0;
 
         foreach (var taskResult in results)
@@ -854,12 +869,25 @@ public static class RhodesMaaLocalCandidateConverter
             var textResults = PrimaryTextResults(taskResult.RecognitionDetailJson);
             foreach (var textResult in textResults)
             {
+                if (!byNormalizedName.ContainsKey(NormalizeRelicName(textResult.Text))
+                    && nameCorrections.ContainsAliasFragment("relic", campaignId, textResult.Text)) continue;
                 foreach (var token in ChoiceNameTokens(textResult.Text))
                 {
-                    if (!LooksLikeStandaloneRelicNameToken(token.Raw))
-                        continue;
-
-                    var relic = ResolveRelic(NormalizeRelicName(token.Raw), byNormalizedName);
+                    var normalizedName = NormalizeRelicName(token.Raw);
+                    // Formal names can continue after a closing quote. Apply the prose guard
+                    // only when the catalog does not already identify the complete token.
+                    if (!byNormalizedName.TryGetValue(normalizedName, out var relic))
+                    {
+                        var correction = nameCorrections.Resolve("relic", campaignId, token.Raw);
+                        if (correction is not null)
+                            relic = byId.GetValueOrDefault(correction.TargetId);
+                        else
+                        {
+                            if (!LooksLikeStandaloneRelicNameToken(token.Raw))
+                                continue;
+                            relic = ResolveRelic(normalizedName, byNormalizedName);
+                        }
+                    }
                     if (relic is null)
                         continue;
 
@@ -867,13 +895,13 @@ public static class RhodesMaaLocalCandidateConverter
 
                     if (!matched.TryGetValue(relic.Id, out var existing))
                     {
-                        matched[relic.Id] = (relic, token.Raw, textResult.Confidence, order, usageState);
+                        matched[relic.Id] = (relic, textResult.OriginalText ?? token.Raw, textResult.Confidence, order, usageState);
                     }
                     else if ((textResult.Confidence ?? 0) > (existing.Confidence ?? 0))
                     {
                         matched[relic.Id] = (
                             relic,
-                            token.Raw,
+                            textResult.OriginalText ?? token.Raw,
                             textResult.Confidence,
                             existing.Order,
                             MergeRelicUsageState(existing.StateId, usageState));
@@ -908,70 +936,7 @@ public static class RhodesMaaLocalCandidateConverter
     }
 
     private static IReadOnlyDictionary<string, int> RelicStackCounts(IEnumerable<MaaTaskRunResult> taskResults)
-    {
-        var observed = new Dictionary<string, Dictionary<int, int>>(StringComparer.Ordinal);
-        foreach (var taskResult in taskResults)
-        {
-            if (!taskResult.Succeeded
-                || !taskResult.Entry.StartsWith(RhodesRelicStackOcrPlanner.EntryPrefix, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            var relicId = taskResult.Entry[RhodesRelicStackOcrPlanner.EntryPrefix.Length..];
-            if (string.IsNullOrWhiteSpace(relicId)
-                || RhodesRelicStackRuleCatalog.Find(relicId) is null
-                || RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(relicId))
-                continue;
-
-            var rows = PrimaryTextResults(taskResult.RecognitionDetailJson);
-            // Read a whole badge token, never a digit embedded in icon/background noise.
-            // The bounded prefix set retains existing multiplier/arrow OCR forms.
-            var numbers = rows.Select(row =>
-            {
-                var match = Regex.Match(row.Text.Trim(), @"\A(?:[×xX^★-]\s*)?([0-9]+)\z", RegexOptions.CultureInvariant);
-                return match.Success
-                    && int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var number)
-                        ? number
-                        : 0;
-            }).Distinct().ToArray();
-
-            // Reject the complete observation before range filtering. In particular,
-            // 4 + 14 must not become 4 just because 14 is above this relic's limit.
-            if (numbers.Length != 1
-                || !RhodesRelicStackRuleCatalog.IsWithinKnownLimit(relicId, numbers[0]))
-                continue;
-
-            if (!observed.TryGetValue(relicId, out var counts))
-            {
-                counts = [];
-                observed[relicId] = counts;
-            }
-
-            var count = numbers[0];
-            // Multiple OCR rows from one capture provide only one observation.
-            counts[count] = counts.GetValueOrDefault(count) + 1;
-        }
-
-        var resolved = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var (relicId, counts) in observed)
-        {
-            var ranked = counts
-                .OrderByDescending(item => item.Value)
-                .ThenBy(item => item.Key)
-                .ToArray();
-            if (ranked.Length == 0
-                || ranked.Length > 1 && ranked[0].Value == ranked[1].Value
-                || !RhodesRelicStackRuleCatalog.IsWithinKnownLimit(relicId, ranked[0].Key))
-            {
-                continue;
-            }
-
-            resolved[relicId] = ranked[0].Key;
-        }
-
-        return resolved;
-    }
+        => RhodesRelicStackObservationReader.ResolveCounts(taskResults);
 
     private static bool LooksLikeStandaloneRelicNameToken(string value)
     {
@@ -1933,6 +1898,8 @@ public static class RhodesMaaLocalCandidateConverter
         var maxCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         var frames = new List<IReadOnlyList<ThoughtOccurrence>>();
         var firstSeen = new List<string>();
+        var nameCorrections = RhodesOcrNameCorrections.Load();
+        var byId = thoughts.ToDictionary(item => item.Id, StringComparer.Ordinal);
 
         foreach (var taskResult in results)
         {
@@ -1942,17 +1909,23 @@ public static class RhodesMaaLocalCandidateConverter
             var frameCandidates = new List<ThoughtOccurrence>();
             foreach (var textResult in PrimaryTextResults(taskResult.RecognitionDetailJson))
             {
+                if (!byNormalizedName.ContainsKey(NormalizeChoiceName(textResult.Text))
+                    && nameCorrections.ContainsAliasFragment("thought", "is5_sarkaz", textResult.Text)) continue;
                 foreach (var token in ChoiceNameTokens(textResult.Text))
                 {
                     if (!byNormalizedName.TryGetValue(token.Normalized, out var thought))
-                        continue;
+                    {
+                        var correction = nameCorrections.Resolve("thought", "is5_sarkaz", token.Raw);
+                        if (correction is null || !byId.TryGetValue(correction.TargetId, out thought))
+                            continue;
+                    }
 
                     frameCandidates.Add(new ThoughtOccurrence(
                         new MaaCandidatePreview(
                             "thought",
                             thought.Name,
                             thought.Id,
-                            token.Raw,
+                            textResult.OriginalText ?? token.Raw,
                             Math.Max(0.68, textResult.Confidence ?? 0),
                             CampaignId: thought.CampaignId,
                             ThoughtId: thought.Id),
@@ -3684,14 +3657,14 @@ public static class RhodesMaaLocalCandidateConverter
             .Distinct(StringComparer.Ordinal);
     }
 
-    private static IEnumerable<(string Raw, string Normalized)> ChoiceNameTokens(string value)
+    private static IEnumerable<(string Raw, string Normalized)> ChoiceNameTokens(string value, bool allowSingleCharacterWhole = false)
     {
         if (string.IsNullOrWhiteSpace(value))
             yield break;
 
         var whole = NormalizeChoiceName(value);
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        if (whole.Length >= 2)
+        if (whole.Length >= 2 || allowSingleCharacterWhole && whole.Length == 1)
         {
             seen.Add(whole);
             yield return (value.Trim(), whole);
@@ -3880,11 +3853,20 @@ public static class RhodesMaaLocalCandidateConverter
                     box.X,
                     box.Y,
                     box.Width,
-                    box.Height));
+                    box.Height,
+                    OriginalOcrText(item)));
             }
         }
 
         return results;
+    }
+
+    private static string? OriginalOcrText(JsonElement item)
+    {
+        foreach (var key in new[] { "rhodes_name_correction", "rhodes_name_retry" })
+            if (item.TryGetProperty(key, out var metadata) && metadata.ValueKind == JsonValueKind.Object
+                && JsonString(metadata, "original_text") is { Length: > 0 } original) return original;
+        return null;
     }
 
     private static (int X, int Y, int Width, int Height) JsonBox(JsonElement item)
@@ -4380,7 +4362,8 @@ public static class RhodesMaaLocalCandidateConverter
         int X,
         int Y,
         int Width,
-        int Height);
+        int Height,
+        string? OriginalText = null);
 
     private sealed record ThoughtOccurrence(
         MaaCandidatePreview Candidate,

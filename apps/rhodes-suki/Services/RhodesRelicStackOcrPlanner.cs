@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Security.Cryptography;
 using RhodesSuki.Models;
 using SkiaSharp;
 
@@ -7,19 +8,16 @@ namespace RhodesSuki.Services;
 public static class RhodesRelicStackOcrPlanner
 {
     public const string EntryPrefix = "relic.stack.";
-    private const int BaseWidth = 1280;
-    private const int BaseHeight = 720;
-    private const int MarkerProbeOffsetX = -62;
-    private const int MarkerProbeOffsetY = 64;
-    private const int MarkerProbeWidth = 55;
-    private const int MarkerProbeHeight = 45;
-    private const int OcrOffsetX = -96;
-    private const int OcrOffsetY = 46;
-    private const int OcrWidth = 90;
-    private const int OcrHeight = 70;
-    private const int OcrScale = 6;
+    private const string CaptureSeparator = ".capture.";
+    private const string CardSeparator = ".card.";
+    private const string VariantSeparator = ".variant.";
+    private const string PrimaryVariant = "gray";
+    private const string FallbackVariant = "binary";
+    private const string RescueVariant = "gray0";
+    private const string PaddedBinaryVariant = "binary-pad2";
+    private const string PaddedGrayVariant = "gray0-pad2";
+    private const int OcrScale = 8;
     private const double OcrThreshold = 0.1;
-    private const double MinimumNeutralBrightRatio = 0.012;
 
     public static IReadOnlyList<MaaDynamicOcrRequest> BuildRequests(
         IEnumerable<MaaTaskRunResult> taskResults,
@@ -39,6 +37,7 @@ public static class RhodesRelicStackOcrPlanner
 
         var requests = new List<MaaDynamicOcrRequest>();
         var emitted = new HashSet<string>(StringComparer.Ordinal);
+        var captureId = Convert.ToHexString(SHA256.HashData(encodedImage).AsSpan(0, 6)).ToLowerInvariant();
         foreach (var taskResult in taskResults)
         {
             if (!taskResult.Succeeded || !IsRelicNameEntry(taskResult.Entry))
@@ -52,59 +51,92 @@ public static class RhodesRelicStackOcrPlanner
                 var relic = RhodesMaaLocalCandidateConverter.ResolveRelicName(row.Text, campaignId);
                 if (relic is null
                     || RhodesRelicStackRuleCatalog.Find(relic.Id) is null
-                    || RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(relic.Id)
-                    || !emitted.Add(relic.Id))
+                    || RhodesRelicStackRuleCatalog.IsExplicitlyNonStack(relic.Id))
                     continue;
 
-                var probe = new SKRectI(
-                    row.X + MarkerProbeOffsetX,
-                    row.Y + MarkerProbeOffsetY,
-                    row.X + MarkerProbeOffsetX + MarkerProbeWidth,
-                    row.Y + MarkerProbeOffsetY + MarkerProbeHeight);
-                if (!HasStackMarker(bitmap, probe))
+                if (!RhodesRelicStackImageSeparator.TryLocateDigits(bitmap, row.X, row.Y, out var digits))
                     continue;
 
-                var x = row.X + OcrOffsetX;
-                var y = row.Y + OcrOffsetY;
-                if (x < 0 || y < 0 || x + OcrWidth > BaseWidth || y + OcrHeight > BaseHeight)
+                var entry = CreateEntry(relic.Id, captureId, row.X, row.Y);
+                if (!emitted.Add(entry))
                     continue;
 
                 requests.Add(new MaaDynamicOcrRequest(
-                    $"{EntryPrefix}{relic.Id}",
-                    x,
-                    y,
-                    OcrWidth,
-                    OcrHeight,
+                    entry,
+                    digits.Left,
+                    digits.Top,
+                    digits.Width,
+                    digits.Height,
                     OcrScale,
                     row.Confidence ?? 0,
-                    OnlyRecognition: false,
+                    OnlyRecognition: true,
                     Threshold: OcrThreshold));
             }
         }
         return requests;
     }
 
-    private static bool HasStackMarker(SKBitmap bitmap, SKRectI requested)
+    internal static bool TryParseEntry(string? entry, out string relicId, out string captureId, out string cardId)
+        => TryParseEntry(entry, out relicId, out captureId, out cardId, out _);
+
+    internal static bool TryParseEntry(
+        string? entry,
+        out string relicId,
+        out string captureId,
+        out string cardId,
+        out string variant)
     {
-        var xScale = bitmap.Width / (double)BaseWidth;
-        var yScale = bitmap.Height / (double)BaseHeight;
-        var left = Math.Clamp((int)Math.Floor(requested.Left * xScale), 0, bitmap.Width);
-        var top = Math.Clamp((int)Math.Floor(requested.Top * yScale), 0, bitmap.Height);
-        var right = Math.Clamp((int)Math.Ceiling(requested.Right * xScale), 0, bitmap.Width);
-        var bottom = Math.Clamp((int)Math.Ceiling(requested.Bottom * yScale), 0, bitmap.Height);
-        if (right <= left || bottom <= top)
+        relicId = "";
+        captureId = "";
+        cardId = "";
+        variant = "";
+        if (string.IsNullOrWhiteSpace(entry) || !entry.StartsWith(EntryPrefix, StringComparison.Ordinal))
             return false;
 
-        var bright = 0;
-        var total = (right - left) * (bottom - top);
-        for (var y = top; y < bottom; y++)
-        for (var x = left; x < right; x++)
+        var suffix = entry[EntryPrefix.Length..];
+        var captureIndex = suffix.IndexOf(CaptureSeparator, StringComparison.Ordinal);
+        if (captureIndex < 0)
         {
-            var color = bitmap.GetPixel(x, y);
-            if (color.Red >= 205 && color.Green >= 205 && color.Blue >= 205)
-                bright++;
+            relicId = suffix;
+            return relicId.Length > 0;
         }
-        return bright >= Math.Max(12, (int)Math.Ceiling(total * MinimumNeutralBrightRatio));
+
+        var cardIndex = suffix.IndexOf(CardSeparator, captureIndex + CaptureSeparator.Length, StringComparison.Ordinal);
+        if (captureIndex == 0 || cardIndex <= captureIndex + CaptureSeparator.Length)
+            return false;
+        relicId = suffix[..captureIndex];
+        captureId = suffix[(captureIndex + CaptureSeparator.Length)..cardIndex];
+        var cardSuffix = suffix[(cardIndex + CardSeparator.Length)..];
+        var variantIndex = cardSuffix.IndexOf(VariantSeparator, StringComparison.Ordinal);
+        if (variantIndex < 0)
+            cardId = cardSuffix;
+        else
+        {
+            cardId = cardSuffix[..variantIndex];
+            variant = cardSuffix[(variantIndex + VariantSeparator.Length)..];
+        }
+        return cardId.Length > 0 && (variantIndex < 0 || variant.Length > 0);
+    }
+
+    private static string CreateEntry(string relicId, string captureId, int x, int y) =>
+        $"{EntryPrefix}{relicId}{CaptureSeparator}{captureId}{CardSeparator}{x}_{y}{VariantSeparator}{PrimaryVariant}";
+
+    internal static MaaDynamicOcrRequest? BuildFallbackRequest(MaaDynamicOcrRequest request)
+    {
+        if (!TryParseEntry(request.Entry, out _, out _, out _, out var variant)
+            || variant is not (PrimaryVariant or FallbackVariant or RescueVariant))
+            return null;
+        var marker = $"{VariantSeparator}{variant}";
+        var nextVariant = variant switch
+        {
+            PrimaryVariant => FallbackVariant,
+            FallbackVariant => RescueVariant,
+            _ => request.Width < request.Height ? PaddedBinaryVariant : PaddedGrayVariant,
+        };
+        return request with
+        {
+            Entry = request.Entry[..^marker.Length] + $"{VariantSeparator}{nextVariant}",
+        };
     }
 
     private static bool IsRelicNameEntry(string entry)
@@ -164,7 +196,9 @@ public static class RhodesRelicStackOcrPlanner
         double? confidence = null;
         foreach (var propertyName in new[] { "score", "confidence", "prob" })
         {
-            if (item.TryGetProperty(propertyName, out var score) && score.TryGetDouble(out var number))
+            if (item.TryGetProperty(propertyName, out var score)
+                && score.ValueKind == JsonValueKind.Number
+                && score.TryGetDouble(out var number))
             {
                 confidence = number;
                 break;

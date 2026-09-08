@@ -117,6 +117,7 @@ async function copyRequiredMasterData() {
     "data/relics.json",
     "data/selectable-effects.json",
     "data/recognition/maa-operator-name-ocr.json",
+    "data/recognition/rhodes-name-corrections.json",
   ];
 
   for (const relativePath of requiredFiles) {

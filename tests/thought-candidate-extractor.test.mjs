@@ -9,6 +9,14 @@ const thoughts = [
   { id: "revelation_01", campaignId: "is4_sami", slot: "revelation", name: "関係ない啓示", groupLabel: "啓示" },
 ];
 
+const nameCorrections = {
+  schemaVersion: 1,
+  normalization: "nfkc-compact-quotes-lower",
+  rules: [
+    { id: "thought.wall", kind: "thought", campaignId: "is5_sarkaz", targetId: "insp_01", canonicalName: "築壁", aliases: ["築璧"] },
+  ],
+};
+
 test("thought recognition text normalization removes OCR spaces and punctuation", () => {
   assert.equal(normalizeThoughtRecognitionText(" 純 白 の 花 び ら "), "純白の花びら");
   assert.equal(normalizeThoughtRecognitionText("『築壁』"), "築壁");
@@ -37,6 +45,23 @@ test("thought candidate extractor matches inspiration and legacy thoughts from O
   assert.equal(candidates[0].groupLabel, "妙想");
   assert.equal(candidates[1].groupLabel, "宿願");
   assert.equal(candidates[1].thoughtRank, "✦4");
+});
+
+test("thought candidate extractor applies campaign-scoped corrections as whole-row matches and preserves metadata", async () => {
+  const extractor = createThoughtCandidateExtractor({ selectableEffects: thoughts, campaignId: "is5_sarkaz", nameCorrections });
+  const context = { profile: { id: "is5ThoughtFull" }, region: { x: 180, y: 120, width: 2200, height: 1080 } };
+  const corrected = await extractor({
+    ocrResults: [{ text: "築 璧", regionId: "full", roi: { x: 260, y: 160, width: 120, height: 34 }, confidence: 0.7 }],
+  }, context);
+  const prose = await extractor({
+    ocrResults: [{ text: "築璧の効果", regionId: "full", roi: { x: 260, y: 160, width: 180, height: 34 }, confidence: 0.7 }],
+  }, context);
+
+  assert.deepEqual(corrected.map((item) => item.thoughtId), ["insp_01"]);
+  assert.equal(corrected[0].groupLabel, "妙想");
+  assert.equal(corrected[0].source, "rhodes-name-correction");
+  assert.equal(corrected[0].rawText, "築 璧");
+  assert.deepEqual(prose, []);
 });
 
 test("thought candidate extractor preserves duplicate visible thought rows", async () => {
