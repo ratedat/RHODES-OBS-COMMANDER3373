@@ -14,7 +14,7 @@ using RhodesSuki.Services;
 
 namespace RhodesSuki.ViewModels;
 
-public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
+public sealed partial class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly RhodesMaaSession _session;
     private readonly RhodesManagedAdbInstaller _managedAdbInstaller;
@@ -520,6 +520,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RegenerateMaaResourceCommand = new AsyncRelayCommand(RegenerateMaaResourceAsync);
         SyncRunStateFromApiCommand = new AsyncRelayCommand(SyncRunStateFromApiAsync);
         ApplyManualRunValuesCommand = new AsyncRelayCommand(ApplyManualRunValuesAsync);
+        RevertManualRunValuesCommand = new AsyncRelayCommand(RevertManualRunValuesAsync);
+        RevertTournamentInfoCommand = new AsyncRelayCommand(RevertTournamentInfoAsync);
         ApplyTournamentInfoCommand = new AsyncRelayCommand(ApplyTournamentInfoAsync);
         ApplyManualSarkazValuesCommand = new AsyncRelayCommand(ApplyManualSarkazValuesAsync);
         ApplyManualPhantomValuesCommand = new AsyncRelayCommand(ApplyManualPhantomValuesAsync);
@@ -577,6 +579,40 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ToggleRelicUsedCommand = new AsyncRelayCommand(ToggleRelicUsedAsync);
         ToggleChoiceExcludedCommand = new AsyncRelayCommand(ToggleChoiceExcludedAsync);
         ClearVisibleChoicesCommand = new AsyncRelayCommand(ClearVisibleChoicesAsync);
+        NavigateToOperatorsCommand = new AsyncRelayCommand(_ => SetChoiceTabAsync("operators"));
+        NavigateToRelicsCommand = new AsyncRelayCommand(_ => SetChoiceTabAsync("relics"));
+        ClearOperatorSearchCommand = new AsyncRelayCommand(_ =>
+        {
+            OperatorSearch = "";
+            return Task.CompletedTask;
+        });
+        ClearRelicSearchCommand = new AsyncRelayCommand(_ =>
+        {
+            RelicSearch = "";
+            return Task.CompletedTask;
+        });
+        ResetOperatorFiltersCommand = new AsyncRelayCommand(_ =>
+        {
+            OperatorSearch = "";
+            OperatorClassFilter = "すべて";
+            OperatorBranchFilter = "すべて";
+            OperatorRarityFilter = "すべて";
+            OperatorSortMode = "レア度順";
+            OperatorShowSelectedFirst = false;
+            OperatorHideExcluded = false;
+            OperatorSelectedOnly = false;
+            return Task.CompletedTask;
+        });
+        ResetRelicFiltersCommand = new AsyncRelayCommand(_ =>
+        {
+            RelicSearch = "";
+            RelicCategoryFilter = "すべて";
+            RelicSortMode = "秘宝種別順";
+            RelicShowSelectedFirst = false;
+            RelicHideExcluded = false;
+            RelicSelectedOnly = false;
+            return Task.CompletedTask;
+        });
         SelectedResourceProfile = ResourceProfiles.FirstOrDefault(profile => profile.Id == "runStatusFull") ?? ResourceProfiles.FirstOrDefault();
         RefreshOperatorFilterOptions();
         RefreshRelicFilterOptions();
@@ -1303,7 +1339,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public int ManualIngot
     {
         get => _manualIngot;
-        set => SetProperty(ref _manualIngot, Math.Clamp(value, 0, 9999));
+        set
+        {
+            if (!SetProperty(ref _manualIngot, Math.Clamp(value, 0, 9999)))
+                return;
+            NotifyManualRunValuesChanged();
+        }
     }
 
     /// <summary>共通値の手動入力: 等級。反映時に多元化珍品tier(run.difficultyTierId)も導出される。</summary>
@@ -1316,6 +1357,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
             OnPropertyChanged(nameof(ManualDifficultyTierLabel));
             OnPropertyChanged(nameof(ManualSuiSeasonalHourDifficultyLabel));
+            NotifyManualRunValuesChanged();
             if (IsSuiCampaignSelected && ManualSuiSeasonalHourEditors.Count > 0)
             {
                 RefreshManualSuiSeasonalHourEditors(
@@ -1357,13 +1399,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetProperty(ref _selectedManualSquad, value))
                 return;
             RefreshManualSquadRandomEffectOptions();
+            NotifyManualRunValuesChanged();
         }
     }
 
     public SukiSquadOption? SelectedManualSquadRandomEffect
     {
         get => _selectedManualSquadRandomEffect;
-        set => SetProperty(ref _selectedManualSquadRandomEffect, value);
+        set
+        {
+            if (!SetProperty(ref _selectedManualSquadRandomEffect, value))
+                return;
+            NotifyManualRunValuesChanged();
+        }
     }
 
     public bool IsManualSquadRandomEffectVisible => ManualSquadRandomEffectOptions.Count > 1;
@@ -1377,13 +1425,23 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public int ManualTournamentScore
     {
         get => _manualTournamentScore;
-        set => SetProperty(ref _manualTournamentScore, Math.Clamp(value, -999_999, 999_999));
+        set
+        {
+            if (!SetProperty(ref _manualTournamentScore, Math.Clamp(value, -999_999, 999_999)))
+                return;
+            NotifyTournamentInfoChanged();
+        }
     }
 
     public int ManualTournamentWithdrawals
     {
         get => _manualTournamentWithdrawals;
-        set => SetProperty(ref _manualTournamentWithdrawals, Math.Clamp(value, 0, 9_999));
+        set
+        {
+            if (!SetProperty(ref _manualTournamentWithdrawals, Math.Clamp(value, 0, 9_999)))
+                return;
+            NotifyTournamentInfoChanged();
+        }
     }
 
     public string ManualTournamentMemo
@@ -1394,7 +1452,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             var normalized = value ?? "";
             if (normalized.Length > 160)
                 normalized = normalized[..160];
-            SetProperty(ref _manualTournamentMemo, normalized);
+            if (!SetProperty(ref _manualTournamentMemo, normalized))
+                return;
+            NotifyTournamentInfoChanged();
         }
     }
 
@@ -1685,6 +1745,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string ConnectionStatusForeground => ConnectionStatusTone("#7BE2B6", "#F0D06A", "#F08A8A", "#AAB6B8");
 
+    public string ConnectionStatusDetailForeground => ConnectionStatusTone("#D2F7E7", "#FCF0C8", "#FCE0E0", "#DCE3E6");
+
     public string ConnectionStatusBackground => ConnectionStatusTone("#12241D", "#242012", "#241212", "#151D1E");
 
     public string ConnectionStatusBorder => ConnectionStatusTone("#2C5745", "#5C512C", "#5C2C2C", "#2B3638");
@@ -1792,6 +1854,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public bool HasOperatorSearchText => !string.IsNullOrEmpty(_operatorSearch);
+
+    public bool HasFilteredOperators => FilteredOperators.Count > 0;
+
+    public bool HasFilteredRelics => FilteredRelics.Count > 0;
+
     public string OperatorSearch
     {
         get => _operatorSearch;
@@ -1799,6 +1867,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _operatorSearch, value ?? ""))
                 return;
+            OnPropertyChanged(nameof(HasOperatorSearchText));
             RestartSearchDebounce(ref _operatorSearchDebounce, RefreshOperatorChoices);
         }
     }
@@ -1885,6 +1954,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public bool HasRelicSearchText => !string.IsNullOrEmpty(_relicSearch);
+
     public string RelicSearch
     {
         get => _relicSearch;
@@ -1892,6 +1963,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             if (!SetProperty(ref _relicSearch, value ?? ""))
                 return;
+            OnPropertyChanged(nameof(HasRelicSearchText));
             RestartSearchDebounce(ref _relicSearchDebounce, RefreshRelicChoices);
         }
     }
@@ -2936,6 +3008,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand SyncRunStateFromApiCommand { get; }
 
     public ICommand ApplyManualRunValuesCommand { get; }
+
+    public ICommand RevertManualRunValuesCommand { get; }
+
+    public ICommand RevertTournamentInfoCommand { get; }
     public ICommand ApplyTournamentInfoCommand { get; }
     public ICommand ApplyManualSarkazValuesCommand { get; }
     public ICommand ApplyManualPhantomValuesCommand { get; }
@@ -3008,6 +3084,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ToggleChoiceExcludedCommand { get; }
 
     public ICommand ClearVisibleChoicesCommand { get; }
+
+    public ICommand NavigateToOperatorsCommand { get; }
+
+    public ICommand NavigateToRelicsCommand { get; }
+
+    public ICommand ClearOperatorSearchCommand { get; }
+
+    public ICommand ClearRelicSearchCommand { get; }
+
+    public ICommand ResetOperatorFiltersCommand { get; }
+
+    public ICommand ResetRelicFiltersCommand { get; }
 
     public void Dispose()
     {
@@ -3655,6 +3743,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(ConnectionStatusLabel));
         OnPropertyChanged(nameof(ConnectionStatusDetail));
         OnPropertyChanged(nameof(ConnectionStatusForeground));
+        OnPropertyChanged(nameof(ConnectionStatusDetailForeground));
         OnPropertyChanged(nameof(ConnectionStatusBackground));
         OnPropertyChanged(nameof(ConnectionStatusBorder));
     }
@@ -6501,6 +6590,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 candidates.Add(new("runStatus", "分隊追加効果 (手動入力)", SelectedManualSquadRandomEffect.Id, "手動入力", 1.0, Field: "squadRandomEffectOptionId", CampaignId: campaignId));
 
             await ApplyCandidatesPipelineAsync(candidates);
+            NotifyManualRunValuesChanged();
             RefreshInspectorRows();
         });
     }
@@ -7013,6 +7103,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
             _recognitionEndpointCache.Clear();
             IsClearRunConfirmationVisible = false;
+            _hasEditedManualRunValues = false;
+            _hasEditedTournamentInfo = false;
             ReloadRunStateFromStore();
             StatusMessage = "現在の統合戦略ランをクリアしました。";
             LastCandidateApplySummary = "ラン状態を手動クリア";
@@ -7023,25 +7115,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void RefreshManualRunEditors()
     {
         var campaignId = SelectedCampaign?.Id ?? _runState.CampaignId;
-        ReplaceCollection(ManualSquadOptions, new[] { SukiSquadOption.KeepCurrent }
-            .Concat(RhodesRunCatalog.LoadSquadOptions(campaignId)));
-        ManualIngot = _runState.Ingot;
-        if (int.TryParse(_runState.Difficulty, NumberStyles.Integer, CultureInfo.InvariantCulture, out var difficulty))
-            ManualDifficulty = difficulty;
-        SelectedManualSquad = ManualSquadOptions.FirstOrDefault(option =>
-                !string.IsNullOrWhiteSpace(option.Id)
-            && option.Name.Equals(_runState.Squad, StringComparison.Ordinal))
-            ?? SukiSquadOption.KeepCurrent;
+        RefreshManualRunDraftFields(campaignId);
         ManualIdea = _runState.Idea;
-        ManualTournamentScore = _runState.TournamentInfo?.Score ?? 0;
-        ManualTournamentWithdrawals = _runState.TournamentInfo?.Withdrawals ?? 0;
-        ManualTournamentMemo = _runState.TournamentInfo?.Memo ?? "";
         RefreshManualSarkazEditors();
         RefreshManualPhantomEditors();
         RefreshManualMizukiEditors();
         RefreshManualSamiEditors();
         RefreshManualSuiEditors();
-        RefreshManualSquadRandomEffectOptions();
         RefreshBossSections();
         OnPropertyChanged(nameof(ManualDifficultyMaximum));
         OnPropertyChanged(nameof(ManualDifficultyTierLabel));
@@ -7942,7 +8022,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 (entry, cancellationToken) =>
                 {
                     var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                    return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
+                    return RecognizeResourceImageAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
                 },
                 result =>
                 {
@@ -8391,7 +8471,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     (entry, cancellationToken) =>
                     {
                         var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                        return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
+                        return RecognizeResourceImageAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
                     },
                     result =>
                     {
@@ -8582,7 +8662,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 (entry, cancellationToken) =>
                 {
                     var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                    return _session.RunResourceRecognitionAsync(entry, payload, capture.EncodedImage, cancellationToken);
+                    return RecognizeResourceImageAsync(entry, payload, capture.EncodedImage, cancellationToken);
                 });
             var candidates = execution.Succeeded
                 ? RhodesMaaLocalCandidateConverter.FromTaskResults(
@@ -8628,7 +8708,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 (entry, cancellationToken) =>
                 {
                     var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                    return _session.RunResourceRecognitionAsync(entry, payload, selected.Capture.EncodedImage, cancellationToken);
+                    return RecognizeResourceImageAsync(entry, payload, selected.Capture.EncodedImage, cancellationToken);
                 });
             if (!detailExecution.Succeeded)
                 return new RhodesRecognitionTaskExecutionResult(plan, selectedResults, detailExecution.Error);
@@ -8681,7 +8761,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             (entry, cancellationToken) =>
             {
                 var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
+                return RecognizeResourceImageAsync(entry, payload, CurrentRecognitionImage, cancellationToken);
             },
             result =>
             {
@@ -8724,7 +8804,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         foreach (var request in RhodesSamiSpecialOcrPlanner.BuildRequests(profileId, profileId == "is4RevelationFull" ? encodedImage.EncodedImage : null))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var result = await _session.RunResourceRecognitionAsync(
+            var result = await RecognizeResourceImageAsync(
                 request.Entry,
                 request.PayloadJson,
                 encodedImage,
@@ -8743,7 +8823,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             foreach (var request in stackRequests)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var result = await _session.RunResourceRecognitionAsync(
+                var result = await RecognizeResourceImageAsync(
                     request.Entry,
                     request.PayloadJson,
                     encodedImage,
@@ -8757,7 +8837,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     && RhodesRelicStackOcrPlanner.BuildFallbackRequest(attempted) is { } fallback)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    result = await _session.RunResourceRecognitionAsync(
+                    result = await RecognizeResourceImageAsync(
                         fallback.Entry,
                         fallback.PayloadJson,
                         encodedImage,
@@ -8795,7 +8875,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     foreach (var request in rowRequests)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var result = await _session.RunResourceRecognitionAsync(
+                        var result = await RecognizeResourceImageAsync(
                             request.Entry,
                             request.PayloadJson,
                             encodedImage,
@@ -8848,7 +8928,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 foreach (var request in missingNameRequests)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var result = await _session.RunResourceRecognitionAsync(
+                    var result = await RecognizeResourceImageAsync(
                         request.Entry,
                         request.PayloadJson,
                         encodedImage,
@@ -8910,7 +8990,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     cancellationToken.ThrowIfCancellationRequested();
                     var request = workItem.Request;
                     var cardResults = new List<MaaTaskRunResult>();
-                    var result = await _session.RunResourceRecognitionAsync(
+                    var result = await RecognizeResourceImageAsync(
                         request.Entry,
                         request.PayloadJson,
                         encodedImage,
@@ -8921,7 +9001,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     var roleRequest = RhodesMaaAmiyaRoleResolver.BuildRequest(request, result);
                     if (roleRequest is not null)
                     {
-                        var roleResult = await _session.RunResourceRecognitionAsync(
+                        var roleResult = await RecognizeResourceImageAsync(
                             roleRequest.Entry,
                             roleRequest.PayloadJson,
                             encodedImage,
@@ -8992,7 +9072,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             foreach (var request in requests)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var result = await _session.RunResourceRecognitionAsync(
+                var result = await RecognizeResourceImageAsync(
                     request.Entry,
                     request.PayloadJson,
                     encodedImage,
@@ -9027,7 +9107,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 async (request, token) =>
                 {
                     StatusMessage = "背景と重なった秘宝名を再確認しています。";
-                    return await _session.RunResourceRecognitionAsync(
+                    return await RecognizeResourceImageAsync(
                         request.Entry, request.PayloadJson, encodedImage, token, request.Scale);
                 }, cancellationToken);
             ResourceTaskResults[sourceIndex] = refinement.Frame;
@@ -9059,7 +9139,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 async (request, token) =>
                 {
                     StatusMessage = "読み取れなかった思想名を再確認しています。";
-                    return await _session.RunResourceRecognitionAsync(
+                    return await RecognizeResourceImageAsync(
                         request.Entry, request.PayloadJson, encodedImage, token, request.Scale);
                 },
                 cancellationToken);
@@ -9073,7 +9153,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             foreach (var request in requests)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var result = await _session.RunResourceRecognitionAsync(
+                var result = await RecognizeResourceImageAsync(
                     request.Entry,
                     request.PayloadJson,
                     encodedImage,
@@ -9118,7 +9198,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             (entry, token) =>
             {
                 var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, token);
+                return RecognizeResourceImageAsync(entry, payload, CurrentRecognitionImage, token);
             },
             result =>
             {
@@ -9169,7 +9249,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 (entry, token) =>
                 {
                     var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-                    return _session.RunResourceRecognitionAsync(entry, payload, CurrentRecognitionImage, token);
+                    return RecognizeResourceImageAsync(entry, payload, CurrentRecognitionImage, token);
                 },
                 result =>
                 {
@@ -9902,7 +9982,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return false;
 
         var detailRequest = RhodesSuiCatchWindDetailResolver.BuildDetailRequest();
-        var detailResult = await _session.RunResourceRecognitionAsync(
+        var detailResult = await RecognizeResourceImageAsync(
             detailRequest.Entry,
             detailRequest.PayloadJson,
             CurrentRecognitionImage,
@@ -9934,7 +10014,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         CancellationToken cancellationToken)
     {
         var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(listEntry);
-        var result = await _session.RunResourceRecognitionAsync(
+        var result = await RecognizeResourceImageAsync(
             listEntry,
             payload,
             encodedImage,
@@ -9980,6 +10060,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return [];
     }
 
+    private Task<MaaTaskRunResult> RecognizeResourceImageAsync(
+        string entry, string payload, byte[] image,
+        CancellationToken cancellationToken = default, int? scaleOverride = null) =>
+        RecognizeResourceImageAsync(entry, payload, MaaOwnedImage.FromEncodedCopy(image), cancellationToken, scaleOverride);
+
+    private async Task<MaaTaskRunResult> RecognizeResourceImageAsync(
+        string entry, string payload, MaaOwnedImage image,
+        CancellationToken cancellationToken = default, int? scaleOverride = null)
+    {
+        var campaignId = CurrentCampaignId;
+        var titlesOnly = entry == RhodesMaaRelicTitleImage.ListEntry && campaignId == "is5_sarkaz";
+        if (titlesOnly)
+        {
+            var prepared = await Task.Run(() => RhodesMaaRelicTitleImage.Prepare(image, entry, campaignId), cancellationToken);
+            titlesOnly = !ReferenceEquals(image, prepared);
+            image = prepared;
+        }
+        var result = await _session.RunResourceRecognitionAsync(entry, payload, image, cancellationToken, scaleOverride);
+        return titlesOnly ? RhodesMaaRelicTitleOcrExpander.MarkTitleOnly(result) : result;
+    }
+
     private async Task<bool> RunScrollFrameTasksAsync(
         string profileId,
         IEnumerable<string> taskEntries,
@@ -9994,7 +10095,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         foreach (var entry in taskEntries)
         {
             var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(entry);
-            var result = await _session.RunResourceRecognitionAsync(entry, payload, encodedImage, cancellationToken);
+            var result = await RecognizeResourceImageAsync(entry, payload, encodedImage, cancellationToken);
             ResourceTaskResults.Add(result);
             frameResults.Add(result);
             RefreshResourceTaskDiagnostics();
@@ -10183,7 +10284,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             var payload = RhodesMaaResourceCatalog.LoadRecognitionPayloadJson(task.Entry);
-            var result = await _session.RunResourceRecognitionAsync(task.Entry, payload, CurrentRecognitionImage);
+            var result = await RecognizeResourceImageAsync(task.Entry, payload, CurrentRecognitionImage);
             ResourceTaskResults.Add(result);
             RefreshResourceTaskDiagnostics();
             RefreshInspectorRows();
@@ -10784,6 +10885,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RhodesMizukiOperatorPresentation.Apply(CurrentCampaignId, _runState.SpecialFields, _allOperators);
         var view = RhodesChoiceCatalogRegistry.BuildView("operator", _allOperators, OperatorChoiceFilterState());
         ReplaceCollection(FilteredOperators, view.FilteredItems);
+        OnPropertyChanged(nameof(HasFilteredOperators));
         ReplaceCollection(FilteredOperatorRows, view.Rows);
         OnPropertyChanged(nameof(OperatorListSummary));
         OnPropertyChanged(nameof(RunContextSummary));
@@ -10796,6 +10898,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         var view = RhodesChoiceCatalogRegistry.BuildView("relic", _allRelics, RelicChoiceFilterState());
         ReplaceCollection(FilteredRelics, view.FilteredItems);
+        OnPropertyChanged(nameof(HasFilteredRelics));
         ReplaceCollection(FilteredRelicRows, view.Rows);
         OnPropertyChanged(nameof(RelicListSummary));
         OnPropertyChanged(nameof(RunContextSummary));

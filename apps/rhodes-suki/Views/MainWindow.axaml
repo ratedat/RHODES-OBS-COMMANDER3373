@@ -21,10 +21,13 @@
       Bottom : ステータスバー (+ 処理中表示)
     プレビュー・候補は認識ワークスペース内、報告取込・Frame再認識はデバッグ内で完結する。
   -->
-  <Grid RowDefinitions="68,*,36">
+  <Grid RowDefinitions="72,*,56">
     <Border Classes="workbenchToolbar">
       <Grid ColumnDefinitions="260,240,*,Auto,Auto,Auto" ColumnSpacing="16">
-        <TextBlock Text="{Binding Title}" Classes="wordmark" VerticalAlignment="Center" />
+        <StackPanel Spacing="0" VerticalAlignment="Center">
+          <TextBlock Text="RHODES" Classes="wordmark" FontSize="22" />
+          <TextBlock Text="OBS COMMANDER3373" Classes="caption" />
+        </StackPanel>
 
         <ComboBox Grid.Column="1"
                   Width="240"
@@ -33,7 +36,8 @@
                   SelectedItem="{Binding SelectedCampaign, Mode=TwoWay}"
                   ItemTemplate="{StaticResource CampaignComboItemTemplate}"
                   SelectionBoxItemTemplate="{StaticResource CampaignComboItemTemplate}"
-                  ToolTip.Tip="統合戦略テーマを切り替えます。検証用ではIS#2～IS#6を選択できます。" />
+                  AutomationProperties.Name="統合戦略テーマ"
+                  ToolTip.Tip="統合戦略テーマを切り替えます。" />
 
         <Button Grid.Column="3"
                 Classes="secondaryAction compactAction"
@@ -47,13 +51,13 @@
                 ToolTip.Tip="クリックで接続画面を開きます">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="{Binding ConnectionStatusLabel}" Classes="denseLabel" Foreground="{Binding ConnectionStatusForeground}" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding ConnectionStatusDetail}" Classes="mono" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxWidth="180" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding ConnectionStatusDetail}" Classes="mono" Foreground="{Binding ConnectionStatusDetailForeground}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxWidth="180" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
 
         <Button Grid.Column="4"
                 Classes="primaryAction"
-                Content="取得して反映"
+                Content="画面を取得して反映"
                 Command="{Binding RunAllOperationalRecognitionAndApplyCommand}"
                 ToolTip.Tip="現在テーマの共通値・固有値・オペレーター・秘宝を順に取得して反映します" />
         <Button Grid.Column="5" Classes="tertiaryAction iconAction" Content="⋯" Width="48"
@@ -61,8 +65,10 @@
           <Button.Flyout>
             <MenuFlyout>
               <MenuItem Header="接続設定" Command="{Binding SetWorkspaceCommand}" CommandParameter="runtime" />
+              <MenuItem Header="認識スタジオ" Command="{Binding SetWorkspaceCommand}" CommandParameter="recognition" />
               <MenuItem Header="HUDを表示／非表示" Command="{Binding ToggleHudVisibilityCommand}" />
               <MenuItem Header="バグ報告ZIPを作成" Command="{Binding CreateBugReportBundleCommand}" />
+              <MenuItem Header="デバッグ画面" Command="{Binding SetWorkspaceCommand}" CommandParameter="debug" />
             </MenuFlyout>
           </Button.Flyout>
         </Button>
@@ -71,8 +77,8 @@
 
     <Grid Grid.Row="1" ColumnDefinitions="208,*">
       <Border Classes="workbenchSidebar">
-        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
-          <TextBlock Text="操作" Classes="navHeading" Margin="0,8,0,8" />
+        <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="6">
+          <TextBlock Text="配信・運用" Classes="navHeading" Margin="0,4,0,4" />
           <ListBox Grid.Row="1"
                  Classes="navList"
                  ItemsSource="{Binding WorkspaceNav}"
@@ -86,11 +92,14 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
           </ListBox>
-          <StackPanel Grid.Row="2" Spacing="8" Margin="0,8,0,0">
-            <Button Classes="tertiaryAction" Content="接続設定" HorizontalContentAlignment="Left"
+          <TextBlock Grid.Row="2" Text="設定・保守" Classes="navHeading" Margin="0,8,0,4" />
+          <StackPanel Grid.Row="3" Spacing="4" Margin="0,0,0,0">
+            <Button Classes="tertiaryAction" Classes.activeNavAction="{Binding IsRuntimeWorkspaceVisible}" Content="接続設定" HorizontalContentAlignment="Left"
                     Command="{Binding SetWorkspaceCommand}" CommandParameter="runtime" />
-            <Button Classes="tertiaryAction" Content="報告ZIP" HorizontalContentAlignment="Left"
-                    Command="{Binding CreateBugReportBundleCommand}" />
+            <Button Classes="tertiaryAction" Classes.activeNavAction="{Binding IsRecognitionWorkspaceVisible}" Content="認識スタジオ" HorizontalContentAlignment="Left"
+                    Command="{Binding SetWorkspaceCommand}" CommandParameter="recognition" />
+            <Button Classes="tertiaryAction" Classes.activeNavAction="{Binding IsDebugWorkspaceVisible}" Content="デバッグ・報告" HorizontalContentAlignment="Left"
+                    Command="{Binding SetWorkspaceCommand}" CommandParameter="debug" />
           </StackPanel>
         </Grid>
       </Border>
@@ -109,13 +118,18 @@
     </Grid>
 
     <Border Grid.Row="2" Classes="statusBar">
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsBusy}">
           <ProgressBar IsIndeterminate="True" Width="70" Height="4" VerticalAlignment="Center" />
           <TextBlock Text="処理中" Classes="caption" VerticalAlignment="Center" />
         </StackPanel>
-        <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Classes="body" TextTrimming="CharacterEllipsis" MaxLines="1" ToolTip.Tip="{Binding StatusMessage}" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="2" Text="{Binding CaptureState}" Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxLines="1" MaxWidth="480" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="pendingEditsAction compactAction"
+                IsVisible="{Binding HasUnappliedRunEdits}"
+                Content="{Binding UnappliedRunEditsLabel}"
+                Command="{Binding SetWorkspaceCommand}" CommandParameter="run"
+                ToolTip.Tip="ラン画面で未反映の入力を確認します" />
+        <TextBlock Grid.Column="2" Text="{Binding StatusMessage}" Classes="body" TextTrimming="CharacterEllipsis" MaxLines="1" ToolTip.Tip="{Binding StatusMessage}" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="3" Text="{Binding CaptureState}" Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxLines="1" MaxWidth="240" ToolTip.Tip="{Binding CaptureState}" VerticalAlignment="Center" />
       </Grid>
     </Border>
   </Grid>

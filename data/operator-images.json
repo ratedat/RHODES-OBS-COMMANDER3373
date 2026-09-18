@@ -1,18 +1,18 @@
 {
     "version":  1,
     "meta":  {
-                 "generatedAt":  "2026-08-13",
+                 "generatedAt":  "2026-09-18",
                  "source":  "arknights.wikiru.jp operator table image refs",
                  "assetRoot":  "assets/operators/wikiru"
              },
     "summary":  {
-                    "operators":  437,
-                    "withImages":  437,
+                    "operators":  441,
+                    "withImages":  441,
                     "failedDownloads":  0,
-                    "downloaded":  5,
-                    "cached":  432,
-                    "uniqueSourceImages":  437,
-                    "japanUnreleased":  18
+                    "downloaded":  4,
+                    "cached":  437,
+                    "uniqueSourceImages":  441,
+                    "japanUnreleased":  19
                 },
     "images":  [
                    {
@@ -421,6 +421,17 @@
                        "sourcePath":  "img/togawasakiko_icon.png",
                        "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_746F6761776173616B696B6F5F69636F6E2E706E67.png",
                        "localPath":  "assets/operators/wikiru/img/togawasakiko_icon.png"
+                   },
+                   {
+                       "operatorId":  "zima2",
+                       "name":  "怒潮ズィマー",
+                       "rarity":  6,
+                       "sourceTable":  "テーブル/★6",
+                       "sourceSection":  "standard",
+                       "isJapanUnreleased":  false,
+                       "sourcePath":  "img/zima2_icon.png",
+                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7A696D61325F69636F6E2E706E67.png",
+                       "localPath":  "assets/operators/wikiru/img/zima2_icon.png"
                    },
                    {
                        "operatorId":  "gavial2",
@@ -1413,17 +1424,6 @@
                        "localPath":  "assets/operators/wikiru/img/swire2_icon.png"
                    },
                    {
-                       "operatorId":  "zima2",
-                       "name":  "怒潮ズィマー",
-                       "rarity":  6,
-                       "sourceTable":  "テーブル/★6",
-                       "sourceSection":  "japan_unreleased",
-                       "isJapanUnreleased":  true,
-                       "sourcePath":  "img/zima2_icon.png",
-                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_7A696D61325F69636F6E2E706E67.png",
-                       "localPath":  "assets/operators/wikiru/img/zima2_icon.png"
-                   },
-                   {
                        "operatorId":  "viy",
                        "name":  "ヴィイ",
                        "rarity":  6,
@@ -1510,6 +1510,17 @@
                        "sourcePath":  "img/angelina2_icon.png",
                        "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_616E67656C696E61325F69636F6E2E706E67.png",
                        "localPath":  "assets/operators/wikiru/img/angelina2_icon.png"
+                   },
+                   {
+                       "operatorId":  "makotoyuki",
+                       "name":  "結城理",
+                       "rarity":  6,
+                       "sourceTable":  "テーブル/★6",
+                       "sourceSection":  "japan_unreleased",
+                       "isJapanUnreleased":  true,
+                       "sourcePath":  "img/makotoyuki_icon.png",
+                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_6D616B6F746F79756B695F69636F6E2E706E67.png",
+                       "localPath":  "assets/operators/wikiru/img/makotoyuki_icon.png"
                    },
                    {
                        "operatorId":  "elysium",
@@ -2909,6 +2920,17 @@
                        "localPath":  "assets/operators/wikiru/img/icon_whisperain.png"
                    },
                    {
+                       "operatorId":  "ukusik",
+                       "name":  "ウクシク",
+                       "rarity":  5,
+                       "sourceTable":  "テーブル/★5",
+                       "sourceSection":  "standard",
+                       "isJapanUnreleased":  false,
+                       "sourcePath":  "img/ukusik_icon.png",
+                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_756B7573696B5F69636F6E2E706E67.png",
+                       "localPath":  "assets/operators/wikiru/img/ukusik_icon.png"
+                   },
+                   {
                        "operatorId":  "silence",
                        "name":  "サイレンス",
                        "rarity":  5,
@@ -3283,6 +3305,17 @@
                        "localPath":  "assets/operators/wikiru/img/proviso_icon.png"
                    },
                    {
+                       "operatorId":  "botani",
+                       "name":  "ボタニ",
+                       "rarity":  5,
+                       "sourceTable":  "テーブル/★5",
+                       "sourceSection":  "standard",
+                       "isJapanUnreleased":  false,
+                       "sourcePath":  "img/botani_icon.png",
+                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_626F74616E695F69636F6E2E706E67.png",
+                       "localPath":  "assets/operators/wikiru/img/botani_icon.png"
+                   },
+                   {
                        "operatorId":  "bobbing",
                        "name":  "ボビング",
                        "rarity":  5,
@@ -3602,28 +3635,6 @@
                        "localPath":  "assets/operators/wikiru/img/wakabamutsumi_icon.png"
                    },
                    {
-                       "operatorId":  "ukusik",
-                       "name":  "ウクシク",
-                       "rarity":  5,
-                       "sourceTable":  "テーブル/★5",
-                       "sourceSection":  "japan_unreleased",
-                       "isJapanUnreleased":  true,
-                       "sourcePath":  "img/ukusik_icon.png",
-                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_756B7573696B5F69636F6E2E706E67.png",
-                       "localPath":  "assets/operators/wikiru/img/ukusik_icon.png"
-                   },
-                   {
-                       "operatorId":  "botani",
-                       "name":  "ボタニ",
-                       "rarity":  5,
-                       "sourceTable":  "テーブル/★5",
-                       "sourceSection":  "japan_unreleased",
-                       "isJapanUnreleased":  true,
-                       "sourcePath":  "img/botani_icon.png",
-                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_626F74616E695F69636F6E2E706E67.png",
-                       "localPath":  "assets/operators/wikiru/img/botani_icon.png"
-                   },
-                   {
                        "operatorId":  "crackborne",
                        "name":  "クラックボーン",
                        "rarity":  5,
@@ -3677,6 +3688,28 @@
                        "sourcePath":  "img/timeslot_icon.png",
                        "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_74696D65736C6F745F69636F6E2E706E67.png",
                        "localPath":  "assets/operators/wikiru/img/timeslot_icon.png"
+                   },
+                   {
+                       "operatorId":  "aegis",
+                       "name":  "アイギス",
+                       "rarity":  5,
+                       "sourceTable":  "テーブル/★5",
+                       "sourceSection":  "japan_unreleased",
+                       "isJapanUnreleased":  true,
+                       "sourcePath":  "img/aegis_icon.png",
+                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_61656769735F69636F6E2E706E67.png",
+                       "localPath":  "assets/operators/wikiru/img/aegis_icon.png"
+                   },
+                   {
+                       "operatorId":  "yukaritakeba",
+                       "name":  "岳羽ゆかり",
+                       "rarity":  5,
+                       "sourceTable":  "テーブル/★5",
+                       "sourceSection":  "japan_unreleased",
+                       "isJapanUnreleased":  true,
+                       "sourcePath":  "img/yukaritakeba_icon.png",
+                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_79756B61726974616B6562615F69636F6E2E706E67.png",
+                       "localPath":  "assets/operators/wikiru/img/yukaritakeba_icon.png"
                    },
                    {
                        "operatorId":  "tulip",
@@ -4821,6 +4854,17 @@
                        "sourcePath":  "img/rhodesislandrecon_icon.png",
                        "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_72686F64657369736C616E647265636F6E5F69636F6E2E706E67.png",
                        "localPath":  "assets/operators/wikiru/img/rhodesislandrecon_icon.png"
+                   },
+                   {
+                       "operatorId":  "koromaru",
+                       "name":  "コロマル",
+                       "rarity":  1,
+                       "sourceTable":  "テーブル/★1",
+                       "sourceSection":  "japan_unreleased",
+                       "isJapanUnreleased":  true,
+                       "sourcePath":  "img/koromaru_icon.png",
+                       "sourceUrl":  "https://arknights.wikiru.jp/attach2/696D67_6B6F726F6D6172755F69636F6E2E706E67.png",
+                       "localPath":  "assets/operators/wikiru/img/koromaru_icon.png"
                    }
                ],
     "failed":  [

@@ -1,7 +1,8 @@
 <UserControl
     x:Class="RhodesSuki.Views.Workspaces.RunWorkspaceView"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:RhodesSuki.Controls">
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Spacing="18">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
@@ -23,18 +24,22 @@
       </Border>
 
       <Border Classes="filterBar">
-        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
-          <Button Content="撮影" Command="{Binding CaptureCommand}" />
-          <Button Grid.Column="1" Content="基本情報"
-                  Command="{Binding RunCommonRecognitionAndApplyCommand}" />
-          <Button Grid.Column="2" Content="特殊値" Command="{Binding RunCurrentSpecialRecognitionAndApplyCommand}" />
-          <Button Grid.Column="3" Content="オペレーター"
-                  Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="operatorsFull" />
-          <Button Grid.Column="4" Content="秘宝"
-                  Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="relicsFull" />
-          <TextBlock Grid.Column="6" Text="{Binding LastCandidateApplySummary}" Classes="caption"
-                     MaxWidth="420" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-        </Grid>
+        <StackPanel Spacing="4">
+          <WrapPanel Classes="runtimeActions" HorizontalAlignment="Left">
+            <TextBlock Text="項目を指定して取得" Classes="denseLabel" VerticalAlignment="Center" Margin="4,0,16,8" />
+            <Button Classes="secondaryAction compactAction" Content="基本情報"
+                    Command="{Binding RunCommonRecognitionAndApplyCommand}" ToolTip.Tip="源石錐・等級・分隊を取得して反映します" />
+            <Button Classes="secondaryAction compactAction" Content="特殊値"
+                    Command="{Binding RunCurrentSpecialRecognitionAndApplyCommand}" ToolTip.Tip="現在テーマの特殊値を取得して反映します" />
+            <Button Classes="secondaryAction compactAction" Content="オペレーター"
+                    Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="operatorsFull" />
+            <Button Classes="secondaryAction compactAction" Content="秘宝"
+                    Command="{Binding RunProfileRecognitionAndApplyCommand}" CommandParameter="relicsFull" />
+            <Button Classes="tertiaryAction compactAction" Content="撮影のみ" Command="{Binding CaptureCommand}" />
+          </WrapPanel>
+          <TextBlock Text="{Binding LastCandidateApplySummary}" Classes="caption" TextWrapping="Wrap"
+                     MaxLines="2" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding LastCandidateApplySummary}" Margin="4,0" />
+        </StackPanel>
       </Border>
 
       <Border Classes="metricBand" Padding="0">
@@ -45,11 +50,10 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Border Padding="18,14" BorderBrush="{StaticResource WorkbenchBorder}" BorderThickness="0,0,1,0"
-                      MinHeight="92" ToolTip.Tip="{Binding Detail}">
+                      MinHeight="76">
                 <StackPanel Spacing="3">
                   <TextBlock Text="{Binding Label}" Classes="eyebrow" />
                   <TextBlock Text="{Binding Value}" Classes="metricValue" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Text="{Binding Detail}" Classes="caption" MaxLines="1" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </Border>
             </DataTemplate>
@@ -60,33 +64,42 @@
       <Grid ColumnDefinitions="2*,1.15*" ColumnSpacing="16">
         <Border Classes="surfaceCard">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Spacing="2">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="4">
                 <TextBlock Text="手動補正" Classes="sectionTitle" />
-                <TextBlock Text="大会進行中に変わった値だけを修正します。" Classes="caption" />
+                <Border Classes="statusPill" Classes.unapplied="{Binding HasUnappliedManualRunValues}"
+                        HorizontalAlignment="Left">
+                  <TextBlock Text="{Binding ManualRunValuesStatusLabel}" Classes="caption" />
+                </Border>
               </StackPanel>
-              <Button Grid.Column="1" Classes="primaryAction" Content="反映" Command="{Binding ApplyManualRunValuesCommand}" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Classes="primaryAction" Content="{Binding ManualRunValuesButtonLabel}"
+                        Command="{Binding ApplyManualRunValuesCommand}" ToolTip.Tip="入力値を現在のランへ反映します" />
+                <Button Classes="tertiaryAction compactAction" Content="入力を戻す"
+                        Command="{Binding RevertManualRunValuesCommand}" IsEnabled="{Binding HasUnappliedManualRunValues}"
+                        ToolTip.Tip="未反映の手動補正だけを現在の値に戻します" />
+              </StackPanel>
             </Grid>
 
-            <Border Grid.Row="1" Classes="resultBanner" IsVisible="{Binding IsManualDifficultyCampaign}">
+            <Border Grid.Row="1" Classes="informationBanner" IsVisible="{Binding IsManualDifficultyCampaign}">
               <TextBlock Text="{Binding ManualDifficultyGuidance}" TextWrapping="Wrap" />
             </Border>
 
             <Grid Grid.Row="2" ColumnDefinitions="*,*,1.45*" ColumnSpacing="12">
               <StackPanel Spacing="5">
                 <TextBlock Text="源石錐" Classes="eyebrow" />
-                <NumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0"
-                               Value="{Binding ManualIngot, Mode=TwoWay}" />
+                <controls:RhodesNumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0"
+                               AutomationProperties.Name="源石錐" Value="{Binding ManualIngot, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
                 <TextBlock Text="等級" Classes="eyebrow" />
-                <NumericUpDown Minimum="1" Maximum="{Binding ManualDifficultyMaximum}" Increment="1" FormatString="0"
-                               Value="{Binding ManualDifficulty, Mode=TwoWay}" />
+                <controls:RhodesNumericUpDown Minimum="1" Maximum="{Binding ManualDifficultyMaximum}" Increment="1" FormatString="0"
+                               AutomationProperties.Name="等級" Value="{Binding ManualDifficulty, Mode=TwoWay}" />
                 <TextBlock Text="{Binding ManualDifficultyTierLabel}" Classes="caption" Foreground="{StaticResource WorkbenchSuccess}" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="5">
                 <TextBlock Text="分隊" Classes="eyebrow" />
-                <ComboBox ItemsSource="{Binding ManualSquadOptions}" SelectedItem="{Binding SelectedManualSquad, Mode=TwoWay}" />
+                <ComboBox AutomationProperties.Name="分隊" ItemsSource="{Binding ManualSquadOptions}" SelectedItem="{Binding SelectedManualSquad, Mode=TwoWay}" />
               </StackPanel>
             </Grid>
 
@@ -100,9 +113,9 @@
 
         <Border Grid.Column="1" Classes="surfaceCard">
           <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
-            <StackPanel Spacing="2">
+            <StackPanel Spacing="4">
               <TextBlock Text="現在の選択" Classes="sectionTitle" />
-              <TextBlock Text="{Binding RunSelectionSummary}" Classes="caption" />
+              <TextBlock Text="{Binding RunSelectionSummary}" Classes="body" TextWrapping="Wrap" />
             </StackPanel>
             <ItemsControl Grid.Row="1" ItemsSource="{Binding RunSelectionHighlights}">
               <ItemsControl.ItemsPanel>
@@ -118,8 +131,12 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Button Grid.Row="2" Classes="tertiaryAction" Content="選択を編集" HorizontalAlignment="Right"
-                    Command="{Binding SetWorkspaceCommand}" CommandParameter="choices" />
+            <WrapPanel Grid.Row="2" Classes="runtimeActions" HorizontalAlignment="Left">
+              <Button Classes="secondaryAction compactAction" Content="オペレーターを編集"
+                      Command="{Binding NavigateToOperatorsCommand}" />
+              <Button Classes="secondaryAction compactAction" Content="秘宝を編集"
+                      Command="{Binding NavigateToRelicsCommand}" />
+            </WrapPanel>
           </Grid>
         </Border>
       </Grid>
@@ -127,22 +144,29 @@
       <Border Classes="surfaceCard">
         <Grid RowDefinitions="Auto,Auto" RowSpacing="12">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <StackPanel Spacing="2">
+            <StackPanel Spacing="4">
               <TextBlock Text="大会メモ" Classes="sectionTitle" />
-              <TextBlock Text="点数・引き出し数・任意メモを独立したOBS部品へ送ります。" Classes="caption" />
+              <TextBlock Text="点数・引き出し数・メモをOBSへ反映します。" Classes="caption" TextWrapping="Wrap" />
+              <Border Classes="statusPill" Classes.unapplied="{Binding HasUnappliedTournamentInfo}" HorizontalAlignment="Left">
+                <TextBlock Text="{Binding TournamentInfoStatusLabel}" Classes="caption" />
+              </Border>
             </StackPanel>
-            <Button Grid.Column="1" Classes="primaryAction" Content="大会情報を反映"
-                    Command="{Binding ApplyTournamentInfoCommand}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Button Classes="tertiaryAction compactAction" Content="入力を戻す"
+                      Command="{Binding RevertTournamentInfoCommand}" IsEnabled="{Binding HasUnappliedTournamentInfo}"
+                      ToolTip.Tip="未反映の大会メモだけを現在の値に戻します" />
+              <Button Classes="primaryAction" Content="{Binding TournamentInfoButtonLabel}" Command="{Binding ApplyTournamentInfoCommand}" />
+            </StackPanel>
           </Grid>
           <Grid Grid.Row="1" ColumnDefinitions="180,180,*" ColumnSpacing="12">
             <StackPanel Spacing="5">
               <TextBlock Text="点数" Classes="eyebrow" />
-              <NumericUpDown Minimum="-999999" Maximum="999999" Increment="1" FormatString="0"
+              <controls:RhodesNumericUpDown Minimum="-999999" Maximum="999999" Increment="1" FormatString="0"
                              Value="{Binding ManualTournamentScore, Mode=TwoWay}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="5">
               <TextBlock Text="引き出し数" Classes="eyebrow" />
-              <NumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0"
+              <controls:RhodesNumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0"
                              Value="{Binding ManualTournamentWithdrawals, Mode=TwoWay}" />
             </StackPanel>
             <StackPanel Grid.Column="2" Spacing="5">

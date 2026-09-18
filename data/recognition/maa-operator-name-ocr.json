@@ -18382,7 +18382,7 @@
   ],
   "summary": {
     "rawRuleCount": 1064,
-    "localOperatorCount": 437,
+    "localOperatorCount": 441,
     "rulesWithLocalMatches": 408,
     "uniqueMatchedLocalOperators": 412,
     "invalidRegexRules": 0,

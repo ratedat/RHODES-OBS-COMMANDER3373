@@ -1,7 +1,8 @@
 <UserControl
     x:Class="RhodesSuki.Views.Workspaces.SpecialWorkspaceView"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:RhodesSuki.Controls">
   <UserControl.Resources>
     <DataTemplate x:Key="SamiRevelationEditorTemplate">
       <Border MinHeight="132"
@@ -36,7 +37,7 @@
                       ItemsSource="{Binding StateOptions}"
                       SelectedItem="{Binding SelectedState, Mode=TwoWay}" />
             <TextBlock Grid.Column="3" Text="個数" VerticalAlignment="Center" FontWeight="SemiBold" />
-            <NumericUpDown Grid.Column="4"
+            <controls:RhodesNumericUpDown Grid.Column="4"
                            Minimum="1"
                            Maximum="99"
                            Value="{Binding Count, Mode=TwoWay}" />
@@ -258,7 +259,7 @@
             <TextBlock Text="遊覧券" Classes="h3" />
             <TextBlock Text="マップ右上から取得するか、現在値を直接入力して反映します。" Classes="caption" />
             <WrapPanel Orientation="Horizontal">
-              <NumericUpDown Width="140"
+              <controls:RhodesNumericUpDown Width="140"
                              Margin="0,0,8,8"
                              Minimum="0"
                              Maximum="999"
@@ -447,7 +448,7 @@
                                   CommandParameter="{Binding}"
                                   AutomationProperties.Name="有効銭から削除"
                                   ToolTip.Tip="有効銭から削除" />
-                          <NumericUpDown Grid.Row="1" Grid.Column="0" Width="68" Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
+                          <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="0" Width="68" Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
                           <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus, Mode=TwoWay}" />
                         </Grid>
                       </Border>
@@ -485,7 +486,7 @@
                                   CommandParameter="{Binding}"
                                   AutomationProperties.Name="保有銭から削除"
                                   ToolTip.Tip="保有銭から削除" />
-                          <NumericUpDown Grid.Row="1" Grid.Column="0" Width="68" Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
+                          <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="0" Width="68" Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
                           <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus, Mode=TwoWay}" />
                         </Grid>
                       </Border>
@@ -630,9 +631,9 @@
 
           <WrapPanel>
             <TextBlock Text="鍵" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
-            <NumericUpDown Width="120" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding ManualMizukiKey, Mode=TwoWay}" Margin="0,0,18,6" />
+            <controls:RhodesNumericUpDown Width="120" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding ManualMizukiKey, Mode=TwoWay}" Margin="0,0,18,6" />
             <TextBlock Text="灯火" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
-            <NumericUpDown Width="120" Minimum="0" Maximum="100" Increment="1" FormatString="0" Value="{Binding ManualMizukiLight, Mode=TwoWay}" Margin="0,0,10,6" />
+            <controls:RhodesNumericUpDown Width="120" Minimum="0" Maximum="100" Increment="1" FormatString="0" Value="{Binding ManualMizukiLight, Mode=TwoWay}" Margin="0,0,10,6" />
           </WrapPanel>
 
           <TextBlock Text="大群の呼び声（複数選択）" FontWeight="SemiBold" />
@@ -808,7 +809,7 @@
 
           <WrapPanel>
             <TextBlock Text="構想" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
-            <NumericUpDown Width="130" Minimum="0" Maximum="999" Increment="1" FormatString="0" Value="{Binding ManualIdea, Mode=TwoWay}" Margin="0,0,16,6" />
+            <controls:RhodesNumericUpDown Width="130" Minimum="0" Maximum="999" Increment="1" FormatString="0" Value="{Binding ManualIdea, Mode=TwoWay}" Margin="0,0,16,6" />
             <TextBlock Text="時代" Classes="caption" VerticalAlignment="Center" Margin="0,0,6,6" />
             <ComboBox Width="360" ItemsSource="{Binding ManualAgeOptions}" SelectedItem="{Binding SelectedManualAge, Mode=TwoWay}" Margin="0,0,10,6" />
           </WrapPanel>
@@ -844,7 +845,7 @@
                                 CommandParameter="{Binding}"
                                 AutomationProperties.Name="思案の詳細を表示"
                                 ToolTip.Tip="思案の詳細を表示" />
-                        <NumericUpDown Grid.Column="3" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
+                        <controls:RhodesNumericUpDown Grid.Column="3" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding Count, Mode=TwoWay}" />
                       </Grid>
                     </Border>
                   </DataTemplate>

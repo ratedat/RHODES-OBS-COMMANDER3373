@@ -113,6 +113,7 @@ async function copyRequiredMasterData() {
   const requiredFiles = [
     "data/campaigns.json",
     "data/operators.json",
+    "data/operator-implementation-history.json",
     "data/performances.json",
     "data/relics.json",
     "data/selectable-effects.json",

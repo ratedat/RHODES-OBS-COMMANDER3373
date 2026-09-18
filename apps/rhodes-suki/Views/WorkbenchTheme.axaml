@@ -307,7 +307,7 @@
     <Setter Property="Background" Value="{StaticResource WorkbenchSelection}" />
     <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
   </Style>
-  <Style Selector="Button.catalogItem.excluded">
+  <Style Selector="Grid.catalogItemContainer.excluded">
     <Setter Property="Opacity" Value="0.45" />
   </Style>
   <Style Selector="Button.choiceCard">
@@ -319,6 +319,28 @@
     <Setter Property="Background" Value="{StaticResource WorkbenchSelection}" />
     <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
     <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="Button.activeNavAction">
+    <Setter Property="Background" Value="{StaticResource WorkbenchPressed}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+    <Setter Property="BorderThickness" Value="2,1,1,1" />
+  </Style>
+  <Style Selector="Border.statusPill">
+    <Setter Property="Background" Value="{StaticResource WorkbenchFloating}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSeparator}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
+    <Setter Property="Padding" Value="8,3" />
+  </Style>
+  <Style Selector="Border.statusPill.unapplied">
+    <Setter Property="Background" Value="{StaticResource WorkbenchWarningSurface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchWarning}" />
+  </Style>
+  <Style Selector="Button.pendingEditsAction">
+    <Setter Property="Background" Value="{StaticResource WorkbenchWarningSurface}" />
+    <Setter Property="Foreground" Value="{StaticResource WorkbenchWarning}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchWarning}" />
+    <Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="RadioButton.segmented">
     <Setter Property="MinHeight" Value="{StaticResource WorkbenchControlTargetMinHeight}" />
@@ -613,6 +635,13 @@
     <Setter Property="Background" Value="{StaticResource WorkbenchSuccessSurface}" />
     <Setter Property="BorderBrush" Value="{StaticResource WorkbenchSuccess}" />
     <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
+    <Setter Property="Padding" Value="12,9" />
+  </Style>
+  <Style Selector="Border.informationBanner">
+    <Setter Property="Background" Value="{StaticResource WorkbenchSelection}" />
+    <Setter Property="BorderBrush" Value="{StaticResource WorkbenchAccent}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
     <Setter Property="CornerRadius" Value="{StaticResource WorkbenchCornerSmall}" />
     <Setter Property="Padding" Value="12,9" />
   </Style>

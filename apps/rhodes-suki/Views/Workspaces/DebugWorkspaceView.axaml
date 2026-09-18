@@ -1,7 +1,8 @@
 <UserControl
     x:Class="RhodesSuki.Views.Workspaces.DebugWorkspaceView"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:RhodesSuki.Controls">
   <Grid RowDefinitions="Auto,*" RowSpacing="12">
     <StackPanel Spacing="2">
       <TextBlock Text="{Binding DebugLayout.Header.Title}" FontSize="20" FontWeight="SemiBold" />
@@ -152,29 +153,29 @@
             </Grid>
 
             <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
-              <StackPanel Spacing="2"><TextBlock Text="ROI X" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="1279" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiX, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="ROI Y" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="719" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiY, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="幅" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="1" Maximum="1280" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiWidth, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Column="3" Spacing="2"><TextBlock Text="高さ" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="1" Maximum="720" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiHeight, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Spacing="2"><TextBlock Text="ROI X" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="0" Maximum="1279" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiX, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="ROI Y" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="0" Maximum="719" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiY, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="幅" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="1" Maximum="1280" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiWidth, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="3" Spacing="2"><TextBlock Text="高さ" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="1" Maximum="720" Increment="1" FormatString="0" Value="{Binding RecognitionLab.RoiHeight, Mode=TwoWay}" /></StackPanel>
             </Grid>
 
             <Grid IsVisible="{Binding RecognitionLab.IsOcrMode}" ColumnDefinitions="*,150,Auto" ColumnSpacing="8">
               <StackPanel Spacing="2"><TextBlock Text="expected（カンマまたは改行区切り）" FontSize="10" Opacity="0.58" /><TextBox Text="{Binding RecognitionLab.Expected, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="threshold" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding RecognitionLab.Threshold, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="threshold" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding RecognitionLab.Threshold, Mode=TwoWay}" /></StackPanel>
               <CheckBox Grid.Column="2" Content="only_rec" IsChecked="{Binding RecognitionLab.OnlyRecognition, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,7" />
             </Grid>
 
             <Grid IsVisible="{Binding RecognitionLab.IsTemplateMode}" ColumnDefinitions="*,120,150" ColumnSpacing="8">
               <StackPanel Spacing="2"><TextBlock Text="template（resource/base/imageからの相対パス）" FontSize="10" Opacity="0.58" /><TextBox Text="{Binding RecognitionLab.Template, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="method" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="10" Increment="1" FormatString="0" Value="{Binding RecognitionLab.TemplateMethod, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="threshold" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding RecognitionLab.Threshold, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="method" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="0" Maximum="10" Increment="1" FormatString="0" Value="{Binding RecognitionLab.TemplateMethod, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="threshold" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding RecognitionLab.Threshold, Mode=TwoWay}" /></StackPanel>
             </Grid>
 
             <Grid IsVisible="{Binding RecognitionLab.IsColorMode}" RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,120,120" ColumnSpacing="8" RowSpacing="6">
               <StackPanel Spacing="2"><TextBlock Text="lower (3値)" FontSize="10" Opacity="0.58" /><TextBox Text="{Binding RecognitionLab.ColorLower, Mode=TwoWay}" /></StackPanel>
               <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="upper (3値)" FontSize="10" Opacity="0.58" /><TextBox Text="{Binding RecognitionLab.ColorUpper, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="method" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding RecognitionLab.ColorMethod, Mode=TwoWay}" /></StackPanel>
-              <StackPanel Grid.Column="3" Spacing="2"><TextBlock Text="count" FontSize="10" Opacity="0.58" /><NumericUpDown Minimum="1" Maximum="921600" Increment="1" FormatString="0" Value="{Binding RecognitionLab.ColorCount, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="method" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding RecognitionLab.ColorMethod, Mode=TwoWay}" /></StackPanel>
+              <StackPanel Grid.Column="3" Spacing="2"><TextBlock Text="count" FontSize="10" Opacity="0.58" /><controls:RhodesNumericUpDown Minimum="1" Maximum="921600" Increment="1" FormatString="0" Value="{Binding RecognitionLab.ColorCount, Mode=TwoWay}" /></StackPanel>
               <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Content="connected（連結領域として判定）" IsChecked="{Binding RecognitionLab.ColorConnected, Mode=TwoWay}" />
             </Grid>
 

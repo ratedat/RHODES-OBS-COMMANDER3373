@@ -9,6 +9,7 @@ test("portable publisher includes local-image master data and assets", () => {
   );
 
   assert.match(source, /"data\/campaigns\.json"/);
+  assert.match(source, /"data\/operator-implementation-history\.json"/);
   assert.match(source, /"data\/performances\.json"/);
   assert.match(source, /"data\/selectable-effects\.json"/);
   assert.match(source, /const assetDirectories = \["bosses", "performances", "selectable-effects", "ui"\]/);

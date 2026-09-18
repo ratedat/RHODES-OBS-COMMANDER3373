@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
@@ -22,6 +23,10 @@ public partial class ChoicesWorkspaceView : UserControl
         RegisterChoicePaneDrag(RelicChoicePane);
     }
 
+    private void ClearOperatorSearchClicked(object? sender, RoutedEventArgs e) => OperatorSearchBox.Focus();
+
+    private void ClearRelicSearchClicked(object? sender, RoutedEventArgs e) => RelicSearchBox.Focus();
+
     private void RegisterChoicePaneDrag(ItemsControl pane)
     {
         pane.AddHandler(PointerPressedEvent, ChoicePanePointerPressed, RoutingStrategies.Tunnel, true);
@@ -33,6 +38,7 @@ public partial class ChoicesWorkspaceView : UserControl
     private void ChoicePanePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Control source
+            || !CanStartChoicePaneDrag(e.Source as Visual)
             || !e.GetCurrentPoint(source).Properties.IsLeftButtonPressed)
         {
             return;
@@ -43,6 +49,13 @@ public partial class ChoicesWorkspaceView : UserControl
         _dragStartPoint = e.GetPosition(source);
         _dragStartOffset = _dragScrollViewer?.Offset ?? default;
         _isDragging = false;
+    }
+
+    internal static bool CanStartChoicePaneDrag(Visual? source)
+    {
+        // ScrollBar owns its track and thumb gestures; do not steal their pointer capture.
+        return source is not null && source is not ScrollBar
+            && !source.GetVisualAncestors().Any(ancestor => ancestor is ScrollBar);
     }
 
     private void ChoicePanePointerMoved(object? sender, PointerEventArgs e)

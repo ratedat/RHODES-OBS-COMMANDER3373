@@ -1,7 +1,8 @@
 <UserControl
     x:Class="RhodesSuki.Views.Workspaces.ChoicesWorkspaceView"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:RhodesSuki.Controls">
   <UserControl.Styles>
     <Style Selector="TextBlock.rejectionTarget">
       <Setter Property="Foreground" Value="{StaticResource WorkbenchRejectionTarget}" />
@@ -41,48 +42,98 @@
     <Grid Grid.Row="1">
       <Border Classes="filterBar" IsVisible="{Binding IsOperatorsPanelVisible}">
         <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
-          <Grid ColumnDefinitions="*,150,180,130,160" ColumnSpacing="8">
-            <TextBox Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分で検索" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="職業で絞り込み" />
-            <ComboBox Grid.Column="2" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="職分で絞り込み" />
-            <ComboBox Grid.Column="3" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="レア度で絞り込み" />
-            <ComboBox Grid.Column="4" ItemsSource="{Binding OperatorSortOptions}" SelectedItem="{Binding OperatorSortMode, Mode=TwoWay}"
+          <Grid ColumnDefinitions="*,150,180,130,160" RowDefinitions="Auto,Auto" RowSpacing="4" ColumnSpacing="8">
+            <TextBlock Text="検索" Classes="caption" />
+            <TextBlock Grid.Column="1" Text="職業" Classes="caption" />
+            <TextBlock Grid.Column="2" Text="職分" Classes="caption" />
+            <TextBlock Grid.Column="3" Text="レア度" Classes="caption" />
+            <TextBlock Grid.Column="4" Text="並び順" Classes="caption" />
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+              <TextBox x:Name="OperatorSearchBox" AutomationProperties.Name="オペレーター検索" Text="{Binding OperatorSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="名前、職業、職分で検索" />
+              <Button Grid.Column="1" Classes="tertiaryAction compactAction" Content="✕"
+                      Command="{Binding ClearOperatorSearchCommand}"
+                      IsEnabled="{Binding HasOperatorSearchText}" Width="44"
+                      Click="ClearOperatorSearchClicked" AutomationProperties.Name="オペレーターの検索文字列をクリア"
+                      Margin="4,0,0,0" ToolTip.Tip="検索文字列をクリア" />
+            </Grid>
+            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding OperatorClassOptions}" SelectedItem="{Binding OperatorClassFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="職業で絞り込み" />
+            <ComboBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding OperatorBranchOptions}" SelectedItem="{Binding OperatorBranchFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="職分で絞り込み" />
+            <ComboBox Grid.Row="1" Grid.Column="3" ItemsSource="{Binding OperatorRarityOptions}" SelectedItem="{Binding OperatorRarityFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="レア度で絞り込み" />
+            <ComboBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding OperatorSortOptions}" SelectedItem="{Binding OperatorSortMode, Mode=TwoWay}"
                       ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}"
                       ToolTip.Tip="表示順を切り替え" />
           </Grid>
-          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,84,Auto,Auto,Auto" ColumnSpacing="12">
-            <TextBlock Text="{Binding OperatorListSummary}" Classes="caption" VerticalAlignment="Center" />
-            <TextBlock Grid.Column="1" Text="表示列" Classes="caption" VerticalAlignment="Center" />
-            <NumericUpDown Grid.Column="2" Minimum="1" Maximum="4" Increment="1" FormatString="0" Value="{Binding OperatorPaneColumns, Mode=TwoWay}" />
-            <CheckBox Grid.Column="3" Content="選択を先頭" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" VerticalAlignment="Center" />
-            <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" VerticalAlignment="Center" />
-            <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" VerticalAlignment="Center" />
-          </Grid>
+          <WrapPanel Grid.Row="1">
+            <TextBlock Text="{Binding OperatorListSummary}" Classes="caption" MaxWidth="200"
+                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding OperatorListSummary}"
+                       VerticalAlignment="Center" Margin="0,0,16,4" />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,4">
+              <TextBlock Text="表示列" Classes="caption" VerticalAlignment="Center" />
+              <controls:RhodesNumericUpDown Width="84" Minimum="1" Maximum="4" Increment="1" FormatString="0"
+                             AutomationProperties.Name="表示列数" Value="{Binding OperatorPaneColumns, Mode=TwoWay}" />
+            </StackPanel>
+            <CheckBox Content="選択を先頭" IsChecked="{Binding OperatorShowSelectedFirst, Mode=TwoWay}" Margin="0,0,12,4" />
+            <CheckBox Content="除外を隠す" IsChecked="{Binding OperatorHideExcluded, Mode=TwoWay}" Margin="0,0,12,4" />
+            <CheckBox Content="選択のみ" IsChecked="{Binding OperatorSelectedOnly, Mode=TwoWay}" Margin="0,0,12,4" />
+            <Button Classes="tertiaryAction compactAction" Content="条件リセット" Command="{Binding ResetOperatorFiltersCommand}"
+                    ToolTip.Tip="検索・絞り込み・並び順を初期状態へ戻します。所持品の選択は変わりません。" Margin="0,0,0,4" />
+          </WrapPanel>
         </Grid>
       </Border>
 
       <Border Classes="filterBar" IsVisible="{Binding IsRelicsPanelVisible}">
         <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
-          <Grid ColumnDefinitions="*,260,170" ColumnSpacing="8">
-            <TextBox Text="{Binding RelicSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="秘宝名、番号、効果で検索" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="秘宝種別で絞り込み" />
-            <ComboBox Grid.Column="2" ItemsSource="{Binding RelicSortOptions}" SelectedItem="{Binding RelicSortMode, Mode=TwoWay}"
+          <Grid ColumnDefinitions="*,260,170" RowDefinitions="Auto,Auto" RowSpacing="4" ColumnSpacing="8">
+            <TextBlock Text="検索" Classes="caption" />
+            <TextBlock Grid.Column="1" Text="秘宝種別" Classes="caption" />
+            <TextBlock Grid.Column="2" Text="並び順" Classes="caption" />
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+              <TextBox x:Name="RelicSearchBox" AutomationProperties.Name="秘宝検索" Text="{Binding RelicSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="秘宝名、番号、効果で検索" />
+              <Button Grid.Column="1" Classes="tertiaryAction compactAction" Content="✕"
+                      Command="{Binding ClearRelicSearchCommand}"
+                      IsEnabled="{Binding HasRelicSearchText}" Width="44"
+                      Click="ClearRelicSearchClicked" AutomationProperties.Name="秘宝の検索文字列をクリア"
+                      Margin="4,0,0,0" ToolTip.Tip="検索文字列をクリア" />
+            </Grid>
+            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RelicCategoryOptions}" SelectedItem="{Binding RelicCategoryFilter, Mode=TwoWay}" ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}" ToolTip.Tip="秘宝種別で絞り込み" />
+            <ComboBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding RelicSortOptions}" SelectedItem="{Binding RelicSortMode, Mode=TwoWay}"
                       ItemTemplate="{StaticResource PlainComboItemTemplate}" SelectionBoxItemTemplate="{StaticResource PlainComboItemTemplate}"
                       ToolTip.Tip="表示順を切り替え" />
           </Grid>
-          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,84,Auto,Auto,Auto" ColumnSpacing="12">
-            <TextBlock Text="{Binding RelicListSummary}" Classes="caption" VerticalAlignment="Center" />
-            <TextBlock Grid.Column="1" Text="表示列" Classes="caption" VerticalAlignment="Center" />
-            <NumericUpDown Grid.Column="2" Minimum="1" Maximum="4" Increment="1" FormatString="0" Value="{Binding RelicPaneColumns, Mode=TwoWay}" />
-            <CheckBox Grid.Column="3" Content="選択を先頭" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" VerticalAlignment="Center" />
-            <CheckBox Grid.Column="4" Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" VerticalAlignment="Center" />
-            <CheckBox Grid.Column="5" Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" VerticalAlignment="Center" />
-          </Grid>
+          <WrapPanel Grid.Row="1">
+            <TextBlock Text="{Binding RelicListSummary}" Classes="caption" MaxWidth="200"
+                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding RelicListSummary}"
+                       VerticalAlignment="Center" Margin="0,0,16,4" />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,4">
+              <TextBlock Text="表示列" Classes="caption" VerticalAlignment="Center" />
+              <controls:RhodesNumericUpDown Width="84" Minimum="1" Maximum="4" Increment="1" FormatString="0"
+                             AutomationProperties.Name="表示列数" Value="{Binding RelicPaneColumns, Mode=TwoWay}" />
+            </StackPanel>
+            <CheckBox Content="選択を先頭" IsChecked="{Binding RelicShowSelectedFirst, Mode=TwoWay}" Margin="0,0,12,4" />
+            <CheckBox Content="除外を隠す" IsChecked="{Binding RelicHideExcluded, Mode=TwoWay}" Margin="0,0,12,4" />
+            <CheckBox Content="選択のみ" IsChecked="{Binding RelicSelectedOnly, Mode=TwoWay}" Margin="0,0,12,4" />
+            <Button Classes="tertiaryAction compactAction" Content="条件リセット" Command="{Binding ResetRelicFiltersCommand}"
+                    ToolTip.Tip="検索・絞り込み・並び順を初期状態へ戻します。所持品の選択は変わりません。" Margin="0,0,0,4" />
+          </WrapPanel>
         </Grid>
       </Border>
     </Grid>
 
     <Grid Grid.Row="2">
+      <Border IsVisible="{Binding IsOperatorsPanelVisible}" VerticalAlignment="Top">
+        <StackPanel IsVisible="{Binding !HasFilteredOperators}" Spacing="12" Margin="24" HorizontalAlignment="Center">
+          <TextBlock Text="該当するオペレーターがありません" Classes="sectionTitle" HorizontalAlignment="Center" />
+          <TextBlock Text="検索語や絞り込み条件を見直してください。" Classes="body" TextWrapping="Wrap" />
+          <Button Content="条件をリセット" Command="{Binding ResetOperatorFiltersCommand}" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Border>
+      <Border IsVisible="{Binding IsRelicsPanelVisible}" VerticalAlignment="Top">
+        <StackPanel IsVisible="{Binding !HasFilteredRelics}" Spacing="12" Margin="24" HorizontalAlignment="Center">
+          <TextBlock Text="該当する秘宝がありません" Classes="sectionTitle" HorizontalAlignment="Center" />
+          <TextBlock Text="検索語や絞り込み条件を見直してください。" Classes="body" TextWrapping="Wrap" />
+          <Button Content="条件をリセット" Command="{Binding ResetRelicFiltersCommand}" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Border>
       <ItemsControl Classes="choicePane" ItemsSource="{Binding FilteredOperatorRows}" x:Name="OperatorChoicePane" IsVisible="{Binding IsOperatorsPanelVisible}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
@@ -94,20 +145,19 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="70">
-                      <Button Grid.Column="0" Classes="catalogItem" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="70">
-                        <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+                    <Grid Classes="catalogItemContainer" Classes.excluded="{Binding IsExcluded}" ColumnDefinitions="*,Auto" Margin="0,0,8,8" MinHeight="70">
+                      <Button Classes="catalogItem" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Name}" MinHeight="70" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                        <Grid ColumnDefinitions="42,*" ColumnSpacing="8" Margin="10" IsHitTestVisible="False">
                           <Border Width="42" Height="42" CornerRadius="6" Background="{StaticResource WorkbenchPreviewPanel}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" VerticalAlignment="Top">
                             <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="UniformToFill" />
                           </Border>
                           <StackPanel Grid.Column="1" Spacing="2">
-                            <TextBlock Text="{Binding Name}" Classes.rejectionTarget="{Binding IsRejectionReactionTarget}" Classes.evolutionTarget="{Binding IsEvolutionTarget}" Classes.candleBearerTarget="{Binding IsCandleBearerTarget}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Name}" Classes.rejectionTarget="{Binding IsRejectionReactionTarget}" Classes.evolutionTarget="{Binding IsEvolutionTarget}" Classes.candleBearerTarget="{Binding IsCandleBearerTarget}" FontSize="15" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Heading}" Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding StateLabel}" Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                           </StackPanel>
                         </Grid>
-                      </Button>
-                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                      <StackPanel Grid.Column="1" Spacing="6" Margin="0,10,10,10" VerticalAlignment="Center" IsVisible="{Binding IsSelected}">
                         <Button Content="{Binding PromotionButtonLabel}"
                                 Command="{Binding DataContext.ToggleOperatorPromotionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}"
@@ -115,10 +165,10 @@
                                 Width="72"
                                 VerticalAlignment="Center"
                                 ToolTip.Tip="昇進1と昇進2を切り替えます" />
-                        <Border Width="88" Padding="8,6" CornerRadius="6" BorderBrush="{StaticResource WorkbenchSuccess}" BorderThickness="1" Background="{StaticResource WorkbenchSuccessSurface}" IsVisible="{Binding IsSelectionCountVisible}" VerticalAlignment="Stretch">
+                        <Border Width="88" IsVisible="{Binding IsSelectionCountVisible}">
                           <StackPanel Spacing="3" VerticalAlignment="Center">
-                            <TextBlock Text="人数" FontSize="10" Opacity="0.72" HorizontalAlignment="Center" />
-                            <NumericUpDown Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding SelectionCount, Mode=TwoWay}" HorizontalAlignment="Stretch" />
+                            <TextBlock Text="人数" Classes="caption" HorizontalAlignment="Center" />
+                            <controls:RhodesNumericUpDown Minimum="1" Maximum="99" Increment="1" FormatString="0" Value="{Binding SelectionCount, Mode=TwoWay}" HorizontalAlignment="Stretch" />
                           </StackPanel>
                         </Border>
                       </StackPanel>
@@ -140,32 +190,29 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" MinHeight="118">
-                      <Button Classes="catalogItem" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" MinHeight="118">
-                        <Grid RowDefinitions="Auto,*" RowSpacing="7">
-                          <Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+                    <Grid Classes="catalogItemContainer" Classes.excluded="{Binding IsExcluded}" ColumnDefinitions="*,Auto" RowDefinitions="Auto,*" Margin="0,0,8,8" MinHeight="118">
+                      <Button Classes="catalogItem" Classes.selected="{Binding IsSelected}" Classes.excluded="{Binding IsExcluded}" Command="{Binding DataContext.ToggleChoiceSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Detail}" MinHeight="118" Grid.RowSpan="2" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                          <Grid Grid.ColumnSpan="2" ColumnDefinitions="42,*" ColumnSpacing="8" Margin="10,10,10,0" IsHitTestVisible="False">
                             <Border Width="42" Height="42" CornerRadius="6" Background="{StaticResource WorkbenchPreviewPanel}" BorderBrush="{StaticResource WorkbenchSeparator}" BorderThickness="1" VerticalAlignment="Top">
                               <Image Source="{Binding ImagePath, Converter={StaticResource BitmapPathConverter}}" Stretch="Uniform" />
                             </Border>
                             <StackPanel Grid.Column="1" Spacing="2">
-                              <TextBlock Text="{Binding Name}" Classes.rejectionTarget="{Binding IsRejectionReactionTarget}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                              <TextBlock Text="{Binding Heading}" FontSize="11" Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                              <TextBlock Text="{Binding StateLabel}" FontSize="10" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding Name}" Classes.rejectionTarget="{Binding IsRejectionReactionTarget}" FontSize="15" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding Heading}" Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding StateLabel}" Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                           </Grid>
-                          <TextBlock Grid.Row="1" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" MaxLines="3" Opacity="0.58" />
-                        </Grid>
-                      </Button>
-                      <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
-                        <Border Width="96" Padding="8,6" CornerRadius="6" BorderBrush="{StaticResource WorkbenchSuccess}" BorderThickness="1" Background="{StaticResource WorkbenchSuccessSurface}"
+                          <TextBlock Grid.Row="1" Text="{Binding Detail}" Classes="body" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="3" Margin="10,7,10,10" IsHitTestVisible="False" />
+                      <StackPanel Grid.Row="1" Grid.Column="1" Spacing="6" Margin="0,7,10,10" VerticalAlignment="Bottom" IsVisible="{Binding IsSelected}">
+                        <Border Width="96"
                                 IsVisible="{Binding IsRelicStackCountVisible}"
                                 ToolTip.Tip="画面取得で認識した値を確認・修正できます。0は未確認として出力しません。">
                           <StackPanel Spacing="3">
-                            <TextBlock Text="スタック数" FontSize="10" Opacity="0.72" HorizontalAlignment="Center" />
-                            <NumericUpDown Minimum="0" Maximum="{Binding RelicStackInputMaximum}" Increment="1" FormatString="0"
+                            <TextBlock Text="スタック数" Classes="caption" HorizontalAlignment="Center" />
+                            <controls:RhodesNumericUpDown Minimum="0" Maximum="{Binding RelicStackInputMaximum}" Increment="1" FormatString="0"
                                            Value="{Binding RelicStackCount, Mode=TwoWay}" HorizontalAlignment="Stretch"
                                            ToolTip.Tip="{Binding RelicStackMaximumLabel}" />
-                            <TextBlock Text="{Binding RelicStackMaximumLabel}" FontSize="9" Opacity="0.58" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding RelicStackMaximumLabel}" Classes="caption" HorizontalAlignment="Center" />
                           </StackPanel>
                         </Border>
                         <Button Content="{Binding UsageButtonLabel}"

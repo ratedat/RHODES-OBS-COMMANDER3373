@@ -12,6 +12,14 @@ public static class RhodesMaaRelicTitleOcrExpander
     public const string EntryPrefix = "relic.card.name.cyan.";
     public const int MaximumRetriesPerFrame = 4;
 
+    public static MaaTaskRunResult MarkTitleOnly(MaaTaskRunResult frame)
+    {
+        var document = Parse(frame.RecognitionDetailJson);
+        if (document is null) return frame;
+        document["rhodes_title_only"] = true;
+        return frame with { RecognitionDetailJson = document.ToJsonString() };
+    }
+
     public static IReadOnlyList<MaaDynamicOcrRequest> BuildRequests(MaaTaskRunResult frame, MaaOwnedImage image, string campaignId) =>
         CreatePlan(frame, image, campaignId)?.Targets.Select(target => target.Request).ToArray() ?? [];
 
@@ -21,6 +29,11 @@ public static class RhodesMaaRelicTitleOcrExpander
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (campaignId == "is5_sarkaz" && frame.Entry == RhodesMaaRelicTitleImage.ListEntry
+            && frame.Succeeded && Parse(frame.RecognitionDetailJson) is { } titleDocument
+            && titleDocument["rhodes_title_only"] is JsonValue marker
+            && marker.TryGetValue<bool>(out var titleOnly) && titleOnly)
+            return await RefineTitleBandsAsync(frame, image, campaignId, titleDocument, recognize, cancellationToken);
         var plan = CreatePlan(frame, image, campaignId);
         if (plan is null || plan.Targets.Count == 0) return new MaaRelicTitleRefinement(frame, []);
         var attempts = new List<MaaTaskRunResult>();
@@ -44,6 +57,79 @@ public static class RhodesMaaRelicTitleOcrExpander
         }
         return new MaaRelicTitleRefinement(changed ? frame with { RecognitionDetailJson = plan.Document.ToJsonString() } : frame, attempts);
     }
+
+    private static async Task<MaaRelicTitleRefinement> RefineTitleBandsAsync(
+        MaaTaskRunResult frame, MaaOwnedImage image, string campaignId, JsonObject document,
+        Func<MaaDynamicOcrRequest, CancellationToken, Task<MaaTaskRunResult>> recognize,
+        CancellationToken cancellationToken)
+    {
+        var root = document["result"] as JsonObject ?? document;
+        if (root["filtered"] is not JsonArray rows) return new MaaRelicTitleRefinement(frame, []);
+        var resolvedText = RhodesMaaLocalCandidateConverter.FromTaskResults("relicsFull", [frame], campaignId)
+            .SelectMany(item => new[] { item.RawText, item.Label }).ToHashSet(StringComparer.Ordinal);
+        var names = RhodesRecognitionCatalogCache.Load().Relics.Where(item => item.CampaignId == campaignId)
+            .GroupBy(item => TitleKey(item.Name)).Where(group => group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single().Name, StringComparer.Ordinal);
+        var attempts = new List<MaaTaskRunResult>();
+        var changed = false;
+        foreach (var region in RhodesMaaRelicTitleImage.FindTitleRegions(image))
+        {
+            if (attempts.Count >= MaximumRetriesPerFrame) break;
+            cancellationToken.ThrowIfCancellationRequested();
+            var fragments = rows.OfType<JsonObject>().Where(row => Box(row) is { } box
+                && box[0] >= region.Left - 4 && box[0] < region.Right
+                && box[1] + box[3] / 2 >= region.Top && box[1] + box[3] / 2 < region.Bottom).ToArray();
+            if (fragments.Any(row => resolvedText.Contains(Text(row)))) continue;
+            var request = new MaaDynamicOcrRequest($"{EntryPrefix}band.{attempts.Count}",
+                region.Left, region.Top, region.Width, region.Height, 4, 0);
+            var result = await recognize(request, cancellationToken);
+            attempts.Add(result);
+            var recognized = Rows(Parse(result.RecognitionDetailJson));
+            var corroborated = false;
+            var acceptedScore = recognized.Count == 1 ? Score(recognized[0]) : 0;
+            if (result.Succeeded && result.Hit && result.Entry == request.Entry && recognized.Count == 1
+                && Score(recognized[0]) is >= 0.75 and < 0.90 && attempts.Count < MaximumRetriesPerFrame
+                && names.ContainsKey(TitleKey(Text(recognized[0]))))
+            {
+                var firstKey = TitleKey(Text(recognized[0]));
+                var firstScore = Score(recognized[0]);
+                request = request with { Entry = $"{EntryPrefix}band.{attempts.Count}.fallback", Scale = 3 };
+                result = await recognize(request, cancellationToken);
+                attempts.Add(result);
+                recognized = Rows(Parse(result.RecognitionDetailJson));
+                if (recognized.Count != 1 || TitleKey(Text(recognized[0])) != firstKey) continue;
+                // A borderline read needs agreement at a second scale. Both reads
+                // must spell the complete catalog name, and confidence is not raised.
+                corroborated = firstScore >= 0.85 && Score(recognized[0]) >= 0.85;
+                acceptedScore = Math.Min(firstScore, Score(recognized[0]));
+            }
+            if (result.Succeeded && result.Hit && result.Entry == request.Entry && recognized.Count == 1
+                && (Score(recognized[0]) >= 0.90 || corroborated)
+                && names.TryGetValue(TitleKey(Text(recognized[0])), out var name))
+            {
+                foreach (var fragment in fragments.Where(row => !IsUsageLabel(Text(row)))) rows.Remove(fragment);
+                rows.Add(new JsonObject
+                {
+                    ["text"] = name, ["score"] = acceptedScore,
+                    ["box"] = new JsonArray(region.Left, region.Top, region.Width, region.Height),
+                    ["rhodes_name_retry"] = new JsonObject
+                    {
+                        ["original_text"] = string.Join(" ", fragments.Select(Text)),
+                        ["original_score"] = fragments.Select(Score).DefaultIfEmpty(0).Min(),
+                        ["entry"] = request.Entry,
+                    },
+                });
+                changed = true;
+            }
+            if (attempts.Count >= MaximumRetriesPerFrame) break;
+        }
+        return new MaaRelicTitleRefinement(changed ? frame with { RecognitionDetailJson = document.ToJsonString(), Hit = true } : frame, attempts);
+    }
+
+    private static string TitleKey(string text) => RhodesMaaLocalCandidateConverter.NormalizeRelicName(text);
+
+    private static bool IsUsageLabel(string text) => text.StartsWith("使用", StringComparison.Ordinal)
+        && text.Length <= 4 && !text.Contains("使用後", StringComparison.Ordinal);
 
     internal static bool IsTitleForeground(SKColor color) => color.Green >= 90 && color.Blue >= 90
         && color.Green - color.Red >= 25 && color.Blue - color.Red >= 25

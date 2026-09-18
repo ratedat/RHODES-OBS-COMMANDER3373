@@ -1,7 +1,8 @@
 <UserControl
     x:Class="RhodesSuki.Views.Workspaces.RuntimeWorkspaceView"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:RhodesSuki.Controls">
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ClipToBounds="True">
     <StackPanel Spacing="16" HorizontalAlignment="Stretch">
       <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
@@ -373,11 +374,11 @@
               <TextBlock Grid.Column="1" Text="clone番号" Classes="fieldLabel" />
               <TextBlock Grid.Column="2" Text="ゲームパッケージ" Classes="fieldLabel" />
               <TextBlock Grid.Column="3" Text="能力確認" Classes="fieldLabel" />
-              <NumericUpDown Grid.Row="1" IsVisible="{Binding IsMuMuPresetSelected}" Minimum="0" Maximum="127" Increment="1" FormatString="0" Value="{Binding MuMuInstanceIndex, Mode=TwoWay}"
+              <controls:RhodesNumericUpDown Grid.Row="1" IsVisible="{Binding IsMuMuPresetSelected}" Minimum="0" Maximum="127" Increment="1" FormatString="0" Value="{Binding MuMuInstanceIndex, Mode=TwoWay}"
                              ToolTip.Tip="MuMu IPCが接続する仮想端末番号です。通常は0です。" />
-              <NumericUpDown Grid.Row="1" IsVisible="{Binding IsLdPlayerPresetSelected}" Minimum="0" Maximum="127" Increment="1" FormatString="0" Value="{Binding LdPlayerInstanceIndex, Mode=TwoWay}"
+              <controls:RhodesNumericUpDown Grid.Row="1" IsVisible="{Binding IsLdPlayerPresetSelected}" Minimum="0" Maximum="127" Increment="1" FormatString="0" Value="{Binding LdPlayerInstanceIndex, Mode=TwoWay}"
                              ToolTip.Tip="LDPlayerのinstance番号です。通常はADB serialから自動推定されます。" />
-              <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding AdbGameCloneIndex, Mode=TwoWay}"
+              <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="99" Increment="1" FormatString="0" Value="{Binding AdbGameCloneIndex, Mode=TwoWay}"
                              ToolTip.Tip="同じ仮想端末内で複製したゲームアプリの番号です。通常は0です。" />
               <StackPanel Grid.Row="1" Grid.Column="2" Spacing="4">
                 <ComboBox ItemsSource="{Binding AdbGamePackageOptions}"
@@ -444,10 +445,10 @@
                   <TextBlock Grid.Column="1" Text="Y" Classes="supporting" />
                   <TextBlock Grid.Column="2" Text="幅" Classes="supporting" />
                   <TextBlock Grid.Column="3" Text="高さ" Classes="supporting" />
-                  <NumericUpDown Grid.Row="1" Minimum="0" Maximum="1279" Increment="1" FormatString="0" Value="{Binding TouchTestX, Mode=TwoWay}" />
-                  <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="719" Increment="1" FormatString="0" Value="{Binding TouchTestY, Mode=TwoWay}" />
-                  <NumericUpDown Grid.Row="1" Grid.Column="2" Minimum="0" Maximum="1280" Increment="1" FormatString="0" Value="{Binding TouchTestWidth, Mode=TwoWay}" />
-                  <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="0" Maximum="720" Increment="1" FormatString="0" Value="{Binding TouchTestHeight, Mode=TwoWay}" />
+                  <controls:RhodesNumericUpDown Grid.Row="1" Minimum="0" Maximum="1279" Increment="1" FormatString="0" Value="{Binding TouchTestX, Mode=TwoWay}" />
+                  <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="719" Increment="1" FormatString="0" Value="{Binding TouchTestY, Mode=TwoWay}" />
+                  <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="2" Minimum="0" Maximum="1280" Increment="1" FormatString="0" Value="{Binding TouchTestWidth, Mode=TwoWay}" />
+                  <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="3" Minimum="0" Maximum="720" Increment="1" FormatString="0" Value="{Binding TouchTestHeight, Mode=TwoWay}" />
                   <Button Grid.Row="1" Grid.Column="4" Content="タップ点を準備" Command="{Binding PrepareAdbTouchTestCommand}" />
                 </Grid>
                 <TextBlock Text="{Binding TouchTestStatus}" Classes="supporting" TextWrapping="Wrap" />
@@ -479,8 +480,8 @@
               <TextBlock Text="再接続回数" Classes="fieldLabel" />
               <TextBlock Grid.Column="1" Text="再接続待機 (ms)" Classes="fieldLabel" />
               <TextBlock Grid.Column="2" Text="直近の回復結果" Classes="fieldLabel" />
-              <NumericUpDown Grid.Row="1" Minimum="1" Maximum="5" Increment="1" FormatString="0" Value="{Binding AdbReconnectAttempts, Mode=TwoWay}" />
-              <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="10000" Increment="250" FormatString="0" Value="{Binding AdbReconnectDelayMs, Mode=TwoWay}" />
+              <controls:RhodesNumericUpDown Grid.Row="1" Minimum="1" Maximum="5" Increment="1" FormatString="0" Value="{Binding AdbReconnectAttempts, Mode=TwoWay}" />
+              <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="10000" Increment="250" FormatString="0" Value="{Binding AdbReconnectDelayMs, Mode=TwoWay}" />
               <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AdbRecoveryStatus}" Classes="mono" TextWrapping="Wrap" VerticalAlignment="Center" />
             </Grid>
 

@@ -1,7 +1,8 @@
 <UserControl
     x:Class="RhodesSuki.Views.Workspaces.OutputWorkspaceView"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:RhodesSuki.Controls">
   <Grid RowDefinitions="Auto,*" RowSpacing="12">
     <StackPanel Spacing="2">
       <TextBlock Text="出力レイアウト" Classes="displayTitle" />
@@ -265,7 +266,7 @@
           <StackPanel Grid.Column="1" Spacing="2">
             <TextBlock Text="スクロール速度" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <NumericUpDown Minimum="0" Maximum="30" Increment="1" FormatString="0"
+              <controls:RhodesNumericUpDown Minimum="0" Maximum="30" Increment="1" FormatString="0"
                              Value="{Binding OutputScrollSpeed, Mode=TwoWay}"
                              ToolTip.Tip="0にすると停止します。" />
               <TextBlock Grid.Column="1" Text="px/s" Classes="caption" VerticalAlignment="Center" />
@@ -274,7 +275,7 @@
           <StackPanel Grid.Column="2" Spacing="2">
             <TextBlock Text="文字サイズ" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <NumericUpDown Minimum="60" Maximum="200" Increment="5" FormatString="0"
+              <controls:RhodesNumericUpDown Minimum="60" Maximum="200" Increment="5" FormatString="0"
                              Value="{Binding OutputFontSizePercent, Mode=TwoWay}" />
               <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
             </Grid>
@@ -319,7 +320,7 @@
                 <StackPanel Spacing="3">
                   <TextBlock Text="濃度" Classes="caption" />
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding OutputCanvasBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding OutputCanvasBackgroundEnabled}" />
+                    <controls:RhodesNumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding OutputCanvasBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding OutputCanvasBackgroundEnabled}" />
                     <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
                   </Grid>
                 </StackPanel>
@@ -338,7 +339,7 @@
                 <StackPanel Spacing="3">
                   <TextBlock Text="濃度" Classes="caption" />
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding OutputBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding OutputBackgroundEnabled}" />
+                    <controls:RhodesNumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding OutputBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding OutputBackgroundEnabled}" />
                     <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
                   </Grid>
                 </StackPanel>
@@ -377,14 +378,14 @@
           <StackPanel Grid.Column="1" Spacing="2">
             <TextBlock Text="スクロール速度" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <NumericUpDown Minimum="0" Maximum="30" Increment="1" FormatString="0" Value="{Binding IndividualOutputScrollSpeed, Mode=TwoWay}" ToolTip.Tip="0にすると停止します。" />
+              <controls:RhodesNumericUpDown Minimum="0" Maximum="30" Increment="1" FormatString="0" Value="{Binding IndividualOutputScrollSpeed, Mode=TwoWay}" ToolTip.Tip="0にすると停止します。" />
               <TextBlock Grid.Column="1" Text="px/s" Classes="caption" VerticalAlignment="Center" />
             </Grid>
           </StackPanel>
           <StackPanel Grid.Column="2" Spacing="2">
             <TextBlock Text="文字サイズ" FontSize="12" FontWeight="SemiBold" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-              <NumericUpDown Minimum="60" Maximum="200" Increment="5" FormatString="0" Value="{Binding IndividualOutputFontSizePercent, Mode=TwoWay}" />
+              <controls:RhodesNumericUpDown Minimum="60" Maximum="200" Increment="5" FormatString="0" Value="{Binding IndividualOutputFontSizePercent, Mode=TwoWay}" />
               <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
             </Grid>
           </StackPanel>
@@ -421,7 +422,7 @@
                 <StackPanel Spacing="3">
                   <TextBlock Text="濃度" Classes="caption" />
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding IndividualOutputCanvasBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding IndividualOutputCanvasBackgroundEnabled}" />
+                    <controls:RhodesNumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding IndividualOutputCanvasBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding IndividualOutputCanvasBackgroundEnabled}" />
                     <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
                   </Grid>
                 </StackPanel>
@@ -437,7 +438,7 @@
                 <StackPanel Spacing="3">
                   <TextBlock Text="濃度" Classes="caption" />
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding IndividualOutputBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding IndividualOutputBackgroundEnabled}" />
+                    <controls:RhodesNumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding IndividualOutputBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding IndividualOutputBackgroundEnabled}" />
                     <TextBlock Grid.Column="1" Text="%" Classes="caption" VerticalAlignment="Center" />
                   </Grid>
                 </StackPanel>
@@ -528,13 +529,13 @@
               <CheckBox Content="表示する" IsChecked="{Binding Enabled, Mode=TwoWay}" />
               <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
                 <TextBlock Text="X" VerticalAlignment="Center" />
-                <NumericUpDown Grid.Column="1" Minimum="0" Maximum="1920" Increment="1" FormatString="0" Value="{Binding X, Mode=TwoWay}" />
+                <controls:RhodesNumericUpDown Grid.Column="1" Minimum="0" Maximum="1920" Increment="1" FormatString="0" Value="{Binding X, Mode=TwoWay}" />
                 <TextBlock Grid.Column="2" Text="Y" VerticalAlignment="Center" />
-                <NumericUpDown Grid.Column="3" Minimum="0" Maximum="1080" Increment="1" FormatString="0" Value="{Binding Y, Mode=TwoWay}" />
+                <controls:RhodesNumericUpDown Grid.Column="3" Minimum="0" Maximum="1080" Increment="1" FormatString="0" Value="{Binding Y, Mode=TwoWay}" />
                 <TextBlock Grid.Row="1" Text="幅" VerticalAlignment="Center" />
-                <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="160" Maximum="1920" Increment="8" FormatString="0" Value="{Binding Width, Mode=TwoWay}" />
+                <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="1" Minimum="160" Maximum="1920" Increment="8" FormatString="0" Value="{Binding Width, Mode=TwoWay}" />
                 <TextBlock Grid.Row="1" Grid.Column="2" Text="高さ" VerticalAlignment="Center" />
-                <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="80" Maximum="1080" Increment="8" FormatString="0" Value="{Binding Height, Mode=TwoWay}" />
+                <controls:RhodesNumericUpDown Grid.Row="1" Grid.Column="3" Minimum="80" Maximum="1080" Increment="8" FormatString="0" Value="{Binding Height, Mode=TwoWay}" />
               </Grid>
               <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
                 <Button Content="←" Command="{Binding DataContext.AdjustSelectedOverlayLayoutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="left" ToolTip.Tip="左へ8px" />
@@ -642,7 +643,7 @@
                               ToolTip.Tip="OFFではこの個別URLの背景を完全透過にします" />
                     <Grid Grid.Column="2" ColumnDefinitions="Auto,90,Auto" ColumnSpacing="6" IsEnabled="{Binding BackgroundEnabled}">
                       <TextBlock Text="背景濃度" VerticalAlignment="Center" />
-                      <NumericUpDown Grid.Column="1" Minimum="0" Maximum="100" Increment="5" FormatString="0"
+                      <controls:RhodesNumericUpDown Grid.Column="1" Minimum="0" Maximum="100" Increment="5" FormatString="0"
                                      Value="{Binding BackgroundOpacity, Mode=TwoWay}" />
                       <TextBlock Grid.Column="2" Text="%" Classes="caption" VerticalAlignment="Center" />
                     </Grid>

@@ -28,7 +28,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
 
   assert.match(csproj, /PackageReference Include="SukiUI" Version="7\.0\.1"/);
   assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.13\.0-preview\.1"/);
-  assert.match(csproj, /PackageReference Include="Maa\.Framework\.Runtimes" Version="5\.13\.0-beta\.5"/);
+  assert.match(csproj, /PackageReference Include="Maa\.Framework\.Runtimes" Version="5\.13\.1"/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes\.json/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes-generated\.json/);
   assert.match(csproj, /interface\.json/);
@@ -657,7 +657,8 @@ test("Suki shell keeps MAA session and probe code in thin RHODES-owned services"
   assert.ok(liveResourceTaskEnd > liveResourceTaskStart);
   const liveResourceTaskBody = viewModel.slice(liveResourceTaskStart, liveResourceTaskEnd);
   assert.match(liveResourceTaskBody, /RhodesMaaResourceCatalog\.LoadRecognitionPayloadJson\(entry\)/);
-  assert.match(liveResourceTaskBody, /_session\.RunResourceRecognitionAsync\(entry, payload, CurrentRecognitionImage, cancellationToken\)/);
+  assert.match(liveResourceTaskBody, /RecognizeResourceImageAsync\(entry, payload, CurrentRecognitionImage, cancellationToken\)/);
+  assert.match(viewModel, /_session\.RunResourceRecognitionAsync\(entry, payload, image, cancellationToken, scaleOverride\)/);
   assert.doesNotMatch(liveResourceTaskBody, /_session\.RunResourceTaskAsync\(entry, "\{\}", cancellationToken\)/);
   assert.match(recognitionWorkflow, /RhodesMaaResultPreview\.FromTaskResults/);
   assert.match(viewModel, /CandidateResults/);
@@ -1390,7 +1391,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   // 2026-07-08 UI再設計: 常設右ペインを廃止し、ヘッダーは接続ピル+主アクションに集約。
   assert.match(mainWindowXaml, /ConnectionStatusLabel/);
   assert.match(mainWindowXaml, /ConnectionStatusBackground/);
-  assert.match(mainWindowXaml, /Classes="primaryAction"[\s\S]+Content="取得して反映"[\s\S]+RunAllOperationalRecognitionAndApplyCommand/);
+  assert.match(mainWindowXaml, /Classes="primaryAction"[\s\S]+Content="画面を取得して反映"[\s\S]+RunAllOperationalRecognitionAndApplyCommand/);
   assert.match(mainWindowXaml, /Classes="workbenchToolbar"/);
   assert.match(mainWindowXaml, /Classes="workbenchSidebar"/);
   assert.match(mainWindowXaml, /Classes="workbenchWorkspace"/);
@@ -1512,7 +1513,7 @@ test("Suki shell exposes manual MAA ADB and probe controls", async () => {
   assert.doesNotMatch(xaml, /基本値を認識/);
   assert.match(viewModel, /OpenRecognitionProfileCommand/);
   assert.match(xaml, /RunProfileRecognitionAndApplyCommand/);
-  assert.match(mainWindowXaml, /Content="取得して反映"/);
+  assert.match(mainWindowXaml, /Content="画面を取得して反映"/);
   assert.match(mainWindowXaml, /RunAllOperationalRecognitionAndApplyCommand/);
   assert.match(runWorkspace, /Content="オペレーター"[\s\S]+CommandParameter="operatorsFull"/);
   assert.match(runWorkspace, /Content="秘宝"[\s\S]+CommandParameter="relicsFull"/);

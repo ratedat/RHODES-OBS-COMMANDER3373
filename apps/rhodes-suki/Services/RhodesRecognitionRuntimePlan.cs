@@ -129,7 +129,8 @@ public static class RhodesRecognitionRuntimePlan
         int? expectedCandidateCount,
         string campaignId)
     {
-        if (IsKnownNonScrollableRelicList(profileId, expectedCandidateCount, campaignId))
+        if (IsKnownNonScrollableRelicList(profileId, expectedCandidateCount, campaignId)
+            && candidateCount <= RelicVisibleItemCapacity)
             return true;
 
         return profileId == "relicsFull"

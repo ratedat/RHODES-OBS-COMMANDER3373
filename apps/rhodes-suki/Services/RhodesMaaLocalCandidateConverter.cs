@@ -1021,7 +1021,7 @@ public static class RhodesMaaLocalCandidateConverter
                 : "";
     }
 
-    private static string NormalizeRelicName(string value)
+    internal static string NormalizeRelicName(string value)
     {
         var normalized = NormalizeChoiceName(value)
             .ToLowerInvariant()

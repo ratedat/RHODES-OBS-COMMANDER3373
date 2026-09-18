@@ -12,6 +12,8 @@ using SkiaSharp;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Numeric input accessibility sends Windows-compatible range notifications", NumericInputAccessibilityTests.RangeNotifications),
+    ("Choice pane drag scrolling leaves scrollbar gestures intact", ChoicePaneDragScrollTests.ScrollBarKeepsItsGesture),
     ("MAA OCR best_result becomes an OCR candidate", OcrBestResult),
     ("MAA OCR filtered_results are preferred over all_results", OcrFilteredResults),
     ("MAA TemplateMatch count becomes a template candidate", TemplateCount),
@@ -211,6 +213,11 @@ var tests = new (string Name, Action Run)[]
     ("MAA template OCR expander builds dynamic name regions", MaaTemplateOcrExpanderBuildsDynamicRegions),
     ("MAA template OCR expander restores weak operator anchors on the detected card grid", MaaTemplateOcrExpanderRestoresWeakGridAlignedOperatorAnchors),
     ("MAA thought load OCR expander targets displayed card values", MaaThoughtLoadOcrExpanderTargetsDisplayedValues),
+    ("MAA thought title image excludes descriptions before OCR", RhodesSuki.Tests.ThoughtTitleImageTests.ExcludesDescriptionsBeforeOcr),
+    ("MAA thought title image never falls back to prose", RhodesSuki.Tests.ThoughtTitleImageTests.UnlocatedCardsNeverFallBackToProse),
+    ("MAA relic title image keeps titles and usage without prose", RhodesSuki.Tests.RelicTitleImageTests.KeepsNamesAndUsageWithoutProse),
+    ("MAA relic title image limits processing to the supported list", RhodesSuki.Tests.RelicTitleImageTests.LimitsProcessingToTheSupportedList),
+    ("MAA relic title retry reads complete unresolved bands", RhodesSuki.Tests.RelicTitleImageTests.RetriesUnresolvedTitleBands),
     ("MAA thought name retry restores titles within the original frame", RhodesSuki.Tests.ThoughtNameOcrTests.RefinesNamesWithinTheirOriginalFrame),
     ("MAA thought name retry preserves unknown and unrelated evidence", RhodesSuki.Tests.ThoughtNameOcrTests.PreservesUnknownNamesAndRejectsUnrelatedEvidence),
     ("MAA thought name retry bounds work and preserves original OCR evidence", RhodesSuki.Tests.ThoughtNameOcrTests.BoundsRetriesAndPreservesRawEvidence),
@@ -8800,6 +8807,8 @@ static void RecognitionRuntimePlanUsesFocusedTasks()
     Equal(true, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 9, 9, "is5_sarkaz"), "non-Phantom three-row relic list never probes with a swipe");
     Equal(true, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 0, 0, "is6_sui"), "empty non-Phantom relic list never probes with a swipe");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 10, 10, "is5_sarkaz"), "fourth relic row still enables scrolling");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 15, 0, "is5_sarkaz"), "visible fourth row contradicts a zero footer reading");
+    Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 12, 6, "is5_sarkaz"), "visible fourth row contradicts a small footer reading");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 6, 6, "is2_phantom"), "Phantom retains its dedicated relic scrolling behavior");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 0, null, "is5_sarkaz"), "zero unknown relic candidates still permits discovery scrolling");
     Equal(false, RhodesRecognitionRuntimePlan.ShouldStopBeforeRelicScroll("relicsFull", 9, null, "is5_sarkaz"), "full visible capacity with unknown total still permits fourth-row discovery");

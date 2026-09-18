@@ -47,6 +47,14 @@ public static class RhodesMaaRecognitionImagePreprocessor
         string entry = "")
     {
         ArgumentNullException.ThrowIfNull(sourceImage);
+        if (string.Equals(recognitionType, "OCR", StringComparison.Ordinal)
+            && entry == RhodesMaaThoughtTitleImage.ListEntry && sourceImage.Length > 0)
+        {
+            var titles = RhodesMaaThoughtTitleImage.Prepare(sourceImage);
+            return scale > 1
+                ? Prepare(titles, recognitionType, parametersJson, scale)
+                : new MaaPreparedRecognitionInput(titles, parametersJson);
+        }
         var operatorNameEntry = entry.StartsWith("operator.card.name.", StringComparison.Ordinal);
         var catchWindDetailEntry = entry.Equals(
             RhodesSuiCatchWindDetailResolver.DetailEntry,
