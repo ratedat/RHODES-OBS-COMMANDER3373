@@ -162,6 +162,31 @@ test("operator promotion updates are retained only for selected elite-two capabl
   assert.deepEqual(state.operatorPromotionLevels, {});
 });
 
+test("recruiting without a promotion field stays elite one for every rarity", () => {
+  for (const rarity of [3, 4, 5, 6]) {
+    const master = { operators: [{ id: "test-operator", rarity }] };
+    const state = baseState();
+    const operation = { type: "operator.set", operatorId: "test-operator", selected: true, count: 1 };
+    const recruited = applyTournamentRemoteOperation(state, master, operation).state;
+    assert.deepEqual(recruited.operatorPromotionLevels, {}, `rarity ${rarity} must stay elite one`);
+    const counted = applyTournamentRemoteOperation(recruited, master, { ...operation, count: 2 }).state;
+    assert.deepEqual(counted.operatorPromotionLevels, {}, "changing count must not promote");
+    assert.deepEqual(counted.operators, [operation.operatorId]);
+    assert.deepEqual(state.operators, []);
+  }
+});
+
+test("explicit elite one downgrades elite two and omitted promotion preserves the current level", () => {
+  const master = { operators: [{ id: "test-operator", rarity: 6 }] };
+  const operation = { type: "operator.set", operatorId: "test-operator", selected: true, count: 1 };
+  const promoted = applyTournamentRemoteOperation(baseState(), master, { ...operation, promotionLevel: 2 }).state;
+  const unchanged = applyTournamentRemoteOperation(promoted, master, operation).state;
+  assert.equal(unchanged.operatorPromotionLevels[operation.operatorId], 2);
+  const downgraded = applyTournamentRemoteOperation(unchanged, master, { ...operation, promotionLevel: 1 }).state;
+  assert.deepEqual(downgraded.operatorPromotionLevels, {});
+  assert.equal(promoted.operatorPromotionLevels[operation.operatorId], 2);
+});
+
 test("batch operation applies all edits as one state transition", async () => {
   const master = await loadMaster();
   const state = baseState();

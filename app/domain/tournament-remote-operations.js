@@ -315,7 +315,7 @@ export function applyTournamentRemoteOperation(state, master, operation) {
       const promotions = normalizeOperatorPromotionLevels(next.operatorPromotionLevels, next.operators);
       if (!selected || Number(operation.promotionLevel) < 2) {
         if (!selected || operation.promotionLevel !== undefined) delete promotions[id];
-      } else if (supportsEliteTwo(master, id)) {
+      } else if (Number(operation.promotionLevel) >= 2 && supportsEliteTwo(master, id)) {
         promotions[id] = 2;
       }
       next.operatorPromotionLevels = promotions;

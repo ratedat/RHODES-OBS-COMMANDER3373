@@ -22,6 +22,7 @@ import {
   saveEditorPersistence,
 } from "/assets/editor-persistence.js";
 import { requestEditorJson } from "/assets/editor-request.js";
+import { bindCatalogSearchInput } from "/assets/catalog-search-input.js";
 
 const sessionId = location.pathname.split("/").filter(Boolean).at(-1) || "";
 const query = new URLSearchParams(location.search);
@@ -859,13 +860,10 @@ function catalogToolbar(kind, placeholder, view, rerender) {
     value: filters.search,
     dataset: { filterSearch: kind },
   });
-  input.oninput = () => {
-    filters.search = input.value;
+  bindCatalogSearchInput(input, (value) => {
+    filters.search = value;
     rerender();
-    const next = elements.editor.querySelector(`[data-filter-search="${kind}"]`);
-    next?.focus();
-    next?.setSelectionRange(filters.search.length, filters.search.length);
-  };
+  }, () => elements.editor.querySelector(`[data-filter-search="${kind}"]`));
   const setFilter = (key, value) => {
     filters[key] = value;
     rerender();
@@ -948,6 +946,7 @@ function renderOperatorEditor() {
         operatorId: item.id,
         selected: !isSelected,
         count,
+        promotionLevel: Number(promotionLevels[item.id]) >= 2 ? 2 : 1,
       }),
     }, [
       node("span", {}, [
@@ -980,6 +979,7 @@ function renderOperatorEditor() {
           });
           return field(labelOf(item), input, submitButton("反映", () => sendOperation({
             type: "operator.set", operatorId: item.id, selected: true, count: input.value,
+            promotionLevel: Number(promotionLevels[item.id]) >= 2 ? 2 : 1,
           })));
         })),
       ])
