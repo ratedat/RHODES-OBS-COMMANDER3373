@@ -253,6 +253,7 @@ test("special overlay renders coin effect groups and visible effect text", () =>
   assert.match(output, /味方の攻撃速度\+80/);
   assert.match(output, /振出時: 異境の入口が出現/);
   assert.match(output, />2枚</);
+  assert.doesNotMatch(output, /stream-section-head/);
 });
 
 test("Mizuki special overlay renders distinct horde, rejection, and revelation groups", () => {
@@ -294,7 +295,8 @@ test("Mizuki special overlay renders distinct horde, rejection, and revelation g
   assert.match(output, /啓示/);
   assert.equal((output.match(/>1件</g) || []).length, 3);
   assert.equal((output.match(/class="stream-scroll special-overlay-group-scroll"/g) || []).length, 3);
-  assert.doesNotMatch(output, /stream-special-scroll" data-autoscroll/);
+  assert.match(output, /stream-special-scroll" data-autoscroll-groups/);
+  assert.doesNotMatch(output, /stream-special-scroll" data-autoscroll(?:\s|=|>)/);
 });
 
 test("Sami special part keeps paradigm lost and revelation groups independently visible", () => {
@@ -337,5 +339,6 @@ test("Sami special part keeps paradigm lost and revelation groups independently 
   assert.match(output, /門 x2/);
   assert.match(output, /驚き x2/);
   assert.equal((output.match(/class="stream-scroll special-overlay-group-scroll"/g) || []).length, 3);
-  assert.doesNotMatch(output, /stream-special-scroll" data-autoscroll/);
+  assert.match(output, /stream-special-scroll" data-autoscroll-groups/);
+  assert.doesNotMatch(output, /stream-special-scroll" data-autoscroll(?:\s|=|>)/);
 });

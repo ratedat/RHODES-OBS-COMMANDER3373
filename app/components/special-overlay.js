@@ -61,8 +61,8 @@ export function renderSpecialOverlayBlock(items, mode, speedKey, getOverlayScrol
   const isPart = mode === "part";
   const scrollSpeed = getOverlayScrollSpeed(speedKey);
   return `<section class="${isCompact ? "compact-section compact-special-section" : `stream-special-section${isPart ? " special-overlay-part-section" : ""}`}">
-    <div class="${isCompact ? "compact-section-head" : "stream-section-head"}"><span>Special</span><span>${items.length}</span></div>
-    <div class="stream-scroll ${isCompact ? "compact-special-scroll" : "stream-special-scroll"}"${isPart ? "" : ` data-autoscroll data-scroll-speed="${scrollSpeed}"`}>
+    ${isPart ? "" : `<div class="${isCompact ? "compact-section-head" : "stream-section-head"}"><span>Special</span><span>${items.length}</span></div>`}
+    <div class="stream-scroll ${isCompact ? "compact-special-scroll" : "stream-special-scroll"}" ${isPart ? "data-autoscroll-groups" : "data-autoscroll"} data-scroll-speed="${scrollSpeed}">
       ${renderSpecialOverlayGroups(items, { independentScroll: isPart, scrollSpeed })}
     </div>
   </section>`;
