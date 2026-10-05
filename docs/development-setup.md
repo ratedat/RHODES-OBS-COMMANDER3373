@@ -5,14 +5,26 @@
 ## 必要な環境
 
 - Git。
-- Node.js `.node-version` の版（24.19.0）、npm `package.json` の `packageManager` の版（11.17.0）。
-- .NET SDK `global.json` の版（9.0.202）。自動で別のSDKへ切り替えません。
+- Node.js `.node-version` の版（24.21.0）、npm `package.json` の `packageManager` の版（11.19.0）。
+- .NET SDK `global.json` の版（9.0.318）。自動で別のSDKへ切り替えません。
 - .NET 8ランタイム。アプリとC#テストの対象は `net8.0` です。
 - PowerShell。ソース起動スクリプトを実行する場合に使います。
 
-これらは検証環境の固定値です。更新時は固定ファイルと依存ロックを一緒に見直し、全検証を実行してください。MAAはC#連携の `Maa.Framework 5.13.0-preview.1` と実行エンジンの `Maa.Framework.Runtimes 5.13.1` を使用します。両者は別々に版管理されるため、プロジェクト指定と依存ロックを正本にします。PythonとGLM-OCRはオプションの作業用で、通常ビルドの前提ではありません。
+これらは検証環境の固定値です。更新時は固定ファイルと依存ロックを一緒に見直し、全検証を実行してください。MAAはC#連携の `Maa.Framework 5.13.0-preview.1` と実行エンジンの `Maa.Framework.Runtimes 5.14.2` を使用します。両者は別々に版管理されるため、プロジェクト指定と依存ロックを正本にします。通常の起動・C#ビルドにはPythonは不要です。Node全テストに含まれるOCR画像生成テストにはPython 3とPillowが必要です。PATH上の `python` を使うか、`PYTHON` 環境変数に実行ファイルを指定してください。GLM-OCRはオプションです。
 
-2026-09-18に[MAAFramework 5.13.1の安定版](https://github.com/MaaXYZ/MaaFramework/releases/tag/v5.13.1)へ更新しました。C#連携は確認時点の最新公開版を維持しています。通常ビルド、C#テスト、Windows x64配布用の各ロックを合わせて更新します。
+2026-10-05に[Avalonia 12.1.3](https://github.com/AvaloniaUI/Avalonia/releases/tag/12.1.3)、[MAAFramework 5.14.2](https://github.com/MaaXYZ/MaaFramework/releases/tag/v5.14.2)、[Node.js 24.21.0 LTS](https://nodejs.org/en/blog/release/v24.21.0)、[cloudflared 2026.9.3](https://github.com/cloudflare/cloudflared/releases/tag/2026.9.3)へ更新しました。SukiUI 7.0.1とMAAのC#連携は公開版を照合して維持しています。Avaloniaのコード生成に合わせてSDKも9.0.318へ更新しています。通常ビルド、C#テスト、Windows x64配布用の各ロックを合わせて更新します。
+
+.NETの対象は引き続き `net8.0` です。今回のローカル検証では.NET 8.0.31を使用します。.NET 10への移行は含みません。
+
+## プロジェクト専用の開発環境
+
+システム全体へインストールせず、公式配布物を `outputs/development-tools/dotnet-9.0.318/` と `outputs/development-tools/node-v24.21.0-win-x64/` に展開した場合は、PowerShellで次を実行します。.NET 8ランタイムも同じdotnetフォルダーに配置してください。
+
+```powershell
+. .\tools\windows\use-development-tools.ps1
+```
+
+固定版のフォルダーが存在する場合だけ、現在のPowerShellと子プロセスのPATH・DOTNET_ROOTを切り替えます。永続設定は変更しません。`start-app.ps1` はこの選択を自動で行います。フォルダーがない環境では、通常どおりインストール済みの開発環境を使います。
 
 ## 初回の準備
 

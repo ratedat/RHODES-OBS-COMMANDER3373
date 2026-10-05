@@ -9,7 +9,7 @@ test("Sui coin OCR corpus renders Noto Sans JP line and sheet fixtures", async (
   const output = await fs.mkdtemp(path.join(os.tmpdir(), "rhodes-sui-coin-ocr-"));
   try {
     const run = spawnSync(
-      "python",
+      process.env.PYTHON || "python",
       [
         "tools/generate-sui-coin-ocr-corpus.py",
         "--output",
@@ -23,6 +23,7 @@ test("Sui coin OCR corpus renders Noto Sans JP line and sheet fixtures", async (
       ],
       { cwd: process.cwd(), encoding: "utf8" },
     );
+    assert.equal(run.error, undefined, `Python could not start: ${run.error?.message}. Set PYTHON to a Python 3 executable with Pillow installed.`);
     assert.equal(run.status, 0, run.stderr || run.stdout);
 
     const manifest = JSON.parse(await fs.readFile(path.join(output, "manifest.json"), "utf8"));

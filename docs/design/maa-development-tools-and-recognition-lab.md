@@ -29,10 +29,10 @@ RHODES OBS COMMANDER3373 の認識開発と不具合調査を、外部MAA系ツ�
 ## Tech Stack
 
 - .NET 8.0
-- Avalonia 12.0.5
+- Avalonia 12.1.3
 - SukiUI 7.0.1
-- Maa.Framework binding 5.10.0
-- Maa.Framework runtime 5.12.3
+- Maa.Framework binding 5.13.0-preview.1
+- Maa.Framework runtime 5.14.2
 - Node.js 24 LTS
 - MaaEvidenceKit 0.3.2以上（任意のローカルCLI）
 

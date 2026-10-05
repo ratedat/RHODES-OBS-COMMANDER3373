@@ -1,4 +1,5 @@
 import test from "node:test";
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
@@ -80,6 +81,7 @@ test("quick publish owns the relay and tunnel without exposing the admin token",
   const manager = createTournamentQuickPublishManager({
     runtimeRoot,
     remoteHost,
+    expectedSha256: createHash("sha256").update("test executable").digest("hex"),
     platform: "win32",
     fetchImpl: async () => ({
       ok: true,
@@ -150,6 +152,7 @@ test("quick publish waits through transient public route failures before registe
   const manager = createTournamentQuickPublishManager({
     runtimeRoot,
     remoteHost,
+    expectedSha256: createHash("sha256").update("test executable").digest("hex"),
     platform: "win32",
     publicRouteReadyTimeoutMs: 5_000,
     publicRouteRetryDelayMs: 1,
@@ -203,6 +206,7 @@ test("quick publish preserves the failed stage and cloudflared output for suppor
   const manager = createTournamentQuickPublishManager({
     runtimeRoot,
     remoteHost,
+    expectedSha256: createHash("sha256").update("test executable").digest("hex"),
     platform: "win32",
     relayStarter: async () => ({
       server: {
@@ -266,6 +270,50 @@ test("quick publish rejects a cloudflared download with an unexpected checksum",
   try {
     await assert.rejects(manager.install(), /SHA-256/);
     await assert.rejects(fs.access(path.join(runtimeRoot, "cloudflared.exe")));
+  } finally {
+    await fs.rm(runtimeRoot, { recursive: true, force: true });
+  }
+});
+
+test("quick publish replaces an outdated managed runtime before declaring it installed", async () => {
+  const runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), "rhodes-runtime-upgrade-"));
+  const executable = path.join(runtimeRoot, "cloudflared.exe");
+  const current = Buffer.from("verified current executable");
+  await fs.writeFile(executable, "old managed executable");
+  let downloads = 0;
+  const manager = createTournamentQuickPublishManager({
+    runtimeRoot, remoteHost: fakeRemoteHost(), platform: "win32",
+    expectedSha256: createHash("sha256").update(current).digest("hex"),
+    fetchImpl: async () => {
+      downloads++;
+      return { ok: true, headers: new Headers(), arrayBuffer: async () => current };
+    },
+  });
+  try {
+    assert.equal((await manager.status()).installed, false);
+    assert.equal((await manager.install()).installed, true);
+    assert.deepEqual(await fs.readFile(executable), current);
+    await manager.install();
+    assert.equal(downloads, 1);
+    await fs.writeFile(executable, "different replacement executable");
+    assert.equal((await manager.status()).installed, false);
+  } finally {
+    await fs.rm(runtimeRoot, { recursive: true, force: true });
+  }
+});
+
+test("a failed runtime update preserves the previous managed executable", async () => {
+  const runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), "rhodes-runtime-failed-upgrade-"));
+  const executable = path.join(runtimeRoot, "cloudflared.exe");
+  await fs.writeFile(executable, "old managed executable");
+  const manager = createTournamentQuickPublishManager({
+    runtimeRoot, remoteHost: fakeRemoteHost(), platform: "win32",
+    expectedSha256: "0".repeat(64),
+    fetchImpl: async () => ({ ok: true, headers: new Headers(), arrayBuffer: async () => Buffer.from("wrong download") }),
+  });
+  try {
+    await assert.rejects(manager.install(), /SHA-256/);
+    assert.equal(await fs.readFile(executable, "utf8"), "old managed executable");
   } finally {
     await fs.rm(runtimeRoot, { recursive: true, force: true });
   }

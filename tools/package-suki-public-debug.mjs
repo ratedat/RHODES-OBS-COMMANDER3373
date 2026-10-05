@@ -13,17 +13,17 @@ const releaseRoot = path.join(repoRoot, "outputs", "release");
 const folderOnly = process.argv.includes("--folder-only");
 const slim = process.argv.includes("--slim");
 const nodeRuntime = {
-  version: "24.18.0",
-  distributionDirectory: "node-v24.18.0-win-x64",
-  archiveUrl: "https://nodejs.org/dist/v24.18.0/node-v24.18.0-win-x64.zip",
-  archiveSha256: "0ae68406b42d7725661da979b1403ec9926da205c6770827f33aac9d8f26e821",
+  version: "24.21.0",
+  distributionDirectory: "node-v24.21.0-win-x64",
+  archiveUrl: "https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-x64.zip",
+  archiveSha256: "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541",
   maxBytes: 96 * 1024 * 1024,
 };
 const cloudflaredRuntime = {
-  version: "2026.7.2",
+  version: "2026.9.3",
   executableUrl:
-    "https://github.com/cloudflare/cloudflared/releases/download/2026.7.2/cloudflared-windows-amd64.exe",
-  executableSha256: "cdb5d4432f6ae1595654a692a51308b69d2bf7af961f5578d9391837cf072df9",
+    "https://github.com/cloudflare/cloudflared/releases/download/2026.9.3/cloudflared-windows-amd64.exe",
+  executableSha256: "f096265ec2fcbe9bb6e2d64268db167ced3fcbb83d894bdb9e2fcdb26f2ea7e2",
   maxBytes: 80 * 1024 * 1024,
 };
 const excludedPortableEntries = new Set([

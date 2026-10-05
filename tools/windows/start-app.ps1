@@ -7,6 +7,7 @@ $ErrorActionPreference = 'Stop'
 $root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $helperPath = Join-Path $PSScriptRoot 'rhodes-launch-helpers.ps1'
 . $helperPath
+. (Join-Path $PSScriptRoot 'use-development-tools.ps1')
 
 $dotnet = Get-Command dotnet -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($null -eq $dotnet) {

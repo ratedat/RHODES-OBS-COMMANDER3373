@@ -9,11 +9,11 @@ namespace RhodesSuki.Services;
 /// </summary>
 public sealed class RhodesNodeRuntimeManager
 {
-    public const string NodeVersion = "24.18.0";
+    public const string NodeVersion = "24.21.0";
     public const string RuntimeDirectoryName = "nodejs-runtime";
     public const string DistributionDirectoryName = $"node-v{NodeVersion}-win-x64";
     public const string ArchiveFileName = $"{DistributionDirectoryName}.zip";
-    public const string ArchiveSha256 = "0ae68406b42d7725661da979b1403ec9926da205c6770827f33aac9d8f26e821";
+    public const string ArchiveSha256 = "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541";
 
     private const long MaxArchiveBytes = 96L * 1024L * 1024L;
     private const long MaxExpandedBytes = 768L * 1024L * 1024L;

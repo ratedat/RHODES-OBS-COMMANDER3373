@@ -5,11 +5,11 @@ import path from "node:path";
 
 import { startTournamentRelayServer } from "../../services/tournament-relay/server.mjs";
 
-export const CLOUDFLARED_VERSION = "2026.7.2";
+export const CLOUDFLARED_VERSION = "2026.9.3";
 export const CLOUDFLARED_WINDOWS_AMD64_URL =
   `https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-windows-amd64.exe`;
 export const CLOUDFLARED_WINDOWS_AMD64_SHA256 =
-  "cdb5d4432f6ae1595654a692a51308b69d2bf7af961f5578d9391837cf072df9";
+  "f096265ec2fcbe9bb6e2d64268db167ced3fcbb83d894bdb9e2fcdb26f2ea7e2";
 
 const QUICK_TUNNEL_URL_PATTERN = /https:\/\/[a-z0-9-]+\.trycloudflare\.com\b/i;
 const MAX_DOWNLOAD_BYTES = 80 * 1024 * 1024;
@@ -80,12 +80,24 @@ export function createTournamentQuickPublishManager({
   let diagnostic = "";
   let lastTunnelOutput = "";
   let installPromise = null;
+  let installedFile = null;
 
   async function isInstalled() {
     try {
       const stat = await fs.stat(executablePath);
-      return stat.isFile() && stat.size > 0;
+      if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_DOWNLOAD_BYTES) return false;
+      const fingerprint = `${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+      // Status is polled frequently; rehash only when the managed file changes.
+      if (installedFile?.fingerprint !== fingerprint) {
+        const bytes = await fs.readFile(executablePath);
+        installedFile = {
+          fingerprint,
+          matches: createHash("sha256").update(bytes).digest("hex") === expectedSha256.toLowerCase(),
+        };
+      }
+      return installedFile.matches;
     } catch {
+      installedFile = null;
       return false;
     }
   }

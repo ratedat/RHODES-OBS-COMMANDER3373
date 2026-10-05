@@ -150,3 +150,55 @@ test("the public launcher contains no global process-stop path", async () => {
   assert.doesNotMatch(`${source}\n${helpers}`, /Stop-Process|Get-CimInstance|Win32_Process|WScript\.Shell/u);
   assert.match(source, /rhodes-launch-helpers\.ps1/u);
 });
+
+async function inspectLocalTools({ available }) {
+  const fixture = await mkdtemp(path.join(tmpdir(), "rhodes local tools "));
+  try {
+    const windowsTools = path.join(fixture, "tools", "windows");
+    const localTools = path.join(fixture, "outputs", "development-tools");
+    const sdk = path.join(localTools, "dotnet-9.0.318");
+    const node = path.join(localTools, "node-v24.21.0-win-x64");
+    await mkdir(windowsTools, { recursive: true });
+    await writeFile(path.join(fixture, "global.json"), JSON.stringify({ sdk: { version: "9.0.318" } }));
+    await writeFile(path.join(fixture, ".node-version"), "24.21.0\n");
+    const selector = path.join(windowsTools, "use-development-tools.ps1");
+    await writeFile(selector, await readFile(path.join(repoRoot, "tools", "windows", "use-development-tools.ps1")));
+    if (available) {
+      await mkdir(path.join(sdk, "sdk", "9.0.318"), { recursive: true });
+      await mkdir(node, { recursive: true });
+      await writeFile(path.join(sdk, "dotnet.exe"), "fixture only");
+      await writeFile(path.join(node, "node.exe"), "fixture only");
+    }
+    const script = path.join(fixture, "inspect.ps1");
+    await writeFile(script, [
+      "$env:PATH = 'original-path'",
+      "$env:DOTNET_ROOT = 'original-dotnet'",
+      "$env:DOTNET_ROOT_X64 = 'original-dotnet-x64'",
+      ". $env:RHODES_TOOLS_SELECTOR",
+      ". $env:RHODES_TOOLS_SELECTOR",
+      "[ordered]@{ path = $env:PATH; dotnet = $env:DOTNET_ROOT; dotnetX64 = $env:DOTNET_ROOT_X64 } | ConvertTo-Json -Compress",
+    ].join("\n"));
+    const result = spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-File", script], {
+      encoding: "utf8", env: { ...process.env, RHODES_TOOLS_SELECTOR: selector },
+    });
+    assert.equal(result.error, undefined, result.error?.message);
+    assert.equal(result.status, 0, result.stderr);
+    return { sdk, node, result: JSON.parse(result.stdout.trim()) };
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+}
+
+test("local development tools follow project pins without duplicating PATH entries", async () => {
+  const { sdk, node, result } = await inspectLocalTools({ available: true });
+  assert.deepEqual(result.path.split(";"), [sdk, node, "original-path"]);
+  assert.equal(result.dotnet, sdk);
+  assert.equal(result.dotnetX64, sdk);
+});
+
+test("missing local development tools preserve the caller's installed tools", async () => {
+  const { result } = await inspectLocalTools({ available: false });
+  assert.equal(result.path, "original-path");
+  assert.equal(result.dotnet, "original-dotnet");
+  assert.equal(result.dotnetX64, "original-dotnet-x64");
+});

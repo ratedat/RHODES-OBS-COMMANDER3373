@@ -28,7 +28,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
 
   assert.match(csproj, /PackageReference Include="SukiUI" Version="7\.0\.1"/);
   assert.match(csproj, /PackageReference Include="Maa\.Framework" Version="5\.13\.0-preview\.1"/);
-  assert.match(csproj, /PackageReference Include="Maa\.Framework\.Runtimes" Version="5\.13\.1"/);
+  assert.match(csproj, /PackageReference Include="Maa\.Framework\.Runtimes" Version="5\.14\.2"/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes\.json/);
   assert.match(csproj, /resource\\base\\pipeline\\rhodes-generated\.json/);
   assert.match(csproj, /interface\.json/);
@@ -91,7 +91,7 @@ test("Suki shell references SukiUI and Maa.Framework as the replacement desktop 
   assert.match(excludedPortableEntries, /nodejs-runtime/);
   assert.match(excludedPortableEntries, /cloudflared-runtime/);
   assert.match(publicDebugPackager, /ensureBundledPublicRuntime\(packageRoot\)/);
-  assert.match(publicDebugPackager, /node-v24\.18\.0-win-x64/);
+  assert.match(publicDebugPackager, /node-v24\.21\.0-win-x64/);
   assert.match(publicDebugPackager, /cloudflared-windows-amd64\.exe/);
   assert.match(publicDebugPackager, /path\.join\(repoRoot, "services"\)/);
   assert.match(publicDebugPackager, /README_PUBLIC_DEBUG\.md/);
@@ -1959,7 +1959,7 @@ test("Apple Design prototype stays independent from the operational Suki shell",
   const packageJson = await fs.readFile("package.json", "utf8");
 
   assert.match(project, /<AssemblyName>RhodesAppleDesignPrototype<\/AssemblyName>/);
-  assert.match(project, /PackageReference Include="Avalonia" Version="12\.0\.5"/);
+  assert.match(project, /PackageReference Include="Avalonia" Version="12\.1\.3"/);
   assert.match(project, /PackageReference Include="SukiUI" Version="7\.0\.1"/);
   assert.match(project, /data\\operators\.json/);
   assert.match(project, /data\\relics\.json/);
