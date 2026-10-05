@@ -47,13 +47,13 @@ export function renderOverlayCompact(args, context) {
       ${context.renderSpecialOverlayBlock(specialItems, "compact", "compactRelicScrollSpeed")}
       ${activeEffects.length ? `<section class="compact-section compact-effects-section">
         <div class="compact-section-head"><span>Effects</span><span>${activeEffects.length}</span></div>
-        <div class="stream-scroll compact-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("compactRelicScrollSpeed")}">
+        <div class="stream-scroll compact-effect-scroll" data-autoscroll data-scroll-key="compact-effect-scroll" data-scroll-speed="${context.getOverlayScrollSpeed("compactRelicScrollSpeed")}">
           ${context.renderEffectList(activeEffects, "compact-effect-list", "発動効果なし")}
         </div>
       </section>` : ""}
       <section class="compact-section">
         <div class="compact-section-head"><span>Relics</span><span>${relics.length}</span></div>
-        <div class="stream-scroll compact-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("compactRelicScrollSpeed")}">
+        <div class="stream-scroll compact-relic-scroll" data-autoscroll data-scroll-key="compact-relic-scroll" data-scroll-speed="${context.getOverlayScrollSpeed("compactRelicScrollSpeed")}">
           <div class="compact-relic-strip">
             ${relics.length ? relics.map((item) => `<div class="compact-relic-tile ${item.used ? "used" : ""}" title="${html(item.name)}" aria-label="${html(item.name)}" data-effect="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" />${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<span class="compact-empty">なし</span>`}
           </div>
@@ -83,7 +83,7 @@ export function renderOverlayDense(args, context) {
   const rosterCount = operatorRosterCount(allOperators);
   const isHorizontal = orientation === "horizontal";
   const inlineBosses = isHorizontal ? "" : flags.map((flag) => context.renderBossChip(flag)).join("");
-  const inlineEffects = !isHorizontal && activeEffects.length ? `<div class="stream-scroll stream-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
+  const inlineEffects = !isHorizontal && activeEffects.length ? `<div class="stream-scroll stream-effect-scroll" data-autoscroll data-scroll-key="stream-effect-scroll" data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
           ${context.renderEffectList(activeEffects, "stream-effect-list", "発動効果なし")}
         </div>` : "";
   const horizontalBosses = isHorizontal && flags.length ? `<section class="stream-panel stream-boss-panel">
@@ -92,7 +92,7 @@ export function renderOverlayDense(args, context) {
       </section>` : "";
   const horizontalEffects = isHorizontal && activeEffects.length ? `<section class="stream-panel stream-horizontal-effect-panel">
         <div class="stream-section-head"><span>Effects</span><strong>${activeEffects.length}</strong></div>
-        <div class="stream-scroll stream-horizontal-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
+        <div class="stream-scroll stream-horizontal-effect-scroll" data-autoscroll data-scroll-key="stream-horizontal-effect-scroll" data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
           ${context.renderEffectList(activeEffects, "stream-horizontal-effect-list", "発動効果なし")}
         </div>
       </section>` : "";
@@ -121,7 +121,7 @@ export function renderOverlayDense(args, context) {
       </section>`;
   const relicPanel = `<section class="stream-panel stream-relic-panel">
         <div class="stream-section-head"><span>Relics</span><strong>${relics.length}</strong></div>
-        <div class="stream-scroll stream-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
+        <div class="stream-scroll stream-relic-scroll" data-autoscroll data-scroll-key="stream-relic-scroll" data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}RelicScrollSpeed`)}">
           <div class="stream-relic-grid">
             ${relics.length ? relics.map((item) => `<div class="stream-relic-tile ${item.used ? "used" : ""}" title="${html(item.name)}" aria-label="${html(item.name)}" data-effect="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><strong>${html(item.name)}</strong>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("") : `<div class="stream-empty">秘宝なし</div>`}
           </div>
@@ -129,7 +129,7 @@ export function renderOverlayDense(args, context) {
       </section>`;
   const operatorPanel = `<section class="stream-panel stream-operator-panel">
         <div class="stream-section-head"><span>Operators</span><strong>${operatorCount}</strong></div>
-        <div class="stream-scroll stream-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}OperatorScrollSpeed`)}">
+        <div class="stream-scroll stream-operator-scroll" data-autoscroll data-scroll-key="stream-operator-scroll" data-scroll-speed="${context.getOverlayScrollSpeed(`${orientation}OperatorScrollSpeed`)}">
           <div class="stream-operator-grid">
             ${operators.length ? operators.map((item) => `<div class="stream-operator-tile" title="${html(item.name)}" aria-label="${html(item.name)}">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${stars(item.rarity)} / ${html(item.class || "-")}</span></div></div>`).join("") : `<div class="stream-empty">未招集</div>`}
           </div>
@@ -209,7 +209,7 @@ export function renderOverlayDefault(args, context) {
         </section>
         <section class="overlay-card">
           <div class="overlay-card-header"><span>Active effects</span><span>${activeEffects.length}</span></div>
-          <div class="overlay-card-body overlay-effect-scroll stream-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("verticalRelicScrollSpeed")}">
+          <div class="overlay-card-body overlay-effect-scroll stream-scroll" data-autoscroll data-scroll-key="overlay-effect-scroll" data-scroll-speed="${context.getOverlayScrollSpeed("verticalRelicScrollSpeed")}">
             ${context.renderEffectList(activeEffects, "overlay-effect-list", "発動効果なし")}
           </div>
         </section>

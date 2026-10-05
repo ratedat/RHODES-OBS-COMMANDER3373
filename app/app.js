@@ -32,7 +32,7 @@ import { isOverlayScrollSpeedField, isTournamentOverlay, overlayScrollSpeedLabel
 import { mediaUrl } from "./lib/media.js";
 import { normalizePreferences } from "./lib/preferences.js";
 import { resolveAppView } from "./lib/view-route.js";
-import { cancelOverlayAutoScroll, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
+import { cancelOverlayAutoScroll, captureOverlayAutoScrollState, setupOverlayAutoScroll } from "./overlay/autoscroll.js";
 import { installOverlayLayoutEditor, isOverlayEditorMode } from "./overlay/layout-editor.js";
 import { RUN_STAT_FIELDS, formatRunStatValue, normalizeRunStats, runStatDisplayItems } from "./domain/run-stats.js";
 import { normalizeAdbSettings } from "./domain/adb-settings.js";
@@ -1114,6 +1114,7 @@ function renderOverlayDense(args) {
 }
 
 function renderOverlay() {
+  const scrollState = captureOverlayAutoScrollState();
   cancelOverlayAutoScroll();
   disposeOverlayLayoutEditor?.();
   disposeOverlayLayoutEditor = null;
@@ -1164,17 +1165,17 @@ function renderOverlay() {
   if (presentationClasses) app.className += ` ${presentationClasses}`;
   if (overlayPart) {
     app.innerHTML = renderOverlayPart({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, runDifficulty: state.run.difficulty, updatedAt: state.updatedAt, presentation });
-    setupOverlayAutoScroll(app);
+    setupOverlayAutoScroll(app, scrollState);
     return;
   }
   if (overlayLayout === "compact") {
     app.innerHTML = renderOverlayCompact({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, presentation });
-    setupOverlayAutoScroll(app);
+    setupOverlayAutoScroll(app, scrollState);
     return;
   }
   if (overlayLayout === "vertical" || overlayLayout === "horizontal") {
     app.innerHTML = renderOverlayDense({ campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, orientation: overlayLayout, presentation });
-    setupOverlayAutoScroll(app);
+    setupOverlayAutoScroll(app, scrollState);
     return;
   }
   if (overlayLayout === "custom") {
@@ -1183,7 +1184,7 @@ function renderOverlay() {
       { campaign, squad, option, performance, activeEffects, relics, operators, specialFields, special, difficultyGrade, run: state.run, runDifficulty: state.run.difficulty, updatedAt: state.updatedAt, presentation },
       renderOverlayContext(),
     );
-    setupOverlayAutoScroll(app);
+    setupOverlayAutoScroll(app, scrollState);
     if (overlayEditorMode) {
       disposeOverlayLayoutEditor = installOverlayLayoutEditor({
         root: app,
@@ -1240,7 +1241,7 @@ function renderOverlay() {
     updatedAt: state.updatedAt,
     bossFlagCount: state.bossFlags.length,
   }, renderOverlayContext());
-  setupOverlayAutoScroll(app);
+  setupOverlayAutoScroll(app, scrollState);
 }
 
 

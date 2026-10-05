@@ -64,7 +64,7 @@ function renderStatusPart(args, context) {
 }
 
 function renderRelicsPart(args, context) {
-  const body = args.relics.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-relic-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("horizontalRelicScrollSpeed")}">
+  const body = args.relics.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-relic-scroll" data-autoscroll data-scroll-key="overlay-part-relic-scroll" data-scroll-speed="${context.getOverlayScrollSpeed("horizontalRelicScrollSpeed")}">
     <div class="overlay-part-relic-grid">
       ${args.relics.map((item) => `<div class="overlay-part-relic ${item.used ? "used" : ""}" title="${html(item.name)}" aria-label="${html(item.name)}" data-effect="${html(context.relicEffectForDisplay(item))}"><img src="${html(assetUrl(item.image?.localPath))}" alt="" /><span>${html(item.name)}</span>${renderRelicStackBadge(item)}${renderRelicUsedBadge(item)}</div>`).join("")}
     </div>
@@ -76,7 +76,7 @@ function renderOperatorsPart(args, context) {
   const grouped = [6, 5, 4, 3, 2, 1]
     .map((rarity) => ({ rarity, items: args.operators.filter((item) => Number(item.rarity) === rarity) }))
     .filter((group) => group.items.length);
-  const body = grouped.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-operator-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("horizontalOperatorScrollSpeed")}">
+  const body = grouped.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-operator-scroll" data-autoscroll data-scroll-key="overlay-part-operator-scroll" data-scroll-speed="${context.getOverlayScrollSpeed("horizontalOperatorScrollSpeed")}">
     <div class="overlay-part-operator-groups">
       ${grouped.map((group) => `<section class="overlay-part-operator-group"><h3>${stars(group.rarity)} <span>${operatorRosterCount(group.items)}</span></h3><div class="overlay-part-operator-grid">${group.items.map((item) => `<div class="overlay-part-operator" title="${html(item.name)}" aria-label="${html(item.name)}">${renderOperatorPortrait(item, html(assetUrl(item.image?.localPath)))}<div><strong class="${operatorNameClass(item)}">${html(item.name)}${Number(item.count) > 1 ? ` ×${html(item.count)}` : ""}</strong><span>${html(item.class || "-")} / ${html(item.branch || "-")}</span></div></div>`).join("")}</div></section>`).join("")}
     </div>
@@ -85,7 +85,7 @@ function renderOperatorsPart(args, context) {
 }
 
 function renderEffectsPart(args, context) {
-  const body = `<div class="stream-scroll overlay-part-scroll overlay-part-effect-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("verticalRelicScrollSpeed")}">
+  const body = `<div class="stream-scroll overlay-part-scroll overlay-part-effect-scroll" data-autoscroll data-scroll-key="overlay-part-effect-scroll" data-scroll-speed="${context.getOverlayScrollSpeed("verticalRelicScrollSpeed")}">
     ${context.renderEffectList(args.activeEffects, "overlay-part-effect-list", "発動効果なし")}
   </div>`;
   return section("effects", "Effects", args.activeEffects.length, body);
@@ -93,7 +93,7 @@ function renderEffectsPart(args, context) {
 
 function renderBossesPart(args, context) {
   const entries = context.getBossFlagEntries(args.campaign.id);
-  const body = entries.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-boss-scroll" data-autoscroll data-scroll-speed="${context.getOverlayScrollSpeed("verticalRelicScrollSpeed")}"><div class="overlay-part-boss-grid">${entries.map((entry) => context.renderBossCard(entry, "compact")).join("")}</div></div>` : empty("ボスフラグなし");
+  const body = entries.length ? `<div class="stream-scroll overlay-part-scroll overlay-part-boss-scroll" data-autoscroll data-scroll-key="overlay-part-boss-scroll" data-scroll-speed="${context.getOverlayScrollSpeed("verticalRelicScrollSpeed")}"><div class="overlay-part-boss-grid">${entries.map((entry) => context.renderBossCard(entry, "compact")).join("")}</div></div>` : empty("ボスフラグなし");
   return section("bosses", "Boss Flags", entries.length, body);
 }
 

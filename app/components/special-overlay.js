@@ -37,7 +37,7 @@ function renderSpecialOverlayGroups(items, { independentScroll = false, scrollSp
   if (groups.length === 1 && groups[0].id === "default") {
     const body = renderSpecialOverlayItems(items);
     return independentScroll
-      ? `<div class="stream-scroll special-overlay-group-scroll" data-autoscroll data-scroll-speed="${scrollSpeed}">${body}</div>`
+      ? `<div class="stream-scroll special-overlay-group-scroll" data-autoscroll data-scroll-key="special-default" data-scroll-speed="${scrollSpeed}">${body}</div>`
       : body;
   }
   return `<div class="special-overlay-groups">
@@ -48,7 +48,7 @@ function renderSpecialOverlayGroups(items, { independentScroll = false, scrollSp
       return `<section class="special-overlay-group special-overlay-group-${html(classId)}">
         <header><strong>${html(group.label || "特殊値")}</strong><span>${count}${html(group.unit)}</span></header>
         ${independentScroll
-          ? `<div class="stream-scroll special-overlay-group-scroll" data-autoscroll data-scroll-speed="${scrollSpeed}">${body}</div>`
+          ? `<div class="stream-scroll special-overlay-group-scroll" data-autoscroll data-scroll-key="special-group-${html(group.id)}" data-scroll-speed="${scrollSpeed}">${body}</div>`
           : body}
       </section>`;
     }).join("")}
@@ -62,7 +62,7 @@ export function renderSpecialOverlayBlock(items, mode, speedKey, getOverlayScrol
   const scrollSpeed = getOverlayScrollSpeed(speedKey);
   return `<section class="${isCompact ? "compact-section compact-special-section" : `stream-special-section${isPart ? " special-overlay-part-section" : ""}`}">
     ${isPart ? "" : `<div class="${isCompact ? "compact-section-head" : "stream-section-head"}"><span>Special</span><span>${items.length}</span></div>`}
-    <div class="stream-scroll ${isCompact ? "compact-special-scroll" : "stream-special-scroll"}" ${isPart ? "data-autoscroll-groups" : "data-autoscroll"} data-scroll-speed="${scrollSpeed}">
+    <div class="stream-scroll ${isCompact ? "compact-special-scroll" : "stream-special-scroll"}" ${isPart ? "data-autoscroll-groups" : "data-autoscroll"} data-scroll-key="special-${html(mode)}" data-scroll-speed="${scrollSpeed}">
       ${renderSpecialOverlayGroups(items, { independentScroll: isPart, scrollSpeed })}
     </div>
   </section>`;

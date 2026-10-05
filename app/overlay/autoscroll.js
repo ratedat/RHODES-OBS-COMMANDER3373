@@ -1,7 +1,18 @@
 let overlayAutoScrollFrame = null;
 let overlayAutoScrollResizeObserver = null;
+let overlayAutoScrollEntries = [];
+
+export function captureOverlayAutoScrollState() {
+  return new Map(overlayAutoScrollEntries.filter((entry) => entry.key).map((entry) => [entry.key, {
+    signature: entry.signature,
+    offset: entry.offset,
+    direction: entry.direction,
+    pauseUntil: entry.pauseUntil,
+  }]));
+}
 
 export function cancelOverlayAutoScroll() {
+  overlayAutoScrollEntries = [];
   overlayAutoScrollResizeObserver?.disconnect();
   overlayAutoScrollResizeObserver = null;
   if (overlayAutoScrollFrame !== null) {
@@ -10,13 +21,13 @@ export function cancelOverlayAutoScroll() {
   }
 }
 
-export function setupOverlayAutoScroll(root = document) {
+export function setupOverlayAutoScroll(root = document, previousState = captureOverlayAutoScrollState()) {
   cancelOverlayAutoScroll();
   const scrollers = [...root.querySelectorAll("[data-autoscroll]")];
   if (!scrollers.length) return;
   const groupViewports = [...root.querySelectorAll("[data-autoscroll-groups]")]
     .filter((element) => element.firstElementChild?.classList.contains("special-overlay-groups"));
-  const createEntries = () => {
+  const createEntries = (savedState) => {
     for (const element of [...scrollers, ...groupViewports]) {
       if (element.firstElementChild) element.firstElementChild.style.transform = "translateY(0px)";
     }
@@ -37,26 +48,40 @@ export function setupOverlayAutoScroll(root = document) {
     activeScrollers.push(...groupViewports.filter((element) => groupModes.get(element)));
     return activeScrollers.map((element, index) => {
       const content = element.firstElementChild;
+      if (!content) return null;
+      const key = element.dataset.scrollKey;
+      // Nested scrolling transforms were reset above, so this describes the
+      // rendered cards rather than their current animation position.
+      const signature = content.innerHTML;
+      const saved = key ? savedState.get(key) : null;
+      const unchanged = saved && saved.signature === signature;
+      const max = Math.max(0, content.scrollHeight - element.clientHeight);
+      const offset = unchanged ? Math.min(max, saved.offset) : 0;
+      content.style.transform = `translateY(${-offset}px)`;
       return {
+        key,
+        signature,
         element,
         content,
-        offset: 0,
-        direction: 1,
+        offset,
+        direction: unchanged ? saved.direction : 1,
         last: performance.now(),
-        pauseUntil: performance.now() + 900 + index * 700,
+        pauseUntil: unchanged ? saved.pauseUntil : performance.now() + 900 + index * 700,
         speed: Number.isFinite(Number(element.dataset.scrollSpeed)) ? Number(element.dataset.scrollSpeed) : 14,
       };
-    }).filter((entry) => entry.content);
+    }).filter(Boolean);
   };
-  let entries = createEntries();
-  if (!entries.length) return;
+  overlayAutoScrollEntries = createEntries(previousState);
+  if (!overlayAutoScrollEntries.length) return;
   if (groupViewports.length && typeof ResizeObserver !== "undefined") {
-    overlayAutoScrollResizeObserver = new ResizeObserver(() => { entries = createEntries(); });
+    overlayAutoScrollResizeObserver = new ResizeObserver(() => {
+      overlayAutoScrollEntries = createEntries(captureOverlayAutoScrollState());
+    });
     groupViewports.forEach((element) => overlayAutoScrollResizeObserver.observe(element));
   }
   overlayAutoScrollFrame = setInterval(() => {
     const now = performance.now();
-    for (const entry of entries) {
+    for (const entry of overlayAutoScrollEntries) {
       const max = Math.max(0, entry.content.scrollHeight - entry.element.clientHeight);
       if (max <= 1) {
         entry.offset = 0;
