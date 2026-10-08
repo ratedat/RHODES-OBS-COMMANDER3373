@@ -91,9 +91,9 @@ Windows x64 · 日本版 IS#2〜IS#6 · OBSブラウザソース · AGPL-3.0-onl
 
 ### 東合祭 — 大会配信のオペレーター表示
 
-[![東合祭「溶炉 DAY10」でrate-datさんがランしている場面。画面左側に使用中の星6オペレーターを表示](docs/images/stream-togosai-operators.jpg)](https://www.youtube.com/watch?v=o1tIQegHtwk&t=3600s)
+[![東合祭「溶炉 DAY10」でrate-datがランしている場面。画面左側に使用中の星6オペレーターを表示](docs/images/stream-togosai-operators.jpg)](https://www.youtube.com/watch?v=o1tIQegHtwk&t=3600s)
 
-**大会で注目したいオペレーターを、ひと目で。** rate-datさんのラン中に、配信画面の左側へ使用中の星6オペレーターをまとめて表示した例です。<br>
+**大会で注目したいオペレーターを、ひと目で。** rate-datのラン中に、配信画面の左側へ使用中の星6オペレーターをまとめて表示した例です。<br>
 配信：[TOGOSEN Univ.](https://www.youtube.com/@LinGuFamily) · 2026年9月30日 · [該当場面 1:00:00](https://www.youtube.com/watch?v=o1tIQegHtwk&t=3600s)
 
 画像は配信当時のバージョン・設定による表示です。配置や見た目はカスタマイズできます。出典と権利表記は[紹介画像について](docs/images/README.md)を参照してください。
