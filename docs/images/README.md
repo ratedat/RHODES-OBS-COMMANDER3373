@@ -26,12 +26,13 @@
 
 - 画像：[stream-togosai-operators.jpg](stream-togosai-operators.jpg)
 - チャンネル：[TOGOSEN Univ.](https://www.youtube.com/@LinGuFamily)
-- 元配信：[【アークナイツ│Arknights】東合祭 - 溶炉 DAY14](https://www.youtube.com/watch?v=PuZ4tBOpiHM)
-- 配信日：2026年10月4日
-- 該当時刻：[2:00:00](https://www.youtube.com/watch?v=PuZ4tBOpiHM&t=7200s)
+- 元配信：[【アークナイツ│Arknights】東合祭 - 溶炉 DAY10](https://www.youtube.com/watch?v=o1tIQegHtwk)
+- 配信日：2026年9月30日
+- 走者：rate-dat
+- 該当時刻：[1:00:00](https://www.youtube.com/watch?v=o1tIQegHtwk&t=3600s)
 - 表示例：大会配信の左側に、使用中の星6オペレーターを配置。
 
-Rindo3373さん・白羽 契さんの画像は1920×1080、東合祭の画像は1280×720のJPEGです。配信当時のバージョンと各配信者の設定による表示であり、現行版の初期レイアウトを示すものではありません。
+配信画像はすべて1920×1080のJPEGです。配信当時のバージョンと各配信者の設定による表示であり、現行版の初期レイアウトを示すものではありません。
 
 配信映像、出演者の画像、配信枠、ゲーム素材等の権利は、それぞれの権利者に帰属します。これらの画像はアプリのソースコードに適用するAGPL-3.0-onlyの対象には含めません。本リポジトリへの掲載は、第三者による転載・再利用の許可を意味しません。
 
