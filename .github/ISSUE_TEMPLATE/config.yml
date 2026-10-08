@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: はじめ方とOBS設定
+    url: https://github.com/ratedat/RHODES-OBS-COMMANDER3373/blob/main/docs/guides/startup-guide.md
+    about: 起動・手動入力・OBS表示・更新方法はこちら
+  - name: 不具合報告と機能要望のガイド
+    url: https://github.com/ratedat/RHODES-OBS-COMMANDER3373/blob/main/docs/guides/feedback.md
+    about: 報告する情報と添付ファイルの扱いを確認できます

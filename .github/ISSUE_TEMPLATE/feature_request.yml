@@ -1,0 +1,36 @@
+name: 機能要望・改善案
+description: 配信・大会・入力作業で改善したいことを提案する
+title: "[要望] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        実装方法が決まっていなくても提案できます。どのような場面で助かるかを教えてください。
+        同じ要望が既にある場合は、そのIssueへ情報を追加してください。
+  - type: textarea
+    id: situation
+    attributes:
+      label: 利用場面と困っていること
+      placeholder: 大会の入力担当として、…をするときに…で困っています。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: できるようにしたいこと
+      description: 操作や表示の例があれば記入してください。
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 今の対応方法・代替案（任意）
+    validations:
+      required: false
+  - type: textarea
+    id: examples
+    attributes:
+      label: 参考例（任意）
+      description: 公開できる画像やリンクがあれば添付してください。
+    validations:
+      required: false

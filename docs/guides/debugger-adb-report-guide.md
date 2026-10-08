@@ -10,11 +10,11 @@ ZIP内のSuki/Avaloniaデバッグ用実行ファイルを起動します。
 RhodesSuki.exe
 ```
 
-初回起動で保存先を聞かれた場合は、迷ったら `実行ファイル側に保存` を選んでください。ログとスクリーンショットを実行ファイルの近くにまとめやすくなります。
+配布フォルダーへZIPをすべて展開してから起動してください。設定は `user-data`、報告用のログと認識画像は `RHODES OBS COMMANDER3373 Debug Logs` に保存されます。
 
 ## 2. ADB接続を確認する
 
-Suki/Avaloniaのランタイム/ADB設定画面で、使用しているエミュレーターに合わせてプリセットを選びます。
+アプリの「接続設定」画面で、使用しているエミュレーターに合わせてプリセットを選びます。
 
 | 環境 | 推奨プリセット | 代表的なserial |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ Suki/Avaloniaのランタイム/ADB設定画面で、使用しているエミュ
 | Google Play Games開発者 | Google Play Games 開発者 | `127.0.0.1:6520` |
 | Android Studio AVD | Android Studio AVD | `adb devices -l` に出るserial |
 
-`ADB検出` を実行し、対象が `device` として表示されることを確認してからスキャンしてください。複数端末が出る場合は、対象のserialを明示してください。
+「自動検出」を実行し、対象が `device` として表示されることを確認してからスキャンしてください。複数端末が出る場合は、対象のserialを明示してください。
 
 ## 3. Google Play Games開発者エミュレーターの場合
 
@@ -58,11 +58,11 @@ adb devices -l
 
 - ゲーム画面は16:9の横画面で表示してください。
 - タップ/スワイプ座標は固定点ではなく、指定範囲内でランダムにずらして実行します。
-- OCR候補は誤認識することがあります。候補が変な場合は、そのままログとスクリーンショットを送ってください。
+- OCR候補は誤認識することがあります。候補が変な場合は、取得したログとスクリーンショットを保管し、公開できる部分を確認して報告してください。
 
 ## 5. 報告時に添付してほしいもの
 
-まずSuki/Avaloniaの `デバッグ` ワークスペースで `バグ報告ZIP` の `作成` を押してください。
+まずアプリの「デバッグ・報告」画面で「バグ報告ZIP」の「作成」を押してください。
 
 生成先:
 
@@ -70,7 +70,7 @@ adb devices -l
 RHODES OBS COMMANDER3373 Debug Logs\Bug Reports
 ```
 
-このZIPには、再現確認に必要なものだけが入ります。
+このZIPには、以下の調査資料が入ります。GitHubのIssueへ添付すると公開されるため、画像内の表示名・UID、ローカルパス、接続情報などを確認してください。必要な箇所だけを抜粋して報告することもできます。詳しくは[不具合報告と機能要望](https://github.com/ratedat/RHODES-OBS-COMMANDER3373/blob/main/docs/guides/feedback.md)を参照してください。
 
 | ZIP内の主な内容 | 用途 |
 | --- | --- |
@@ -98,13 +98,6 @@ RHODES OBS COMMANDER3373 Debug Logs\ADB Screenshots
 | `RHODES OBS COMMANDER3373 Debug Logs\ADB Screenshots` | ADBで取得したスクリーンショット |
 | `recognition-*.json` | 取得結果、候補、OCRログ |
 | 問題が見えるゲーム画面スクリーンショット | 目視確認用 |
-
-通常ビルドや保存先を実行ファイル側にした場合は、次にも認識ログが残ることがあります。
-
-```text
-RHODES OBS COMMANDER3373 Data\state\recognition-logs
-RHODES OBS COMMANDER3373 Data\state\adb-screenshots
-```
 
 ## 6. よくあるエラー
 

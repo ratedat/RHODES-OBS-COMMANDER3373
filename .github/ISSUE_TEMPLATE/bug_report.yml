@@ -1,0 +1,75 @@
+name: 不具合報告
+description: 起動・入力・認識・OBS表示などの問題を報告する
+title: "[不具合] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        報告ありがとうございます。分かる範囲で記入してください。
+        既存のIssueと[現在の制限](https://github.com/ratedat/RHODES-OBS-COMMANDER3373#現在の制限)もご確認ください。
+        このIssueと添付資料は公開されます。UID、表示名、接続コードなどを含めないようにしてください。報告ZIPは任意です。
+  - type: input
+    id: version
+    attributes:
+      label: 使用したバージョン
+      description: 配布ZIP名、BUILD_INFO.txtのrevision、またはソースのコミット番号。分からない場合は「不明」と記入してください。
+      placeholder: 配布ZIP名 または コミット番号
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 問題が起きた箇所
+      options:
+        - 起動・更新
+        - ラン・特殊値の入力
+        - オペレーター・秘宝の選択
+        - ADB接続・画面取得
+        - 認識結果
+        - OBS表示・レイアウト
+        - 大会遠隔入力
+        - その他
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 使用環境
+      description: 関係する項目だけ記入してください。個人名を含むファイルパスや接続コードは不要です。
+      placeholder: |
+        Windows:
+        統合戦略テーマ:
+        OBSのバージョン（表示の問題の場合）:
+        エミュレーター名・バージョン・解像度（認識の問題の場合）:
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現する操作
+      placeholder: |
+        1. 「出力」を開く
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待した結果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の結果
+      description: エラーが表示された場合は、その文章も記入してください。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 画像・ログなど（任意）
+      description: 公開できる範囲の資料を添付してください。報告ZIPの作り方と内容は「不具合報告と機能要望」ガイドを参照してください。
+    validations:
+      required: false

@@ -1,161 +1,119 @@
+<div align="center">
+
 # RHODES OBS COMMANDER3373
 
-OBS overlay tool for displaying Arknights Integrated Strategies run state.
+**アークナイツ「統合戦略」のラン情報を、見やすく配信に。**
 
-The project supports manual-first operation with optional semi-automatic ADB/OCR assistance.
+秘宝・オペレーター・特殊値をまとめて管理し、OBSへ表示するWindows用ツールです。<br>
+手動入力、画面認識による入力補助、大会スタッフによる遠隔入力に対応しています。
 
-Target campaigns:
+[はじめ方](docs/guides/startup-guide.md) · [配布状況](https://github.com/ratedat/RHODES-OBS-COMMANDER3373/releases) · [使い方](docs/README.md) · [不具合・要望](https://github.com/ratedat/RHODES-OBS-COMMANDER3373/issues)
 
-- IS#2: ファントムと緋き貴石
-- IS#3: ミヅキと紺碧の樹
-- IS#4: 探索者と銀氷の果て
-- IS#5: サルカズの炉辺奇談
-- IS#6: 歳の界園志異
+Windows x64 / 日本版アークナイツ向け / 開発・テスト段階
 
-See:
+</div>
 
-- `docs/README.md` for the categorized documentation index
-- `docs/guides/startup-guide.md` for app startup, OBS URL, port, and ADB setup notes
-- `出力CSSカスタマイズガイド.html` for an interactive, browser-openable Overlay CSS guide with concrete display examples
-- `docs/guides/adb-setup.md` for supported ADB presets, emulator setup, Google Play Games developer emulator notes, Hyper-V diagnostics, and troubleshooting
-- `docs/legal/licenses.md` for license, source availability, and third-party notices
-- `docs/reference/architecture.md` for state and overlay architecture
-- `docs/reference/data-sources.md` for source extraction notes
-- `docs/reference/data-summary.md` for extracted campaign data coverage
-- `docs/reference/effect-calculation.md` for relic/squad effect calculation design
-- `data/wikiru-campaign-sources.json` for adding or updating campaign wiki extraction targets
-- `data/performance-sources.json` for adding or updating campaign performance/event-buff extraction targets such as IS#2 演目
-- `data/performances.json` for generated selectable performance/event-buff names and effects
-- `data/difficulty-variant-sources.json` for adding or updating difficulty-dependent relic groups
-- `data/difficulty-tiers.json` for campaign-specific difficulty tier mapping such as IS#4/IS#5/IS#6 多元化珍品
-- `data/difficulty-grade-sources.json` for selectable grade ranges and wiki table column mappings
-- `data/difficulty-grades.json` for generated grade conditions, score multipliers, and campaign-specific grade effects
-- `data/relic-effect-variants.json` for tier-specific relic effect text
-- `data/relic-images.json` for the relic image sync audit
-- `assets/relics/wikiru/img` for mirrored relic image files referenced by `data/relics.json`
-- `data/wikiru-operator-sources.json` for the operator wiki extraction source
-- `data/operators.json` for operator names, rarity, class, branch, and image metadata
-- `data/operator-implementation-history.json` for Japan implementation dates/order merged into operator sorting
-- `data/operator-images.json` for the operator image sync audit
-- `assets/operators/wikiru/img` for mirrored operator image files referenced by `data/operators.json`
+## 配信での使用例
 
-## Suki/Avalonia App
+配信者の方に掲載許可をいただいた、実際の配信画面です。画像をクリックすると、その場面から元の配信を視聴できます。
 
-The active desktop app is the Suki/Avalonia shell under `apps/rhodes-suki`.
-Electron and Tauri are not active build, launch, or distribution targets.
-The Node local server remains only for the HTTP API and OBS Browser Source URLs; it is not a desktop app fallback.
+### Rindo3373さん — サルカズの炉辺奇談
 
-For streamers and tournament staff, use the packaged Suki portable build when available: open `RhodesSuki.exe` from the release package.
+[![Rindo3373さんの配信で、画面左にオペレーターと特殊情報、下部に秘宝一覧を表示している使用例](docs/images/stream-rindo-sarkaz.jpg)](https://www.youtube.com/watch?v=DWAcBQgd-Xg&t=7200s)
 
-When running from the source folder on Windows, double-click this file instead of typing commands:
+左側にオペレーター・特殊情報、下部に秘宝を配置した例です。<br>
+配信：[Rindo3373【アークナイツ配信他】](https://www.youtube.com/@nekomimikitunemimi) · 2026年10月4日 · [該当場面 2:00:00](https://www.youtube.com/watch?v=DWAcBQgd-Xg&t=7200s)
 
-- `start-windows.vbs`
+### 白羽 契さん — 探索者と銀氷の果て
 
-The source-folder launcher builds the current checkout and starts its Suki/Avalonia app only after the build succeeds. See [development setup](docs/development-setup.md) before the first source build.
+[![白羽 契さんの配信で、ゲーム画面の下部に秘宝アイコンを横並びに表示している使用例](docs/images/stream-shiba-sami.jpg)](https://www.youtube.com/watch?v=FRDEmZXiFWw&t=7200s)
 
-Developer Suki/Avalonia workflow:
+配信枠の下部へ秘宝アイコンを横並びに配置した例です。<br>
+配信：[白羽 契 -Shiba Chigiri-](https://www.youtube.com/@%E3%81%97%E3%81%B0%E3%81%A1%E3%81%8E%E3%82%8A) · 2026年8月2日 · [該当場面 2:00:00](https://www.youtube.com/watch?v=FRDEmZXiFWw&t=7200s)
 
-Human debugging should use the Suki/Avalonia app window, not a standalone browser tab. The browser URLs remain useful for OBS Browser Source setup and fallback checks, but normal UI/UX verification should start here:
+画像は配信当時のバージョン・設定による表示です。配置や見た目はカスタマイズできます。出典と権利表記は[紹介画像について](docs/images/README.md)を参照してください。
 
-```powershell
-cd O:\Arknights_Rogue_OBSTool
-npm.cmd run suki:run
-```
+## できること
 
-Run the Suki service checks:
+- **ラン情報をひとまとめに。** 所持秘宝、招集したオペレーター、分隊、等級、源石錐、ボス、テーマごとの特殊値を管理できます。
+- **手動入力ですぐに使える。** ゲームへ接続せず、検索・選択・数値入力だけで配信表示を作れます。認識後の修正も同じ画面から行えます。
+- **画面認識で入力を補助。** ADBとMAAFrameworkを使い、ゲーム画面からラン情報を取得できます。
+- **配信画面に合わせて配置。** OBSのブラウザソースに対応。透過背景、部品の位置・大きさ、文字や色、一覧の自動スクロールを調整できます。
+- **大会の入力を分担。** 入力担当者がブラウザーから情報を送り、配信PCの表示を更新できます。
 
-```powershell
-npm.cmd run suki:test
-```
+<details>
+<summary>アプリの操作画面を見る</summary>
 
-After code changes, run the desktop verification command. It runs the Suki/MAA checks and compiles the Avalonia app:
+![オペレーターの検索・選択画面](docs/images/selection.jpg)
 
-```powershell
-npm.cmd run verify:desktop
-```
+*デスクトップアプリの選択画面。名前・職業・レア度などで絞り込み、所持状態を編集できます。*
 
-For the full Node, MAA, C# and desktop checks, run `npm run verify:all -- --no-restore` after restoring dependencies. Results and the built executable hash are saved under `outputs/verification/latest.json`; live UI checks remain separate. See [development verification](docs/development-verification.md).
+</details>
 
-Build a portable Windows package for distribution:
+## 入手と導入
 
-```powershell
-npm.cmd run suki:publish:portable
-```
+現在は開発・テスト段階です。**GitHub Releasesでの実行ファイル配布は準備中です。** 公開状況は[Releases](https://github.com/ratedat/RHODES-OBS-COMMANDER3373/releases)で案内します。
 
-Start only the local HTTP/OBS server when checking OBS URLs without the Suki desktop window:
+配布ZIPをお持ちの場合は、次の手順で始められます。
 
-```powershell
-cd O:\Arknights_Rogue_OBSTool
-npm.cmd run dev
-```
+1. ZIPを新しいフォルダーへ**すべて展開**し、`RhodesSuki.exe` を起動します。
+2. 上部で統合戦略テーマを選び、「ラン」「特殊値」「選択」で表示したい情報を入力します。
+3. 「出力」で配信サーバーを起動し、**カスタムOverlay**のURLをOBSのブラウザソースへ追加します。幅1920・高さ1080が基準です。
 
-The examples below use the default port `5173`. If you selected another port in the desktop app, replace `5173` with that port in OBS Browser Source URLs.
+詳しい操作、更新方法、困ったときの確認先は[はじめ方とOBS設定](docs/guides/startup-guide.md)にまとめています。
 
-Open the sidecar support URL only when you need a browser-based OBS/debug check:
+> GitHubの「Code → Download ZIP」はソースコードです。そのまま起動できる配布版ではありません。ソースから動かす場合は[開発環境の準備](docs/development-setup.md)を参照してください。
 
-- http://127.0.0.1:5173/sidecar
+## 動作環境
 
-Use this URL as an OBS Browser Source:
+| 用途 | 必要なもの |
+| --- | --- |
+| アプリの操作 | Windows x64、書き込み可能な展開先 |
+| 配信画面への表示 | OBS Studioのブラウザソース、Node.js（アプリから導入可能） |
+| 画面認識による入力補助 | ADB接続できるAndroid端末・エミュレーター。認識の基準は1280×720・16:9 |
+| 大会の遠隔入力 | 配信PCと入力端末のインターネット接続、入力担当者用のブラウザー |
 
-- http://127.0.0.1:5173/overlay
+配布版にはアプリの.NET実行環境を含みます。軽量版は、配信サーバーや大会入力に必要な追加ランタイムを初回利用時に取得します。通常の手動入力にADB接続は不要です。
 
-OBS still uses browser-source URLs, while Suki/Avalonia is the control, review, ADB, MAAFramework, and recognition shell. The default overlay is the compact stream layout. The vertical and horizontal variants use auto-scrolling relic/operator panes so entries are not omitted:
+## 対応する統合戦略
 
-- http://127.0.0.1:5173/overlay?layout=vertical&size=small
-- http://127.0.0.1:5173/overlay?layout=vertical&size=medium
-- http://127.0.0.1:5173/overlay?layout=vertical&size=large
-- http://127.0.0.1:5173/overlay?layout=horizontal&size=small
-- http://127.0.0.1:5173/overlay?layout=horizontal&size=medium
-- http://127.0.0.1:5173/overlay?layout=horizontal&size=large
-- http://127.0.0.1:5173/overlay?layout=full
+日本版の名称・データを使用します。テーマごとの特殊値も個別に入力・表示できます。
 
-OBS parts can be added as separate Browser Sources when you want to arrange each element freely:
+| テーマ | 特殊値の例 |
+| --- | --- |
+| IS#2 ファントムと緋き貴石 | 幻覚・演目 |
+| IS#3 ミヅキと紺碧の樹 | 拒絶反応・灯火・鍵 |
+| IS#4 探索者と銀氷の果て | パラダイムロスト・啓示板 |
+| IS#5 サルカズの炉辺奇談 | 思案・時代・構想 |
+| IS#6 歳の界園志異 | 有効銭・保有銭・遊覧券・歳時 |
 
-- http://127.0.0.1:5173/overlay/part/status
-- http://127.0.0.1:5173/overlay/part/relics
-- http://127.0.0.1:5173/overlay/part/operators
-- http://127.0.0.1:5173/overlay/part/effects
-- http://127.0.0.1:5173/overlay/part/bosses
-- http://127.0.0.1:5173/overlay/part/special
+## 使い方を探す
 
-Runtime state is stored in `data/current-state.json` and is intentionally ignored by Git. The committed example state remains `data/overlay-state.example.json`.
+| やりたいこと | ガイド |
+| --- | --- |
+| 初めて起動する・OBSへ表示する | [はじめ方とOBS設定](docs/guides/startup-guide.md) |
+| エミュレーターを接続して画面を読み取る | [ADB設定とトラブルシューティング](docs/guides/adb-setup.md) |
+| 表示の色・文字・背景を変える | [出力のカスタマイズ](docs/guides/output-css-customization.md) |
+| 大会スタッフに入力を任せる | [大会遠隔入力](docs/guides/tournament-remote-input.md) |
+| 不具合を報告する・改善を提案する | [不具合報告と機能要望](docs/guides/feedback.md) |
 
-## License
+## 現在の制限
 
-RHODES OBS COMMANDER3373 is licensed under AGPL-3.0-only. The full license text is included in `LICENSE`.
+- 認識結果には誤りや取りこぼしがあり得ます。取得後に表示内容を確認し、必要に応じて手動で訂正してください。
+- **歳の銭OCR（有効銭・保有銭）は停止中です。** 銭は手動入力してください。
+- 所持一覧から消えた秘宝の自動削除と、ゲーム内だけで始めた新しいランの確実な自動判定は未対応です。新しいランではアプリ側の「ランをクリア」も使用してください。
+- 大会入力の簡易公開URLは、停止またはアプリ終了後に失効します。継続運用する大会では、事前に接続と表示を確認してください。
 
-Source code is available at https://github.com/ratedat/RHODES-OBS-COMMANDER3373. Third-party attribution, including MaaAssistantArknights notes for future ADB/OCR work, is tracked in `THIRD_PARTY_NOTICES.md` and `docs/legal/licenses.md`.
+## 開発・協力
 
-## Data Update Workflow
+不具合報告、説明の改善、機能の提案も歓迎します。[Issues](https://github.com/ratedat/RHODES-OBS-COMMANDER3373/issues)で受け付けています。
 
-Use the data update runner when refreshing wiki-derived data. It snapshots the current data, runs the selected sync steps, snapshots the result, and writes a diff report under `review/update-runs/<run-id>/`.
+コードやデータの変更に参加する方は[貢献ガイド](CONTRIBUTING.md)、[開発環境の準備](docs/development-setup.md)、[検証手順](docs/development-verification.md)をご覧ください。構成・認識・データ関連の資料は[資料一覧](docs/README.md)から参照できます。
 
-Preview the planned full update:
+## 謝辞・ライセンス
 
-```powershell
-npm.cmd run data:update:plan
-```
+画面認識には[MAAFramework](https://github.com/MaaXYZ/MaaFramework)、デスクトップUIには[Avalonia](https://github.com/AvaloniaUI/Avalonia)と[SukiUI](https://github.com/kikipoulet/SukiUI)を使用しています。[MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)をはじめとする関連プロジェクトと、データ・素材の提供元に感謝します。
 
-Run the standard full update:
+アプリのソースコードは[AGPL-3.0-only](LICENSE)で公開しています。素材・依存ライブラリの出典とライセンスは[第三者表記](THIRD_PARTY_NOTICES.md)および[ライセンスについて](docs/legal/licenses.md)を参照してください。
 
-```powershell
-npm.cmd run data:update
-```
-
-Run only part of the flow when checking a specific source:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Operators
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Performances
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\update-data.ps1 -Scope Campaigns,Performances,DifficultyVariants,DifficultyGrades,RelicImages
-```
-
-Each run produces:
-
-- `summary.md` - human-readable counts and changed item list
-- `changes.csv` - spreadsheet-friendly review file
-- `changes.json` - full machine-readable diff
-- `before/data` and `after/data` - snapshots used for comparison
-- `run.log` - executed commands and script output
-
-Generated update runs are intentionally ignored by Git. Commit data and asset changes only after reviewing the diff and the generated review pages.
+本ツールはアークナイツの非公式ファンツールです。ゲーム内の名称・画像等の権利は各権利者に帰属します。
