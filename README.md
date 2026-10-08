@@ -165,6 +165,16 @@ rate-datのラン中に、使用中の星6オペレーターをひと目で確�
 
 ## 開発・協力
 
+<table>
+<tr>
+<td><a href="https://www.youtube.com/@rate-dat"><img src="docs/images/rate-dat-avatar.jpg" alt="rate-datのアイコン" width="72" height="72"></a></td>
+<td>
+本ツールはrate-datが中心となって開発しています。<br><br>
+<a href="https://x.com/rate_dat">X（Twitter）</a> · <a href="https://www.youtube.com/@rate-dat">YouTube</a>
+</td>
+</tr>
+</table>
+
 不具合報告、説明の改善、機能の提案も歓迎します。[Issues](https://github.com/ratedat/RHODES-OBS-COMMANDER3373/issues)で受け付けています。
 
 コードやデータの変更に参加する方は[貢献ガイド](CONTRIBUTING.md)、[開発環境の準備](docs/development-setup.md)、[検証手順](docs/development-verification.md)をご覧ください。構成・認識・データ関連の資料は[資料一覧](docs/README.md)から参照できます。
