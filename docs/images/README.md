@@ -4,6 +4,15 @@
 
 次の画像は、RHODES OBS COMMANDER3373の使用例として掲載しています。元の配信映像から静止画を取り出したもので、表示内容の合成や差し替えは行っていません。
 
+### rate-dat — README冒頭の配信画面
+
+- 画像：[stream-ratedat-sarkaz.jpg](stream-ratedat-sarkaz.jpg)
+- チャンネル：[rate-dat](https://www.youtube.com/channel/UCDgehVnak6dAW4vLwW5IZ6Q)
+- 元配信：[『アークナイツ』「サルカズの炉辺奇談」18等級 東合祭 -溶炉- 練習配信](https://www.youtube.com/watch?v=Q6UEfhZDxkQ)
+- 配信日：2026年8月19日
+- 該当時刻：[2:50:22](https://www.youtube.com/watch?v=Q6UEfhZDxkQ&t=10222s)
+- 表示例：ゲーム画面の下部に、左からオペレーター・秘宝・特殊情報を配置。
+
 ### Rindo3373【アークナイツ配信他】さん
 
 - 画像：[stream-rindo-sarkaz.jpg](stream-rindo-sarkaz.jpg)

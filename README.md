@@ -6,6 +6,12 @@
 
 **秘宝・オペレーター・特殊値を、自由なレイアウトでOBSへ。**
 
+[![rate-datのサルカズ配信。ゲーム画面を大きく確保し、下部にオペレーター・秘宝・特殊情報を並べた使用例](docs/images/stream-ratedat-sarkaz.jpg)](https://www.youtube.com/watch?v=Q6UEfhZDxkQ&t=10222s)
+
+**ゲーム画面を広く見せながら、ランの情報は下部にひとまとめ。**<br>
+左からオペレーター・秘宝・特殊情報を配置した、実際の配信画面です。<br>
+配信：[rate-dat](https://www.youtube.com/channel/UCDgehVnak6dAW4vLwW5IZ6Q) · [元配信のこの場面を見る（2:50:22）](https://www.youtube.com/watch?v=Q6UEfhZDxkQ&t=10222s) · [画像の出典](docs/images/README.md)
+
 アークナイツ「統合戦略」のラン情報を管理し、OBSへ表示するWindows用ツールです。<br>
 **レスポンシブ表示・自由配置・CSSカスタマイズ。** ドラッグや数値指定で配置を詰め、配信枠に合わせた画面を作れます。<br>
 手動入力、画面認識による入力補助、スタッフの遠隔入力で、個人のローグ配信から大会中継まで支えます。

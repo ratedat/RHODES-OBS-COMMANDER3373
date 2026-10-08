@@ -4,7 +4,7 @@ RHODES OBS COMMANDER3373 is licensed under AGPL-3.0-only. See `LICENSE` for the 
 
 ## Stream screenshots
 
-The README includes stream screenshots from Rindo3373, Shiba Chigiri and TOGOSEN Univ. to illustrate RHODES OBS COMMANDER3373 in use. Source channels, videos and timestamps are listed in [the image credits](docs/images/README.md).
+The README includes stream screenshots from rate-dat, Rindo3373, Shiba Chigiri and TOGOSEN Univ. to illustrate RHODES OBS COMMANDER3373 in use. Source channels, videos and timestamps are listed in [the image credits](docs/images/README.md).
 
 Rights to the stream footage, performers' images, stream layouts and game assets remain with their respective rights holders. These screenshots are not covered by the source code's AGPL-3.0-only license. Their inclusion here does not grant permission for third-party reuse.
 
