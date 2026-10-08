@@ -5,7 +5,8 @@
 **アークナイツ「統合戦略」のラン情報を、見やすく配信に。**
 
 秘宝・オペレーター・特殊値をまとめて管理し、OBSへ表示するWindows用ツールです。<br>
-手動入力、画面認識による入力補助、大会スタッフによる遠隔入力に対応しています。
+手動入力、画面認識による入力補助、大会スタッフによる遠隔入力に対応しています。<br>
+[CSSによるカスタマイズ](docs/guides/output-css-customization.md)で、フォント・配色・背景・枠線・余白などを細かく調整し、配信画面に合わせた見た目にできます。
 
 [はじめ方](docs/guides/startup-guide.md) · [配布状況](https://github.com/ratedat/RHODES-OBS-COMMANDER3373/releases) · [使い方](docs/README.md) · [不具合・要望](https://github.com/ratedat/RHODES-OBS-COMMANDER3373/issues)
 
