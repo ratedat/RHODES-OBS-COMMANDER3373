@@ -15,7 +15,7 @@ Windows x64 / 日本版アークナイツ向け / 開発・テスト段階
 
 ## 配信での使用例
 
-配信者の方に掲載許可をいただいた、実際の配信画面です。画像をクリックすると、その場面から元の配信を視聴できます。
+実際の配信画面を、使用例として紹介しています。画像をクリックすると、その場面から元の配信を視聴できます。
 
 ### Rindo3373さん — サルカズの炉辺奇談
 
@@ -30,6 +30,13 @@ Windows x64 / 日本版アークナイツ向け / 開発・テスト段階
 
 配信枠の下部へ秘宝アイコンを横並びに配置した例です。<br>
 配信：[白羽 契 -Shiba Chigiri-](https://www.youtube.com/@%E3%81%97%E3%81%B0%E3%81%A1%E3%81%8E%E3%82%8A) · 2026年8月2日 · [該当場面 2:00:00](https://www.youtube.com/watch?v=FRDEmZXiFWw&t=7200s)
+
+### 東合祭 — 大会配信のオペレーター表示
+
+[![東合祭「溶炉 DAY14」の配信で、画面左側に使用中の星6オペレーターを表示している使用例](docs/images/stream-togosai-operators.jpg)](https://www.youtube.com/watch?v=PuZ4tBOpiHM&t=7200s)
+
+大会配信の左側に、使用中の星6オペレーターをまとめて表示した例です。<br>
+配信：[TOGOSEN Univ.](https://www.youtube.com/@LinGuFamily) · 2026年10月4日 · [該当場面 2:00:00](https://www.youtube.com/watch?v=PuZ4tBOpiHM&t=7200s)
 
 画像は配信当時のバージョン・設定による表示です。配置や見た目はカスタマイズできます。出典と権利表記は[紹介画像について](docs/images/README.md)を参照してください。
 
